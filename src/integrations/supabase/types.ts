@@ -14,16 +14,198 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      restaurants: {
+        Row: {
+          category: string
+          created_at: string
+          cta_app: string | null
+          cta_phone: string | null
+          cta_website: string | null
+          cta_whatsapp: string | null
+          delivery_zones: string[] | null
+          description: string | null
+          display_order: number
+          id: string
+          images: string[] | null
+          is_active: boolean
+          is_featured: boolean
+          logo_url: string | null
+          name: string
+          schedule_weekdays: string | null
+          schedule_weekend: string | null
+          slug: string
+          updated_at: string
+          zone_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          cta_app?: string | null
+          cta_phone?: string | null
+          cta_website?: string | null
+          cta_whatsapp?: string | null
+          delivery_zones?: string[] | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          images?: string[] | null
+          is_active?: boolean
+          is_featured?: boolean
+          logo_url?: string | null
+          name: string
+          schedule_weekdays?: string | null
+          schedule_weekend?: string | null
+          slug: string
+          updated_at?: string
+          zone_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          cta_app?: string | null
+          cta_phone?: string | null
+          cta_website?: string | null
+          cta_whatsapp?: string | null
+          delivery_zones?: string[] | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          images?: string[] | null
+          is_active?: boolean
+          is_featured?: boolean
+          logo_url?: string | null
+          name?: string
+          schedule_weekdays?: string | null
+          schedule_weekend?: string | null
+          slug?: string
+          updated_at?: string
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurants_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suggestions: {
+        Row: {
+          city_name: string
+          created_at: string
+          email: string | null
+          id: string
+          message: string | null
+        }
+        Insert: {
+          city_name: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+        }
+        Update: {
+          city_name?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      zones: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +332,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

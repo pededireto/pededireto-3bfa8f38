@@ -1,4 +1,4 @@
-import { Restaurant } from "@/data/mockData";
+ import { Restaurant } from "@/hooks/useRestaurants";
 import RestaurantCard from "./RestaurantCard";
 import { UtensilsCrossed } from "lucide-react";
 
