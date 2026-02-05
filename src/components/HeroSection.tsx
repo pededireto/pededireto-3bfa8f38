@@ -1,12 +1,14 @@
-import { Zone } from "@/data/mockData";
-import CitySelector from "./CitySelector";
+ import { Zone } from "@/hooks/useZones";
+ import CitySearch from "./CitySearch";
 
 interface HeroSectionProps {
+   zones: Zone[];
   selectedZone: Zone | null;
-  onSelectZone: (zone: Zone) => void;
+   onSelectZone: (zone: Zone | null) => void;
+   isLoading?: boolean;
 }
 
-const HeroSection = ({ selectedZone, onSelectZone }: HeroSectionProps) => {
+ const HeroSection = ({ zones, selectedZone, onSelectZone, isLoading }: HeroSectionProps) => {
   return (
     <section className="section-hero py-12 md:py-20">
       <div className="container">
@@ -22,9 +24,11 @@ const HeroSection = ({ selectedZone, onSelectZone }: HeroSectionProps) => {
             Normalmente mais barato do que apps de delivery.
           </p>
 
-          <CitySelector 
-            selectedZone={selectedZone} 
-            onSelectZone={onSelectZone} 
+           <CitySearch
+             zones={zones}
+             selectedZone={selectedZone}
+             onSelectZone={onSelectZone}
+             isLoading={isLoading}
           />
 
           {selectedZone && (

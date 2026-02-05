@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { MapPin, Star } from "lucide-react";
-import { Restaurant } from "@/data/mockData";
+ import { Restaurant } from "@/hooks/useRestaurants";
 import { cn } from "@/lib/utils";
 
 interface RestaurantCardProps {
@@ -9,7 +9,8 @@ interface RestaurantCardProps {
 }
 
 const RestaurantCard = ({ restaurant, variant = "default" }: RestaurantCardProps) => {
-  const isFeatured = variant === "featured" || restaurant.isFeatured;
+   const isFeatured = variant === "featured" || restaurant.is_featured;
+   const zoneName = restaurant.zones?.name || "";
 
   return (
     <Link
@@ -22,7 +23,7 @@ const RestaurantCard = ({ restaurant, variant = "default" }: RestaurantCardProps
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <img
-          src={restaurant.logo}
+           src={restaurant.logo_url || "/placeholder.svg"}
           alt={restaurant.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
@@ -51,10 +52,12 @@ const RestaurantCard = ({ restaurant, variant = "default" }: RestaurantCardProps
           <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground text-xs font-medium">
             {restaurant.category}
           </span>
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <MapPin className="h-3 w-3" />
-            {restaurant.zoneName}
-          </span>
+           {zoneName && (
+             <span className="flex items-center gap-1 text-xs text-muted-foreground">
+               <MapPin className="h-3 w-3" />
+               {zoneName}
+             </span>
+           )}
         </div>
 
         <p className="mt-3 text-sm text-muted-foreground line-clamp-2">

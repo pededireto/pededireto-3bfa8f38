@@ -1,15 +1,31 @@
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Clock, MapPin, ExternalLink, Phone, MessageCircle, Smartphone, Star } from "lucide-react";
-import { getRestaurantBySlug } from "@/data/mockData";
+ import { useRestaurant } from "@/hooks/useRestaurants";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+ import { Loader2 } from "lucide-react";
 
 const RestaurantPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const restaurant = slug ? getRestaurantBySlug(slug) : undefined;
+   const { data: restaurant, isLoading, error } = useRestaurant(slug || "");
 
-  if (!restaurant) {
+   if (isLoading) {
+     return (
+       <div className="min-h-screen flex flex-col">
+         <Header />
+         <main className="flex-1 flex items-center justify-center">
+           <div className="text-center">
+             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+             <p className="text-muted-foreground">A carregar restaurante...</p>
+           </div>
+         </main>
+         <Footer />
+       </div>
+     );
+   }
+
+   if (error || !restaurant) {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
@@ -36,6 +52,10 @@ const RestaurantPage = () => {
     return `https://wa.me/${cleanNumber}`;
   };
 
+   const zoneName = restaurant.zones?.name || "";
+   const images = restaurant.images || [];
+   const deliveryZones = restaurant.delivery_zones || [];
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -55,7 +75,7 @@ const RestaurantPage = () => {
         {/* Hero Image */}
         <div className="relative h-48 md:h-72 lg:h-96 bg-muted overflow-hidden">
           <img
-            src={restaurant.images[0] || restaurant.logo}
+             src={images[0] || restaurant.logo_url || "/placeholder.svg"}
             alt={restaurant.name}
             className="w-full h-full object-cover"
           />
@@ -69,7 +89,7 @@ const RestaurantPage = () => {
               {/* Title & Category */}
               <div>
                 <div className="flex items-center gap-3 flex-wrap mb-2">
-                  {restaurant.isFeatured && (
+                   {restaurant.is_featured && (
                     <span className="badge-featured">
                       <Star className="h-3 w-3 fill-current" />
                       Destaque
@@ -84,63 +104,75 @@ const RestaurantPage = () => {
                   <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm font-medium">
                     {restaurant.category}
                   </span>
-                  <span className="flex items-center gap-1 text-sm">
-                    <MapPin className="h-4 w-4" />
-                    {restaurant.zoneName}
-                  </span>
+                   {zoneName && (
+                     <span className="flex items-center gap-1 text-sm">
+                       <MapPin className="h-4 w-4" />
+                       {zoneName}
+                     </span>
+                   )}
                 </div>
               </div>
 
               {/* Description */}
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-2">Sobre</h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  {restaurant.description}
-                </p>
-              </div>
+               {restaurant.description && (
+                 <div>
+                   <h2 className="text-lg font-semibold text-foreground mb-2">Sobre</h2>
+                   <p className="text-muted-foreground leading-relaxed">
+                     {restaurant.description}
+                   </p>
+                 </div>
+               )}
 
               {/* Schedule */}
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-primary" />
-                  Horário
-                </h2>
-                <div className="bg-secondary/50 rounded-xl p-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Segunda a Sexta</span>
-                    <span className="font-medium text-foreground">{restaurant.schedule.weekdays}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Fim de semana</span>
-                    <span className="font-medium text-foreground">{restaurant.schedule.weekend}</span>
+               {(restaurant.schedule_weekdays || restaurant.schedule_weekend) && (
+                 <div>
+                   <h2 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
+                     <Clock className="h-5 w-5 text-primary" />
+                     Horário
+                   </h2>
+                   <div className="bg-secondary/50 rounded-xl p-4 space-y-2">
+                     {restaurant.schedule_weekdays && (
+                       <div className="flex justify-between">
+                         <span className="text-muted-foreground">Segunda a Sexta</span>
+                         <span className="font-medium text-foreground">{restaurant.schedule_weekdays}</span>
+                       </div>
+                     )}
+                     {restaurant.schedule_weekend && (
+                       <div className="flex justify-between">
+                         <span className="text-muted-foreground">Fim de semana</span>
+                         <span className="font-medium text-foreground">{restaurant.schedule_weekend}</span>
+                       </div>
+                     )}
                   </div>
                 </div>
-              </div>
+               )}
 
               {/* Delivery Zones */}
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  Zonas de Entrega
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {restaurant.deliveryZones.map((zone, index) => (
-                    <span 
-                      key={index}
-                      className="px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-sm"
-                    >
-                      {zone}
-                    </span>
-                  ))}
+               {deliveryZones.length > 0 && (
+                 <div>
+                   <h2 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
+                     <MapPin className="h-5 w-5 text-primary" />
+                     Zonas de Entrega
+                   </h2>
+                   <div className="flex flex-wrap gap-2">
+                     {deliveryZones.map((zone, index) => (
+                       <span 
+                         key={index}
+                         className="px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-sm"
+                       >
+                         {zone}
+                       </span>
+                     ))}
+                   </div>
                 </div>
-              </div>
+               )}
 
               {/* Images */}
-              {restaurant.images.length > 1 && (
+               {images.length > 1 && (
                 <div>
                   <h2 className="text-lg font-semibold text-foreground mb-3">Galeria</h2>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {restaurant.images.map((image, index) => (
+                     {images.map((image, index) => (
                       <div key={index} className="aspect-square rounded-xl overflow-hidden bg-muted">
                         <img
                           src={image}
@@ -161,9 +193,9 @@ const RestaurantPage = () => {
                   Faz a tua encomenda
                 </h3>
 
-                {restaurant.cta.website && (
+                 {restaurant.cta_website && (
                   <a
-                    href={restaurant.cta.website}
+                     href={restaurant.cta_website}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-cta-primary w-full"
@@ -173,9 +205,9 @@ const RestaurantPage = () => {
                   </a>
                 )}
 
-                {restaurant.cta.whatsapp && (
+                 {restaurant.cta_whatsapp && (
                   <a
-                    href={formatWhatsAppLink(restaurant.cta.whatsapp)}
+                     href={formatWhatsAppLink(restaurant.cta_whatsapp)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-cta-whatsapp w-full"
@@ -185,19 +217,19 @@ const RestaurantPage = () => {
                   </a>
                 )}
 
-                {restaurant.cta.phone && (
+                 {restaurant.cta_phone && (
                   <a
-                    href={`tel:${restaurant.cta.phone}`}
+                     href={`tel:${restaurant.cta_phone}`}
                     className="btn-cta-secondary w-full"
                   >
                     <Phone className="h-5 w-5" />
-                    {restaurant.cta.phone}
+                     {restaurant.cta_phone}
                   </a>
                 )}
 
-                {restaurant.cta.app && (
+                 {restaurant.cta_app && (
                   <a
-                    href={restaurant.cta.app}
+                     href={restaurant.cta_app}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-cta-secondary w-full"
