@@ -1,0 +1,273 @@
+import { useParams, Link } from "react-router-dom";
+import { useBusiness } from "@/hooks/useBusinesses";
+import { useTrackEvent } from "@/hooks/useAnalytics";
+import { useEffect } from "react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { 
+  ArrowLeft, 
+  MapPin, 
+  Globe, 
+  Phone, 
+  MessageCircle, 
+  ExternalLink,
+  Mail,
+  Clock,
+  Star
+} from "lucide-react";
+
+const BusinessPage = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const { data: business, isLoading } = useBusiness(slug);
+  const trackEvent = useTrackEvent();
+
+  // Track view on page load
+  useEffect(() => {
+    if (business) {
+      trackEvent.mutate({
+        event_type: "view",
+        business_id: business.id,
+        category_id: business.category_id || undefined,
+        city: business.city || undefined,
+      });
+    }
+  }, [business?.id]);
+
+  const handleCtaClick = (type: "whatsapp" | "phone" | "website" | "email" | "app") => {
+    if (!business) return;
+    trackEvent.mutate({
+      event_type: `click_${type}` as any,
+      business_id: business.id,
+      category_id: business.category_id || undefined,
+      city: business.city || undefined,
+    });
+  };
+
+  const getAlcanceLabel = () => {
+    if (!business) return "";
+    switch (business.alcance) {
+      case "nacional":
+        return "Entrega em todo o país";
+      case "local":
+        return business.city ? `Atende em ${business.city}` : "Atendimento local";
+      case "hibrido":
+        return business.city ? `${business.city} + envios nacionais` : "Local + envios nacionais";
+      default:
+        return "";
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="animate-pulse text-center">
+            <div className="h-8 bg-muted rounded w-48 mx-auto mb-4" />
+            <div className="h-4 bg-muted rounded w-64 mx-auto" />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!business) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Negócio não encontrado</h1>
+            <Link to="/">
+              <Button>Voltar ao início</Button>
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="section-hero py-8">
+          <div className="container">
+            {business.categories && (
+              <Link 
+                to={`/categoria/${business.categories.slug}`} 
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Voltar a {business.categories.name}
+              </Link>
+            )}
+          </div>
+        </section>
+
+        {/* Business Details */}
+        <section className="pb-12">
+          <div className="container">
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Main Content */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Image */}
+                <div className="relative aspect-video rounded-2xl overflow-hidden bg-muted">
+                  {business.logo_url ? (
+                    <img
+                      src={business.logo_url}
+                      alt={business.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                      <span className="text-8xl font-bold text-primary/30">
+                        {business.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Badges */}
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    {business.is_featured && (
+                      <span className="badge-featured">
+                        <Star className="w-3 h-3" />
+                        Destaque
+                      </span>
+                    )}
+                    {business.is_premium && !business.is_featured && (
+                      <span className="badge-premium">Premium</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="space-y-4">
+                  {business.categories && (
+                    <span className="text-sm font-medium text-primary uppercase tracking-wide">
+                      {business.categories.name}
+                    </span>
+                  )}
+                  
+                  <h1 className="text-3xl md:text-4xl font-bold">{business.name}</h1>
+                  
+                  {/* Location */}
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    {business.alcance === "nacional" ? (
+                      <Globe className="w-5 h-5" />
+                    ) : (
+                      <MapPin className="w-5 h-5" />
+                    )}
+                    <span>{getAlcanceLabel()}</span>
+                  </div>
+
+                  {/* Description */}
+                  {business.description && (
+                    <p className="text-lg text-muted-foreground leading-relaxed">
+                      {business.description}
+                    </p>
+                  )}
+
+                  {/* Schedule */}
+                  {(business.schedule_weekdays || business.schedule_weekend) && (
+                    <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center gap-2 font-medium">
+                        <Clock className="w-5 h-5 text-primary" />
+                        Horário
+                      </div>
+                      {business.schedule_weekdays && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Dias úteis:</span> {business.schedule_weekdays}
+                        </p>
+                      )}
+                      {business.schedule_weekend && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Fim de semana:</span> {business.schedule_weekend}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Sidebar - CTAs */}
+              <div className="lg:col-span-1">
+                <div className="sticky top-24 bg-card rounded-2xl p-6 shadow-card space-y-4">
+                  <h3 className="text-xl font-bold">Resolva hoje o seu problema</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Contacte diretamente — sem intermediários!
+                  </p>
+
+                  <div className="space-y-3 pt-2">
+                    {business.cta_whatsapp && (
+                      <Button
+                        className="btn-cta-whatsapp w-full justify-center text-base"
+                        onClick={() => {
+                          handleCtaClick("whatsapp");
+                          window.open(`https://wa.me/${business.cta_whatsapp!.replace(/\D/g, "")}`, "_blank");
+                        }}
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        WhatsApp
+                      </Button>
+                    )}
+                    
+                    {business.cta_phone && (
+                      <Button
+                        className="btn-cta-phone w-full justify-center text-base"
+                        onClick={() => {
+                          handleCtaClick("phone");
+                          window.open(`tel:${business.cta_phone}`, "_blank");
+                        }}
+                      >
+                        <Phone className="w-5 h-5" />
+                        Ligar Agora
+                      </Button>
+                    )}
+                    
+                    {business.cta_email && (
+                      <Button
+                        variant="outline"
+                        className="w-full justify-center text-base"
+                        onClick={() => {
+                          handleCtaClick("email");
+                          window.open(`mailto:${business.cta_email}`, "_blank");
+                        }}
+                      >
+                        <Mail className="w-5 h-5" />
+                        Enviar Email
+                      </Button>
+                    )}
+                    
+                    {business.cta_website && (
+                      <Button
+                        variant="outline"
+                        className="w-full justify-center text-base"
+                        onClick={() => {
+                          handleCtaClick("website");
+                          window.open(business.cta_website!, "_blank");
+                        }}
+                      >
+                        <ExternalLink className="w-5 h-5" />
+                        Ver Website
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
+};
+
+export default BusinessPage;

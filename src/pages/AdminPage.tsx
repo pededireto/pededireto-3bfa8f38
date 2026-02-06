@@ -1,51 +1,54 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
- import { Menu, X, Loader2 } from "lucide-react";
- import { useAllRestaurants } from "@/hooks/useRestaurants";
- import { useAllZones } from "@/hooks/useZones";
- import { useSuggestions } from "@/hooks/useSuggestions";
+import { Menu, X, Loader2 } from "lucide-react";
+import { useAllBusinesses } from "@/hooks/useBusinesses";
+import { useAllCategories } from "@/hooks/useCategories";
+import { useSuggestions } from "@/hooks/useSuggestions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
- import AdminSidebar, { AdminTab } from "@/components/admin/AdminSidebar";
- import DashboardContent from "@/components/admin/DashboardContent";
- import RestaurantsContent from "@/components/admin/RestaurantsContent";
- import ZonesContent from "@/components/admin/ZonesContent";
- import FeaturedContent from "@/components/admin/FeaturedContent";
- import SuggestionsContent from "@/components/admin/SuggestionsContent";
+import AdminSidebar, { AdminTab } from "@/components/admin/AdminSidebar";
+import DashboardContent from "@/components/admin/DashboardContent";
+import BusinessesContent from "@/components/admin/BusinessesContent";
+import CategoriesContent from "@/components/admin/CategoriesContent";
+import FeaturedContent from "@/components/admin/FeaturedContent";
+import SuggestionsContent from "@/components/admin/SuggestionsContent";
+import AnalyticsContent from "@/components/admin/AnalyticsContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-   
-   const { data: restaurants = [], isLoading: restaurantsLoading } = useAllRestaurants();
-   const { data: zones = [], isLoading: zonesLoading } = useAllZones();
-   const { data: suggestions = [], isLoading: suggestionsLoading } = useSuggestions();
- 
-   const isLoading = restaurantsLoading || zonesLoading || suggestionsLoading;
+  
+  const { data: businesses = [], isLoading: businessesLoading } = useAllBusinesses();
+  const { data: categories = [], isLoading: categoriesLoading } = useAllCategories();
+  const { data: suggestions = [], isLoading: suggestionsLoading } = useSuggestions();
+
+  const isLoading = businessesLoading || categoriesLoading || suggestionsLoading;
 
   const renderContent = () => {
-     if (isLoading) {
-       return (
-         <div className="flex items-center justify-center py-16">
-           <div className="text-center">
-             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-             <p className="text-muted-foreground">A carregar dados...</p>
-           </div>
-         </div>
-       );
-     }
- 
+    if (isLoading && activeTab !== "analytics") {
+      return (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">A carregar dados...</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case "dashboard":
-         return <DashboardContent restaurants={restaurants} zones={zones} suggestions={suggestions} />;
-      case "restaurants":
-         return <RestaurantsContent restaurants={restaurants} zones={zones} />;
-      case "zones":
-         return <ZonesContent zones={zones} restaurants={restaurants} />;
+        return <DashboardContent businesses={businesses} categories={categories} suggestions={suggestions} />;
+      case "businesses":
+        return <BusinessesContent businesses={businesses} categories={categories} />;
+      case "categories":
+        return <CategoriesContent categories={categories} businesses={businesses} />;
       case "featured":
-         return <FeaturedContent restaurants={restaurants} />;
-       case "suggestions":
-         return <SuggestionsContent suggestions={suggestions} />;
+        return <FeaturedContent businesses={businesses} />;
+      case "suggestions":
+        return <SuggestionsContent suggestions={suggestions} />;
+      case "analytics":
+        return <AnalyticsContent />;
       default:
         return null;
     }
@@ -73,11 +76,11 @@ const AdminPage = () => {
           "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-sidebar text-sidebar-foreground transform transition-transform duration-200 lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-           <AdminSidebar 
-             activeTab={activeTab} 
-             setActiveTab={setActiveTab} 
-             setSidebarOpen={setSidebarOpen}
-           />
+          <AdminSidebar 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            setSidebarOpen={setSidebarOpen}
+          />
         </aside>
 
         {/* Overlay for mobile */}
