@@ -5,113 +5,125 @@
 @tailwind utilities;
 
 /* Pede Direto Design System
-   Warm, inviting colors inspired by Portuguese cuisine
+   Verde + Coral CTAs - Multi-negócio marketplace
    All colors in HSL
 */
 
 @layer base {
   :root {
-    /* Warm cream background */
-    --background: 30 50% 98%;
-    --foreground: 20 25% 15%;
+    /* Clean light background */
+    --background: 120 10% 98%;
+    --foreground: 150 20% 15%;
 
     /* Card surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 20 25% 15%;
+    --card-foreground: 150 20% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 20 25% 15%;
+    --popover-foreground: 150 20% 15%;
 
-    /* Coral/Terracotta primary */
-    --primary: 14 76% 55%;
+    /* Verde Pede Direto - Primary */
+    --primary: 142 50% 42%;
     --primary-foreground: 0 0% 100%;
 
-    /* Warm cream secondary */
-    --secondary: 30 30% 94%;
-    --secondary-foreground: 20 25% 25%;
+    /* Light green secondary */
+    --secondary: 140 30% 94%;
+    --secondary-foreground: 150 20% 25%;
 
-    /* Muted warm tones */
-    --muted: 30 20% 92%;
-    --muted-foreground: 20 15% 45%;
+    /* Muted tones */
+    --muted: 140 15% 92%;
+    --muted-foreground: 150 10% 45%;
 
-    /* Sage/Olive accent */
-    --accent: 145 25% 45%;
+    /* Coral/Orange accent for CTAs */
+    --accent: 16 85% 57%;
     --accent-foreground: 0 0% 100%;
+
+    /* CTA específico */
+    --cta: 16 85% 57%;
+    --cta-foreground: 0 0% 100%;
+    --cta-hover: 16 85% 50%;
 
     /* Status colors */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 145 63% 42%;
+    --success: 142 63% 42%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 20 25% 15%;
+    --warning-foreground: 150 20% 15%;
 
     /* Borders and inputs */
-    --border: 30 20% 88%;
-    --input: 30 20% 88%;
-    --ring: 14 76% 55%;
+    --border: 140 15% 88%;
+    --input: 140 15% 88%;
+    --ring: 142 50% 42%;
 
     --radius: 0.75rem;
 
-    /* Featured/highlight gradient */
-    --gradient-featured: linear-gradient(135deg, hsl(14 76% 55%) 0%, hsl(25 85% 60%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(30 50% 98%) 0%, hsl(30 40% 95%) 100%);
+    /* Gradients */
+    --gradient-hero: linear-gradient(180deg, hsl(140 20% 97%) 0%, hsl(140 15% 94%) 100%);
+    --gradient-cta: linear-gradient(135deg, hsl(16 85% 57%) 0%, hsl(25 90% 55%) 100%);
+    --gradient-featured: linear-gradient(135deg, hsl(142 50% 42%) 0%, hsl(160 45% 45%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(140 20% 98%) 100%);
 
     /* Shadows */
-    --shadow-card: 0 4px 20px -4px hsl(20 25% 15% / 0.08);
-    --shadow-card-hover: 0 12px 32px -8px hsl(20 25% 15% / 0.15);
-    --shadow-featured: 0 8px 30px -6px hsl(14 76% 55% / 0.35);
+    --shadow-card: 0 4px 20px -4px hsl(150 20% 15% / 0.08);
+    --shadow-card-hover: 0 12px 32px -8px hsl(150 20% 15% / 0.15);
+    --shadow-cta: 0 8px 24px -6px hsl(16 85% 57% / 0.4);
+    --shadow-featured: 0 8px 30px -6px hsl(142 50% 42% / 0.35);
 
     /* Sidebar (admin) */
-    --sidebar-background: 20 25% 15%;
-    --sidebar-foreground: 30 20% 92%;
-    --sidebar-primary: 14 76% 55%;
+    --sidebar-background: 150 25% 12%;
+    --sidebar-foreground: 140 15% 92%;
+    --sidebar-primary: 142 50% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 20 20% 22%;
-    --sidebar-accent-foreground: 30 20% 92%;
-    --sidebar-border: 20 15% 25%;
-    --sidebar-ring: 14 76% 55%;
+    --sidebar-accent: 150 20% 18%;
+    --sidebar-accent-foreground: 140 15% 92%;
+    --sidebar-border: 150 15% 20%;
+    --sidebar-ring: 142 50% 45%;
   }
 
   .dark {
-    --background: 20 25% 8%;
-    --foreground: 30 20% 92%;
+    --background: 150 20% 6%;
+    --foreground: 140 15% 92%;
 
-    --card: 20 20% 12%;
-    --card-foreground: 30 20% 92%;
+    --card: 150 18% 10%;
+    --card-foreground: 140 15% 92%;
 
-    --popover: 20 20% 12%;
-    --popover-foreground: 30 20% 92%;
+    --popover: 150 18% 10%;
+    --popover-foreground: 140 15% 92%;
 
-    --primary: 14 76% 55%;
+    --primary: 142 50% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 20 15% 18%;
-    --secondary-foreground: 30 20% 92%;
+    --secondary: 150 15% 15%;
+    --secondary-foreground: 140 15% 92%;
 
-    --muted: 20 15% 18%;
-    --muted-foreground: 30 15% 55%;
+    --muted: 150 12% 15%;
+    --muted-foreground: 140 10% 55%;
 
-    --accent: 145 25% 45%;
+    --accent: 16 85% 57%;
     --accent-foreground: 0 0% 100%;
+
+    --cta: 16 85% 57%;
+    --cta-foreground: 0 0% 100%;
+    --cta-hover: 16 85% 62%;
 
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 20 15% 20%;
-    --input: 20 15% 20%;
-    --ring: 14 76% 55%;
+    --border: 150 12% 18%;
+    --input: 150 12% 18%;
+    --ring: 142 50% 50%;
 
-    --sidebar-background: 20 25% 6%;
-    --sidebar-foreground: 30 20% 92%;
-    --sidebar-primary: 14 76% 55%;
+    --sidebar-background: 150 25% 5%;
+    --sidebar-foreground: 140 15% 92%;
+    --sidebar-primary: 142 50% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 20 20% 14%;
-    --sidebar-accent-foreground: 30 20% 92%;
-    --sidebar-border: 20 15% 18%;
-    --sidebar-ring: 14 76% 55%;
+    --sidebar-accent: 150 18% 12%;
+    --sidebar-accent-foreground: 140 15% 92%;
+    --sidebar-border: 150 12% 15%;
+    --sidebar-ring: 142 50% 50%;
   }
 }
 
@@ -130,40 +142,75 @@
 }
 
 @layer components {
+  /* Badges */
   .badge-pede-direto {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent text-accent-foreground;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-primary text-primary-foreground;
   }
 
   .badge-featured {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full text-primary-foreground;
+    @apply inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full text-white;
     background: var(--gradient-featured);
   }
 
-  .card-restaurant {
+  .badge-premium {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full;
+    background: var(--gradient-cta);
+    color: white;
+  }
+
+  /* Cards */
+  .card-business {
     @apply bg-card rounded-xl overflow-hidden transition-all duration-300;
     box-shadow: var(--shadow-card);
   }
 
-  .card-restaurant:hover {
+  .card-business:hover {
     box-shadow: var(--shadow-card-hover);
     transform: translateY(-4px);
   }
 
   .card-featured {
-    @apply relative overflow-hidden;
+    @apply relative overflow-hidden border-2 border-primary/20;
     box-shadow: var(--shadow-featured);
   }
 
+  .card-category {
+    @apply bg-card rounded-2xl p-6 transition-all duration-300 cursor-pointer border border-transparent;
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-category:hover {
+    @apply border-primary/30;
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
+
+  /* CTA Buttons */
   .btn-cta {
     @apply inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold rounded-xl transition-all duration-200;
   }
 
   .btn-cta-primary {
-    @apply btn-cta bg-primary text-primary-foreground hover:opacity-90 active:scale-[0.98];
+    @apply btn-cta text-white;
+    background: var(--gradient-cta);
+    box-shadow: var(--shadow-cta);
+  }
+
+  .btn-cta-primary:hover {
+    @apply opacity-90;
+    transform: translateY(-1px);
+  }
+
+  .btn-cta-primary:active {
+    transform: scale(0.98);
   }
 
   .btn-cta-secondary {
-    @apply btn-cta bg-secondary text-secondary-foreground hover:bg-secondary/80;
+    @apply btn-cta bg-primary text-primary-foreground hover:opacity-90;
+  }
+
+  .btn-cta-outline {
+    @apply btn-cta bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground;
   }
 
   .btn-cta-whatsapp {
@@ -175,22 +222,60 @@
     background-color: hsl(142 70% 40%);
   }
 
+  .btn-cta-phone {
+    @apply btn-cta bg-blue-500 text-white hover:bg-blue-600;
+  }
+
+  /* Hero Section */
   .section-hero {
     background: var(--gradient-hero);
   }
 
-  .city-chip {
+  /* Category/City chips */
+  .chip {
     @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer;
     @apply bg-card text-foreground border border-border hover:border-primary hover:text-primary;
   }
 
-  .city-chip-active {
+  .chip-active {
     @apply bg-primary text-primary-foreground border-primary;
+  }
+
+  /* Trust badges */
+  .trust-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium;
+  }
+
+  /* Mascot container */
+  .mascot-container {
+    @apply relative;
+  }
+
+  .mascot-bubble {
+    @apply absolute -top-2 -right-2 bg-card rounded-xl p-3 shadow-lg border border-border;
+    @apply text-sm font-medium text-foreground;
+  }
+
+  /* Search input enhanced */
+  .search-input-hero {
+    @apply w-full px-6 py-4 text-lg rounded-2xl border-2 border-border bg-card;
+    @apply focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none;
+    @apply transition-all duration-200;
   }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-featured);
+  }
+
+  .text-gradient-cta {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-cta);
   }
 }

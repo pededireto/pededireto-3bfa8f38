@@ -14,6 +14,179 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          business_id: string | null
+          category_id: string | null
+          city: string | null
+          created_at: string | null
+          event_type: string
+          id: string
+        }
+        Insert: {
+          business_id?: string | null
+          category_id?: string | null
+          city?: string | null
+          created_at?: string | null
+          event_type: string
+          id?: string
+        }
+        Update: {
+          business_id?: string | null
+          category_id?: string | null
+          city?: string | null
+          created_at?: string | null
+          event_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      businesses: {
+        Row: {
+          alcance: Database["public"]["Enums"]["alcance_tipo"] | null
+          category_id: string | null
+          city: string | null
+          coordinates: Json | null
+          created_at: string | null
+          cta_app: string | null
+          cta_email: string | null
+          cta_phone: string | null
+          cta_website: string | null
+          cta_whatsapp: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          images: string[] | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          is_premium: boolean | null
+          logo_url: string | null
+          name: string
+          schedule_weekdays: string | null
+          schedule_weekend: string | null
+          slug: string
+          updated_at: string | null
+          zone: string | null
+        }
+        Insert: {
+          alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
+          category_id?: string | null
+          city?: string | null
+          coordinates?: Json | null
+          created_at?: string | null
+          cta_app?: string | null
+          cta_email?: string | null
+          cta_phone?: string | null
+          cta_website?: string | null
+          cta_whatsapp?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          images?: string[] | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          is_premium?: boolean | null
+          logo_url?: string | null
+          name: string
+          schedule_weekdays?: string | null
+          schedule_weekend?: string | null
+          slug: string
+          updated_at?: string | null
+          zone?: string | null
+        }
+        Update: {
+          alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
+          category_id?: string | null
+          city?: string | null
+          coordinates?: Json | null
+          created_at?: string | null
+          cta_app?: string | null
+          cta_email?: string | null
+          cta_phone?: string | null
+          cta_website?: string | null
+          cta_whatsapp?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          images?: string[] | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          is_premium?: boolean | null
+          logo_url?: string | null
+          name?: string
+          schedule_weekdays?: string | null
+          schedule_weekend?: string | null
+          slug?: string
+          updated_at?: string | null
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "businesses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          alcance_default: Database["public"]["Enums"]["alcance_tipo"] | null
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          alcance_default?: Database["public"]["Enums"]["alcance_tipo"] | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          alcance_default?: Database["public"]["Enums"]["alcance_tipo"] | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -205,6 +378,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
+      alcance_tipo: "local" | "nacional" | "hibrido"
       app_role: "admin" | "user"
     }
     CompositeTypes: {
@@ -333,6 +507,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      alcance_tipo: ["local", "nacional", "hibrido"],
       app_role: ["admin", "user"],
     },
   },

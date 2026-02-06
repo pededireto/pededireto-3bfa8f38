@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MapPin, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
@@ -8,13 +8,10 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="flex flex-col">
-            <span className="text-xl font-bold text-primary">Pede Direto</span>
-            <span className="text-[10px] text-muted-foreground -mt-1">Do restaurante para ti.</span>
-          </div>
+          <span className="text-2xl font-bold text-primary">Pede Direto</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -23,19 +20,19 @@ const Header = () => {
             to="/" 
             className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
           >
-            Restaurantes
+            Início
           </Link>
           <Link 
-            to="/como-funciona" 
+            to="/#categorias" 
             className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
           >
-            Como Funciona
+            Categorias
           </Link>
           <Link 
-            to="/admin" 
+            to="/admin/login" 
             className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
           >
-            Área Parceiros
+            Área Admin
           </Link>
         </nav>
 
@@ -54,21 +51,21 @@ const Header = () => {
                 className="text-lg font-medium text-foreground hover:text-primary transition-colors"
                 onClick={() => setIsOpen(false)}
               >
-                Restaurantes
+                Início
               </Link>
               <Link 
-                to="/como-funciona" 
+                to="/#categorias" 
                 className="text-lg font-medium text-foreground hover:text-primary transition-colors"
                 onClick={() => setIsOpen(false)}
               >
-                Como Funciona
+                Categorias
               </Link>
               <Link 
-                to="/admin" 
+                to="/admin/login" 
                 className="text-lg font-medium text-foreground hover:text-primary transition-colors"
                 onClick={() => setIsOpen(false)}
               >
-                Área Parceiros
+                Área Admin
               </Link>
             </nav>
           </SheetContent>
