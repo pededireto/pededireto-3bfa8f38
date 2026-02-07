@@ -1,11 +1,13 @@
-import { 
-  Building2, 
-  FolderOpen, 
-  Star, 
+import {
+  Building2,
+  FolderOpen,
+  Star,
   Lightbulb,
-  TrendingUp
+  TrendingUp,
+  AlertTriangle,
+  CalendarClock
 } from "lucide-react";
-import { BusinessWithCategory } from "@/hooks/useBusinesses";
+import { BusinessWithCategory, useExpiringSubscriptions } from "@/hooks/useBusinesses";
 import { Category } from "@/hooks/useCategories";
 import { Suggestion } from "@/hooks/useSuggestions";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +18,9 @@ interface DashboardContentProps {
   suggestions: Suggestion[];
 }
 
-const StatCard = ({ title, value, icon: Icon, trend }: { 
-  title: string; 
-  value: number; 
+const StatCard = ({ title, value, icon: Icon, trend }: {
+  title: string;
+  value: number;
   icon: React.ElementType;
   trend?: string;
 }) => (
@@ -43,8 +45,9 @@ const StatCard = ({ title, value, icon: Icon, trend }: {
 
 const DashboardContent = ({ businesses, categories, suggestions }: DashboardContentProps) => {
   const featuredCount = businesses.filter(b => b.is_featured).length;
-  const premiumCount = businesses.filter(b => b.is_premium).length;
   const activeBusinesses = businesses.filter(b => b.is_active).length;
+  const activeSubscriptions = businesses.filter(b => b.subscription_status === "active").length;
+  const { data: expiring7 = [] } = useExpiringSubscriptions(7);
 
   return (
     <div className="space-y-6">
@@ -53,28 +56,35 @@ const DashboardContent = ({ businesses, categories, suggestions }: DashboardCont
         <p className="text-muted-foreground">Visão geral da plataforma Pede Direto</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Total Negócios" 
-          value={businesses.length} 
-          icon={Building2}
-        />
-        <StatCard 
-          title="Ativos" 
-          value={activeBusinesses} 
-          icon={Building2}
-        />
-        <StatCard 
-          title="Em Destaque" 
-          value={featuredCount} 
-          icon={Star}
-        />
-        <StatCard 
-          title="Categorias" 
-          value={categories.filter(c => c.is_active).length} 
-          icon={FolderOpen}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <StatCard title="Total Negócios" value={businesses.length} icon={Building2} />
+        <StatCard title="Ativos" value={activeBusinesses} icon={Building2} />
+        <StatCard title="Em Destaque" value={featuredCount} icon={Star} />
+        <StatCard title="Categorias" value={categories.filter(c => c.is_active).length} icon={FolderOpen} />
+        <StatCard title="Subscrições Ativas" value={activeSubscriptions} icon={CalendarClock} />
       </div>
+
+      {/* Subscription Alerts */}
+      {expiring7.length > 0 && (
+        <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <h2 className="font-semibold text-destructive">Subscrições a expirar em 7 dias</h2>
+            <Badge variant="destructive">{expiring7.length}</Badge>
+          </div>
+          <div className="space-y-2">
+            {expiring7.slice(0, 5).map((business) => (
+              <div key={business.id} className="flex items-center gap-3 text-sm">
+                <span className="font-medium">{business.name}</span>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-muted-foreground">
+                  Expira: {business.subscription_end_date ? new Date(business.subscription_end_date).toLocaleDateString("pt-PT") : "-"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Businesses */}
@@ -84,8 +94,8 @@ const DashboardContent = ({ businesses, categories, suggestions }: DashboardCont
             {businesses.slice(0, 5).map((business) => (
               <div key={business.id} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30">
                 {business.logo_url ? (
-                  <img 
-                    src={business.logo_url} 
+                  <img
+                    src={business.logo_url}
                     alt={business.name}
                     className="w-12 h-12 rounded-lg object-cover"
                   />
@@ -106,9 +116,9 @@ const DashboardContent = ({ businesses, categories, suggestions }: DashboardCont
                       Destaque
                     </Badge>
                   )}
-                  {business.is_premium && (
-                    <Badge variant="secondary" className="bg-accent/10 text-accent">
-                      Premium
+                  {business.subscription_status === "active" && (
+                    <Badge variant="secondary" className="bg-accent/10 text-accent-foreground">
+                      Sub.
                     </Badge>
                   )}
                 </div>

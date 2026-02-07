@@ -11,13 +11,14 @@ import DashboardContent from "@/components/admin/DashboardContent";
 import BusinessesContent from "@/components/admin/BusinessesContent";
 import CategoriesContent from "@/components/admin/CategoriesContent";
 import FeaturedContent from "@/components/admin/FeaturedContent";
+import SubscriptionsContent from "@/components/admin/SubscriptionsContent";
 import SuggestionsContent from "@/components/admin/SuggestionsContent";
 import AnalyticsContent from "@/components/admin/AnalyticsContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   const { data: businesses = [], isLoading: businessesLoading } = useAllBusinesses();
   const { data: categories = [], isLoading: categoriesLoading } = useAllCategories();
   const { data: suggestions = [], isLoading: suggestionsLoading } = useSuggestions();
@@ -45,6 +46,8 @@ const AdminPage = () => {
         return <CategoriesContent categories={categories} businesses={businesses} />;
       case "featured":
         return <FeaturedContent businesses={businesses} />;
+      case "subscriptions":
+        return <SubscriptionsContent businesses={businesses} />;
       case "suggestions":
         return <SuggestionsContent suggestions={suggestions} />;
       case "analytics":
@@ -76,16 +79,16 @@ const AdminPage = () => {
           "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-sidebar text-sidebar-foreground transform transition-transform duration-200 lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          <AdminSidebar 
-            activeTab={activeTab} 
-            setActiveTab={setActiveTab} 
+          <AdminSidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
             setSidebarOpen={setSidebarOpen}
           />
         </aside>
 
         {/* Overlay for mobile */}
         {sidebarOpen && (
-          <div 
+          <div
             className="fixed inset-0 bg-black/50 z-30 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />

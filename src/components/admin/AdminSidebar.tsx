@@ -1,18 +1,19 @@
 import { Link } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Building2, 
-  FolderOpen, 
-  Star, 
+import {
+  LayoutDashboard,
+  Building2,
+  FolderOpen,
+  Star,
   ExternalLink,
   LogOut,
   Lightbulb,
-  BarChart3
+  BarChart3,
+  CalendarClock
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "suggestions" | "analytics";
+export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "subscriptions" | "suggestions" | "analytics";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -25,6 +26,7 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "businesses", label: "Negócios", icon: Building2 },
   { id: "categories", label: "Categorias", icon: FolderOpen },
   { id: "featured", label: "Destaques", icon: Star },
+  { id: "subscriptions", label: "Subscrições", icon: CalendarClock },
   { id: "suggestions", label: "Sugestões", icon: Lightbulb },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
 ];
@@ -72,7 +74,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
 
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border space-y-2">
-        <Link 
+        <Link
           to="/"
           className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors"
         >
