@@ -80,6 +80,12 @@ export type Database = {
           schedule_weekdays: string | null
           schedule_weekend: string | null
           slug: string
+          subcategory_id: string | null
+          subscription_end_date: string | null
+          subscription_plan: Database["public"]["Enums"]["subscription_plan_tipo"]
+          subscription_price: number | null
+          subscription_start_date: string | null
+          subscription_status: Database["public"]["Enums"]["subscription_status_tipo"]
           updated_at: string | null
           zone: string | null
         }
@@ -106,6 +112,12 @@ export type Database = {
           schedule_weekdays?: string | null
           schedule_weekend?: string | null
           slug: string
+          subcategory_id?: string | null
+          subscription_end_date?: string | null
+          subscription_plan?: Database["public"]["Enums"]["subscription_plan_tipo"]
+          subscription_price?: number | null
+          subscription_start_date?: string | null
+          subscription_status?: Database["public"]["Enums"]["subscription_status_tipo"]
           updated_at?: string | null
           zone?: string | null
         }
@@ -132,6 +144,12 @@ export type Database = {
           schedule_weekdays?: string | null
           schedule_weekend?: string | null
           slug?: string
+          subcategory_id?: string | null
+          subscription_end_date?: string | null
+          subscription_plan?: Database["public"]["Enums"]["subscription_plan_tipo"]
+          subscription_price?: number | null
+          subscription_start_date?: string | null
+          subscription_status?: Database["public"]["Enums"]["subscription_status_tipo"]
           updated_at?: string | null
           zone?: string | null
         }
@@ -141,6 +159,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
             referencedColumns: ["id"]
           },
         ]
@@ -291,6 +316,53 @@ export type Database = {
           },
         ]
       }
+      subcategories: {
+        Row: {
+          category_id: string
+          created_at: string
+          description: string | null
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suggestions: {
         Row: {
           city_name: string
@@ -380,6 +452,13 @@ export type Database = {
     Enums: {
       alcance_tipo: "local" | "nacional" | "hibrido"
       app_role: "admin" | "user"
+      subscription_plan_tipo:
+        | "free"
+        | "1_month"
+        | "3_months"
+        | "6_months"
+        | "1_year"
+      subscription_status_tipo: "inactive" | "active" | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -509,6 +588,14 @@ export const Constants = {
     Enums: {
       alcance_tipo: ["local", "nacional", "hibrido"],
       app_role: ["admin", "user"],
+      subscription_plan_tipo: [
+        "free",
+        "1_month",
+        "3_months",
+        "6_months",
+        "1_year",
+      ],
+      subscription_status_tipo: ["inactive", "active", "expired"],
     },
   },
 } as const
