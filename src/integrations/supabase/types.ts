@@ -56,6 +56,42 @@ export type Database = {
           },
         ]
       }
+      business_subcategories: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          subcategory_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          subcategory_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          subcategory_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_subcategories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_subcategories_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           alcance: Database["public"]["Enums"]["alcance_tipo"] | null
@@ -448,6 +484,19 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      search_businesses_and_subcategories: {
+        Args: { search_term: string }
+        Returns: {
+          category_name: string
+          category_slug: string
+          relevance: number
+          result_id: string
+          result_name: string
+          result_slug: string
+          result_type: string
+        }[]
+      }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       alcance_tipo: "local" | "nacional" | "hibrido"
