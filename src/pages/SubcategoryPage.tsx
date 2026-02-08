@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
 import { useSubcategory } from "@/hooks/useSubcategories";
-import { useBusinesses, useFeaturedBusinesses } from "@/hooks/useBusinesses";
+import { useBusinesses } from "@/hooks/useBusinesses";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BusinessGrid from "@/components/BusinessGrid";
@@ -16,15 +16,14 @@ const SubcategoryPage = () => {
   const [cityFilter, setCityFilter] = useState("");
 
   const { data: subcategory, isLoading: subcategoryLoading } = useSubcategory(subcategorySlug);
-  const { data: featuredBusinesses = [], isLoading: featuredLoading } = useFeaturedBusinesses(subcategory?.category_id);
   const { data: allBusinesses = [], isLoading: businessesLoading } = useBusinesses(
     undefined,
     cityFilter,
     subcategory?.id
   );
 
-  // Filter featured by subcategory
-  const subcategoryFeatured = featuredBusinesses.filter(b => b.subcategory_id === subcategory?.id);
+  // Separate featured from regular
+  const subcategoryFeatured = allBusinesses.filter(b => b.is_featured);
   const regularBusinesses = allBusinesses.filter(b => !b.is_featured);
 
   if (subcategoryLoading) {
@@ -103,7 +102,7 @@ const SubcategoryPage = () => {
 
         {/* Featured */}
         {subcategoryFeatured.length > 0 && (
-          <FeaturedSection businesses={subcategoryFeatured} isLoading={featuredLoading} />
+          <FeaturedSection businesses={subcategoryFeatured} />
         )}
 
         {/* All Businesses */}

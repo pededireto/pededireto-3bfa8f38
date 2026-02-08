@@ -71,6 +71,35 @@ export const useBusinesses = (categoryId?: string, city?: string, subcategoryId?
   return useQuery({
     queryKey: ["businesses", categoryId, city, subcategoryId],
     queryFn: async () => {
+      // If filtering by subcategory, use junction table for many-to-many
+      if (subcategoryId) {
+        const { data: junctionData, error: jError } = await supabase
+          .from("business_subcategories")
+          .select("business_id")
+          .eq("subcategory_id", subcategoryId);
+
+        if (jError) throw jError;
+        if (!junctionData || junctionData.length === 0) return [];
+
+        const businessIds = junctionData.map((j) => j.business_id);
+
+        let query = supabase
+          .from("businesses")
+          .select(BUSINESS_SELECT)
+          .eq("is_active", true)
+          .in("id", businessIds)
+          .order("is_featured", { ascending: false })
+          .order("is_premium", { ascending: false })
+          .order("display_order", { ascending: true });
+
+        if (categoryId) query = query.eq("category_id", categoryId);
+        if (city) query = query.or(`city.ilike.%${city}%,alcance.eq.nacional`);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data as unknown as BusinessWithCategory[];
+      }
+
       let query = supabase
         .from("businesses")
         .select(BUSINESS_SELECT)
@@ -80,7 +109,6 @@ export const useBusinesses = (categoryId?: string, city?: string, subcategoryId?
         .order("display_order", { ascending: true });
 
       if (categoryId) query = query.eq("category_id", categoryId);
-      if (subcategoryId) query = query.eq("subcategory_id", subcategoryId);
       if (city) query = query.or(`city.ilike.%${city}%,alcance.eq.nacional`);
 
       const { data, error } = await query;
