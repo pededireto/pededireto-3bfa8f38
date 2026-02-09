@@ -14,6 +14,9 @@ import FeaturedContent from "@/components/admin/FeaturedContent";
 import SubscriptionsContent from "@/components/admin/SubscriptionsContent";
 import SuggestionsContent from "@/components/admin/SuggestionsContent";
 import AnalyticsContent from "@/components/admin/AnalyticsContent";
+import SettingsContent from "@/components/admin/SettingsContent";
+import PagesContent from "@/components/admin/PagesContent";
+import SynonymsContent from "@/components/admin/SynonymsContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -26,7 +29,13 @@ const AdminPage = () => {
   const isLoading = businessesLoading || categoriesLoading || suggestionsLoading;
 
   const renderContent = () => {
-    if (isLoading && activeTab !== "analytics") {
+    // These tabs don't depend on businesses/categories data
+    if (activeTab === "analytics") return <AnalyticsContent />;
+    if (activeTab === "settings") return <SettingsContent />;
+    if (activeTab === "pages") return <PagesContent />;
+    if (activeTab === "synonyms") return <SynonymsContent />;
+
+    if (isLoading) {
       return (
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
@@ -50,8 +59,6 @@ const AdminPage = () => {
         return <SubscriptionsContent businesses={businesses} />;
       case "suggestions":
         return <SuggestionsContent suggestions={suggestions} />;
-      case "analytics":
-        return <AnalyticsContent />;
       default:
         return null;
     }
@@ -74,7 +81,6 @@ const AdminPage = () => {
       </div>
 
       <div className="flex">
-        {/* Sidebar */}
         <aside className={cn(
           "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-sidebar text-sidebar-foreground transform transition-transform duration-200 lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -86,7 +92,6 @@ const AdminPage = () => {
           />
         </aside>
 
-        {/* Overlay for mobile */}
         {sidebarOpen && (
           <div
             className="fixed inset-0 bg-black/50 z-30 lg:hidden"
@@ -94,7 +99,6 @@ const AdminPage = () => {
           />
         )}
 
-        {/* Main Content */}
         <main className="flex-1 min-h-screen lg:min-h-[calc(100vh)] p-4 md:p-8">
           {renderContent()}
         </main>

@@ -56,6 +56,41 @@ export type Database = {
           },
         ]
       }
+      business_contact_logs: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          nota: string | null
+          tipo_contacto: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          nota?: string | null
+          tipo_contacto: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          nota?: string | null
+          tipo_contacto?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_contact_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_subcategories: {
         Row: {
           business_id: string
@@ -97,6 +132,7 @@ export type Database = {
           alcance: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id: string | null
           city: string | null
+          commercial_status: Database["public"]["Enums"]["commercial_status_tipo"]
           coordinates: Json | null
           created_at: string | null
           cta_app: string | null
@@ -113,6 +149,9 @@ export type Database = {
           is_premium: boolean | null
           logo_url: string | null
           name: string
+          premium_level:
+            | Database["public"]["Enums"]["premium_level_tipo"]
+            | null
           schedule_weekdays: string | null
           schedule_weekend: string | null
           slug: string
@@ -129,6 +168,7 @@ export type Database = {
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id?: string | null
           city?: string | null
+          commercial_status?: Database["public"]["Enums"]["commercial_status_tipo"]
           coordinates?: Json | null
           created_at?: string | null
           cta_app?: string | null
@@ -145,6 +185,9 @@ export type Database = {
           is_premium?: boolean | null
           logo_url?: string | null
           name: string
+          premium_level?:
+            | Database["public"]["Enums"]["premium_level_tipo"]
+            | null
           schedule_weekdays?: string | null
           schedule_weekend?: string | null
           slug: string
@@ -161,6 +204,7 @@ export type Database = {
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id?: string | null
           city?: string | null
+          commercial_status?: Database["public"]["Enums"]["commercial_status_tipo"]
           coordinates?: Json | null
           created_at?: string | null
           cta_app?: string | null
@@ -177,6 +221,9 @@ export type Database = {
           is_premium?: boolean | null
           logo_url?: string | null
           name?: string
+          premium_level?:
+            | Database["public"]["Enums"]["premium_level_tipo"]
+            | null
           schedule_weekdays?: string | null
           schedule_weekend?: string | null
           slug?: string
@@ -245,6 +292,45 @@ export type Database = {
           name?: string
           slug?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      institutional_pages: {
+        Row: {
+          content: string | null
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          meta_description: string | null
+          meta_title: string | null
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          meta_description?: string | null
+          meta_title?: string | null
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          meta_description?: string | null
+          meta_title?: string | null
+          slug?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -351,6 +437,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      search_synonyms: {
+        Row: {
+          created_at: string
+          equivalente: string
+          id: string
+          termo: string
+        }
+        Insert: {
+          created_at?: string
+          equivalente: string
+          id?: string
+          termo: string
+        }
+        Update: {
+          created_at?: string
+          equivalente?: string
+          id?: string
+          termo?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: []
       }
       subcategories: {
         Row: {
@@ -501,6 +629,12 @@ export type Database = {
     Enums: {
       alcance_tipo: "local" | "nacional" | "hibrido"
       app_role: "admin" | "user"
+      commercial_status_tipo:
+        | "nao_contactado"
+        | "contactado"
+        | "interessado"
+        | "cliente"
+      premium_level_tipo: "SUPER" | "CATEGORIA" | "SUBCATEGORIA"
       subscription_plan_tipo:
         | "free"
         | "1_month"
@@ -637,6 +771,13 @@ export const Constants = {
     Enums: {
       alcance_tipo: ["local", "nacional", "hibrido"],
       app_role: ["admin", "user"],
+      commercial_status_tipo: [
+        "nao_contactado",
+        "contactado",
+        "interessado",
+        "cliente",
+      ],
+      premium_level_tipo: ["SUPER", "CATEGORIA", "SUBCATEGORIA"],
       subscription_plan_tipo: [
         "free",
         "1_month",

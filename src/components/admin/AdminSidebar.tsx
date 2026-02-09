@@ -8,12 +8,16 @@ import {
   LogOut,
   Lightbulb,
   BarChart3,
-  CalendarClock
+  CalendarClock,
+  Settings,
+  FileText,
+  BookOpen,
+  Crown
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "subscriptions" | "suggestions" | "analytics";
+export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "subscriptions" | "suggestions" | "analytics" | "settings" | "pages" | "synonyms";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -25,10 +29,13 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "businesses", label: "Negócios", icon: Building2 },
   { id: "categories", label: "Categorias", icon: FolderOpen },
-  { id: "featured", label: "Destaques", icon: Star },
+  { id: "featured", label: "Destaques", icon: Crown },
   { id: "subscriptions", label: "Subscrições", icon: CalendarClock },
   { id: "suggestions", label: "Sugestões", icon: Lightbulb },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "pages", label: "Páginas", icon: FileText },
+  { id: "synonyms", label: "Sinónimos", icon: BookOpen },
+  { id: "settings", label: "Configurações", icon: Settings },
 ];
 
 const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarProps) => {
@@ -51,7 +58,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {sidebarItems.map((item) => (
           <button
             key={item.id}
