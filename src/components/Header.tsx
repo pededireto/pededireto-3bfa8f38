@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
+import { useActiveInstitutionalPages } from "@/hooks/useInstitutionalPages";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { data: pages = [] } = useActiveInstitutionalPages();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -16,22 +18,22 @@ const Header = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
-          <Link 
-            to="/" 
-            className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
-          >
+          <Link to="/" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
             Início
           </Link>
-          <Link 
-            to="/#categorias" 
-            className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
-          >
+          <Link to="/#categorias" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
             Categorias
           </Link>
-          <Link 
-            to="/admin/login" 
-            className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
-          >
+          {pages.map((page) => (
+            <Link
+              key={page.id}
+              to={`/pagina/${page.slug}`}
+              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+            >
+              {page.title}
+            </Link>
+          ))}
+          <Link to="/admin/login" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
             Área Admin
           </Link>
         </nav>
@@ -46,25 +48,23 @@ const Header = () => {
           </SheetTrigger>
           <SheetContent side="right" className="w-[280px]">
             <nav className="flex flex-col gap-4 mt-8">
-              <Link 
-                to="/" 
-                className="text-lg font-medium text-foreground hover:text-primary transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
+              <Link to="/" className="text-lg font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
                 Início
               </Link>
-              <Link 
-                to="/#categorias" 
-                className="text-lg font-medium text-foreground hover:text-primary transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
+              <Link to="/#categorias" className="text-lg font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
                 Categorias
               </Link>
-              <Link 
-                to="/admin/login" 
-                className="text-lg font-medium text-foreground hover:text-primary transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
+              {pages.map((page) => (
+                <Link
+                  key={page.id}
+                  to={`/pagina/${page.slug}`}
+                  className="text-lg font-medium text-foreground hover:text-primary transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {page.title}
+                </Link>
+              ))}
+              <Link to="/admin/login" className="text-lg font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
                 Área Admin
               </Link>
             </nav>

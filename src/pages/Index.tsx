@@ -6,17 +6,13 @@ import Footer from "@/components/Footer";
 import HeroSection from "@/components/HeroSection";
 import CategoriesGrid from "@/components/CategoriesGrid";
 import FeaturedSection from "@/components/FeaturedSection";
+import SuperHighlightsSection from "@/components/SuperHighlightsSection";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
   
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const { data: featuredBusinesses = [], isLoading: featuredLoading } = useFeaturedBusinesses();
-
-  const handleSearch = (term: string) => {
-    // TODO: Implement search functionality
-    console.log("Search:", term);
-  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -26,8 +22,10 @@ const Index = () => {
         <HeroSection
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          onSearch={handleSearch}
         />
+
+        {/* Super Destaques (Premium) */}
+        <SuperHighlightsSection />
 
         <CategoriesGrid 
           categories={categories} 

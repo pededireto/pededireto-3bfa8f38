@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { BusinessWithCategory, useCreateBusiness, useUpdateBusiness, useDeleteBusiness, SUBSCRIPTION_PLANS, SubscriptionPlan, SubscriptionStatus } from "@/hooks/useBusinesses";
+import { BusinessWithCategory, useCreateBusiness, useUpdateBusiness, useDeleteBusiness, SUBSCRIPTION_PLANS, SubscriptionPlan, SubscriptionStatus, CommercialStatus, PremiumLevel } from "@/hooks/useBusinesses";
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories, Subcategory } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
@@ -13,7 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Download, MessageSquare } from "lucide-react";
+import ContactLogsDialog from "@/components/admin/ContactLogsDialog";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -67,10 +68,12 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     cta_email: "",
     is_featured: false,
     is_premium: false,
+    premium_level: "" as string,
     is_active: true,
     display_order: 0,
     subscription_plan: "free" as SubscriptionPlan,
     subscription_start_date: "",
+    commercial_status: "nao_contactado" as CommercialStatus,
   });
 
   // Load subcategory IDs when editing
@@ -88,8 +91,9 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       description: "", logo_url: "", city: "", zone: "",
       alcance: "local", schedule_weekdays: "", schedule_weekend: "",
       cta_website: "", cta_whatsapp: "", cta_phone: "", cta_email: "",
-      is_featured: false, is_premium: false, is_active: true,
+      is_featured: false, is_premium: false, premium_level: "", is_active: true,
       display_order: 0, subscription_plan: "free", subscription_start_date: "",
+      commercial_status: "nao_contactado",
     });
     setEditingBusiness(null);
   };
@@ -114,10 +118,12 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       cta_email: business.cta_email || "",
       is_featured: business.is_featured,
       is_premium: business.is_premium,
+      premium_level: business.premium_level || "",
       is_active: business.is_active,
       display_order: business.display_order,
       subscription_plan: business.subscription_plan,
       subscription_start_date: business.subscription_start_date || "",
+      commercial_status: business.commercial_status || "nao_contactado",
     });
     setDialogOpen(true);
   };
@@ -165,9 +171,11 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
         coordinates: null,
         is_featured: formData.is_featured,
         is_premium: formData.is_premium,
+        premium_level: formData.premium_level ? (formData.premium_level as PremiumLevel) : null,
         is_active: formData.subscription_plan !== "free" ? true : formData.is_active,
         display_order: formData.display_order,
         subscription_plan: formData.subscription_plan,
+        commercial_status: formData.commercial_status,
         ...subscriptionData,
       };
 
@@ -282,6 +290,8 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             cta_app: null, images: [], coordinates: null,
             schedule_weekdays: null, schedule_weekend: null,
             is_active: false, is_featured: false, is_premium: false,
+            premium_level: null,
+            commercial_status: "nao_contactado" as CommercialStatus,
             display_order: 0,
             subscription_plan: "free" as SubscriptionPlan,
             subscription_price: 0,
@@ -314,27 +324,25 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
 
   // Excel export
   const handleExcelExport = () => {
-    const exportData = filteredBusinesses.map((b) => {
-      // Get subcategory names from allSubcategories via junction (we only have primary here)
-      const subcatName = b.subcategories?.name || "-";
-
-      return {
-        Nome: b.name,
-        Categoria: b.categories?.name || "-",
-        Subcategoria: subcatName,
-        Cidade: b.city || "-",
-        Telefone: b.cta_phone || "-",
-        WhatsApp: b.cta_whatsapp || "-",
-        Email: b.cta_email || "-",
-        Website: b.cta_website || "-",
-        Estado: b.is_active ? "Ativo" : "Inativo",
-        Destaque: b.is_featured ? "Sim" : "Não",
-        Premium: b.is_premium ? "Sim" : "Não",
-        "Data de Criação": b.created_at ? new Date(b.created_at).toLocaleDateString("pt-PT") : "-",
-        Subscrição: SUBSCRIPTION_PLANS[b.subscription_plan]?.label || "Gratuito",
-        "Fim Subscrição": b.subscription_end_date || "-",
-      };
-    });
+    const commercialLabels: Record<string, string> = { nao_contactado: "Não Contactado", contactado: "Contactado", interessado: "Interessado", cliente: "Cliente" };
+    const exportData = filteredBusinesses.map((b) => ({
+      Nome: b.name,
+      Categoria: b.categories?.name || "-",
+      Subcategoria: b.subcategories?.name || "-",
+      Cidade: b.city || "-",
+      Telefone: b.cta_phone || "-",
+      WhatsApp: b.cta_whatsapp || "-",
+      Email: b.cta_email || "-",
+      Website: b.cta_website || "-",
+      Estado: b.is_active ? "Ativo" : "Inativo",
+      "Estado Comercial": commercialLabels[b.commercial_status] || "Não Contactado",
+      Destaque: b.is_featured ? "Sim" : "Não",
+      Premium: b.is_premium ? "Sim" : "Não",
+      "Nível Premium": b.premium_level || "-",
+      "Data de Criação": b.created_at ? new Date(b.created_at).toLocaleDateString("pt-PT") : "-",
+      Subscrição: SUBSCRIPTION_PLANS[b.subscription_plan]?.label || "Gratuito",
+      "Fim Subscrição": b.subscription_end_date || "-",
+    }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -576,6 +584,37 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                   </div>
                 </div>
 
+                {/* Commercial Status & Premium Level */}
+                <div className="border-t border-border pt-4">
+                  <h3 className="font-semibold mb-3">Estado Comercial & Premium</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Estado Comercial</Label>
+                      <Select value={formData.commercial_status} onValueChange={(value: CommercialStatus) => setFormData({ ...formData, commercial_status: value })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="nao_contactado">Não Contactado</SelectItem>
+                          <SelectItem value="contactado">Contactado</SelectItem>
+                          <SelectItem value="interessado">Interessado</SelectItem>
+                          <SelectItem value="cliente">Cliente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nível Premium</Label>
+                      <Select value={formData.premium_level || "none"} onValueChange={(value) => setFormData({ ...formData, premium_level: value === "none" ? "" : value, is_premium: value !== "none" })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem Premium</SelectItem>
+                          <SelectItem value="SUPER">Super Destaque</SelectItem>
+                          <SelectItem value="CATEGORIA">Destaque Categoria</SelectItem>
+                          <SelectItem value="SUBCATEGORIA">Destaque Subcategoria</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-6 pt-4">
                   <div className="flex items-center gap-2">
                     <Switch checked={formData.is_active} onCheckedChange={(c) => setFormData({ ...formData, is_active: c })} />
@@ -584,10 +623,6 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                   <div className="flex items-center gap-2">
                     <Switch checked={formData.is_featured} onCheckedChange={(c) => setFormData({ ...formData, is_featured: c })} />
                     <Label>Destaque</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch checked={formData.is_premium} onCheckedChange={(c) => setFormData({ ...formData, is_premium: c })} />
-                    <Label>Premium</Label>
                   </div>
                 </div>
 
@@ -669,11 +704,23 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                         <Badge variant="secondary" className="bg-muted text-muted-foreground">Inativo</Badge>
                       )}
                       {business.is_featured && <Badge variant="secondary" className="bg-primary/10 text-primary">Destaque</Badge>}
-                      {business.subscription_status === "active" && <Badge variant="secondary" className="bg-accent/10 text-accent-foreground">Sub. Ativa</Badge>}
+                      {business.is_premium && <Badge variant="secondary" className="bg-accent/10 text-accent">Premium</Badge>}
+                      {business.commercial_status && business.commercial_status !== "nao_contactado" && (
+                        <Badge variant="secondary" className={
+                          business.commercial_status === "cliente" ? "bg-success/10 text-success" :
+                          business.commercial_status === "interessado" ? "bg-warning/10 text-warning" :
+                          "bg-muted text-muted-foreground"
+                        }>
+                          {business.commercial_status === "contactado" ? "Contactado" :
+                           business.commercial_status === "interessado" ? "Interessado" :
+                           business.commercial_status === "cliente" ? "Cliente" : ""}
+                        </Badge>
+                      )}
                     </div>
                   </td>
                   <td className="p-4">
                     <div className="flex justify-end gap-2">
+                      <ContactLogsDialog businessId={business.id} businessName={business.name} />
                       <Button size="sm" variant="ghost" onClick={() => openEditDialog(business)}><Pencil className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(business.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
