@@ -113,3 +113,18 @@ export const useMarkSearchReviewed = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["search-logs"] }),
   });
 };
+
+export const useDeleteSearchLogs = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (searchTerm: string) => {
+      const { error } = await supabase
+        .from("search_logs" as any)
+        .delete()
+        .ilike("search_term", searchTerm);
+
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["search-logs"] }),
+  });
+};

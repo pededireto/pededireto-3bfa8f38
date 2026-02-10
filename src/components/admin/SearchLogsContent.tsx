@@ -1,17 +1,35 @@
 import { useState } from "react";
-import { useSearchLogsAggregated, useMarkSearchReviewed } from "@/hooks/useSearchLogs";
+import { useSearchLogsAggregated, useMarkSearchReviewed, useDeleteSearchLogs } from "@/hooks/useSearchLogs";
+import { useCategories } from "@/hooks/useCategories";
+import { useCreateCategory } from "@/hooks/useCategories";
+import { useCreateSubcategory } from "@/hooks/useSubcategories";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader2, Search, CheckCircle, AlertTriangle, MoreHorizontal, Trash2, FolderPlus, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 
 const SearchLogsContent = () => {
   const { data: logs = [], isLoading } = useSearchLogsAggregated();
+  const { data: categories = [] } = useCategories();
   const markReviewed = useMarkSearchReviewed();
+  const deleteSearchLogs = useDeleteSearchLogs();
+  const createCategory = useCreateCategory();
+  const createSubcategory = useCreateSubcategory();
   const { toast } = useToast();
   const [filter, setFilter] = useState<"all" | "pending">("pending");
+
+  // Dialog state
+  const [dialogType, setDialogType] = useState<"category" | "subcategory" | null>(null);
+  const [dialogTerm, setDialogTerm] = useState("");
+  const [newName, setNewName] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
   const filtered = filter === "pending" ? logs.filter((l) => !l.is_reviewed) : logs;
 
@@ -21,6 +39,65 @@ const SearchLogsContent = () => {
       toast({ title: "Marcado como analisado" });
     } catch {
       toast({ title: "Erro", variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async (term: string) => {
+    try {
+      await deleteSearchLogs.mutateAsync(term);
+      toast({ title: "Registos apagados" });
+    } catch {
+      toast({ title: "Erro ao apagar", variant: "destructive" });
+    }
+  };
+
+  const openCreateDialog = (type: "category" | "subcategory", term: string) => {
+    setDialogType(type);
+    setDialogTerm(term);
+    setNewName(term.charAt(0).toUpperCase() + term.slice(1));
+    setSelectedCategoryId("");
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newName.trim()) return;
+    try {
+      const slug = newName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      await createCategory.mutateAsync({
+        name: newName.trim(),
+        slug,
+        description: null,
+        icon: null,
+        image_url: null,
+        alcance_default: "local",
+        display_order: 0,
+        is_active: true,
+      });
+      await markReviewed.mutateAsync(dialogTerm);
+      toast({ title: `Categoria "${newName}" criada com sucesso` });
+      setDialogType(null);
+    } catch {
+      toast({ title: "Erro ao criar categoria", variant: "destructive" });
+    }
+  };
+
+  const handleCreateSubcategory = async () => {
+    if (!newName.trim() || !selectedCategoryId) return;
+    try {
+      const slug = newName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      await createSubcategory.mutateAsync({
+        name: newName.trim(),
+        slug,
+        category_id: selectedCategoryId,
+        description: null,
+        icon: null,
+        display_order: 0,
+        is_active: true,
+      });
+      await markReviewed.mutateAsync(dialogTerm);
+      toast({ title: `Subcategoria "${newName}" criada com sucesso` });
+      setDialogType(null);
+    } catch {
+      toast({ title: "Erro ao criar subcategoria", variant: "destructive" });
     }
   };
 
@@ -40,19 +117,11 @@ const SearchLogsContent = () => {
       </div>
 
       <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant={filter === "pending" ? "default" : "outline"}
-          onClick={() => setFilter("pending")}
-        >
+        <Button size="sm" variant={filter === "pending" ? "default" : "outline"} onClick={() => setFilter("pending")}>
           <AlertTriangle className="w-4 h-4 mr-1" />
           Por analisar
         </Button>
-        <Button
-          size="sm"
-          variant={filter === "all" ? "default" : "outline"}
-          onClick={() => setFilter("all")}
-        >
+        <Button size="sm" variant={filter === "all" ? "default" : "outline"} onClick={() => setFilter("all")}>
           Todos
         </Button>
       </div>
@@ -83,9 +152,7 @@ const SearchLogsContent = () => {
                       <span className="font-medium">{log.search_term}</span>
                     </div>
                     {log.count >= 3 && (
-                      <p className="text-xs text-accent mt-1">
-                        💡 Considerar criar categoria ou subcategoria?
-                      </p>
+                      <p className="text-xs text-accent mt-1">💡 Considerar criar categoria ou subcategoria?</p>
                     )}
                   </td>
                   <td className="p-4 text-center">
@@ -107,12 +174,33 @@ const SearchLogsContent = () => {
                     )}
                   </td>
                   <td className="p-4 text-right">
-                    {!log.is_reviewed && (
-                      <Button size="sm" variant="outline" onClick={() => handleMark(log.search_term)}>
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Marcar
-                      </Button>
-                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {!log.is_reviewed && (
+                          <DropdownMenuItem onClick={() => handleMark(log.search_term)}>
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Marcar como analisado
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => openCreateDialog("category", log.search_term)}>
+                          <FolderPlus className="w-4 h-4 mr-2" />
+                          Criar nova Categoria
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openCreateDialog("subcategory", log.search_term)}>
+                          <Tag className="w-4 h-4 mr-2" />
+                          Criar nova Subcategoria
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(log.search_term)}>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Apagar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
@@ -120,6 +208,54 @@ const SearchLogsContent = () => {
           </table>
         </div>
       )}
+
+      {/* Create Category/Subcategory Dialog */}
+      <Dialog open={dialogType !== null} onOpenChange={(open) => !open && setDialogType(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {dialogType === "category" ? "Criar nova Categoria" : "Criar nova Subcategoria"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              A partir do termo pesquisado: <strong>"{dialogTerm}"</strong>
+            </p>
+            <div className="space-y-2">
+              <Label>Nome</Label>
+              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome..." />
+            </div>
+            {dialogType === "subcategory" && (
+              <div className="space-y-2">
+                <Label>Categoria associada</Label>
+                <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar categoria..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogType(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={dialogType === "category" ? handleCreateCategory : handleCreateSubcategory}
+              disabled={!newName.trim() || (dialogType === "subcategory" && !selectedCategoryId)}
+            >
+              Criar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
