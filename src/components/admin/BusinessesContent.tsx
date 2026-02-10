@@ -1,21 +1,18 @@
-import { useState, useRef, useEffect } from "react";
-import { BusinessWithCategory, useCreateBusiness, useUpdateBusiness, useDeleteBusiness, SUBSCRIPTION_PLANS, SubscriptionPlan, SubscriptionStatus, CommercialStatus, PremiumLevel } from "@/hooks/useBusinesses";
-import { useCommercialPlans, CommercialPlan } from "@/hooks/useCommercialPlans";
+import { useState, useRef } from "react";
+import { BusinessWithCategory, useCreateBusiness, useDeleteBusiness, SUBSCRIPTION_PLANS, SubscriptionPlan, SubscriptionStatus, CommercialStatus } from "@/hooks/useBusinesses";
+import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { Category } from "@/hooks/useCategories";
-import { useAllSubcategories, Subcategory } from "@/hooks/useSubcategories";
-import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
+import { useAllSubcategories } from "@/hooks/useSubcategories";
+import { useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Download, MessageSquare } from "lucide-react";
+import { Plus, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Download, Pencil } from "lucide-react";
 import ContactLogsDialog from "@/components/admin/ContactLogsDialog";
+import BusinessFileCard from "@/components/admin/BusinessFileCard";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -36,7 +33,7 @@ const generateSlug = (name: string) => {
 const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) => {
   const { toast } = useToast();
   const createBusiness = useCreateBusiness();
-  const updateBusiness = useUpdateBusiness();
+  
   const deleteBusiness = useDeleteBusiness();
   const syncSubcategories = useSyncBusinessSubcategories();
   const { data: allSubcategories = [] } = useAllSubcategories();
@@ -52,164 +49,13 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const [importing, setImporting] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<BusinessWithCategory | null>(null);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    slug: "",
-    category_id: "",
-    subcategory_ids: [] as string[],
-    description: "",
-    logo_url: "",
-    city: "",
-    zone: "",
-    alcance: "local" as "local" | "nacional" | "hibrido",
-    schedule_weekdays: "",
-    schedule_weekend: "",
-    cta_website: "",
-    cta_whatsapp: "",
-    cta_phone: "",
-    cta_email: "",
-    is_featured: false,
-    is_premium: false,
-    premium_level: "" as string,
-    is_active: true,
-    display_order: 0,
-    plan_id: "" as string,
-    subscription_start_date: "",
-    commercial_status: "nao_contactado" as CommercialStatus,
-  });
-
-  // Load subcategory IDs when editing
-  const { data: editSubcategoryIds } = useBusinessSubcategoryIds(editingBusiness?.id);
-
-  useEffect(() => {
-    if (editSubcategoryIds && editingBusiness) {
-      setFormData((prev) => ({ ...prev, subcategory_ids: editSubcategoryIds }));
-    }
-  }, [editSubcategoryIds, editingBusiness]);
-
   const resetForm = () => {
-    setFormData({
-      name: "", slug: "", category_id: "", subcategory_ids: [],
-      description: "", logo_url: "", city: "", zone: "",
-      alcance: "local", schedule_weekdays: "", schedule_weekend: "",
-      cta_website: "", cta_whatsapp: "", cta_phone: "", cta_email: "",
-      is_featured: false, is_premium: false, premium_level: "", is_active: true,
-      display_order: 0, plan_id: "", subscription_start_date: "",
-      commercial_status: "nao_contactado",
-    });
     setEditingBusiness(null);
   };
 
   const openEditDialog = (business: BusinessWithCategory) => {
     setEditingBusiness(business);
-    setFormData({
-      name: business.name,
-      slug: business.slug,
-      category_id: business.category_id || "",
-      subcategory_ids: [], // Will be loaded via useEffect
-      description: business.description || "",
-      logo_url: business.logo_url || "",
-      city: business.city || "",
-      zone: business.zone || "",
-      alcance: business.alcance,
-      schedule_weekdays: business.schedule_weekdays || "",
-      schedule_weekend: business.schedule_weekend || "",
-      cta_website: business.cta_website || "",
-      cta_whatsapp: business.cta_whatsapp || "",
-      cta_phone: business.cta_phone || "",
-      cta_email: business.cta_email || "",
-      is_featured: business.is_featured,
-      is_premium: business.is_premium,
-      premium_level: business.premium_level || "",
-      is_active: business.is_active,
-      display_order: business.display_order,
-      plan_id: business.plan_id || "",
-      subscription_start_date: business.subscription_start_date || "",
-      commercial_status: business.commercial_status || "nao_contactado",
-    });
     setDialogOpen(true);
-  };
-
-  const getSubscriptionDates = (planId: string, startDate: string) => {
-    if (!planId || !startDate) {
-      return { subscription_price: 0, subscription_start_date: null, subscription_end_date: null, subscription_status: "inactive" as SubscriptionStatus, subscription_plan: "free" as SubscriptionPlan };
-    }
-    const plan = commercialPlans.find(p => p.id === planId);
-    if (!plan || plan.price === 0) {
-      return { subscription_price: 0, subscription_start_date: null, subscription_end_date: null, subscription_status: "inactive" as SubscriptionStatus, subscription_plan: "free" as SubscriptionPlan };
-    }
-    const start = new Date(startDate);
-    const end = new Date(start);
-    end.setMonth(end.getMonth() + plan.duration_months);
-    return {
-      subscription_price: plan.price,
-      subscription_start_date: start.toISOString().split("T")[0],
-      subscription_end_date: end.toISOString().split("T")[0],
-      subscription_status: "active" as SubscriptionStatus,
-      subscription_plan: "1_month" as SubscriptionPlan, // legacy field, kept for compatibility
-    };
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const subscriptionData = getSubscriptionDates(formData.plan_id, formData.subscription_start_date);
-      const primarySubcategoryId = formData.subcategory_ids.length > 0 ? formData.subcategory_ids[0] : null;
-
-      const businessData = {
-        name: formData.name,
-        slug: formData.slug || generateSlug(formData.name),
-        category_id: formData.category_id || null,
-        subcategory_id: primarySubcategoryId,
-        plan_id: formData.plan_id || null,
-        description: formData.description || null,
-        logo_url: formData.logo_url || null,
-        city: formData.city || null,
-        zone: formData.zone || null,
-        alcance: formData.alcance,
-        schedule_weekdays: formData.schedule_weekdays || null,
-        schedule_weekend: formData.schedule_weekend || null,
-        cta_website: formData.cta_website || null,
-        cta_whatsapp: formData.cta_whatsapp || null,
-        cta_phone: formData.cta_phone || null,
-        cta_email: formData.cta_email || null,
-        cta_app: null,
-        images: [],
-        coordinates: null,
-        is_featured: formData.is_featured,
-        is_premium: formData.is_premium,
-        premium_level: formData.premium_level ? (formData.premium_level as PremiumLevel) : null,
-        is_active: formData.plan_id ? true : formData.is_active,
-        display_order: formData.display_order,
-        commercial_status: formData.commercial_status,
-        ...subscriptionData,
-      };
-
-      let businessId: string;
-
-      if (editingBusiness) {
-        const result = await updateBusiness.mutateAsync({ id: editingBusiness.id, ...businessData });
-        businessId = editingBusiness.id;
-        toast({ title: "Negócio atualizado com sucesso" });
-      } else {
-        const result = await createBusiness.mutateAsync(businessData);
-        businessId = result.id;
-        toast({ title: "Negócio criado com sucesso" });
-      }
-
-      // Sync subcategories junction table
-      if (formData.subcategory_ids.length > 0) {
-        await syncSubcategories.mutateAsync({
-          businessId,
-          subcategoryIds: formData.subcategory_ids,
-        });
-      }
-
-      setDialogOpen(false);
-      resetForm();
-    } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível guardar o negócio", variant: "destructive" });
-    }
   };
 
   const handleDelete = async (id: string) => {
@@ -358,8 +204,6 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     toast({ title: "Exportação concluída", description: `${exportData.length} negócios exportados` });
   };
 
-  const filteredSubcategories = allSubcategories.filter(s => s.category_id === formData.category_id);
-
   const filteredBusinesses = businesses.filter(b => {
     const matchesSearch = !searchTerm || 
       b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -373,17 +217,6 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       (filterStatus === "premium" && b.is_premium);
     return matchesSearch && matchesCategory && matchesStatus;
   });
-
-  const isLoading = createBusiness.isPending || updateBusiness.isPending;
-
-  const toggleSubcategory = (subId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      subcategory_ids: prev.subcategory_ids.includes(subId)
-        ? prev.subcategory_ids.filter(id => id !== subId)
-        : [...prev.subcategory_ids, subId],
-    }));
-  };
 
   return (
     <div className="space-y-6">
@@ -451,7 +284,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             </DialogContent>
           </Dialog>
 
-          {/* Add Business */}
+          {/* Add / Edit Business */}
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="btn-cta-primary">
@@ -459,195 +292,17 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                 Adicionar Negócio
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingBusiness ? "Editar Negócio" : "Novo Negócio"}</DialogTitle>
+                <DialogTitle>{editingBusiness ? `Ficha — ${editingBusiness.name}` : "Nova Ficha de Cliente"}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome *</Label>
-                    <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="slug">Slug (URL)</Label>
-                    <Input id="slug" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} placeholder="gerado automaticamente" />
-                  </div>
-                </div>
-
-                {/* Category */}
-                <div className="space-y-2">
-                  <Label>Categoria *</Label>
-                  <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value, subcategory_ids: [] })}>
-                    <SelectTrigger><SelectValue placeholder="Selecionar categoria" /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (<SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Multi-select Subcategories */}
-                <div className="space-y-2">
-                  <Label>Subcategorias *</Label>
-                  {!formData.category_id ? (
-                    <p className="text-sm text-muted-foreground">Escolha categoria primeiro</p>
-                  ) : filteredSubcategories.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Sem subcategorias disponíveis</p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-border rounded-lg p-3">
-                      {filteredSubcategories.map((sub) => (
-                        <label key={sub.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded p-1">
-                          <Checkbox
-                            checked={formData.subcategory_ids.includes(sub.id)}
-                            onCheckedChange={() => toggleSubcategory(sub.id)}
-                          />
-                          <span className="text-sm">{sub.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                  {formData.subcategory_ids.length > 0 && (
-                    <p className="text-xs text-muted-foreground">{formData.subcategory_ids.length} selecionada(s)</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Alcance</Label>
-                  <Select value={formData.alcance} onValueChange={(value: "local" | "nacional" | "hibrido") => setFormData({ ...formData, alcance: value })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="local">Local</SelectItem>
-                      <SelectItem value="nacional">Nacional</SelectItem>
-                      <SelectItem value="hibrido">Híbrido</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Descrição</Label>
-                  <Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Cidade</Label>
-                    <Input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>URL do Logo</Label>
-                    <Input value={formData.logo_url} onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>WhatsApp</Label>
-                    <Input value={formData.cta_whatsapp} onChange={(e) => setFormData({ ...formData, cta_whatsapp: e.target.value })} placeholder="+351..." />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Telefone</Label>
-                    <Input value={formData.cta_phone} onChange={(e) => setFormData({ ...formData, cta_phone: e.target.value })} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Website</Label>
-                    <Input value={formData.cta_website} onChange={(e) => setFormData({ ...formData, cta_website: e.target.value })} placeholder="https://..." />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input type="email" value={formData.cta_email} onChange={(e) => setFormData({ ...formData, cta_email: e.target.value })} />
-                  </div>
-                </div>
-
-                {/* Subscription */}
-                <div className="border-t border-border pt-4">
-                  <h3 className="font-semibold mb-3">Subscrição</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Plano</Label>
-                      <Select value={formData.plan_id || "none"} onValueChange={(value) => setFormData({ ...formData, plan_id: value === "none" ? "" : value })}>
-                        <SelectTrigger><SelectValue placeholder="Selecionar plano" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Gratuito</SelectItem>
-                          {commercialPlans.map((plan) => (
-                            <SelectItem key={plan.id} value={plan.id}>
-                              {plan.name} {plan.price > 0 ? `— ${plan.price}€` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {formData.plan_id && (
-                      <div className="space-y-2">
-                        <Label>Data de início</Label>
-                        <Input type="date" value={formData.subscription_start_date} onChange={(e) => setFormData({ ...formData, subscription_start_date: e.target.value })} />
-                        {formData.subscription_start_date && (() => {
-                          const selectedPlan = commercialPlans.find(p => p.id === formData.plan_id);
-                          const dates = getSubscriptionDates(formData.plan_id, formData.subscription_start_date);
-                          return (
-                            <p className="text-xs text-muted-foreground">
-                              Fim: {dates.subscription_end_date || "-"}
-                              {selectedPlan ? ` • ${selectedPlan.price}€` : ""}
-                            </p>
-                          );
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Commercial Status & Premium Level */}
-                <div className="border-t border-border pt-4">
-                  <h3 className="font-semibold mb-3">Estado Comercial & Premium</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Estado Comercial</Label>
-                      <Select value={formData.commercial_status} onValueChange={(value: CommercialStatus) => setFormData({ ...formData, commercial_status: value })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="nao_contactado">Não Contactado</SelectItem>
-                          <SelectItem value="contactado">Contactado</SelectItem>
-                          <SelectItem value="interessado">Interessado</SelectItem>
-                          <SelectItem value="cliente">Cliente</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Nível Premium</Label>
-                      <Select value={formData.premium_level || "none"} onValueChange={(value) => setFormData({ ...formData, premium_level: value === "none" ? "" : value, is_premium: value !== "none" })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sem Premium</SelectItem>
-                          <SelectItem value="SUPER">Super Destaque</SelectItem>
-                          <SelectItem value="CATEGORIA">Destaque Categoria</SelectItem>
-                          <SelectItem value="SUBCATEGORIA">Destaque Subcategoria</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-6 pt-4">
-                  <div className="flex items-center gap-2">
-                    <Switch checked={formData.is_active} onCheckedChange={(c) => setFormData({ ...formData, is_active: c })} />
-                    <Label>Ativo</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch checked={formData.is_featured} onCheckedChange={(c) => setFormData({ ...formData, is_featured: c })} />
-                    <Label>Destaque</Label>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    {editingBusiness ? "Guardar" : "Criar"}
-                  </Button>
-                </div>
-              </form>
+              <BusinessFileCard
+                business={editingBusiness}
+                categories={categories}
+                isAdmin={true}
+                onSaved={() => { setDialogOpen(false); resetForm(); }}
+                onCancel={() => { setDialogOpen(false); resetForm(); }}
+              />
             </DialogContent>
           </Dialog>
         </div>
