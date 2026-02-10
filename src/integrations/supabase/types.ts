@@ -344,6 +344,50 @@ export type Database = {
         }
         Relationships: []
       }
+      expiration_logs: {
+        Row: {
+          business_id: string
+          contact_status: string
+          contacted_at: string | null
+          deactivated_at: string
+          expired_at: string
+          id: string
+          notes: string | null
+          plan_name: string
+          plan_price: number
+        }
+        Insert: {
+          business_id: string
+          contact_status?: string
+          contacted_at?: string | null
+          deactivated_at?: string
+          expired_at: string
+          id?: string
+          notes?: string | null
+          plan_name: string
+          plan_price?: number
+        }
+        Update: {
+          business_id?: string
+          contact_status?: string
+          contacted_at?: string | null
+          deactivated_at?: string
+          expired_at?: string
+          id?: string
+          notes?: string | null
+          plan_name?: string
+          plan_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiration_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       institutional_pages: {
         Row: {
           blocks: Json | null

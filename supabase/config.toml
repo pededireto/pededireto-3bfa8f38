@@ -2,3 +2,6 @@ project_id = "mpnizkjntkutpxevqzxx"
 
 [functions.check-subscriptions]
 verify_jwt = false
+
+[functions.send-expiry-alerts]
+verify_jwt = false
