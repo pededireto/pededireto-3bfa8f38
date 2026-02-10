@@ -10,6 +10,7 @@ import {
   Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import FavoriteButton from "@/components/FavoriteButton";
 
 interface BusinessCardProps {
   business: BusinessWithCategory;
@@ -58,6 +59,11 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
           <span className="badge-premium">Premium</span>
         </div>
       )}
+
+      {/* Favorite Button */}
+      <div className="absolute top-3 left-3 z-10">
+        <FavoriteButton businessId={business.id} className="bg-card/80 backdrop-blur-sm hover:bg-card" />
+      </div>
 
       {/* Image/Logo */}
       <div className="relative aspect-[4/3] bg-muted flex items-center justify-center">
