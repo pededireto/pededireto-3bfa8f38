@@ -346,6 +346,7 @@ export type Database = {
       }
       institutional_pages: {
         Row: {
+          blocks: Json | null
           content: string | null
           created_at: string
           display_order: number
@@ -353,11 +354,15 @@ export type Database = {
           is_active: boolean
           meta_description: string | null
           meta_title: string | null
+          page_type: string
+          show_in_footer: boolean
+          show_in_header: boolean
           slug: string
           title: string
           updated_at: string
         }
         Insert: {
+          blocks?: Json | null
           content?: string | null
           created_at?: string
           display_order?: number
@@ -365,11 +370,15 @@ export type Database = {
           is_active?: boolean
           meta_description?: string | null
           meta_title?: string | null
+          page_type?: string
+          show_in_footer?: boolean
+          show_in_header?: boolean
           slug: string
           title: string
           updated_at?: string
         }
         Update: {
+          blocks?: Json | null
           content?: string | null
           created_at?: string
           display_order?: number
@@ -377,6 +386,9 @@ export type Database = {
           is_active?: boolean
           meta_description?: string | null
           meta_title?: string | null
+          page_type?: string
+          show_in_footer?: boolean
+          show_in_header?: boolean
           slug?: string
           title?: string
           updated_at?: string

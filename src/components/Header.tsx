@@ -3,12 +3,12 @@ import { Menu } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
-import { useActiveInstitutionalPages } from "@/hooks/useInstitutionalPages";
+import { useHeaderPages } from "@/hooks/useNavigationPages";
 import ThemeToggle from "./ThemeToggle";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { data: pages = [] } = useActiveInstitutionalPages();
+  const { data: pages = [] } = useHeaderPages();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
