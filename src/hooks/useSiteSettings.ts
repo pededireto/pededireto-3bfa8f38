@@ -36,7 +36,7 @@ export const useUpdateSiteSetting = () => {
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
       const { error } = await supabase
         .from("site_settings")
-        .update({ value } as any)
+        .update({ value })
         .eq("key", key);
 
       if (error) throw error;
@@ -55,7 +55,7 @@ export const useBulkUpdateSiteSettings = () => {
       const promises = Object.entries(settings).map(([key, value]) =>
         supabase
           .from("site_settings")
-          .upsert({ key, value } as any, { onConflict: "key" })
+          .upsert({ key, value }, { onConflict: "key" })
       );
       const results = await Promise.all(promises);
       const errors = results.filter((r) => r.error);
