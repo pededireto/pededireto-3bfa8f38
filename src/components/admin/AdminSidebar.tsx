@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import {
+  CreditCard,
   LayoutDashboard,
   Building2,
   FolderOpen,
@@ -17,7 +18,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "subscriptions" | "suggestions" | "analytics" | "settings" | "pages" | "synonyms";
+export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "plans" | "subscriptions" | "suggestions" | "analytics" | "settings" | "pages" | "synonyms";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -30,6 +31,7 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "businesses", label: "Negócios", icon: Building2 },
   { id: "categories", label: "Categorias", icon: FolderOpen },
   { id: "featured", label: "Destaques", icon: Crown },
+  { id: "plans", label: "Planos", icon: CreditCard },
   { id: "subscriptions", label: "Subscrições", icon: CalendarClock },
   { id: "suggestions", label: "Sugestões", icon: Lightbulb },
   { id: "analytics", label: "Analytics", icon: BarChart3 },

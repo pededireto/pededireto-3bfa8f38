@@ -36,6 +36,9 @@ const EmergencyBanner = () => {
 
   const emergencyCats = (settings?.emergency_categories || "Serviços,Saúde,Energia,Transportes").split(",").map(s => s.trim());
 
+  // Note: Premium businesses get visual priority in emergency mode via the existing
+  // is_premium/is_featured ordering in useBusinesses queries (order by is_featured desc, is_premium desc)
+
   return (
     <div className="bg-destructive text-destructive-foreground">
       <div className="container py-4">

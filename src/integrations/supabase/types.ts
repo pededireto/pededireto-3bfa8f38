@@ -149,6 +149,7 @@ export type Database = {
           is_premium: boolean | null
           logo_url: string | null
           name: string
+          plan_id: string | null
           premium_level:
             | Database["public"]["Enums"]["premium_level_tipo"]
             | null
@@ -185,6 +186,7 @@ export type Database = {
           is_premium?: boolean | null
           logo_url?: string | null
           name: string
+          plan_id?: string | null
           premium_level?:
             | Database["public"]["Enums"]["premium_level_tipo"]
             | null
@@ -221,6 +223,7 @@ export type Database = {
           is_premium?: boolean | null
           logo_url?: string | null
           name?: string
+          plan_id?: string | null
           premium_level?:
             | Database["public"]["Enums"]["premium_level_tipo"]
             | null
@@ -242,6 +245,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_plans"
             referencedColumns: ["id"]
           },
           {
@@ -292,6 +302,45 @@ export type Database = {
           name?: string
           slug?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      commercial_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          duration_months: number
+          id: string
+          is_active: boolean
+          name: string
+          premium_level: string | null
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          duration_months?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          premium_level?: string | null
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          duration_months?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          premium_level?: string | null
+          price?: number
+          updated_at?: string
         }
         Relationships: []
       }
