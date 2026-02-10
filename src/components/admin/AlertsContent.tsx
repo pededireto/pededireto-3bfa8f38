@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useExpirationLogs, useUpdateContactStatus } from "@/hooks/useExpirationLogs";
+import { useExpirationLogs, useUpdateContactStatus, useUncontactedCount } from "@/hooks/useExpirationLogs";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
@@ -13,13 +13,13 @@ import { pt } from "date-fns/locale";
 
 const AlertsContent = () => {
   const [period, setPeriod] = useState<"today" | "7days" | "30days" | "all">("all");
-  const [planFilter, setPlanFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [planFilter, setPlanFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: logs = [], isLoading } = useExpirationLogs({
     period,
-    planName: planFilter || undefined,
-    contactStatus: statusFilter || undefined,
+    planName: planFilter === "all" ? undefined : planFilter,
+    contactStatus: statusFilter === "all" ? undefined : statusFilter,
   });
 
   const { data: allLogs = [] } = useExpirationLogs({ period: "30days" });
@@ -127,7 +127,7 @@ const AlertsContent = () => {
         <Select value={planFilter} onValueChange={setPlanFilter}>
           <SelectTrigger className="w-[200px]"><SelectValue placeholder="Plano anterior" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os planos</SelectItem>
+            <SelectItem value="all">Todos os planos</SelectItem>
             {paidPlans.map(p => (
               <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
             ))}
@@ -137,7 +137,7 @@ const AlertsContent = () => {
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]"><SelectValue placeholder="Estado" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="nao_contactado">Não contactado</SelectItem>
             <SelectItem value="contactado">Contactado</SelectItem>
             <SelectItem value="renovado">Renovado</SelectItem>
