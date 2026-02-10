@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
-import { useActiveInstitutionalPages } from "@/hooks/useInstitutionalPages";
+import { useFooterPages } from "@/hooks/useNavigationPages";
 
 const socialIcons: Record<string, string> = {
   facebook: "📘",
@@ -13,7 +13,7 @@ const socialIcons: Record<string, string> = {
 
 const Footer = () => {
   const { data: settings } = useSiteSettings();
-  const { data: pages = [] } = useActiveInstitutionalPages();
+  const { data: pages = [] } = useFooterPages();
 
   const socials = ["facebook", "instagram", "twitter", "linkedin", "youtube"]
     .map((key) => ({ key, url: settings?.[`footer_${key}`] }))

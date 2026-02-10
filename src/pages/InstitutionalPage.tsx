@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import { useInstitutionalPage } from "@/hooks/useInstitutionalPages";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import BlockRenderer from "@/components/BlockRenderer";
 import { Loader2 } from "lucide-react";
 import DOMPurify from "dompurify";
 
@@ -38,9 +39,7 @@ const InstitutionalPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {page.meta_title && (
-        <title>{page.meta_title}</title>
-      )}
+      {page.meta_title && <title>{page.meta_title}</title>}
       <Header />
       <main className="flex-1">
         <section className="section-hero py-12">
@@ -50,12 +49,14 @@ const InstitutionalPage = () => {
         </section>
         <section className="py-12">
           <div className="container max-w-3xl">
-            {page.content && (
+            {page.page_type === "advanced" && page.blocks.length > 0 ? (
+              <BlockRenderer blocks={page.blocks} />
+            ) : page.content ? (
               <div
-                className="prose prose-lg max-w-none"
+                className="prose prose-lg max-w-none dark:prose-invert"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }}
               />
-            )}
+            ) : null}
           </div>
         </section>
       </main>
