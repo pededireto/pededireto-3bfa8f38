@@ -6,7 +6,7 @@ interface SearchResultsProps {
   results: SearchResult[];
   isLoading: boolean;
   searchTerm: string;
-  onSelect: () => void;
+  onSelect: (result?: SearchResult) => void;
 }
 
 const SearchResults = ({ results, isLoading, searchTerm, onSelect }: SearchResultsProps) => {
@@ -20,7 +20,7 @@ const SearchResults = ({ results, isLoading, searchTerm, onSelect }: SearchResul
     } else {
       navigate(`/negocio/${result.result_slug}`);
     }
-    onSelect();
+    onSelect(result);
   };
 
   return (
