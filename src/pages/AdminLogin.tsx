@@ -1,7 +1,7 @@
- import { useState } from "react";
+ import { useState, useEffect } from "react";
  import { useNavigate, Link } from "react-router-dom";
  import { z } from "zod";
- import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
  import { Label } from "@/components/ui/label";
@@ -14,15 +14,24 @@
  });
  
  const AdminLogin = () => {
-   const navigate = useNavigate();
-   const { signIn, isLoading: authLoading } = useAuth();
-   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { signIn, isAdmin, isCommercial, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
  
    const [email, setEmail] = useState("");
    const [password, setPassword] = useState("");
    const [showPassword, setShowPassword] = useState(false);
    const [isLoading, setIsLoading] = useState(false);
-   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  // Role-based redirect after login
+  useEffect(() => {
+    if (!authLoading && isAdmin) {
+      navigate("/admin", { replace: true });
+    } else if (!authLoading && isCommercial) {
+      navigate("/comercial", { replace: true });
+    }
+  }, [authLoading, isAdmin, isCommercial, navigate]);
  
    const handleSubmit = async (e: React.FormEvent) => {
      e.preventDefault();
@@ -57,13 +66,13 @@
            description: message,
            variant: "destructive",
          });
-       } else {
-         toast({
-           title: "Login efetuado",
-           description: "Bem-vindo de volta!",
-         });
-         navigate("/admin");
-       }
+        } else {
+          toast({
+            title: "Login efetuado",
+            description: "Bem-vindo de volta!",
+          });
+          // Role-based redirect happens in useEffect below
+        }
      } finally {
        setIsLoading(false);
      }

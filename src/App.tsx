@@ -21,6 +21,7 @@ import UserRegister from "./pages/UserRegister";
 import UserDashboard from "./pages/UserDashboard";
 import InstitutionalPage from "./pages/InstitutionalPage";
 import RegisterBusiness from "./pages/RegisterBusiness";
+import CommercialPage from "./pages/CommercialPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requireAdmin>
                     <AdminPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/comercial"
+                element={
+                  <ProtectedRoute requireCommercial>
+                    <CommercialPage />
                   </ProtectedRoute>
                 }
               />

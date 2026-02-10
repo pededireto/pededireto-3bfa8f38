@@ -20,6 +20,9 @@ import SynonymsContent from "@/components/admin/SynonymsContent";
 import PlansContent from "@/components/admin/PlansContent";
 import SearchLogsContent from "@/components/admin/SearchLogsContent";
 import AlertsContent from "@/components/admin/AlertsContent";
+import CommercialUsersContent from "@/components/admin/CommercialUsersContent";
+import ActionRequestsContent from "@/components/admin/ActionRequestsContent";
+import AuditLogsContent from "@/components/admin/AuditLogsContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -40,6 +43,9 @@ const AdminPage = () => {
     if (activeTab === "plans") return <PlansContent />;
     if (activeTab === "search-logs") return <SearchLogsContent />;
     if (activeTab === "alerts") return <AlertsContent />;
+    if (activeTab === "commercial-users") return <CommercialUsersContent />;
+    if (activeTab === "action-requests") return <ActionRequestsContent />;
+    if (activeTab === "audit-logs") return <AuditLogsContent />;
 
     if (isLoading) {
       return (
