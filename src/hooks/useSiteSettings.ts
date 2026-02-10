@@ -55,8 +55,7 @@ export const useBulkUpdateSiteSettings = () => {
       const promises = Object.entries(settings).map(([key, value]) =>
         supabase
           .from("site_settings")
-          .update({ value } as any)
-          .eq("key", key)
+          .upsert({ key, value } as any, { onConflict: "key" })
       );
       const results = await Promise.all(promises);
       const errors = results.filter((r) => r.error);

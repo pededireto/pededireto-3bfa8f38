@@ -68,6 +68,17 @@ const SettingsContent = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
+            <Label>Texto Principal (Hero)</Label>
+            <Input value={form.hero_title || ""} onChange={(e) => setForm({ ...form, hero_title: e.target.value })} placeholder="Tem um problema? Nós mostramos quem resolve." />
+          </div>
+          <div className="space-y-2">
+            <Label>Texto Secundário (Hero)</Label>
+            <Input value={form.hero_subtitle || ""} onChange={(e) => setForm({ ...form, hero_subtitle: e.target.value })} placeholder="Restaurantes, serviços, lojas e profissionais — tudo num só sítio." />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
             <Label>URL do Logótipo</Label>
             <Input value={form.logo_url || ""} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="https://..." />
             {form.logo_url && <img src={form.logo_url} alt="Logo" className="h-12 mt-2 object-contain" />}

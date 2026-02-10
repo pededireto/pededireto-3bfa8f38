@@ -136,6 +136,9 @@ export const useFeaturedBusinesses = (categoryId?: string) => {
 
       if (categoryId) query = query.eq("category_id", categoryId);
 
+      // Exclude SUPER premium businesses (they appear in Super Destaques section)
+      query = query.or("premium_level.is.null,premium_level.neq.SUPER");
+
       const { data, error } = await query;
       if (error) throw error;
       return data as unknown as BusinessWithCategory[];
