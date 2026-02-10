@@ -16,6 +16,9 @@ import BusinessPage from "./pages/BusinessPage";
 import AdminPage from "./pages/AdminPage";
 import AdminLogin from "./pages/AdminLogin";
 import AdminRegister from "./pages/AdminRegister";
+import UserLogin from "./pages/UserLogin";
+import UserRegister from "./pages/UserRegister";
+import UserDashboard from "./pages/UserDashboard";
 import InstitutionalPage from "./pages/InstitutionalPage";
 import NotFound from "./pages/NotFound";
 
@@ -38,6 +41,9 @@ const App = () => (
               <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
               <Route path="/negocio/:slug" element={<BusinessPage />} />
               <Route path="/pagina/:slug" element={<InstitutionalPage />} />
+              <Route path="/login" element={<UserLogin />} />
+              <Route path="/registar" element={<UserRegister />} />
+              <Route path="/dashboard" element={<UserDashboard />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/register" element={<AdminRegister />} />
               <Route

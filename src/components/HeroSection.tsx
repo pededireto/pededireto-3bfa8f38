@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect } from "react";
-import { Search } from "lucide-react";
+import { Search, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSearch } from "@/hooks/useSearch";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { useAuth } from "@/hooks/useAuth";
+import { useSaveSearch } from "@/hooks/useSavedSearches";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import SearchResults from "@/components/SearchResults";
 import pedeDiretoMascot from "@/assets/pede-direto-mascot.png";
 
@@ -16,6 +20,10 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   const [showResults, setShowResults] = useState(false);
   const { data: searchResults = [], isLoading: searchLoading } = useSearch(searchTerm);
   const { data: settings } = useSiteSettings();
+  const { user } = useAuth();
+  const saveSearch = useSaveSearch();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
 
   const heroTitle = settings?.hero_title || "Tem um problema? Nós mostramos quem resolve.";
@@ -86,6 +94,29 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                       onSearchChange?.("");
                     }}
                   />
+                )}
+                {searchTerm.length >= 2 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 gap-1 text-muted-foreground hover:text-primary"
+                    onClick={() => {
+                      if (!user) {
+                        navigate("/login");
+                        return;
+                      }
+                      saveSearch.mutate(
+                        { searchQuery: searchTerm },
+                        {
+                          onSuccess: () => toast({ title: "Pesquisa guardada!" }),
+                        }
+                      );
+                    }}
+                    title="Guardar pesquisa"
+                  >
+                    <Bookmark className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
             </form>
