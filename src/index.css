@@ -142,6 +142,27 @@
 }
 
 @layer components {
+  /* Prose dark mode fix */
+  .dark .prose ul,
+  .dark .prose ol,
+  .dark .prose li,
+  .dark .prose p,
+  .dark .prose div,
+  .dark .prose blockquote,
+  .dark .prose table,
+  .dark .prose thead,
+  .dark .prose tbody,
+  .dark .prose tr,
+  .dark .prose td,
+  .dark .prose th {
+    background-color: transparent !important;
+    color: inherit !important;
+  }
+
+  .dark .prose a {
+    color: hsl(var(--primary)) !important;
+  }
+
   /* Badges */
   .badge-pede-direto {
     @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-primary text-primary-foreground;
