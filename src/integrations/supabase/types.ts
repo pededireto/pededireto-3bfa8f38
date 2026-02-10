@@ -129,6 +129,7 @@ export type Database = {
       }
       businesses: {
         Row: {
+          address: string | null
           alcance: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id: string | null
           city: string | null
@@ -149,10 +150,15 @@ export type Database = {
           is_premium: boolean | null
           logo_url: string | null
           name: string
+          nif: string | null
+          owner_email: string | null
+          owner_name: string | null
+          owner_phone: string | null
           plan_id: string | null
           premium_level:
             | Database["public"]["Enums"]["premium_level_tipo"]
             | null
+          registration_source: string | null
           schedule_weekdays: string | null
           schedule_weekend: string | null
           slug: string
@@ -166,6 +172,7 @@ export type Database = {
           zone: string | null
         }
         Insert: {
+          address?: string | null
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id?: string | null
           city?: string | null
@@ -186,10 +193,15 @@ export type Database = {
           is_premium?: boolean | null
           logo_url?: string | null
           name: string
+          nif?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
           plan_id?: string | null
           premium_level?:
             | Database["public"]["Enums"]["premium_level_tipo"]
             | null
+          registration_source?: string | null
           schedule_weekdays?: string | null
           schedule_weekend?: string | null
           slug: string
@@ -203,6 +215,7 @@ export type Database = {
           zone?: string | null
         }
         Update: {
+          address?: string | null
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id?: string | null
           city?: string | null
@@ -223,10 +236,15 @@ export type Database = {
           is_premium?: boolean | null
           logo_url?: string | null
           name?: string
+          nif?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
           plan_id?: string | null
           premium_level?:
             | Database["public"]["Enums"]["premium_level_tipo"]
             | null
+          registration_source?: string | null
           schedule_weekdays?: string | null
           schedule_weekend?: string | null
           slug?: string

@@ -20,6 +20,7 @@ import UserLogin from "./pages/UserLogin";
 import UserRegister from "./pages/UserRegister";
 import UserDashboard from "./pages/UserDashboard";
 import InstitutionalPage from "./pages/InstitutionalPage";
+import RegisterBusiness from "./pages/RegisterBusiness";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
               <Route path="/negocio/:slug" element={<BusinessPage />} />
               <Route path="/pagina/:slug" element={<InstitutionalPage />} />
+              <Route path="/registar-negocio" element={<RegisterBusiness />} />
               <Route path="/login" element={<UserLogin />} />
               <Route path="/registar" element={<UserRegister />} />
               <Route path="/dashboard" element={<UserDashboard />} />
