@@ -4,6 +4,7 @@ import { useTrackEvent } from "@/hooks/useAnalytics";
 import { useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import FavoriteButton from "@/components/FavoriteButton";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, 
@@ -133,7 +134,7 @@ const BusinessPage = () => {
                   )}
                   
                   {/* Badges */}
-                  <div className="absolute top-4 right-4 flex gap-2">
+                  <div className="absolute top-4 right-4 flex gap-2 items-center">
                     {business.is_featured && (
                       <span className="badge-featured">
                         <Star className="w-3 h-3" />
@@ -143,6 +144,10 @@ const BusinessPage = () => {
                     {business.is_premium && !business.is_featured && (
                       <span className="badge-premium">Premium</span>
                     )}
+                    <FavoriteButton
+                      businessId={business.id}
+                      className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"
+                    />
                   </div>
                 </div>
 
