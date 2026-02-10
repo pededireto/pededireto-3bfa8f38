@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useActiveInstitutionalPages } from "@/hooks/useInstitutionalPages";
+import ThemeToggle from "./ThemeToggle";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -36,6 +37,7 @@ const Header = () => {
           <Link to="/admin/login" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
             Área Admin
           </Link>
+          <ThemeToggle />
         </nav>
 
         {/* Mobile Navigation */}
