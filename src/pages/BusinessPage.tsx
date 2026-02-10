@@ -117,12 +117,12 @@ const BusinessPage = () => {
               {/* Main Content */}
               <div className="lg:col-span-2 space-y-6">
                 {/* Image */}
-                <div className="relative aspect-video rounded-2xl overflow-hidden bg-muted">
+                <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
                   {business.logo_url ? (
                     <img
                       src={business.logo_url}
                       alt={business.name}
-                      className="w-full h-full object-cover"
+                      className="max-w-full max-h-full object-contain"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-primary/10">

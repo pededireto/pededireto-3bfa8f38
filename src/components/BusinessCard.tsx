@@ -60,12 +60,12 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
       )}
 
       {/* Image/Logo */}
-      <div className="relative h-40 bg-muted">
+      <div className="relative aspect-[4/3] bg-muted flex items-center justify-center">
         {business.logo_url ? (
           <img
             src={business.logo_url}
             alt={business.name}
-            className="w-full h-full object-cover"
+            className="max-w-full max-h-full object-contain p-2"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-primary/10">

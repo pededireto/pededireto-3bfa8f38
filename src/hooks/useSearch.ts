@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLogSearch } from "@/hooks/useSearchLogs";
+import { useEffect, useRef } from "react";
 
 export interface SearchResult {
   result_type: string;
@@ -13,8 +15,10 @@ export interface SearchResult {
 
 export const useSearch = (term: string) => {
   const debouncedTerm = term.trim();
+  const logSearch = useLogSearch();
+  const lastLoggedRef = useRef<string>("");
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["search", debouncedTerm],
     queryFn: async () => {
       if (!debouncedTerm || debouncedTerm.length < 2) return [];
@@ -26,10 +30,8 @@ export const useSearch = (term: string) => {
 
       if (error) throw error;
       
-      // Sort by relevance and deduplicate
       const sorted = (data || []).sort((a, b) => a.relevance - b.relevance);
       
-      // Deduplicate by result_id + result_type
       const seen = new Set<string>();
       return sorted.filter((item) => {
         const key = `${item.result_type}-${item.result_id}`;
@@ -41,4 +43,23 @@ export const useSearch = (term: string) => {
     enabled: debouncedTerm.length >= 2,
     staleTime: 30000,
   });
+
+  // Log zero-result searches (debounced, only once per term)
+  useEffect(() => {
+    if (
+      query.isSuccess &&
+      query.data?.length === 0 &&
+      debouncedTerm.length >= 2 &&
+      lastLoggedRef.current !== debouncedTerm
+    ) {
+      lastLoggedRef.current = debouncedTerm;
+      logSearch.mutate({
+        search_term: debouncedTerm,
+        results_count: 0,
+        search_type: "general",
+      });
+    }
+  }, [query.isSuccess, query.data?.length, debouncedTerm]);
+
+  return query;
 };
