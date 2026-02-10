@@ -1,190 +1,113 @@
 
-# Plano: Tornar a Plataforma Pede Direto Totalmente Funcional
 
-## Visão Geral
+# Sistema de Expiracao Automatica e Alertas Comerciais
 
-A plataforma tem a interface visual pronta, mas precisa de backend real para funcionar. Atualmente usa dados mock estáticos e não persiste nenhuma informação.
+## Resumo
 
-## Fase 1: Criar Base de Dados
-
-Criar as tabelas necessárias na base de dados com segurança RLS:
-
-```text
-+------------------+       +-------------------+       +------------------+
-|     zones        |       |    restaurants    |       |   suggestions    |
-+------------------+       +-------------------+       +------------------+
-| id (uuid)        |<----->| zone_id (uuid)    |       | id (uuid)        |
-| name (text)      |       | name (text)       |       | city_name (text) |
-| slug (text)      |       | slug (text)       |       | email (text)     |
-| is_active (bool) |       | logo_url (text)   |       | message (text)   |
-| created_at       |       | images (text[])   |       | created_at       |
-| updated_at       |       | category (text)   |       +------------------+
-+------------------+       | description       |
-                           | schedule_weekdays |
-+------------------+       | schedule_weekend  |       +------------------+
-|    profiles      |       | delivery_zones    |       |   user_roles     |
-+------------------+       | cta_website       |       +------------------+
-| id (uuid)        |       | cta_whatsapp      |       | id (uuid)        |
-| email (text)     |       | cta_phone         |       | user_id (uuid)   |
-| created_at       |       | cta_app           |       | role (enum)      |
-+------------------+       | is_featured       |       +------------------+
-                           | is_active (bool)  |
-                           | display_order     |
-                           | created_at        |
-                           | updated_at        |
-                           +-------------------+
-```
-
-**Policies RLS:**
-- Leitura pública para restaurantes e zonas ativas
-- Escrita restrita a utilizadores com role "admin"
-
-## Fase 2: Sistema de Autenticação Admin
-
-Criar página de login em `/admin/login`:
-
-- Campo de email e password
-- Validação com zod
-- Autenticação via Supabase Auth
-- Redirecionamento automático após login
-- Proteção da rota `/admin` para utilizadores autenticados com role "admin"
-
-**Nota sobre "admin123":** Por segurança, não é possível usar senhas fixas no código. Em vez disso:
-1. Criarei um utilizador admin inicial
-2. A password poderá ser definida através do registo ou reset de password
-
-## Fase 3: Funcionalidades do Backoffice
-
-### 3.1 Gestão de Restaurantes
-- Formulário funcional para adicionar/editar restaurantes
-- Guardar na base de dados real
-- Campo is_active para ativar/desativar
-- Upload de imagens (opcional - pode usar URLs)
-- Botões editar e remover funcionais
-
-### 3.2 Gestão de Zonas
-- Criar/editar/remover zonas
-- Associar restaurantes a zonas
-- Ativar/desativar zonas
-
-### 3.3 Sistema de Destaques
-- Toggle para marcar como destaque
-- Campo de ordem/prioridade
-- Guardar alterações na base de dados
-
-## Fase 4: Melhorias no Frontend
-
-### 4.1 Pesquisa por Cidade/Morada
-- Adicionar campo de pesquisa de texto na homepage
-- Sugestões de cidades mais pesquisadas
-- Autocomplete com zonas disponíveis
-
-### 4.2 Persistência de Sessão
-- Guardar cidade selecionada em localStorage
-- Restaurar ao recarregar a página
-
-### 4.3 Formulário de Sugestão
-- Quando não há restaurantes numa zona
-- Campos: nome da cidade, email, mensagem
-- Guardar na tabela `suggestions`
-
-## Fase 5: Integração Frontend com Base de Dados
-
-- Substituir imports de `mockData.ts` por queries Supabase
-- Criar hooks React Query para:
-  - `useZones()` - listar zonas ativas
-  - `useRestaurants(zoneId)` - restaurantes por zona
-  - `useFeaturedRestaurants(zoneId)` - restaurantes em destaque
-  - `useRestaurant(slug)` - detalhes do restaurante
+Melhorar a edge function existente de verificacao de subscricoes, criar uma nova tabela para registar desativacoes automaticas, adicionar uma nova seccao "Alertas Comerciais" ao backoffice, e criar uma edge function para envio de emails diarios de resumo.
 
 ---
 
-## Detalhes Técnicos
+## PARTE 1 -- Logica de Expiracao Melhorada
 
-### Tabelas a Criar
+### Base de dados
+- Criar tabela `expiration_logs` para registar cada desativacao automatica:
+  - `id` (uuid, PK)
+  - `business_id` (uuid, FK)
+  - `plan_name` (text) -- nome do plano na altura da expiracao
+  - `plan_price` (numeric)
+  - `expired_at` (date)
+  - `deactivated_at` (timestamptz, default now())
+  - `contact_status` (text, default 'nao_contactado') -- nao_contactado | contactado | renovado | perdido
+  - `contacted_at` (timestamptz, nullable)
+  - `notes` (text, nullable)
+- RLS: admins full access
 
-**1. zones**
-```sql
-CREATE TABLE zones (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-```
+### Edge Function (`check-subscriptions`)
+- Atualizar a funcao existente para:
+  - Excluir negocios com `plan_id` nulo ou plano gratuito (preco = 0) da verificacao
+  - Ao desativar, registar na tabela `expiration_logs` com dados do plano
+  - Adicionar periodo de graca opcional (3 dias) -- comparar com `subscription_end_date + 3 dias`
+  - Retornar lista de negocios expirados no response para uso pelo email
 
-**2. restaurants**
-```sql
-CREATE TABLE restaurants (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  zone_id UUID REFERENCES zones(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
-  logo_url TEXT,
-  images TEXT[] DEFAULT '{}',
-  category TEXT NOT NULL,
-  description TEXT,
-  schedule_weekdays TEXT,
-  schedule_weekend TEXT,
-  delivery_zones TEXT[] DEFAULT '{}',
-  cta_website TEXT,
-  cta_whatsapp TEXT,
-  cta_phone TEXT,
-  cta_app TEXT,
-  is_featured BOOLEAN DEFAULT false,
-  is_active BOOLEAN DEFAULT true,
-  display_order INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-**3. suggestions**
-```sql
-CREATE TABLE suggestions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  city_name TEXT NOT NULL,
-  email TEXT,
-  message TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-**4. profiles + user_roles** (para autenticação)
-
-### Ficheiros a Criar/Modificar
-
-| Ficheiro | Ação |
-|----------|------|
-| `src/pages/AdminLogin.tsx` | Criar - página de login |
-| `src/hooks/useAuth.tsx` | Criar - contexto de autenticação |
-| `src/hooks/useZones.ts` | Criar - query para zonas |
-| `src/hooks/useRestaurants.ts` | Criar - query para restaurantes |
-| `src/components/CitySearch.tsx` | Criar - pesquisa por cidade |
-| `src/components/SuggestionForm.tsx` | Criar - formulário de sugestão |
-| `src/pages/AdminPage.tsx` | Modificar - integrar com BD |
-| `src/pages/Index.tsx` | Modificar - usar hooks reais |
-| `src/App.tsx` | Modificar - adicionar rotas e proteção |
-
-### Estimativa de Trabalho
-
-1. **Base de dados + RLS:** 1 migração
-2. **Autenticação:** 2-3 ficheiros
-3. **Backoffice funcional:** 4-5 ficheiros
-4. **Frontend melhorado:** 3-4 ficheiros
+### Cron Job
+- Configurar via SQL (pg_cron + pg_net) para executar `check-subscriptions` diariamente a meia-noite
 
 ---
 
-## Resultado Final
+## PARTE 2 -- Email Automatico de Alerta
 
-Após implementação:
-- Base de dados persistente com todas as tabelas
-- Login admin funcional (não com "admin123" fixo, mas com autenticação real)
-- CRUD completo de restaurantes e zonas
-- Pesquisa por cidade com campo de texto
-- Formulário de sugestão para zonas sem restaurantes
-- Sessão de cidade persistente durante navegação
-- Controle de restaurantes ativos/inativos
-- Sistema de destaques com ordem de exibição
+### Nova Edge Function (`send-expiry-alerts`)
+- Executada diariamente (ex: 9h00 via cron)
+- Consulta `expiration_logs` das ultimas 24h com `contact_status = 'nao_contactado'`
+- Junta dados de contacto do negocio (WhatsApp, telefone, email)
+- Envia email formatado em HTML para `geral.pededireto@gmail.com` usando Resend ou o servico de email do projeto
+- Template conforme especificado no pedido
+
+### Nota sobre envio de email
+- Sera necessario configurar um servico de email (Resend API key como secret)
+- Alternativa: registar tudo na tabela e o admin consulta no dashboard (sem email externo)
+
+---
+
+## PARTE 3 -- Dashboard de Alertas Comerciais
+
+### Nova aba no sidebar
+- Adicionar "Alertas" entre "Subscricoes" e "Sugestoes" no `AdminSidebar.tsx`
+- Icone: `Bell` (sino) do lucide-react
+- Badge vermelho dinamico com contagem de negocios nao contactados
+
+### Componente `AlertsContent.tsx`
+- **Filtros no topo:**
+  - Periodo: Hoje / 7 dias / 30 dias / Todos
+  - Plano anterior (dropdown dinamico dos planos comerciais)
+  - Estado de contacto: Nao contactado / Contactado / Renovado / Perdido
+
+- **Estatisticas resumidas:**
+  - Total expirados nao contactados
+  - Taxa de recuperacao (renovados / total nos ultimos 30 dias)
+  - Receita em risco (soma dos precos dos planos expirados nao contactados)
+
+- **Tabela de negocios expirados:**
+  - Colunas: Negocio, Plano Anterior, Expirou em, Dias desde expiracao, Contacto, Acoes
+  - Acoes por linha:
+    - WhatsApp (abre conversa pre-formatada com template)
+    - Email (abre mailto com template)
+    - Marcar como contactado (atualiza `contact_status`)
+
+### Hook `useExpirationLogs.ts`
+- Query `expiration_logs` com join a `businesses` para dados de contacto
+- Mutacoes para atualizar `contact_status` e `notes`
+
+---
+
+## PARTE 4 -- Templates de Comunicacao
+
+- Template WhatsApp integrado no botao de acao (URL `wa.me` com texto pre-formatado)
+- Template Email integrado no botao `mailto:` com subject e body pre-formatados
+- Ambos usando dados dinamicos do negocio (nome, plano, data de expiracao)
+
+---
+
+## Detalhes Tecnicos
+
+### Ficheiros a criar
+| Ficheiro | Descricao |
+|---|---|
+| `supabase/migrations/..._create_expiration_logs.sql` | Tabela + RLS |
+| `src/hooks/useExpirationLogs.ts` | Hook para queries e mutacoes |
+| `src/components/admin/AlertsContent.tsx` | Dashboard de alertas |
+| `supabase/functions/send-expiry-alerts/index.ts` | Edge function de email |
+
+### Ficheiros a editar
+| Ficheiro | Alteracao |
+|---|---|
+| `supabase/functions/check-subscriptions/index.ts` | Excluir gratuitos, registar em expiration_logs, periodo de graca |
+| `src/components/admin/AdminSidebar.tsx` | Adicionar tab "alerts" com badge |
+| `src/pages/AdminPage.tsx` | Renderizar AlertsContent |
+| `supabase/config.toml` | Registar nova edge function |
+
+### Dependencias
+- Secret `RESEND_API_KEY` necessaria para envio de emails (sera pedida ao utilizador)
+- Extensoes `pg_cron` e `pg_net` para cron jobs
+
