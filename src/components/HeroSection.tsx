@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useSearch } from "@/hooks/useSearch";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import SearchResults from "@/components/SearchResults";
-import verdinhoMascot from "@/assets/verdinho-mascot.png";
+import pedeDiretoMascot from "@/assets/pede-direto-mascot.png";
 
 interface HeroSectionProps {
   onSearch?: (term: string) => void;
@@ -134,8 +134,8 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
             <div className="hidden md:flex justify-center items-center relative">
               <div className="relative animate-float">
                 <img
-                  src={verdinhoMascot}
-                  alt="Verdinho - Mascote do Pede Direto"
+                  src={pedeDiretoMascot}
+                  alt="Pede Direto - Logo"
                   className="w-72 lg:w-96 drop-shadow-2xl"
                 />
                 <div className="absolute -top-4 -right-4 bg-card rounded-2xl p-4 shadow-lg border border-border max-w-[200px]">
