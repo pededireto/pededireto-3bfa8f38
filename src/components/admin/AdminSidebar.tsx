@@ -14,12 +14,14 @@ import {
   FileText,
   BookOpen,
   Crown,
-  SearchX
+  SearchX,
+  Bell
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { useUncontactedCount } from "@/hooks/useExpirationLogs";
 
-export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "plans" | "subscriptions" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms";
+export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -34,6 +36,7 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "featured", label: "Destaques", icon: Crown },
   { id: "plans", label: "Planos", icon: CreditCard },
   { id: "subscriptions", label: "Subscrições", icon: CalendarClock },
+  { id: "alerts", label: "Alertas", icon: Bell },
   { id: "suggestions", label: "Sugestões", icon: Lightbulb },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "search-logs", label: "Pesquisas", icon: SearchX },
@@ -44,6 +47,7 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
 
 const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarProps) => {
   const { signOut } = useAuth();
+  const { data: uncontactedCount = 0 } = useUncontactedCount();
 
   const handleSignOut = async () => {
     await signOut();
@@ -79,6 +83,11 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
           >
             <item.icon className="h-5 w-5" />
             {item.label}
+            {item.id === "alerts" && uncontactedCount > 0 && (
+              <span className="ml-auto bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
+                {uncontactedCount}
+              </span>
+            )}
           </button>
         ))}
       </nav>
