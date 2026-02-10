@@ -22,9 +22,6 @@ const Header = () => {
           <Link to="/" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
             Início
           </Link>
-          <Link to="/#categorias" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
-            Categorias
-          </Link>
           {pages.map((page) => (
             <Link
               key={page.id}
@@ -53,9 +50,6 @@ const Header = () => {
               <Link to="/" className="text-lg font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
                 Início
               </Link>
-              <Link to="/#categorias" className="text-lg font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
-                Categorias
-              </Link>
               {pages.map((page) => (
                 <Link
                   key={page.id}
@@ -69,6 +63,7 @@ const Header = () => {
               <Link to="/admin/login" className="text-lg font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
                 Área Admin
               </Link>
+              <ThemeToggle />
             </nav>
           </SheetContent>
         </Sheet>
