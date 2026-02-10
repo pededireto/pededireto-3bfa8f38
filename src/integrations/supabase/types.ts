@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_action_requests: {
+        Row: {
+          action_type: string
+          created_at: string
+          details: string | null
+          id: string
+          requested_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          target_id: string
+          target_name: string | null
+          target_table: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          requested_by: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_id: string
+          target_name?: string | null
+          target_table: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          requested_by?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_id?: string
+          target_name?: string | null
+          target_table?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           business_id: string | null
@@ -48,6 +93,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "analytics_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "analytics_events_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
@@ -55,6 +107,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          changes: Json | null
+          created_at: string
+          id: string
+          target_id: string
+          target_name: string | null
+          target_table: string
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          target_id: string
+          target_name?: string | null
+          target_table: string
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          target_id?: string
+          target_name?: string | null
+          target_table?: string
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       business_contact_logs: {
         Row: {
@@ -89,6 +177,13 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "business_contact_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       business_subcategories: {
@@ -119,6 +214,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "business_subcategories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "business_subcategories_subcategory_id_fkey"
             columns: ["subcategory_id"]
             isOneToOne: false
@@ -129,11 +231,13 @@ export type Database = {
       }
       businesses: {
         Row: {
+          activated_at: string | null
           address: string | null
           alcance: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id: string | null
           city: string | null
           commercial_status: Database["public"]["Enums"]["commercial_status_tipo"]
+          contacted_at: string | null
           coordinates: Json | null
           created_at: string | null
           cta_app: string | null
@@ -172,11 +276,13 @@ export type Database = {
           zone: string | null
         }
         Insert: {
+          activated_at?: string | null
           address?: string | null
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id?: string | null
           city?: string | null
           commercial_status?: Database["public"]["Enums"]["commercial_status_tipo"]
+          contacted_at?: string | null
           coordinates?: Json | null
           created_at?: string | null
           cta_app?: string | null
@@ -215,11 +321,13 @@ export type Database = {
           zone?: string | null
         }
         Update: {
+          activated_at?: string | null
           address?: string | null
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id?: string | null
           city?: string | null
           commercial_status?: Database["public"]["Enums"]["commercial_status_tipo"]
+          contacted_at?: string | null
           coordinates?: Json | null
           created_at?: string | null
           cta_app?: string | null
@@ -402,6 +510,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiration_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
             referencedColumns: ["id"]
           },
         ]
@@ -793,6 +908,13 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_favorites_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -845,7 +967,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      commercial_alerts_view: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          name: string | null
+          nif: string | null
+          owner_email: string | null
+          owner_name: string | null
+          owner_phone: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          nif?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          nif?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_business_favorites_count: {
@@ -860,6 +1011,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_commercial: { Args: never; Returns: boolean }
       search_businesses_and_subcategories: {
         Args: { search_term: string }
         Returns: {
@@ -876,12 +1028,13 @@ export type Database = {
     }
     Enums: {
       alcance_tipo: "local" | "nacional" | "hibrido"
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "commercial"
       commercial_status_tipo:
         | "nao_contactado"
         | "contactado"
         | "interessado"
         | "cliente"
+        | "perdido"
       premium_level_tipo: "SUPER" | "CATEGORIA" | "SUBCATEGORIA"
       subscription_plan_tipo:
         | "free"
@@ -889,7 +1042,7 @@ export type Database = {
         | "3_months"
         | "6_months"
         | "1_year"
-      subscription_status_tipo: "inactive" | "active" | "expired"
+      subscription_status_tipo: "inactive" | "active" | "expired" | "free"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1018,12 +1171,13 @@ export const Constants = {
   public: {
     Enums: {
       alcance_tipo: ["local", "nacional", "hibrido"],
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "commercial"],
       commercial_status_tipo: [
         "nao_contactado",
         "contactado",
         "interessado",
         "cliente",
+        "perdido",
       ],
       premium_level_tipo: ["SUPER", "CATEGORIA", "SUBCATEGORIA"],
       subscription_plan_tipo: [
@@ -1033,7 +1187,7 @@ export const Constants = {
         "6_months",
         "1_year",
       ],
-      subscription_status_tipo: ["inactive", "active", "expired"],
+      subscription_status_tipo: ["inactive", "active", "expired", "free"],
     },
   },
 } as const

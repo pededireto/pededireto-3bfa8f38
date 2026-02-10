@@ -2,38 +2,40 @@
  import { User, Session } from "@supabase/supabase-js";
  import { supabase } from "@/integrations/supabase/client";
  
- interface AuthContextType {
-   user: User | null;
-   session: Session | null;
-   isAdmin: boolean;
-   isLoading: boolean;
-   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
-   signOut: () => Promise<void>;
- }
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  isAdmin: boolean;
+  isCommercial: boolean;
+  isLoading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
+}
  
  const AuthContext = createContext<AuthContextType | undefined>(undefined);
  
  export const AuthProvider = ({ children }: { children: ReactNode }) => {
    const [user, setUser] = useState<User | null>(null);
    const [session, setSession] = useState<Session | null>(null);
-   const [isAdmin, setIsAdmin] = useState(false);
-   const [isLoading, setIsLoading] = useState(true);
- 
-   const checkAdminRole = async (userId: string) => {
-     const { data, error } = await supabase
-       .from("user_roles")
-       .select("role")
-       .eq("user_id", userId)
-       .eq("role", "admin")
-       .maybeSingle();
-     
-     if (!error && data) {
-       setIsAdmin(true);
-     } else {
-       setIsAdmin(false);
-     }
-   };
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCommercial, setIsCommercial] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const checkUserRoles = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    
+    if (!error && data) {
+      setIsAdmin(data.some(r => r.role === "admin"));
+      setIsCommercial(data.some(r => r.role === "commercial"));
+    } else {
+      setIsAdmin(false);
+      setIsCommercial(false);
+    }
+  };
  
    useEffect(() => {
      // Set up auth state listener FIRST
@@ -43,13 +45,14 @@
          setUser(session?.user ?? null);
          
          // Defer admin check with setTimeout to avoid deadlock
-         if (session?.user) {
-           setTimeout(() => {
-             checkAdminRole(session.user.id);
-           }, 0);
-         } else {
-           setIsAdmin(false);
-         }
+          if (session?.user) {
+            setTimeout(() => {
+              checkUserRoles(session.user.id);
+            }, 0);
+          } else {
+            setIsAdmin(false);
+            setIsCommercial(false);
+          }
          setIsLoading(false);
        }
      );
@@ -58,9 +61,9 @@
      supabase.auth.getSession().then(({ data: { session } }) => {
        setSession(session);
        setUser(session?.user ?? null);
-       if (session?.user) {
-         checkAdminRole(session.user.id);
-       }
+      if (session?.user) {
+          checkUserRoles(session.user.id);
+        }
        setIsLoading(false);
      });
  
@@ -89,9 +92,9 @@
    };
  
    return (
-     <AuthContext.Provider value={{ user, session, isAdmin, isLoading, signIn, signUp, signOut }}>
-       {children}
-     </AuthContext.Provider>
+    <AuthContext.Provider value={{ user, session, isAdmin, isCommercial, isLoading, signIn, signUp, signOut }}>
+      {children}
+    </AuthContext.Provider>
    );
  };
  

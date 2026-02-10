@@ -15,13 +15,17 @@ import {
   BookOpen,
   Crown,
   SearchX,
-  Bell
+  Bell,
+  UserCog,
+  ClipboardList,
+  History
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUncontactedCount } from "@/hooks/useExpirationLogs";
+import { usePendingRequestsCount } from "@/hooks/useActionRequests";
 
-export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms";
+export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -42,12 +46,16 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "search-logs", label: "Pesquisas", icon: SearchX },
   { id: "pages", label: "Páginas", icon: FileText },
   { id: "synonyms", label: "Sinónimos", icon: BookOpen },
+  { id: "commercial-users", label: "Eq. Comercial", icon: UserCog },
+  { id: "action-requests", label: "Pedidos Comerciais", icon: ClipboardList },
+  { id: "audit-logs", label: "Auditoria", icon: History },
   { id: "settings", label: "Configurações", icon: Settings },
 ];
 
 const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarProps) => {
   const { signOut } = useAuth();
   const { data: uncontactedCount = 0 } = useUncontactedCount();
+  const { data: pendingRequestsCount = 0 } = usePendingRequestsCount();
 
   const handleSignOut = async () => {
     await signOut();
@@ -86,6 +94,11 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
             {item.id === "alerts" && uncontactedCount > 0 && (
               <span className="ml-auto bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
                 {uncontactedCount}
+              </span>
+            )}
+            {item.id === "action-requests" && pendingRequestsCount > 0 && (
+              <span className="ml-auto bg-warning text-warning-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
+                {pendingRequestsCount}
               </span>
             )}
           </button>
