@@ -13,7 +13,7 @@ export const useSavedSearches = () => {
         .from("saved_searches")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        .order("updated_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -21,21 +21,37 @@ export const useSavedSearches = () => {
   });
 };
 
-export const useSaveSearch = () => {
+export const useAutoSaveSearch = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ searchQuery, filters }: { searchQuery: string; filters?: Record<string, string> }) => {
-      if (!user) throw new Error("Not authenticated");
-      const { error } = await supabase
+      if (!user) return; // silently skip if not authenticated
+
+      // Check for existing identical search
+      const { data: existing } = await supabase
         .from("saved_searches")
-        .insert([{
-          user_id: user.id,
-          search_query: searchQuery,
-          filters: filters ?? {},
-        }]);
-      if (error) throw error;
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("search_query", searchQuery)
+        .maybeSingle();
+
+      if (existing) {
+        // Update timestamp only
+        await supabase
+          .from("saved_searches")
+          .update({ updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+      } else {
+        await supabase
+          .from("saved_searches")
+          .insert([{
+            user_id: user.id,
+            search_query: searchQuery,
+            filters: filters ?? {},
+          }]);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["saved-searches"] });
