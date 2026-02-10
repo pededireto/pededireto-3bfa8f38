@@ -13,12 +13,13 @@ import {
   Settings,
   FileText,
   BookOpen,
-  Crown
+  Crown,
+  SearchX
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "plans" | "subscriptions" | "suggestions" | "analytics" | "settings" | "pages" | "synonyms";
+export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "plans" | "subscriptions" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -35,6 +36,7 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "subscriptions", label: "Subscrições", icon: CalendarClock },
   { id: "suggestions", label: "Sugestões", icon: Lightbulb },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "search-logs", label: "Pesquisas", icon: SearchX },
   { id: "pages", label: "Páginas", icon: FileText },
   { id: "synonyms", label: "Sinónimos", icon: BookOpen },
   { id: "settings", label: "Configurações", icon: Settings },

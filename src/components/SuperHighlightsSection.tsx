@@ -57,9 +57,9 @@ const SuperHighlightsSection = () => {
               </div>
 
               {/* Logo */}
-              <div className="h-40 bg-muted relative">
+              <div className="aspect-[4/3] bg-muted relative flex items-center justify-center">
                 {business.logo_url ? (
-                  <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" />
+                  <img src={business.logo_url} alt={business.name} className="max-w-full max-h-full object-contain p-2" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-primary/10">
                     <span className="text-4xl font-bold text-primary/40">{business.name.charAt(0)}</span>

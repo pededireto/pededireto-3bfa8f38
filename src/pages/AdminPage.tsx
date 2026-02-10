@@ -18,6 +18,7 @@ import SettingsContent from "@/components/admin/SettingsContent";
 import PagesContent from "@/components/admin/PagesContent";
 import SynonymsContent from "@/components/admin/SynonymsContent";
 import PlansContent from "@/components/admin/PlansContent";
+import SearchLogsContent from "@/components/admin/SearchLogsContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -36,6 +37,7 @@ const AdminPage = () => {
     if (activeTab === "pages") return <PagesContent />;
     if (activeTab === "synonyms") return <SynonymsContent />;
     if (activeTab === "plans") return <PlansContent />;
+    if (activeTab === "search-logs") return <SearchLogsContent />;
 
     if (isLoading) {
       return (

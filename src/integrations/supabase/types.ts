@@ -487,6 +487,33 @@ export type Database = {
           },
         ]
       }
+      search_logs: {
+        Row: {
+          created_at: string
+          id: string
+          is_reviewed: boolean
+          results_count: number
+          search_term: string
+          search_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_reviewed?: boolean
+          results_count?: number
+          search_term: string
+          search_type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_reviewed?: boolean
+          results_count?: number
+          search_term?: string
+          search_type?: string
+        }
+        Relationships: []
+      }
       search_synonyms: {
         Row: {
           created_at: string
