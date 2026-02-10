@@ -11,6 +11,7 @@ export interface Business {
   id: string;
   category_id: string | null;
   subcategory_id: string | null;
+  plan_id: string | null;
   name: string;
   slug: string;
   description: string | null;

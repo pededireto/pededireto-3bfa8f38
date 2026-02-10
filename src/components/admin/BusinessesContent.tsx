@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { BusinessWithCategory, useCreateBusiness, useUpdateBusiness, useDeleteBusiness, SUBSCRIPTION_PLANS, SubscriptionPlan, SubscriptionStatus, CommercialStatus, PremiumLevel } from "@/hooks/useBusinesses";
+import { useCommercialPlans, CommercialPlan } from "@/hooks/useCommercialPlans";
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories, Subcategory } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
@@ -39,6 +40,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const deleteBusiness = useDeleteBusiness();
   const syncSubcategories = useSyncBusinessSubcategories();
   const { data: allSubcategories = [] } = useAllSubcategories();
+  const { data: commercialPlans = [] } = useCommercialPlans(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -71,7 +73,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     premium_level: "" as string,
     is_active: true,
     display_order: 0,
-    subscription_plan: "free" as SubscriptionPlan,
+    plan_id: "" as string,
     subscription_start_date: "",
     commercial_status: "nao_contactado" as CommercialStatus,
   });
@@ -92,7 +94,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       alcance: "local", schedule_weekdays: "", schedule_weekend: "",
       cta_website: "", cta_whatsapp: "", cta_phone: "", cta_email: "",
       is_featured: false, is_premium: false, premium_level: "", is_active: true,
-      display_order: 0, subscription_plan: "free", subscription_start_date: "",
+      display_order: 0, plan_id: "", subscription_start_date: "",
       commercial_status: "nao_contactado",
     });
     setEditingBusiness(null);
@@ -121,33 +123,37 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       premium_level: business.premium_level || "",
       is_active: business.is_active,
       display_order: business.display_order,
-      subscription_plan: business.subscription_plan,
+      plan_id: business.plan_id || "",
       subscription_start_date: business.subscription_start_date || "",
       commercial_status: business.commercial_status || "nao_contactado",
     });
     setDialogOpen(true);
   };
 
-  const getSubscriptionDates = (plan: SubscriptionPlan, startDate: string) => {
-    if (plan === "free" || !startDate) {
-      return { subscription_price: 0, subscription_start_date: null, subscription_end_date: null, subscription_status: "inactive" as SubscriptionStatus };
+  const getSubscriptionDates = (planId: string, startDate: string) => {
+    if (!planId || !startDate) {
+      return { subscription_price: 0, subscription_start_date: null, subscription_end_date: null, subscription_status: "inactive" as SubscriptionStatus, subscription_plan: "free" as SubscriptionPlan };
     }
-    const planInfo = SUBSCRIPTION_PLANS[plan];
+    const plan = commercialPlans.find(p => p.id === planId);
+    if (!plan || plan.price === 0) {
+      return { subscription_price: 0, subscription_start_date: null, subscription_end_date: null, subscription_status: "inactive" as SubscriptionStatus, subscription_plan: "free" as SubscriptionPlan };
+    }
     const start = new Date(startDate);
     const end = new Date(start);
-    end.setMonth(end.getMonth() + planInfo.months);
+    end.setMonth(end.getMonth() + plan.duration_months);
     return {
-      subscription_price: planInfo.price,
+      subscription_price: plan.price,
       subscription_start_date: start.toISOString().split("T")[0],
       subscription_end_date: end.toISOString().split("T")[0],
       subscription_status: "active" as SubscriptionStatus,
+      subscription_plan: "1_month" as SubscriptionPlan, // legacy field, kept for compatibility
     };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const subscriptionData = getSubscriptionDates(formData.subscription_plan, formData.subscription_start_date);
+      const subscriptionData = getSubscriptionDates(formData.plan_id, formData.subscription_start_date);
       const primarySubcategoryId = formData.subcategory_ids.length > 0 ? formData.subcategory_ids[0] : null;
 
       const businessData = {
@@ -155,6 +161,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
         slug: formData.slug || generateSlug(formData.name),
         category_id: formData.category_id || null,
         subcategory_id: primarySubcategoryId,
+        plan_id: formData.plan_id || null,
         description: formData.description || null,
         logo_url: formData.logo_url || null,
         city: formData.city || null,
@@ -172,9 +179,8 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
         is_featured: formData.is_featured,
         is_premium: formData.is_premium,
         premium_level: formData.premium_level ? (formData.premium_level as PremiumLevel) : null,
-        is_active: formData.subscription_plan !== "free" ? true : formData.is_active,
+        is_active: formData.plan_id ? true : formData.is_active,
         display_order: formData.display_order,
-        subscription_plan: formData.subscription_plan,
         commercial_status: formData.commercial_status,
         ...subscriptionData,
       };
@@ -293,6 +299,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             premium_level: null,
             commercial_status: "nao_contactado" as CommercialStatus,
             display_order: 0,
+            plan_id: null,
             subscription_plan: "free" as SubscriptionPlan,
             subscription_price: 0,
             subscription_start_date: null, subscription_end_date: null,
@@ -560,25 +567,32 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Plano</Label>
-                      <Select value={formData.subscription_plan} onValueChange={(value: SubscriptionPlan) => setFormData({ ...formData, subscription_plan: value })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      <Select value={formData.plan_id || "none"} onValueChange={(value) => setFormData({ ...formData, plan_id: value === "none" ? "" : value })}>
+                        <SelectTrigger><SelectValue placeholder="Selecionar plano" /></SelectTrigger>
                         <SelectContent>
-                          {Object.entries(SUBSCRIPTION_PLANS).map(([key, plan]) => (
-                            <SelectItem key={key} value={key}>{plan.label} {plan.price > 0 ? `— ${plan.price}€` : ""}</SelectItem>
+                          <SelectItem value="none">Gratuito</SelectItem>
+                          {commercialPlans.map((plan) => (
+                            <SelectItem key={plan.id} value={plan.id}>
+                              {plan.name} {plan.price > 0 ? `— ${plan.price}€` : ""}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    {formData.subscription_plan !== "free" && (
+                    {formData.plan_id && (
                       <div className="space-y-2">
                         <Label>Data de início</Label>
                         <Input type="date" value={formData.subscription_start_date} onChange={(e) => setFormData({ ...formData, subscription_start_date: e.target.value })} />
-                        {formData.subscription_start_date && (
-                          <p className="text-xs text-muted-foreground">
-                            Fim: {getSubscriptionDates(formData.subscription_plan, formData.subscription_start_date).subscription_end_date || "-"}
-                            {" "}• {SUBSCRIPTION_PLANS[formData.subscription_plan].price}€
-                          </p>
-                        )}
+                        {formData.subscription_start_date && (() => {
+                          const selectedPlan = commercialPlans.find(p => p.id === formData.plan_id);
+                          const dates = getSubscriptionDates(formData.plan_id, formData.subscription_start_date);
+                          return (
+                            <p className="text-xs text-muted-foreground">
+                              Fim: {dates.subscription_end_date || "-"}
+                              {selectedPlan ? ` • ${selectedPlan.price}€` : ""}
+                            </p>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>

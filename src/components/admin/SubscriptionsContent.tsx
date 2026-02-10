@@ -1,9 +1,11 @@
 import { BusinessWithCategory, useExpiringSubscriptions, useUpdateBusiness, SUBSCRIPTION_PLANS, SubscriptionPlan } from "@/hooks/useBusinesses";
+import { useCommercialPlans, CommercialPlan } from "@/hooks/useCommercialPlans";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, CalendarClock, Building2, Loader2 } from "lucide-react";
+import { AlertTriangle, CalendarClock, Building2, Loader2, Download, Package } from "lucide-react";
 import { useState } from "react";
+import * as XLSX from "xlsx";
 
 interface SubscriptionsContentProps {
   businesses: BusinessWithCategory[];
@@ -13,6 +15,7 @@ const SubscriptionsContent = ({ businesses }: SubscriptionsContentProps) => {
   const { toast } = useToast();
   const updateBusiness = useUpdateBusiness();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const { data: commercialPlans = [] } = useCommercialPlans();
 
   const { data: expiring7 = [] } = useExpiringSubscriptions(7);
   const { data: expiring15 = [] } = useExpiringSubscriptions(15);
@@ -20,7 +23,15 @@ const SubscriptionsContent = ({ businesses }: SubscriptionsContentProps) => {
 
   const activeSubscriptions = businesses.filter(b => b.subscription_status === "active");
   const expiredSubscriptions = businesses.filter(b => b.subscription_status === "expired");
-  const freeBusinesses = businesses.filter(b => b.subscription_plan === "free");
+  const freeBusinesses = businesses.filter(b => !b.plan_id && b.subscription_status !== "active");
+
+  // Count active clients per plan
+  const planCounts = commercialPlans
+    .filter(p => p.is_active && p.price > 0)
+    .map(plan => ({
+      plan,
+      count: businesses.filter(b => b.plan_id === plan.id && b.subscription_status === "active").length,
+    }));
 
   const handleExpire = async (business: BusinessWithCategory) => {
     setUpdatingId(business.id);
@@ -49,6 +60,47 @@ const SubscriptionsContent = ({ businesses }: SubscriptionsContentProps) => {
     return diff;
   };
 
+  const getPlanName = (business: BusinessWithCategory) => {
+    if (business.plan_id) {
+      const plan = commercialPlans.find(p => p.id === business.plan_id);
+      if (plan) return plan.name;
+    }
+    return SUBSCRIPTION_PLANS[business.subscription_plan]?.label || "Gratuito";
+  };
+
+  // Export
+  const handleExport = (format: "xlsx" | "csv") => {
+    const data = [...activeSubscriptions, ...expiredSubscriptions].map((b) => {
+      const days = getDaysRemaining(b.subscription_end_date);
+      return {
+        "Negócio": b.name,
+        "Plano": getPlanName(b),
+        "Preço": b.subscription_price ? `${b.subscription_price}€` : "0€",
+        "Início": formatDate(b.subscription_start_date),
+        "Fim": formatDate(b.subscription_end_date),
+        "Dias Restantes": days !== null ? days : "-",
+        "Estado": b.subscription_status === "active" ? "Ativo" : "Expirado",
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Subscrições");
+    const filename = `subscricoes-pededireto-${new Date().toISOString().split("T")[0]}`;
+    
+    if (format === "csv") {
+      const csv = XLSX.utils.sheet_to_csv(ws);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${filename}.csv`;
+      link.click();
+    } else {
+      XLSX.writeFile(wb, `${filename}.xlsx`);
+    }
+    toast({ title: "Relatório exportado com sucesso" });
+  };
+
   const renderAlertSection = (title: string, items: BusinessWithCategory[], variant: "destructive" | "warning" | "default") => {
     if (items.length === 0) return null;
 
@@ -70,7 +122,7 @@ const SubscriptionsContent = ({ businesses }: SubscriptionsContentProps) => {
                 <div className="flex-1 min-w-0">
                   <h4 className="font-medium truncate">{business.name}</h4>
                   <p className="text-sm text-muted-foreground">
-                    {SUBSCRIPTION_PLANS[business.subscription_plan]?.label} • Expira: {formatDate(business.subscription_end_date)}
+                    {getPlanName(business)} • Expira: {formatDate(business.subscription_end_date)}
                     {days !== null && <span className="ml-2 font-medium text-orange-600">({days} dias)</span>}
                   </p>
                 </div>
@@ -84,9 +136,21 @@ const SubscriptionsContent = ({ businesses }: SubscriptionsContentProps) => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Subscrições</h1>
-        <p className="text-muted-foreground">Controlar subscrições e alertas de renovação</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Subscrições</h1>
+          <p className="text-muted-foreground">Controlar subscrições e alertas de renovação</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => handleExport("xlsx")}>
+            <Download className="h-4 w-4 mr-2" />
+            Excel
+          </Button>
+          <Button variant="outline" onClick={() => handleExport("csv")}>
+            <Download className="h-4 w-4 mr-2" />
+            CSV
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -108,6 +172,27 @@ const SubscriptionsContent = ({ businesses }: SubscriptionsContentProps) => {
           <p className="text-3xl font-bold text-orange-500">{expiring30.length}</p>
         </div>
       </div>
+
+      {/* Per-plan cards */}
+      {planCounts.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">Subscrições por Plano</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {planCounts.map(({ plan, count }) => (
+              <div key={plan.id} className="bg-card rounded-xl p-5 shadow-card border border-border">
+                <p className="text-sm font-medium text-muted-foreground truncate">{plan.name}</p>
+                <p className="text-3xl font-bold text-foreground mt-1">{count}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {plan.duration_months} {plan.duration_months === 1 ? "mês" : "meses"} • {plan.price}€
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Alerts */}
       {renderAlertSection("⚠️ Expiram nos próximos 7 dias", expiring7, "destructive")}
@@ -141,7 +226,7 @@ const SubscriptionsContent = ({ businesses }: SubscriptionsContentProps) => {
                 return (
                   <tr key={business.id} className="border-t border-border">
                     <td className="p-4 font-medium">{business.name}</td>
-                    <td className="p-4">{SUBSCRIPTION_PLANS[business.subscription_plan]?.label}</td>
+                    <td className="p-4">{getPlanName(business)}</td>
                     <td className="p-4">{business.subscription_price}€</td>
                     <td className="p-4">{formatDate(business.subscription_start_date)}</td>
                     <td className="p-4">{formatDate(business.subscription_end_date)}</td>
