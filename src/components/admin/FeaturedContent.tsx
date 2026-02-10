@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Star, Building2, ArrowUp, ArrowDown, Loader2, Crown } from "lucide-react";
 import { useState } from "react";
+import FeaturedCategoriesManager from "./FeaturedCategoriesManager";
 
 interface FeaturedContentProps {
   businesses: BusinessWithCategory[];
@@ -135,6 +136,9 @@ const FeaturedContent = ({ businesses }: FeaturedContentProps) => {
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Destaques & Premium</h1>
         <p className="text-muted-foreground">Gerir destaques e níveis premium na plataforma</p>
       </div>
+
+      {/* Categorias em Destaque */}
+      <FeaturedCategoriesManager />
 
       {/* SUPER Highlights */}
       <div className="bg-card rounded-xl p-6 shadow-card">

@@ -7,6 +7,7 @@ import HeroSection from "@/components/HeroSection";
 import CategoriesGrid from "@/components/CategoriesGrid";
 import FeaturedSection from "@/components/FeaturedSection";
 import SuperHighlightsSection from "@/components/SuperHighlightsSection";
+import FeaturedCategoriesSection from "@/components/FeaturedCategoriesSection";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,6 +27,9 @@ const Index = () => {
 
         {/* Super Destaques (Premium) */}
         <SuperHighlightsSection />
+
+        {/* Categorias em Destaque */}
+        <FeaturedCategoriesSection />
 
         <CategoriesGrid 
           categories={categories} 
