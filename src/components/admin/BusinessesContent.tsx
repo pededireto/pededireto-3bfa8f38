@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Download, Pencil } from "lucide-react";
 import ContactLogsDialog from "@/components/admin/ContactLogsDialog";
 import BusinessFileCard from "@/components/admin/BusinessFileCard";
+import ImportBySourceDialog from "@/components/admin/ImportBySourceDialog";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -232,6 +233,9 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             <Download className="h-4 w-4 mr-2" />
             Exportar Excel
           </Button>
+
+          {/* Import by Source */}
+          <ImportBySourceDialog />
 
           {/* Import Excel */}
           <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
