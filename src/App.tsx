@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +10,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import EmergencyBanner from "@/components/EmergencyBanner";
 import ScrollToTop from "@/components/ScrollToTop";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import SubcategoryPage from "./pages/SubcategoryPage";
@@ -26,52 +28,65 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <OfflineIndicator />
-          <EmergencyBanner />
-          <BrowserRouter>
-            <ScrollToTop />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/categoria/:slug" element={<CategoryPage />} />
-              <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
-              <Route path="/negocio/:slug" element={<BusinessPage />} />
-              <Route path="/pagina/:slug" element={<InstitutionalPage />} />
-              <Route path="/registar-negocio" element={<RegisterBusiness />} />
-              <Route path="/login" element={<UserLogin />} />
-              <Route path="/registar" element={<UserRegister />} />
-              <Route path="/dashboard" element={<UserDashboard />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin/register" element={<AdminRegister />} />
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute requireAdmin>
-                    <AdminPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/comercial"
-                element={
-                  <ProtectedRoute requireCommercial>
-                    <CommercialPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </ThemeProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  useEffect(() => {
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      console.error("Unhandled rejection:", event.reason);
+      event.preventDefault();
+    };
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => window.removeEventListener("unhandledrejection", handleRejection);
+  }, []);
+
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ThemeProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <OfflineIndicator />
+              <EmergencyBanner />
+              <BrowserRouter>
+                <ScrollToTop />
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/categoria/:slug" element={<CategoryPage />} />
+                  <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
+                  <Route path="/negocio/:slug" element={<BusinessPage />} />
+                  <Route path="/pagina/:slug" element={<InstitutionalPage />} />
+                  <Route path="/registar-negocio" element={<RegisterBusiness />} />
+                  <Route path="/login" element={<UserLogin />} />
+                  <Route path="/registar" element={<UserRegister />} />
+                  <Route path="/dashboard" element={<UserDashboard />} />
+                  <Route path="/admin/login" element={<AdminLogin />} />
+                  <Route path="/admin/register" element={<AdminRegister />} />
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute requireAdmin>
+                        <AdminPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/comercial"
+                    element={
+                      <ProtectedRoute requireCommercial>
+                        <CommercialPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;
