@@ -105,7 +105,7 @@ export default function ImportBySourceDialog() {
           name: biz.name.trim(),
           slug: generateSlug(biz.name.trim()),
           category_id: categoryId,
-          subcategory_id: subcategoryId || null,
+          subcategory_id: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
           description: null,
           city: biz.city || null,
           zone: null,
@@ -240,7 +240,7 @@ export default function ImportBySourceDialog() {
               <Select value={subcategoryId} onValueChange={setSubcategoryId}>
                 <SelectTrigger><SelectValue placeholder="Subcategoria (opcional)" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem>
                   {subcategories.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
