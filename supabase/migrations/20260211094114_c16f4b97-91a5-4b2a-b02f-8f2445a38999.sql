@@ -1,0 +1,1 @@
+ALTER TABLE public.subcategories ADD COLUMN image_url TEXT NULL;

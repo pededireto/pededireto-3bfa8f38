@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Subcategory } from "@/hooks/useSubcategories";
 import { ArrowRight } from "lucide-react";
@@ -7,6 +8,58 @@ interface SubcategoriesGridProps {
   categorySlug: string;
   isLoading?: boolean;
 }
+
+const SubcategoryCard = ({ sub, categorySlug }: { sub: Subcategory; categorySlug: string }) => {
+  const [imgError, setImgError] = useState(false);
+  const hasImage = sub.image_url && !imgError;
+
+  return (
+    <Link
+      to={`/categoria/${categorySlug}/${sub.slug}`}
+      className="group relative overflow-hidden bg-card rounded-xl shadow-card hover:shadow-lg transition-all hover:-translate-y-1 border border-border"
+    >
+      {hasImage ? (
+        <>
+          <img
+            src={sub.image_url!}
+            alt={sub.name}
+            onError={() => setImgError(true)}
+            className="absolute inset-0 w-full h-full object-cover rounded-xl grayscale group-hover:grayscale-0 transition-all duration-300"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-black/50 rounded-xl" />
+          <div className="relative z-10 p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-lg text-white">
+                {sub.name}
+              </h3>
+              <ArrowRight className="w-5 h-5 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all" />
+            </div>
+            {sub.description && (
+              <p className="text-sm text-white/80 line-clamp-2">
+                {sub.description}
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+              {sub.name}
+            </h3>
+            <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+          </div>
+          {sub.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {sub.description}
+            </p>
+          )}
+        </div>
+      )}
+    </Link>
+  );
+};
 
 const SubcategoriesGrid = ({ subcategories, categorySlug, isLoading }: SubcategoriesGridProps) => {
   if (isLoading) {
@@ -33,23 +86,7 @@ const SubcategoriesGrid = ({ subcategories, categorySlug, isLoading }: Subcatego
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {subcategories.map((sub) => (
-        <Link
-          key={sub.id}
-          to={`/categoria/${categorySlug}/${sub.slug}`}
-          className="group bg-card rounded-xl p-6 shadow-card hover:shadow-lg transition-all hover:-translate-y-1 border border-border"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
-              {sub.name}
-            </h3>
-            <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-          </div>
-          {sub.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {sub.description}
-            </p>
-          )}
-        </Link>
+        <SubcategoryCard key={sub.id} sub={sub} categorySlug={categorySlug} />
       ))}
     </div>
   );
