@@ -14,6 +14,7 @@ import { Plus, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Down
 import ContactLogsDialog from "@/components/admin/ContactLogsDialog";
 import BusinessFileCard from "@/components/admin/BusinessFileCard";
 import ImportBySourceDialog from "@/components/admin/ImportBySourceDialog";
+import ImportByTextDialog from "@/components/admin/ImportByTextDialog";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -236,6 +237,9 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
 
           {/* Import by Source */}
           <ImportBySourceDialog />
+
+          {/* Import by Text */}
+          <ImportByTextDialog />
 
           {/* Import Excel */}
           <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>

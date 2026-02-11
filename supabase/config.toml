@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.scrape-businesses]
 verify_jwt = false
+
+[functions.extract-businesses-from-text]
+verify_jwt = false
