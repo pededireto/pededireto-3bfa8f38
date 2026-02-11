@@ -58,7 +58,7 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
 
   // Subcategory form
   const [subForm, setSubForm] = useState({
-    name: "", slug: "", description: "", icon: "",
+    name: "", slug: "", description: "", icon: "", image_url: "",
     category_id: "", display_order: 0, is_active: true,
   });
 
@@ -68,7 +68,7 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
   };
 
   const resetSubForm = () => {
-    setSubForm({ name: "", slug: "", description: "", icon: "", category_id: "", display_order: 0, is_active: true });
+    setSubForm({ name: "", slug: "", description: "", icon: "", image_url: "", category_id: "", display_order: 0, is_active: true });
     setEditingSubcategory(null);
   };
 
@@ -101,7 +101,7 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
     setEditingSubcategory(sub);
     setSubForm({
       name: sub.name, slug: sub.slug, description: sub.description || "",
-      icon: sub.icon || "", category_id: sub.category_id,
+      icon: sub.icon || "", image_url: (sub as any).image_url || "", category_id: sub.category_id,
       display_order: sub.display_order, is_active: sub.is_active,
     });
     setSubCategoryParentId(sub.category_id);
@@ -134,6 +134,7 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
         slug: subForm.slug || generateSlug(subForm.name),
         description: subForm.description || null,
         icon: subForm.icon || null,
+        image_url: subForm.image_url || null,
         category_id: subForm.category_id || subCategoryParentId,
       };
       if (editingSubcategory) {
@@ -243,6 +244,10 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
                 </div>
               </div>
               <div className="space-y-2">
+                <Label>Imagem (URL externa)</Label>
+                <Input type="url" value={catForm.image_url} onChange={(e) => setCatForm({ ...catForm, image_url: e.target.value })} placeholder="https://exemplo.com/imagem.jpg" />
+              </div>
+              <div className="space-y-2">
                 <Label>Ordem</Label>
                 <Input type="number" value={catForm.display_order} onChange={(e) => setCatForm({ ...catForm, display_order: parseInt(e.target.value) || 0 })} />
               </div>
@@ -280,6 +285,10 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
             <div className="space-y-2">
               <Label>Descrição</Label>
               <Textarea value={subForm.description} onChange={(e) => setSubForm({ ...subForm, description: e.target.value })} rows={2} placeholder="Texto orientado a problemas..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Imagem (URL externa)</Label>
+              <Input type="url" value={subForm.image_url} onChange={(e) => setSubForm({ ...subForm, image_url: e.target.value })} placeholder="https://exemplo.com/imagem.jpg" />
             </div>
             <div className="space-y-2">
               <Label>Ordem</Label>

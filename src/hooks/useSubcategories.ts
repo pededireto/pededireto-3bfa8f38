@@ -8,6 +8,7 @@ export interface Subcategory {
   slug: string;
   description: string | null;
   icon: string | null;
+  image_url: string | null;
   is_active: boolean;
   display_order: number;
   created_at: string;

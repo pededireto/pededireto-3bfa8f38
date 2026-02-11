@@ -90,6 +90,7 @@ const SearchLogsContent = () => {
         category_id: selectedCategoryId,
         description: null,
         icon: null,
+        image_url: null,
         display_order: 0,
         is_active: true,
       });
