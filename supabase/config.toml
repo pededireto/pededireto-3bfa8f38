@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.manage-commercial-user]
 verify_jwt = false
+
+[functions.scrape-businesses]
+verify_jwt = false
