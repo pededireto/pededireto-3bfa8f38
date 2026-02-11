@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Heart } from "lucide-react";
+import { MessageCircle, Mail } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useFooterPages } from "@/hooks/useNavigationPages";
 
@@ -77,8 +77,30 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold mb-4">Contacto</h4>
             <ul className="space-y-2 text-background/70">
-              {settings?.footer_email && <li>{settings.footer_email}</li>}
-              {settings?.footer_phone && <li>{settings.footer_phone}</li>}
+              {(settings?.contacto_email || settings?.footer_email) && (
+                <li>
+                  <a href={`mailto:${settings?.contacto_email || settings?.footer_email}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                    <Mail className="h-4 w-4" />
+                    {settings?.contacto_email || settings?.footer_email}
+                  </a>
+                </li>
+              )}
+              {settings?.contacto_whatsapp && (
+                <li>
+                  <a
+                    href={`https://api.whatsapp.com/send/?phone=${settings.contacto_whatsapp}&text&type=phone_number&app_absent=0`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 hover:text-primary transition-colors"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
+                  </a>
+                </li>
+              )}
+              {settings?.footer_phone && (
+                <li>{settings.footer_phone}</li>
+              )}
               <li>Portugal</li>
             </ul>
           </div>
@@ -89,8 +111,19 @@ const Footer = () => {
           <p className="text-background/50 text-sm">
             © {new Date().getFullYear()} Pede Direto. Todos os direitos reservados.
           </p>
-          <p className="text-background/50 text-sm flex items-center gap-1">
-            Feito com <Heart className="h-4 w-4 text-primary fill-primary" /> em Portugal
+          <p className="text-background/50 text-sm">
+            {settings?.footer_link ? (
+              <a
+                href={settings.footer_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                {settings?.footer_text || "Desenvolvido por Delivery Masters"}
+              </a>
+            ) : (
+              settings?.footer_text || "Desenvolvido por Delivery Masters"
+            )}
           </p>
         </div>
       </div>
