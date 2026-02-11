@@ -166,7 +166,7 @@ export default function ImportBySourceDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (loading || importing) return; setOpen(o); if (!o) reset(); }}>
       <DialogTrigger asChild>
         <Button variant="outline">
           <Bug className="h-4 w-4 mr-2" />
@@ -247,8 +247,20 @@ export default function ImportBySourceDialog() {
                 </SelectContent>
               </Select>
             )}
+
+            {loading && (
+              <div className="bg-muted/50 rounded-lg p-6 text-center space-y-3">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                <p className="font-medium text-foreground">A extrair negócios...</p>
+                <p className="text-sm text-muted-foreground">
+                  Este processo pode demorar até 60 segundos dependendo da página.
+                  <br />Por favor aguarda e não feches esta janela.
+                </p>
+              </div>
+            )}
+
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(2)}>
+              <Button variant="outline" onClick={() => setStep(2)} disabled={loading}>
                 <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
               </Button>
               <Button onClick={handleScrape} disabled={!categoryId || loading}>
