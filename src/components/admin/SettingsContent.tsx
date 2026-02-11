@@ -107,18 +107,40 @@ const SettingsContent = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Email Institucional</Label>
+            <Label>Texto do Footer (créditos)</Label>
+            <Input value={form.footer_text || ""} onChange={(e) => setForm({ ...form, footer_text: e.target.value })} placeholder="Desenvolvido por Delivery Masters" />
+          </div>
+          <div className="space-y-2">
+            <Label>Link do Footer</Label>
+            <Input value={form.footer_link || ""} onChange={(e) => setForm({ ...form, footer_link: e.target.value })} placeholder="https://deliverymasters.pt/sites-institucionais" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Email de Contacto</Label>
+            <Input value={form.contacto_email || ""} onChange={(e) => setForm({ ...form, contacto_email: e.target.value })} placeholder="geral@pededireto.pt" />
+          </div>
+          <div className="space-y-2">
+            <Label>WhatsApp (apenas número, ex: 351210203862)</Label>
+            <Input value={form.contacto_whatsapp || ""} onChange={(e) => setForm({ ...form, contacto_whatsapp: e.target.value })} placeholder="351210203862" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Email (legado footer)</Label>
             <Input value={form.footer_email || ""} onChange={(e) => setForm({ ...form, footer_email: e.target.value })} />
           </div>
           <div className="space-y-2">
-            <Label>Telefone</Label>
+            <Label>Telefone (legado footer)</Label>
             <Input value={form.footer_phone || ""} onChange={(e) => setForm({ ...form, footer_phone: e.target.value })} />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>Texto Institucional</Label>
-          <Textarea value={form.footer_text || ""} onChange={(e) => setForm({ ...form, footer_text: e.target.value })} rows={3} />
+          <Label>Texto Institucional (descrição do footer)</Label>
+          <Textarea value={form.texto_institucional_home || ""} onChange={(e) => setForm({ ...form, texto_institucional_home: e.target.value })} rows={3} placeholder="Encontre rapidamente o contacto que resolve o seu problema..." />
         </div>
 
         <h3 className="font-medium mt-4">Redes Sociais</h3>
