@@ -25,6 +25,7 @@ import InstitutionalPage from "./pages/InstitutionalPage";
 import RegisterBusiness from "./pages/RegisterBusiness";
 import CommercialPage from "./pages/CommercialPage";
 import BusinessDashboard from "./pages/BusinessDashboard";
+import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,7 @@ const App = () => {
                   <Route path="/login" element={<UserLogin />} />
                   <Route path="/registar" element={<UserRegister />} />
                   <Route path="/dashboard" element={<UserDashboard />} />
+                  <Route path="/perfil" element={<ProfilePage />} />
                   <Route path="/admin/login" element={<AdminLogin />} />
                   <Route path="/admin/register" element={<AdminRegister />} />
                   <Route
