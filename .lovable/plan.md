@@ -1,214 +1,203 @@
+Ficha de Negocio Modular - Arquitetura SaaS
 
+Resumo
+Criar um sistema de modulos dinamicos paralelo a estrutura existente, permitindo ao admin definir campos extras para negocios sem alterar codigo. A tabela businesses e todos os seus campos permanecem intactos. Implementacao hibrida e incremental, preparada para evolucao futura (gallery estruturada, select real, modulos por plano, etc).
 
-Perfeito. Aqui tens o plano reescrito exatamente no mesmo formato dele, já com os ajustes técnicos de escalabilidade e consistência incluídos, pronto para copiares e colares:
+1. Base de Dados (Migracao SQL)
 
-Evolucao do Pede Direto - Infraestrutura SaaS
-Este plano implementa as 7 partes do pedido de forma incremental e retrocompativel, incluindo os ajustes estrategicos solicitados e melhorias de escalabilidade e consistencia futura.
+Criar tabela business_modules (definicao dos campos dinamicos):
 
-Migracao de Base de Dados (SQL unico)
+Campo | Tipo | Notas
+id | uuid PK | gen_random_uuid()
+name | TEXT UNIQUE NOT NULL | identificador interno (ex: "facebook", "video_apresentacao")
+label | TEXT NOT NULL | nome visivel no formulario
+type | TEXT NOT NULL | text, textarea, url, image, gallery, video, boolean, select
+section | TEXT NOT NULL | presenca_publica, dados_privados, marketing
+is_public_default | BOOLEAN DEFAULT true | se aparece na pagina publica
+is_required | BOOLEAN DEFAULT false | se e obrigatorio
+is_active | BOOLEAN DEFAULT true | se esta ativo
+order_index | INTEGER DEFAULT 0 | ordem de apresentacao
+plan_restriction | TEXT NULL | null = todos os planos, ou business / consumer / plano especifico (preparacao futura)
+options | JSONB NULL | usado para type=select (lista de opcoes)
+created_at | TIMESTAMPTZ DEFAULT now()
+updated_at | TIMESTAMPTZ DEFAULT now()
 
-Expandir tabela profiles:
+Indices:
+(section)
+(is_active)
+(order_index)
 
-phone TEXT NULL
-address TEXT NULL
-status TEXT NOT NULL DEFAULT 'active'
-last_activity_at TIMESTAMPTZ NULL
+Adicionar constraint CHECK para type com valores permitidos.
 
-Adicionar plan_type a commercial_plans:
+Criar tabela business_module_values (valores por negocio):
 
-plan_type TEXT NOT NULL DEFAULT 'business' (valores: business, consumer)
-Planos existentes recebem automaticamente 'business'
+Campo | Tipo | Notas
+id | uuid PK | gen_random_uuid()
+business_id | uuid FK businesses(id) ON DELETE CASCADE
+module_id | uuid FK business_modules(id) ON DELETE CASCADE
+value | TEXT | valor simples (text, url, video, boolean)
+value_json | JSONB NULL | usado para gallery ou estruturas futuras
+created_at | TIMESTAMPTZ DEFAULT now()
+updated_at | TIMESTAMPTZ DEFAULT now()
 
-Criar tabela consumer_subscriptions:
+Indices:
+(business_id)
+(module_id)
+UNIQUE(business_id, module_id)
 
-id (uuid PK), user_id (uuid NOT NULL, referencia profiles.user_id), plan_id (uuid, referencia commercial_plans.id), status TEXT DEFAULT 'inactive', start_date DATE, end_date DATE, auto_renew BOOLEAN DEFAULT true, created_at, updated_at
+Nota:
 
-Criar tabela service_requests:
+value continua para simplicidade
 
-id (uuid PK), user_id (uuid NOT NULL, referencia profiles.user_id), category_id (uuid), subcategory_id (uuid NULL), description TEXT, address TEXT, status TEXT DEFAULT 'novo', assigned_to_admin UUID NULL, created_at, updated_at, closed_at TIMESTAMPTZ NULL
+value_json prepara o sistema para gallery real e estruturas complexas
 
-Status possiveis: novo, em_contacto, encaminhado, concluido, cancelado
+RLS:
 
-Adicionar constraint CHECK em service_requests.status garantindo apenas valores validos:
-('novo','em_contacto','encaminhado','concluido','cancelado')
+business_modules:
 
-Criar tabela request_business_matches:
+SELECT publico apenas onde is_active=true
 
-id (uuid PK), request_id (uuid FK service_requests), business_id (uuid FK businesses), sent_at TIMESTAMPTZ DEFAULT now(), status TEXT DEFAULT 'enviado', responded_at TIMESTAMPTZ NULL, price_quote TEXT NULL
+ALL para admins
 
-Status possiveis: enviado, aceite, recusado, sem_resposta
+commercial users apenas SELECT
 
-Adicionar constraint CHECK em request_business_matches.status garantindo apenas valores validos:
-('enviado','aceite','recusado','sem_resposta')
+business_module_values:
 
-Atualizar trigger handle_new_user():
+SELECT publico via join com modulo ativo e is_public_default=true
 
-Copiar phone do raw_user_meta_data para profiles.phone
+admins ALL
 
-Garantir atualizacao automatica de profiles.last_activity_at em:
+commercial users podem ler/escrever apenas onde business_id pertence ao seu utilizador
 
-login
+Triggers:
+updated_at automatico em ambas as tabelas
 
-criacao de pedido (service_requests)
-
-atualizacao de perfil
-
-RLS em todas as novas tabelas:
-
-profiles: admins veem todos; users veem/editam o seu
-consumer_subscriptions: users veem as suas; admins gerem tudo
-service_requests: users criam e veem os seus; admins gerem tudo
-request_business_matches: admins gerem tudo
-
-Indices para performance:
-
-service_requests(user_id)
-service_requests(category_id)
-service_requests(status)
-request_business_matches(request_id)
-request_business_matches(business_id)
-request_business_matches(request_id, status)
-consumer_subscriptions(user_id)
-
-Registo de Consumidores
-
-Ficheiro: src/pages/UserRegister.tsx
-
-Adicionar campos: Nome (obrigatorio), Telefone (obrigatorio)
-Morada permanece opcional
-Atualizar schema Zod com validacao
-Passar full_name e phone como user_metadata no signUp
-
-Ficheiro: src/hooks/useAuth.tsx
-
-Alterar assinatura de signUp para aceitar metadata opcional { full_name, phone }
-Passar dados no options.data do supabase.auth.signUp
-
-Backoffice - Nova aba "Utilizadores"
+2. Backoffice Admin - Nova aba "Configuracao da Ficha"
 
 Ficheiro: src/components/admin/AdminSidebar.tsx
 
-Adicionar "users" ao tipo AdminTab
-Novo item no menu: icone Users, label "Utilizadores" (posicionado apos "Negócios")
+Adicionar "business-modules" ao tipo AdminTab
+Novo item no menu: icone Puzzle (ou Settings2), label "Config. Ficha"
 
 Ficheiro: src/pages/AdminPage.tsx
 
-Importar e renderizar UsersContent
+Importar e renderizar BusinessModulesContent
 
-Novo ficheiro: src/hooks/useUsers.ts
+Novo ficheiro: src/hooks/useBusinessModules.ts
 
-Query para listar profiles com contagem de service_requests (via count)
-Mutation para atualizar status do utilizador
+Query para listar todos os modulos (ordenados por section + order_index)
+Mutation para criar modulo
+Mutation para atualizar modulo (label, type, section, is_public_default, is_required, is_active, order_index, plan_restriction, options)
+Mutation para eliminar modulo (apenas se nao tiver valores associados)
+Query para listar valores de um negocio (business_module_values com join business_modules)
+Mutation para gravar valores (upsert batch por business_id)
 
-Novo ficheiro: src/components/admin/UsersContent.tsx
+Novo ficheiro: src/components/admin/BusinessModulesContent.tsx
 
-Tabela com: Nome, Email, Telefone, Data Registo, Plano, Estado, Nr Pedidos, Ultima Atividade
-Filtros: por estado (ativo/suspenso), por atividade recente, por plano, por subscricao ativa/inativa
-Acao: suspender/ativar utilizador (toggle status)
+Tabela com:
+Name, Label, Type, Section, Publico, Obrigatorio, Ativo, Ordem, Restricao Plano
 
-Backoffice - Nova aba "Pedidos"
+Botao "Criar Modulo" abre dialogo com todos os campos
+Se type = select, mostrar campo adicional para definir options (JSON simples de lista)
+Botao editar em cada linha
+Botao desativar (toggle is_active)
+Botao eliminar apenas se nao existem valores associados (query count antes de permitir)
+Filtro por section
+Reordenacao via order_index (input numerico)
 
-Ficheiro: src/components/admin/AdminSidebar.tsx
+Importante:
+Nao permitir alterar type de um modulo se ja existirem valores associados.
 
-Adicionar "service-requests" ao tipo AdminTab
-Novo item: icone Inbox, label "Pedidos"
+3. Ficha do Negocio - Renderizacao Dinamica dos Modulos
 
-Ficheiro: src/pages/AdminPage.tsx
+Ficheiro: src/components/admin/BusinessFileCard.tsx
 
-Importar e renderizar ServiceRequestsContent
+Adicionar nova Section (bloco 8) apos "Auditoria":
 
-Novo ficheiro: src/hooks/useServiceRequests.ts
+Titulo: "Campos Adicionais"
 
-Queries para listar service_requests com joins (user, category, subcategory)
-Query para listar matches de um request
-Mutations: alterar estado, criar match com negocio
+Carregar modulos ativos via useBusinessModules
+Filtrar modulos por plan_restriction (se aplicavel)
+Carregar valores existentes via query a business_module_values
+Agrupar modulos por section
 
-Novo ficheiro: src/components/admin/ServiceRequestsContent.tsx
+Para cada modulo, renderizar input conforme type:
 
-Tabela com: Utilizador, Categoria, Descricao, Morada, Estado, Data, Nr Negocios Associados
-Filtros por estado e categoria
-Dialogo para associar negocios (selecionar negocio, criar match)
-Dialogo de detalhes com lista de matches e seus estados
-Campo para atribuir admin responsavel (assigned_to_admin)
+text -> Input
+textarea -> Textarea
+url -> Input type="url"
+image -> Upload ou Input URL
+gallery -> gerir array em value_json
+video -> Input URL
+boolean -> Switch
+select -> Select com options (JSON)
 
-Dashboard - Metricas expandidas
+Ao guardar o formulario:
 
-Ficheiro: src/components/admin/DashboardContent.tsx
+Upsert batch dos valores alterados
 
-Adicionar StatCards: Total Utilizadores, Novos este mes, Total Pedidos, Pedidos este mes
-Usar queries a profiles (count) e service_requests (count com filtro de data)
-Manter todos os cards existentes intactos
+Se gallery, guardar em value_json
 
-Ficheiro: src/components/admin/AnalyticsContent.tsx
+Validar is_required=true antes de submit
 
-Nova seccao "Utilizadores": total, novos mes, ativos 30 dias, subscricoes ativas consumer
-Nova seccao "Pedidos": total, este mes, por categoria (top 5), taxa encaminhamento, taxa conclusao (usando closed_at para calculos de tempo medio de resolucao)
-Nova seccao "Negocios - Leads": top 5 por leads recebidas, top 5 por taxa de resposta
+Nao alterar logica existente do formulario.
 
-Manter todas as seccoes existentes
+4. Pagina Publica do Negocio - Renderizacao Dinamica
 
-Ficheiro: src/hooks/useAnalytics.ts
+Ficheiro: src/pages/BusinessPage.tsx
 
-Adicionar queries para profiles count, service_requests aggregations, request_business_matches stats
-Adicionar funcao trackGtagEvent(eventName, params) para enviar eventos ao Google Analytics
+Apos a seccao de horario, adicionar bloco condicional:
 
-Garantir fallback seguro:
-Verificar se window.gtag existe antes de executar qualquer evento
+Carregar modulos onde:
+is_active=true
+is_public_default=true
 
-Planos - Campo plan_type
+Filtrar por plan_restriction se aplicavel
+Carregar valores do negocio atual
+Filtrar apenas modulos com valor preenchido
 
-Ficheiro: src/hooks/useCommercialPlans.ts
+Agrupar por section (mostrar apenas presenca_publica)
 
-Adicionar plan_type: 'business' | 'consumer' a interface CommercialPlan
+Renderizar conforme tipo:
 
-Ficheiro: src/components/admin/PlansContent.tsx
+url -> link clicavel com icone
+text / textarea -> texto simples
+image -> imagem
+gallery -> grelha de imagens (value_json)
+video -> embed seguro
+boolean -> badge/tag se true
+select -> texto selecionado
 
-Adicionar Select "Tipo de Plano" (Negocio / Consumidor) no formulario de criacao/edicao
-Mostrar badge com tipo na lista/cards de planos
-Incluir plan_type no emptyPlan default ('business')
+Se nenhum modulo tiver valor, nao mostrar a seccao.
 
-Google Analytics
+5. Performance e Boas Praticas
 
-Ficheiro: index.html
+Nunca fazer query por modulo dentro de loop
 
-Adicionar script gtag.js com ID G-W3LKHZQ0GF no <head> (antes do </head>)
+Carregar todos os modulos ativos numa unica query
 
-Ficheiro: src/App.tsx
+Carregar todos os valores do negocio numa unica query
 
-Criar componente interno RouteTracker que usa useLocation dentro do BrowserRouter
-Enviar page_view ao gtag em cada mudanca de rota
+Mapear em memoria
 
-Ficheiro: src/hooks/useAnalytics.ts
+Garantir indices criados antes de usar em producao
 
-Adicionar helper trackGtagEvent que chama window.gtag('event', ...) com fallback seguro
-Integrar nos cliques existentes (whatsapp, phone, email) e nos novos eventos (create_request, request_sent_to_business)
+6. Resumo de Ficheiros
 
-Resumo de ficheiros
+Ficheiro | Acao
+Migracao SQL | 2 tabelas, indices, constraints, RLS, triggers
+src/hooks/useBusinessModules.ts | Novo - CRUD modulos + valores
+src/components/admin/BusinessModulesContent.tsx | Novo - gestao de modulos
+src/components/admin/AdminSidebar.tsx | Nova aba "business-modules"
+src/pages/AdminPage.tsx | Renderizar BusinessModulesContent
+src/components/admin/BusinessFileCard.tsx | Nova Section com campos dinamicos
+src/pages/BusinessPage.tsx | Renderizacao publica dos modulos
 
-Ficheiro Acao
-Migracao SQL Novas tabelas, campos, indices, constraints, RLS, trigger update
-src/hooks/useAuth.tsx Metadata no signUp
-src/pages/UserRegister.tsx Campos nome e telefone
-src/hooks/useUsers.ts Novo - hook para profiles
-src/components/admin/UsersContent.tsx Novo - gestao utilizadores
-src/hooks/useServiceRequests.ts Novo - hook para pedidos
-src/components/admin/ServiceRequestsContent.tsx Novo - gestao pedidos
-src/components/admin/AdminSidebar.tsx 2 novas abas
-src/pages/AdminPage.tsx Renderizar novos componentes
-src/hooks/useCommercialPlans.ts Campo plan_type
-src/components/admin/PlansContent.tsx Select tipo plano
-src/components/admin/DashboardContent.tsx Metricas expandidas
-src/components/admin/AnalyticsContent.tsx 3 seccoes novas
-src/hooks/useAnalytics.ts Queries novas + gtag helper
-index.html Script Google Analytics
-src/App.tsx SPA route tracking
+7. O que NAO muda
 
-O que NAO muda
-
-Layout publico existente
-Sistema de categorias, negocios, restaurantes
-Autenticacao existente (user_roles permanece separado)
-SEO e meta tags
-Footer e header publico
-Logica de filtros e ordenacao
-Utilizadores existentes continuam a funcionar (campos novos sao nullable)
+Tabela businesses (zero alteracoes)
+Campos existentes no BusinessFileCard (permanecem intactos)
+Sistema de categorias, planos, subscricoes
+SEO, layout publico, autenticacao
+Logica de pesquisa e filtros
+Todos os hooks e componentes existentes
