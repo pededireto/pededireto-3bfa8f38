@@ -1,203 +1,507 @@
-Ficha de Negocio Modular - Arquitetura SaaS
 
-Resumo
-Criar um sistema de modulos dinamicos paralelo a estrutura existente, permitindo ao admin definir campos extras para negocios sem alterar codigo. A tabela businesses e todos os seus campos permanecem intactos. Implementacao hibrida e incremental, preparada para evolucao futura (gallery estruturada, select real, modulos por plano, etc).
 
-1. Base de Dados (Migracao SQL)
+## Evolucao Estrutural - Monetizacao, Homepage Modular e Regras por Plano
 
-Criar tabela business_modules (definicao dos campos dinamicos):
+Este plano implementa as 3 partes (A, B, C) de forma incremental sem alterar tabelas ou funcionalidades existentes.
 
-Campo | Tipo | Notas
-id | uuid PK | gen_random_uuid()
-name | TEXT UNIQUE NOT NULL | identificador interno (ex: "facebook", "video_apresentacao")
-label | TEXT NOT NULL | nome visivel no formulario
-type | TEXT NOT NULL | text, textarea, url, image, gallery, video, boolean, select
-section | TEXT NOT NULL | presenca_publica, dados_privados, marketing
-is_public_default | BOOLEAN DEFAULT true | se aparece na pagina publica
-is_required | BOOLEAN DEFAULT false | se e obrigatorio
-is_active | BOOLEAN DEFAULT true | se esta ativo
-order_index | INTEGER DEFAULT 0 | ordem de apresentacao
-plan_restriction | TEXT NULL | null = todos os planos, ou business / consumer / plano especifico (preparacao futura)
-options | JSONB NULL | usado para type=select (lista de opcoes)
-created_at | TIMESTAMPTZ DEFAULT now()
-updated_at | TIMESTAMPTZ DEFAULT now()
+---
 
-Indices:
-(section)
-(is_active)
-(order_index)
+### Parte A - Consolidar Monetizacao (Destaques)
 
-Adicionar constraint CHECK para type com valores permitidos.
+**Base de Dados (Migracao SQL)**
 
-Criar tabela business_module_values (valores por negocio):
+Criar tabela `business_highlights`:
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | gen_random_uuid() |
+| business_id | uuid FK businesses(id) ON DELETE CASCADE | |
+| level | TEXT NOT NULL | 'super', 'category', 'subcategory' |
+| category_id | uuid NULL | obrigatorio se level=category |
+| subcategory_id | uuid NULL | obrigatorio se level=subcategory |
+| is_active | BOOLEAN DEFAULT true | |
+| start_date | TIMESTAMPTZ NULL | destaque temporario |
+| end_date | TIMESTAMPTZ NULL | destaque temporario |
+| display_order | INTEGER DEFAULT 0 | |
+| created_at | TIMESTAMPTZ DEFAULT now() | |
+| updated_at | TIMESTAMPTZ DEFAULT now() | |
+
+Constraints CHECK:
+- level IN ('super', 'category', 'subcategory')
+- level='super' implica category_id IS NULL AND subcategory_id IS NULL
+- level='category' implica category_id IS NOT NULL
+- level='subcategory' implica subcategory_id IS NOT NULL
+
+Indices: (business_id), (level), (category_id), (subcategory_id), (is_active)
+
+RLS: SELECT publico onde is_active=true; ALL para admins
+
+Trigger: updated_at automatico
+
+**Nota importante sobre retrocompatibilidade:**
+A tabela `business_highlights` funciona em paralelo com os campos `is_premium`/`premium_level` da tabela `businesses`. Os hooks existentes (`useSuperHighlights`, `useFeaturedBusinesses`) continuam a funcionar. Novos hooks serao criados para ler de `business_highlights`, e a migracaoo dos dados sera feita numa fase futura.
+
+**Configuracoes Admin (SettingsContent.tsx)**
+
+Adicionar nova seccao "Configuracao de Destaques Avancada" com:
+- Limite Super Destaques (site_settings key: `highlights_super_limit`, default 6)
+- Limite por Categoria (key: `highlights_category_limit`, default 3)
+- Limite por Subcategoria (key: `highlights_subcategory_limit`, default 3)
+- Metodo de ordenacao (key: `highlights_sort_method`, valores: manual / recentes / aleatorio)
+- Switch: Filtrar por data ativa (key: `highlights_filter_by_date`, default false)
+
+Estes campos usam o sistema `site_settings` ja existente - sao apenas novos registos.
+
+**Novos Hooks**
+
+Novo ficheiro: `src/hooks/useBusinessHighlights.ts`
+- `useBusinessHighlights(level, categoryId?, subcategoryId?)` - query a business_highlights com join businesses
+- `useCreateHighlight`, `useUpdateHighlight`, `useDeleteHighlight` - mutations CRUD
+- Respeita limites de site_settings e filtro de datas
+
+**Admin - Gestao de Destaques**
+
+Atualizar `src/components/admin/FeaturedContent.tsx`:
+- Adicionar seccao para gerir destaques via `business_highlights`
+- Permitir criar destaque (escolher negocio, nivel, categoria/subcategoria, datas)
+- Listar destaques agrupados por nivel
+- Toggle ativo/inativo
+- Editar ordem e datas
+- Manter logica existente de `is_premium`/`is_featured` intacta (coexistencia)
+
+---
+
+### Parte B - Homepage Modular
+
+**Base de Dados (Migracao SQL)**
+
+Criar tabela `homepage_blocks`:
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | gen_random_uuid() |
+| type | TEXT NOT NULL | hero, categorias, super_destaques, destaques, negocios_premium, banner, texto, personalizado |
+| title | TEXT NULL | titulo opcional do bloco |
+| config | JSONB NULL | configuracao especifica por tipo |
+| is_active | BOOLEAN DEFAULT true | |
+| order_index | INTEGER DEFAULT 0 | |
+| start_date | TIMESTAMPTZ NULL | bloco temporario |
+| end_date | TIMESTAMPTZ NULL | bloco temporario |
+| created_at | TIMESTAMPTZ DEFAULT now() | |
+| updated_at | TIMESTAMPTZ DEFAULT now() | |
+
+Constraint CHECK: type IN ('hero','categorias','super_destaques','destaques','negocios_premium','banner','texto','personalizado','featured_categories')
+
+RLS: SELECT publico (is_active=true); ALL para admins
+
+Trigger: updated_at automatico
+
+Seed inicial com blocos correspondentes ao layout atual:
+1. type=hero, order_index=0
+2. type=super_destaques, order_index=1
+3. type=featured_categories, order_index=2
+4. type=categorias, order_index=3
+5. type=destaques, order_index=4
+
+Isto garante que a homepage renderiza exatamente como antes sem necessidade de configuracao.
+
+**Novos Hooks**
+
+Novo ficheiro: `src/hooks/useHomepageBlocks.ts`
+- `useHomepageBlocks()` - lista blocos ativos, ordenados, filtrados por data
+- `useAllHomepageBlocks()` - admin, todos os blocos
+- CRUD mutations
+
+**Admin - Nova aba "Homepage"**
+
+Ficheiro: `src/components/admin/AdminSidebar.tsx`
+- Adicionar `"homepage"` ao tipo AdminTab
+- Novo item: icone `LayoutDashboard` (ou `Home`), label "Homepage"
+
+Ficheiro: `src/pages/AdminPage.tsx`
+- Importar e renderizar HomepageContent
+
+Novo ficheiro: `src/components/admin/HomepageContent.tsx`
+- Lista de blocos com drag-like reordenacao (order_index numerico)
+- Para cada bloco: tipo, titulo, ativo/inativo, datas, config
+- Criar novo bloco com tipo
+- Editar config conforme tipo:
+  - banner: titulo, descricao, link, imagem_url
+  - negocios_premium: limite, ordenacao
+  - texto: conteudo HTML simples
+  - hero/categorias/super_destaques/destaques: sem config extra (usam site_settings)
+- Eliminar bloco (com confirmacao)
+
+**Homepage Publica - Renderizacao Dinamica**
+
+Ficheiro: `src/pages/Index.tsx`
+- Carregar blocos via `useHomepageBlocks()`
+- Iterar blocos ordenados e renderizar componente conforme type
+- Fallback: se nao existirem blocos na BD, manter layout atual hardcoded (seguranca)
+- Componentes existentes (HeroSection, SuperHighlightsSection, etc.) continuam a ser usados
+
+Novo ficheiro: `src/components/HomepageBlockRenderer.tsx`
+- Switch por tipo de bloco
+- Renderiza componentes existentes ou novos (BannerBlock, TextBlock, PremiumBusinessBlock)
+
+Novos componentes simples:
+- `src/components/BannerBlock.tsx` - renderiza banner a partir do config JSON
+- `src/components/TextBlock.tsx` - renderiza texto/HTML sanitizado
+- `src/components/PremiumBusinessBlock.tsx` - lista de negocios premium com limite do config
+
+---
+
+### Parte C - Sistema de Regras por Plano
+
+**Base de Dados (Migracao SQL)**
+
+Criar tabela `plan_rules`:
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | gen_random_uuid() |
+| plan_id | uuid FK commercial_plans(id) ON DELETE CASCADE | UNIQUE |
+| max_gallery_images | INTEGER NULL | null = sem limite |
+| max_modules | INTEGER NULL | null = sem limite |
+| allow_video | BOOLEAN DEFAULT false | |
+| allow_category_highlight | BOOLEAN DEFAULT false | |
+| allow_super_highlight | BOOLEAN DEFAULT false | |
+| allow_premium_block | BOOLEAN DEFAULT false | |
+| created_at | TIMESTAMPTZ DEFAULT now() | |
+| updated_at | TIMESTAMPTZ DEFAULT now() | |
+
+Constraint: UNIQUE(plan_id)
+
+RLS: SELECT publico; ALL para admins
+
+Trigger: updated_at automatico
+
+**Novos Hooks**
+
+Novo ficheiro: `src/hooks/usePlanRules.ts`
+- `usePlanRules()` - listar todas as regras
+- `usePlanRuleByPlanId(planId)` - regra de um plano especifico
+- `useUpsertPlanRule` - criar/atualizar
+
+**Admin - Regras na aba Planos**
+
+Ficheiro: `src/components/admin/PlansContent.tsx`
+- Adicionar seccao no dialogo de edicao de plano: "Regras e Permissoes"
+- Campos: max_gallery_images, max_modules, allow_video, allow_category_highlight, allow_super_highlight, allow_premium_block
+- Ao guardar plano, fazer upsert em plan_rules
+
+**Validacao Progressiva**
+
+Ficheiro: `src/components/admin/BusinessFileCard.tsx`
+- Ao carregar, verificar plan_id do negocio e carregar regras
+- Na seccao de modulos dinamicos:
+  - Se max_modules definido, limitar numero de campos visiveis/editaveis
+  - Se allow_video=false, desabilitar campos tipo video
+  - Se max_gallery_images definido, limitar numero de imagens em galleries
+- Mostrar aviso visual quando funcionalidade bloqueada por plano
+- NAO bloquear gravacao - apenas avisar (fase progressiva)
+
+Ficheiro: `src/components/admin/FeaturedContent.tsx`
+- Ao tentar adicionar negocio como Super Destaque, verificar allow_super_highlight
+- Ao tentar adicionar como Destaque Categoria, verificar allow_category_highlight
+- Mostrar aviso se plano nao permite
+
+---
+
+### Resumo de Ficheiros
+
+| Ficheiro | Acao |
+|---|---|
+| Migracao SQL | 3 tabelas (business_highlights, homepage_blocks, plan_rules), indices, RLS, triggers, seed homepage |
+| `src/hooks/useBusinessHighlights.ts` | **Novo** - CRUD destaques |
+| `src/hooks/useHomepageBlocks.ts` | **Novo** - CRUD blocos homepage |
+| `src/hooks/usePlanRules.ts` | **Novo** - regras por plano |
+| `src/components/admin/HomepageContent.tsx` | **Novo** - gestao homepage |
+| `src/components/HomepageBlockRenderer.tsx` | **Novo** - renderer dinamico |
+| `src/components/BannerBlock.tsx` | **Novo** - bloco banner |
+| `src/components/TextBlock.tsx` | **Novo** - bloco texto |
+| `src/components/PremiumBusinessBlock.tsx` | **Novo** - bloco negocios premium |
+| `src/components/admin/AdminSidebar.tsx` | Nova aba "homepage" |
+| `src/pages/AdminPage.tsx` | Renderizar HomepageContent |
+| `src/pages/Index.tsx` | Renderizacao dinamica de blocos |
+| `src/components/admin/SettingsContent.tsx` | Seccao configuracao destaques avancada |
+| `src/components/admin/FeaturedContent.tsx` | Gestao via business_highlights + validacao plano |
+| `src/components/admin/PlansContent.tsx` | Seccao regras no dialogo |
+| `src/components/admin/BusinessFileCard.tsx` | Validacao progressiva por regras |
+
+### O que NAO muda
+
+- Tabela businesses (zero alteracoes)
+- Campos is_premium, is_featured, premium_level continuam a funcionar
+- Hooks existentes (useSuperHighlights, useFeaturedBusinesses) permanecem intactos
+- Layout publico continua identico (seed garante blocos iguais ao atual)
+- Sistema de categorias, subcategorias, subscricoes
+- Autenticacao, SEO, footer, header
+- Sistema de modulos dinamicos (business_modules)
+- Sistema de pedidos (service_requests)
+
+Parte D - Backoffice do Negócio (Portal Comercial)
+Objetivo
+
+Criar área autenticada para cada negócio (role: commercial_user) onde pode:
+
+Editar a sua ficha (mesmos campos já existentes)
+
+Gerir módulos dinâmicos
+
+Consultar plano atual
+
+Fazer upgrade de plano
+
+Receber notificações (pedidos, alertas, sistema)
+
+Consultar pedidos de orçamento recebidos
+
+No futuro: gerir faturação e histórico de destaques
+
+Implementação incremental e compatível com estrutura existente.
+
+Arquitetura Geral
+
+Nova área:
+
+/business-dashboard
+
+Separada do Admin.
+
+Acesso apenas a utilizadores com negócio associado.
+
+Base de Dados (sem alterar businesses)
+
+Não alterar tabela businesses.
+
+Aproveitar:
+
+businesses
+
+business_modules
+
+business_module_values
+
+service_requests
+
+commercial_plans
+
+plan_rules
+
+business_highlights
+
+Criar tabela adicional para notificações internas:
+
+business_notifications
 
 Campo | Tipo | Notas
 id | uuid PK | gen_random_uuid()
 business_id | uuid FK businesses(id) ON DELETE CASCADE
-module_id | uuid FK business_modules(id) ON DELETE CASCADE
-value | TEXT | valor simples (text, url, video, boolean)
-value_json | JSONB NULL | usado para gallery ou estruturas futuras
+type | TEXT NOT NULL | 'request', 'system', 'plan', 'highlight'
+title | TEXT NOT NULL
+message | TEXT NOT NULL
+is_read | BOOLEAN DEFAULT false
 created_at | TIMESTAMPTZ DEFAULT now()
-updated_at | TIMESTAMPTZ DEFAULT now()
 
 Indices:
 (business_id)
-(module_id)
-UNIQUE(business_id, module_id)
-
-Nota:
-
-value continua para simplicidade
-
-value_json prepara o sistema para gallery real e estruturas complexas
+(is_read)
 
 RLS:
+SELECT apenas se business_id pertence ao utilizador autenticado
+INSERT sistema/admin
+UPDATE apenas para marcar como lida
 
-business_modules:
+Estrutura Frontend
 
-SELECT publico apenas onde is_active=true
+Nova pasta:
 
-ALL para admins
+src/pages/business-dashboard/
 
-commercial users apenas SELECT
+Criar página principal:
 
-business_module_values:
+BusinessDashboard.tsx
 
-SELECT publico via join com modulo ativo e is_public_default=true
+Layout próprio:
 
-admins ALL
+src/components/business/BusinessSidebar.tsx
+src/components/business/BusinessLayout.tsx
 
-commercial users podem ler/escrever apenas onde business_id pertence ao seu utilizador
+Abas do Backoffice do Negócio
+1️⃣ Dashboard
 
-Triggers:
-updated_at automatico em ambas as tabelas
+Resumo com:
 
-2. Backoffice Admin - Nova aba "Configuracao da Ficha"
+Plano atual
 
-Ficheiro: src/components/admin/AdminSidebar.tsx
+Status do plano (ativo/inativo)
 
-Adicionar "business-modules" ao tipo AdminTab
-Novo item no menu: icone Puzzle (ou Settings2), label "Config. Ficha"
+Número de pedidos recebidos
 
-Ficheiro: src/pages/AdminPage.tsx
+Destaques ativos
 
-Importar e renderizar BusinessModulesContent
+Alertas importantes
 
-Novo ficheiro: src/hooks/useBusinessModules.ts
+Botão Upgrade Plano
 
-Query para listar todos os modulos (ordenados por section + order_index)
-Mutation para criar modulo
-Mutation para atualizar modulo (label, type, section, is_public_default, is_required, is_active, order_index, plan_restriction, options)
-Mutation para eliminar modulo (apenas se nao tiver valores associados)
-Query para listar valores de um negocio (business_module_values com join business_modules)
-Mutation para gravar valores (upsert batch por business_id)
+Hook:
+useBusinessDashboardData()
 
-Novo ficheiro: src/components/admin/BusinessModulesContent.tsx
+2️⃣ A Minha Ficha
 
-Tabela com:
-Name, Label, Type, Section, Publico, Obrigatorio, Ativo, Ordem, Restricao Plano
+Reutilizar BusinessFileCard.tsx
 
-Botao "Criar Modulo" abre dialogo com todos os campos
-Se type = select, mostrar campo adicional para definir options (JSON simples de lista)
-Botao editar em cada linha
-Botao desativar (toggle is_active)
-Botao eliminar apenas se nao existem valores associados (query count antes de permitir)
-Filtro por section
-Reordenacao via order_index (input numerico)
+Mas:
 
-Importante:
-Nao permitir alterar type de um modulo se ja existirem valores associados.
+Apenas editar o próprio negócio
 
-3. Ficha do Negocio - Renderizacao Dinamica dos Modulos
+Aplicar validações por plan_rules
 
-Ficheiro: src/components/admin/BusinessFileCard.tsx
+Mostrar avisos quando funcionalidade bloqueada
 
-Adicionar nova Section (bloco 8) apos "Auditoria":
+Sem alterar lógica existente.
 
-Titulo: "Campos Adicionais"
+3️⃣ O Meu Plano
 
-Carregar modulos ativos via useBusinessModules
-Filtrar modulos por plan_restriction (se aplicavel)
-Carregar valores existentes via query a business_module_values
-Agrupar modulos por section
+Mostrar:
 
-Para cada modulo, renderizar input conforme type:
+Plano atual
 
-text -> Input
-textarea -> Textarea
-url -> Input type="url"
-image -> Upload ou Input URL
-gallery -> gerir array em value_json
-video -> Input URL
-boolean -> Switch
-select -> Select com options (JSON)
+Regras associadas (max_gallery_images, allow_video, etc.)
 
-Ao guardar o formulario:
+Benefícios do plano atual
 
-Upsert batch dos valores alterados
+Lista de planos disponíveis
 
-Se gallery, guardar em value_json
+Hook:
+useCommercialPlans()
 
-Validar is_required=true antes de submit
+Botão:
+“Fazer Upgrade”
 
-Nao alterar logica existente do formulario.
+Fase inicial:
+Redirecionamento para contacto/admin (sem gateway pagamento ainda).
 
-4. Pagina Publica do Negocio - Renderizacao Dinamica
+4️⃣ Pedidos Recebidos
 
-Ficheiro: src/pages/BusinessPage.tsx
+Usar tabela service_requests.
 
-Apos a seccao de horario, adicionar bloco condicional:
+Criar:
 
-Carregar modulos onde:
-is_active=true
-is_public_default=true
+src/components/business/BusinessRequestsContent.tsx
 
-Filtrar por plan_restriction se aplicavel
-Carregar valores do negocio atual
-Filtrar apenas modulos com valor preenchido
+Listar:
 
-Agrupar por section (mostrar apenas presenca_publica)
+Nome cliente
 
-Renderizar conforme tipo:
+Serviço pedido
 
-url -> link clicavel com icone
-text / textarea -> texto simples
-image -> imagem
-gallery -> grelha de imagens (value_json)
-video -> embed seguro
-boolean -> badge/tag se true
-select -> texto selecionado
+Data
 
-Se nenhum modulo tiver valor, nao mostrar a seccao.
+Estado (novo / respondido / fechado)
 
-5. Performance e Boas Praticas
+Botão visualizar detalhe
 
-Nunca fazer query por modulo dentro de loop
+Marcar pedido como lido gera business_notification automática.
 
-Carregar todos os modulos ativos numa unica query
+5️⃣ Notificações
 
-Carregar todos os valores do negocio numa unica query
+Listar business_notifications.
 
-Mapear em memoria
+Permitir:
 
-Garantir indices criados antes de usar em producao
+Marcar como lida
 
-6. Resumo de Ficheiros
+Filtrar por tipo
 
-Ficheiro | Acao
-Migracao SQL | 2 tabelas, indices, constraints, RLS, triggers
-src/hooks/useBusinessModules.ts | Novo - CRUD modulos + valores
-src/components/admin/BusinessModulesContent.tsx | Novo - gestao de modulos
-src/components/admin/AdminSidebar.tsx | Nova aba "business-modules"
-src/pages/AdminPage.tsx | Renderizar BusinessModulesContent
-src/components/admin/BusinessFileCard.tsx | Nova Section com campos dinamicos
-src/pages/BusinessPage.tsx | Renderizacao publica dos modulos
+Badge no sidebar com número de não lidas.
 
-7. O que NAO muda
+Integração com Monetização
+Ao ativar destaque:
 
-Tabela businesses (zero alteracoes)
-Campos existentes no BusinessFileCard (permanecem intactos)
-Sistema de categorias, planos, subscricoes
-SEO, layout publico, autenticacao
-Logica de pesquisa e filtros
-Todos os hooks e componentes existentes
+Criar business_notification tipo 'highlight'
+
+Ao receber pedido:
+
+Criar business_notification tipo 'request'
+
+Ao plano expirar:
+
+Criar business_notification tipo 'plan'
+
+Sistema de Permissões
+
+Atualizar middleware/auth:
+
+Admin → acesso total
+
+Commercial User → acesso apenas ao seu negócio
+
+Consumer → sem acesso
+
+Verificação obrigatória de business_id associado ao user_id.
+
+Hooks Necessários
+
+Novo ficheiro:
+
+src/hooks/useBusinessDashboard.ts
+src/hooks/useBusinessNotifications.ts
+
+Funções:
+
+useBusinessByUser()
+useBusinessRequests()
+useBusinessNotifications()
+useMarkNotificationAsRead()
+
+Fase Inicial (Importante)
+
+Não integrar pagamentos ainda.
+
+Plano upgrade apenas altera plan_id manualmente via admin (fase 1).
+
+Gateway pagamento entra em fase posterior.
+
+Resumo de Ficheiros Adicionados
+
+Ficheiro | Ação
+src/pages/business-dashboard/BusinessDashboard.tsx | Novo
+src/components/business/BusinessSidebar.tsx | Novo
+src/components/business/BusinessLayout.tsx | Novo
+src/components/business/BusinessRequestsContent.tsx | Novo
+src/hooks/useBusinessDashboard.ts | Novo
+src/hooks/useBusinessNotifications.ts | Novo
+Migracao SQL | business_notifications
+
+O que NÃO muda
+
+Tabela businesses
+Sistema atual de pedidos
+Sistema de modulos dinamicos
+Sistema de destaques
+Sistema de planos
+Admin Backoffice
+
+Resultado Estratégico
+
+Após implementação:
+
+Cada negócio passa a ter área própria
+
+Monetização deixa de ser invisível
+
+Plataforma ganha estrutura SaaS real
+
+Base pronta para:
+
+Pagamentos online
+
+Renovação automática
+
+Venda de destaques
+
+Upsell automático
+
+Estatísticas futuras
