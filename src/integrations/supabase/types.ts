@@ -186,6 +186,77 @@ export type Database = {
           },
         ]
       }
+      business_highlights: {
+        Row: {
+          business_id: string
+          category_id: string | null
+          created_at: string
+          display_order: number
+          end_date: string | null
+          id: string
+          is_active: boolean
+          level: string
+          start_date: string | null
+          subcategory_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          category_id?: string | null
+          created_at?: string
+          display_order?: number
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          level: string
+          start_date?: string | null
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          category_id?: string | null
+          created_at?: string
+          display_order?: number
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          level?: string
+          start_date?: string | null
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_highlights_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_highlights_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_highlights_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_highlights_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_module_values: {
         Row: {
           business_id: string
@@ -285,6 +356,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      business_notifications: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_notifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_notifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       business_subcategories: {
         Row: {
@@ -722,6 +838,45 @@ export type Database = {
           },
         ]
       }
+      homepage_blocks: {
+        Row: {
+          config: Json | null
+          created_at: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          order_index: number
+          start_date: string | null
+          title: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          start_date?: string | null
+          title?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          start_date?: string | null
+          title?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       institutional_pages: {
         Row: {
           blocks: Json | null
@@ -772,6 +927,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      plan_rules: {
+        Row: {
+          allow_category_highlight: boolean
+          allow_premium_block: boolean
+          allow_super_highlight: boolean
+          allow_video: boolean
+          created_at: string
+          id: string
+          max_gallery_images: number | null
+          max_modules: number | null
+          plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          allow_category_highlight?: boolean
+          allow_premium_block?: boolean
+          allow_super_highlight?: boolean
+          allow_video?: boolean
+          created_at?: string
+          id?: string
+          max_gallery_images?: number | null
+          max_modules?: number | null
+          plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          allow_category_highlight?: boolean
+          allow_premium_block?: boolean
+          allow_super_highlight?: boolean
+          allow_video?: boolean
+          created_at?: string
+          id?: string
+          max_gallery_images?: number | null
+          max_modules?: number | null
+          plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_rules_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: true
+            referencedRelation: "commercial_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

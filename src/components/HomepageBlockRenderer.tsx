@@ -1,0 +1,45 @@
+import { HomepageBlock } from "@/hooks/useHomepageBlocks";
+import HeroSection from "@/components/HeroSection";
+import CategoriesGrid from "@/components/CategoriesGrid";
+import FeaturedSection from "@/components/FeaturedSection";
+import SuperHighlightsSection from "@/components/SuperHighlightsSection";
+import FeaturedCategoriesSection from "@/components/FeaturedCategoriesSection";
+import BannerBlock from "@/components/BannerBlock";
+import TextBlock from "@/components/TextBlock";
+import PremiumBusinessBlock from "@/components/PremiumBusinessBlock";
+import { useCategories } from "@/hooks/useCategories";
+import { useFeaturedBusinesses } from "@/hooks/useBusinesses";
+
+interface HomepageBlockRendererProps {
+  block: HomepageBlock;
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+}
+
+const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBlockRendererProps) => {
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const { data: featuredBusinesses = [], isLoading: featuredLoading } = useFeaturedBusinesses();
+
+  switch (block.type) {
+    case "hero":
+      return <HeroSection searchTerm={searchTerm} onSearchChange={onSearchChange} />;
+    case "super_destaques":
+      return <SuperHighlightsSection />;
+    case "featured_categories":
+      return <FeaturedCategoriesSection />;
+    case "categorias":
+      return <CategoriesGrid categories={categories} isLoading={categoriesLoading} />;
+    case "destaques":
+      return <FeaturedSection businesses={featuredBusinesses} isLoading={featuredLoading} />;
+    case "banner":
+      return <BannerBlock config={block.config} />;
+    case "texto":
+      return <TextBlock config={block.config} title={block.title} />;
+    case "negocios_premium":
+      return <PremiumBusinessBlock config={block.config} />;
+    default:
+      return null;
+  }
+};
+
+export default HomepageBlockRenderer;

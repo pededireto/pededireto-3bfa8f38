@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCommercialPlans, useCreatePlan, useUpdatePlan, useDeletePlan, CommercialPlan } from "@/hooks/useCommercialPlans";
+import { usePlanRules, useUpsertPlanRule, PlanRule } from "@/hooks/usePlanRules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Loader2, CreditCard } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, CreditCard, ShieldCheck } from "lucide-react";
 
 const emptyPlan = {
   name: "",
@@ -21,20 +22,33 @@ const emptyPlan = {
   plan_type: "business" as CommercialPlan["plan_type"],
 };
 
+const emptyRules = {
+  max_gallery_images: null as number | null,
+  max_modules: null as number | null,
+  allow_video: false,
+  allow_category_highlight: false,
+  allow_super_highlight: false,
+  allow_premium_block: false,
+};
+
 const PlansContent = () => {
   const { data: plans = [], isLoading } = useCommercialPlans();
+  const { data: allRules = [] } = usePlanRules();
   const createPlan = useCreatePlan();
   const updatePlan = useUpdatePlan();
   const deletePlan = useDeletePlan();
+  const upsertPlanRule = useUpsertPlanRule();
   const { toast } = useToast();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Partial<CommercialPlan> | null>(null);
   const [form, setForm] = useState(emptyPlan);
+  const [rules, setRules] = useState(emptyRules);
 
   const openCreate = () => {
     setEditingPlan(null);
     setForm(emptyPlan);
+    setRules(emptyRules);
     setDialogOpen(true);
   };
 
@@ -50,18 +64,37 @@ const PlansContent = () => {
       display_order: plan.display_order,
       plan_type: plan.plan_type || "business",
     });
+    const existingRule = allRules.find((r) => r.plan_id === plan.id);
+    setRules(existingRule ? {
+      max_gallery_images: existingRule.max_gallery_images,
+      max_modules: existingRule.max_modules,
+      allow_video: existingRule.allow_video,
+      allow_category_highlight: existingRule.allow_category_highlight,
+      allow_super_highlight: existingRule.allow_super_highlight,
+      allow_premium_block: existingRule.allow_premium_block,
+    } : emptyRules);
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     try {
+      let planId: string;
       if (editingPlan?.id) {
         await updatePlan.mutateAsync({ id: editingPlan.id, ...form });
+        planId = editingPlan.id;
         toast({ title: "Plano atualizado" });
       } else {
-        await createPlan.mutateAsync(form);
+        const result = await createPlan.mutateAsync(form);
+        planId = (result as any).id;
         toast({ title: "Plano criado" });
       }
+
+      // Upsert plan rules
+      await upsertPlanRule.mutateAsync({
+        plan_id: planId,
+        ...rules,
+      });
+
       setDialogOpen(false);
     } catch {
       toast({ title: "Erro ao guardar plano", variant: "destructive" });
@@ -207,6 +240,42 @@ const PlansContent = () => {
             <Button className="w-full" onClick={handleSave} disabled={!form.name}>
               {editingPlan ? "Guardar Alterações" : "Criar Plano"}
             </Button>
+
+            {/* Plan Rules Section */}
+            <div className="border-t border-border pt-4 mt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-sm">Regras e Permissões</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs">Máx. Imagens Gallery</Label>
+                  <Input type="number" value={rules.max_gallery_images ?? ""} onChange={(e) => setRules({ ...rules, max_gallery_images: e.target.value ? parseInt(e.target.value) : null })} placeholder="Sem limite" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Máx. Módulos</Label>
+                  <Input type="number" value={rules.max_modules ?? ""} onChange={(e) => setRules({ ...rules, max_modules: e.target.value ? parseInt(e.target.value) : null })} placeholder="Sem limite" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="flex items-center gap-2">
+                  <Switch checked={rules.allow_video} onCheckedChange={(v) => setRules({ ...rules, allow_video: v })} />
+                  <Label className="text-xs">Permitir Vídeo</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={rules.allow_category_highlight} onCheckedChange={(v) => setRules({ ...rules, allow_category_highlight: v })} />
+                  <Label className="text-xs">Destaque Categoria</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={rules.allow_super_highlight} onCheckedChange={(v) => setRules({ ...rules, allow_super_highlight: v })} />
+                  <Label className="text-xs">Super Destaque</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={rules.allow_premium_block} onCheckedChange={(v) => setRules({ ...rules, allow_premium_block: v })} />
+                  <Label className="text-xs">Bloco Premium</Label>
+                </div>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

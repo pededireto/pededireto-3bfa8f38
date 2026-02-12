@@ -1,0 +1,257 @@
+import { useState } from "react";
+import {
+  useAllHomepageBlocks,
+  useCreateHomepageBlock,
+  useUpdateHomepageBlock,
+  useDeleteHomepageBlock,
+  HomepageBlock,
+} from "@/hooks/useHomepageBlocks";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Pencil, Trash2, Loader2, LayoutDashboard, ArrowUp, ArrowDown } from "lucide-react";
+
+const BLOCK_TYPES = [
+  { value: "hero", label: "Hero" },
+  { value: "categorias", label: "Categorias" },
+  { value: "super_destaques", label: "Super Destaques" },
+  { value: "destaques", label: "Destaques" },
+  { value: "featured_categories", label: "Categorias em Destaque" },
+  { value: "negocios_premium", label: "Negócios Premium" },
+  { value: "banner", label: "Banner" },
+  { value: "texto", label: "Texto" },
+  { value: "personalizado", label: "Personalizado" },
+];
+
+const typeLabel = (type: string) => BLOCK_TYPES.find((t) => t.value === type)?.label || type;
+
+const emptyBlock = {
+  type: "banner",
+  title: "",
+  config: {} as Record<string, any>,
+  is_active: true,
+  order_index: 0,
+  start_date: "",
+  end_date: "",
+};
+
+const HomepageContent = () => {
+  const { data: blocks = [], isLoading } = useAllHomepageBlocks();
+  const createBlock = useCreateHomepageBlock();
+  const updateBlock = useUpdateHomepageBlock();
+  const deleteBlock = useDeleteHomepageBlock();
+  const { toast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<HomepageBlock | null>(null);
+  const [form, setForm] = useState(emptyBlock);
+  const [configJson, setConfigJson] = useState("");
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyBlock);
+    setConfigJson("{}");
+    setDialogOpen(true);
+  };
+
+  const openEdit = (block: HomepageBlock) => {
+    setEditing(block);
+    setForm({
+      type: block.type,
+      title: block.title || "",
+      config: block.config || {},
+      is_active: block.is_active,
+      order_index: block.order_index,
+      start_date: block.start_date ? block.start_date.split("T")[0] : "",
+      end_date: block.end_date ? block.end_date.split("T")[0] : "",
+    });
+    setConfigJson(JSON.stringify(block.config || {}, null, 2));
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      let parsedConfig = {};
+      try { parsedConfig = JSON.parse(configJson); } catch { /* ignore */ }
+
+      const payload: any = {
+        type: form.type,
+        title: form.title || null,
+        config: parsedConfig,
+        is_active: form.is_active,
+        order_index: form.order_index,
+        start_date: form.start_date || null,
+        end_date: form.end_date || null,
+      };
+
+      if (editing) {
+        await updateBlock.mutateAsync({ id: editing.id, ...payload });
+        toast({ title: "Bloco atualizado" });
+      } else {
+        await createBlock.mutateAsync(payload);
+        toast({ title: "Bloco criado" });
+      }
+      setDialogOpen(false);
+    } catch {
+      toast({ title: "Erro ao guardar bloco", variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Eliminar este bloco?")) return;
+    try {
+      await deleteBlock.mutateAsync(id);
+      toast({ title: "Bloco eliminado" });
+    } catch {
+      toast({ title: "Erro ao eliminar", variant: "destructive" });
+    }
+  };
+
+  const moveBlock = async (block: HomepageBlock, direction: "up" | "down") => {
+    const sorted = [...blocks].sort((a, b) => a.order_index - b.order_index);
+    const idx = sorted.findIndex((b) => b.id === block.id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    try {
+      await updateBlock.mutateAsync({ id: block.id, order_index: sorted[swapIdx].order_index });
+      await updateBlock.mutateAsync({ id: sorted[swapIdx].id, order_index: block.order_index });
+    } catch {
+      toast({ title: "Erro ao reordenar", variant: "destructive" });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const sorted = [...blocks].sort((a, b) => a.order_index - b.order_index);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Homepage</h1>
+          <p className="text-muted-foreground">Gerir blocos e layout da página principal</p>
+        </div>
+        <Button onClick={openCreate}>
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Bloco
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {sorted.map((block, i) => (
+          <div
+            key={block.id}
+            className={`flex items-center gap-4 p-4 rounded-xl bg-card shadow-card border ${block.is_active ? "border-transparent" : "border-destructive/20 opacity-60"}`}
+          >
+            <div className="flex flex-col gap-1">
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveBlock(block, "up")} disabled={i === 0}>
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveBlock(block, "down")} disabled={i === sorted.length - 1}>
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <LayoutDashboard className="h-5 w-5 text-primary" />
+              <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{block.order_index}</span>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium">{block.title || typeLabel(block.type)}</h3>
+              <div className="flex gap-2 mt-1">
+                <Badge variant="outline">{typeLabel(block.type)}</Badge>
+                <Badge variant={block.is_active ? "default" : "secondary"}>{block.is_active ? "Ativo" : "Inativo"}</Badge>
+                {block.start_date && <Badge variant="secondary" className="text-[10px]">De: {new Date(block.start_date).toLocaleDateString("pt-PT")}</Badge>}
+                {block.end_date && <Badge variant="secondary" className="text-[10px]">Até: {new Date(block.end_date).toLocaleDateString("pt-PT")}</Badge>}
+              </div>
+            </div>
+
+            <div className="flex gap-1">
+              <Button size="icon" variant="ghost" onClick={() => openEdit(block)}>
+                <Pencil className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant="ghost" onClick={() => handleDelete(block.id)}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+          </div>
+        ))}
+        {sorted.length === 0 && <p className="text-muted-foreground text-center py-8">Nenhum bloco configurado. A homepage usará o layout padrão.</p>}
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Editar Bloco" : "Novo Bloco"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Tipo</Label>
+              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })} disabled={!!editing}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {BLOCK_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Título (opcional)</Label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Ordem</Label>
+                <Input type="number" value={form.order_index} onChange={(e) => setForm({ ...form, order_index: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="flex items-center gap-2 pt-6">
+                <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+                <Label>Ativo</Label>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Data início</Label>
+                <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+              </div>
+              <div>
+                <Label>Data fim</Label>
+                <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+              </div>
+            </div>
+            {["banner", "negocios_premium", "texto", "personalizado"].includes(form.type) && (
+              <div>
+                <Label>Configuração (JSON)</Label>
+                <Textarea
+                  value={configJson}
+                  onChange={(e) => setConfigJson(e.target.value)}
+                  rows={6}
+                  className="font-mono text-xs"
+                  placeholder={form.type === "banner" ? '{\n  "titulo": "...",\n  "descricao": "...",\n  "link": "...",\n  "imagem_url": "..."\n}' : '{}'}
+                />
+              </div>
+            )}
+            <Button className="w-full" onClick={handleSave} disabled={!form.type}>
+              {editing ? "Guardar Alterações" : "Criar Bloco"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default HomepageContent;

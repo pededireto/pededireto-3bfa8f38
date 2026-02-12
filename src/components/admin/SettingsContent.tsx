@@ -200,6 +200,53 @@ const SettingsContent = () => {
           <Input value={form.emergency_categories || ""} onChange={(e) => setForm({ ...form, emergency_categories: e.target.value })} />
         </div>
       </div>
+
+      {/* Advanced Highlights Config */}
+      <div className="bg-card rounded-xl p-6 shadow-card space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Settings className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Configuração de Destaques Avançada</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label>Limite Super Destaques (Homepage)</Label>
+            <Input type="number" value={form.highlights_super_limit || "6"} onChange={(e) => setForm({ ...form, highlights_super_limit: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Limite por Categoria</Label>
+            <Input type="number" value={form.highlights_category_limit || "3"} onChange={(e) => setForm({ ...form, highlights_category_limit: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Limite por Subcategoria</Label>
+            <Input type="number" value={form.highlights_subcategory_limit || "3"} onChange={(e) => setForm({ ...form, highlights_subcategory_limit: e.target.value })} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Método de Ordenação</Label>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={form.highlights_sort_method || "manual"}
+              onChange={(e) => setForm({ ...form, highlights_sort_method: e.target.value })}
+            >
+              <option value="manual">Manual</option>
+              <option value="recentes">Mais Recentes</option>
+              <option value="aleatorio">Aleatório</option>
+            </select>
+          </div>
+          <div className="space-y-2 pt-6">
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={form.highlights_filter_by_date === "true"}
+                onCheckedChange={(c) => setForm({ ...form, highlights_filter_by_date: c ? "true" : "false" })}
+              />
+              <Label>Filtrar por data ativa</Label>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
