@@ -10,6 +10,8 @@ import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 
 const registerSchema = z
   .object({
+    fullName: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
+    phone: z.string().trim().min(9, "Telefone inválido").max(20),
     email: z.string().trim().email("Email inválido").max(255),
     password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").max(100),
     confirmPassword: z.string(),
@@ -24,22 +26,24 @@ const UserRegister = () => {
   const { signUp } = useAuth();
   const { toast } = useToast();
 
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
-    const result = registerSchema.safeParse({ email, password, confirmPassword });
+    const result = registerSchema.safeParse({ fullName, phone, email, password, confirmPassword });
     if (!result.success) {
-      const fieldErrors: typeof errors = {};
+      const fieldErrors: Record<string, string> = {};
       result.error.errors.forEach((err) => {
-        const field = err.path[0] as keyof typeof errors;
+        const field = err.path[0] as string;
         fieldErrors[field] = err.message;
       });
       setErrors(fieldErrors);
@@ -49,7 +53,7 @@ const UserRegister = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await signUp(email, password);
+      const { error } = await signUp(email, password, { full_name: fullName, phone });
 
       if (error) {
         let message = "Erro ao criar conta. Tenta novamente.";
@@ -87,7 +91,35 @@ const UserRegister = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="fullName">Nome Completo *</Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="O teu nome"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className={errors.fullName ? "border-destructive" : ""}
+                disabled={isLoading}
+              />
+              {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone *</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="912 345 678"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className={errors.phone ? "border-destructive" : ""}
+                disabled={isLoading}
+              />
+              {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 type="email"
@@ -101,7 +133,7 @@ const UserRegister = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password">Senha *</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -125,7 +157,7 @@ const UserRegister = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+              <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
               <Input
                 id="confirmPassword"
                 type={showPassword ? "text" : "password"}

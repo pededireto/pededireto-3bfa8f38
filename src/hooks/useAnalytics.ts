@@ -16,6 +16,13 @@ interface AnalyticsEvent {
   city?: string;
 }
 
+// Google Analytics helper with safe fallback
+export const trackGtagEvent = (eventName: string, params?: Record<string, any>) => {
+  if (typeof window !== "undefined" && (window as any).gtag) {
+    (window as any).gtag("event", eventName, params || {});
+  }
+};
+
 export const useTrackEvent = () => {
   return useMutation({
     mutationFn: async (event: AnalyticsEvent) => {
@@ -24,6 +31,13 @@ export const useTrackEvent = () => {
         .insert(event);
       
       if (error) throw error;
+
+      // Also send to Google Analytics
+      trackGtagEvent(event.event_type, {
+        business_id: event.business_id,
+        category_id: event.category_id,
+        city: event.city,
+      });
     },
   });
 };
@@ -118,6 +132,30 @@ export const useAnalyticsSummary = () => {
         clicksBreakdown,
         topCategories,
         topBusinesses,
+      };
+    },
+  });
+};
+
+export const useUserStats = () => {
+  return useQuery({
+    queryKey: ["analytics", "user-stats"],
+    queryFn: async () => {
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("created_at, last_activity_at");
+      if (error) throw error;
+
+      const all = profiles || [];
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      return {
+        total: all.length,
+        newThisMonth: all.filter(p => p.created_at >= startOfMonth).length,
+        activeLast30: all.filter(p => p.last_activity_at && p.last_activity_at >= thirtyDaysAgo.toISOString()).length,
       };
     },
   });

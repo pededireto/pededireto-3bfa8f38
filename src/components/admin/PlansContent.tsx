@@ -18,6 +18,7 @@ const emptyPlan = {
   premium_level: null as CommercialPlan["premium_level"],
   description: "",
   display_order: 0,
+  plan_type: "business" as CommercialPlan["plan_type"],
 };
 
 const PlansContent = () => {
@@ -47,6 +48,7 @@ const PlansContent = () => {
       premium_level: plan.premium_level,
       description: plan.description || "",
       display_order: plan.display_order,
+      plan_type: plan.plan_type || "business",
     });
     setDialogOpen(true);
   };
@@ -134,6 +136,9 @@ const PlansContent = () => {
               <Badge variant={plan.is_active ? "default" : "secondary"}>
                 {plan.is_active ? "Ativo" : "Inativo"}
               </Badge>
+              <Badge variant="outline">
+                {plan.plan_type === "consumer" ? "Consumidor" : "Negócio"}
+              </Badge>
               {plan.premium_level && (
                 <Badge variant="secondary" className="bg-primary/10 text-primary">
                   {premiumLabel(plan.premium_level)}
@@ -174,6 +179,16 @@ const PlansContent = () => {
                   <SelectItem value="SUBCATEGORIA">Subcategoria</SelectItem>
                   <SelectItem value="CATEGORIA">Destaque</SelectItem>
                   <SelectItem value="SUPER">Super Destaque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Tipo de Plano</Label>
+              <Select value={form.plan_type} onValueChange={(v) => setForm({ ...form, plan_type: v as any })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="business">Negócio</SelectItem>
+                  <SelectItem value="consumer">Consumidor</SelectItem>
                 </SelectContent>
               </Select>
             </div>

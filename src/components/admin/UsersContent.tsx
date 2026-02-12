@@ -1,0 +1,159 @@
+import { useState, useMemo } from "react";
+import { useAllUsers, useUserRequestCounts, useUpdateUserStatus } from "@/hooks/useUsers";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Search, UserCheck, UserX } from "lucide-react";
+
+const UsersContent = () => {
+  const { data: users = [], isLoading } = useAllUsers();
+  const { data: requestCounts = {} } = useUserRequestCounts();
+  const updateStatus = useUpdateUserStatus();
+  const { toast } = useToast();
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const filtered = useMemo(() => {
+    return users.filter(u => {
+      const matchesSearch = !search ||
+        (u.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
+        (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
+        (u.phone || "").includes(search);
+      const matchesStatus = statusFilter === "all" || u.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [users, search, statusFilter]);
+
+  const toggleStatus = async (userId: string, current: string) => {
+    const newStatus = current === "active" ? "suspended" : "active";
+    try {
+      await updateStatus.mutateAsync({ userId, status: newStatus });
+      toast({ title: newStatus === "active" ? "Utilizador ativado" : "Utilizador suspenso" });
+    } catch {
+      toast({ title: "Erro ao alterar estado", variant: "destructive" });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Utilizadores</h1>
+        <p className="text-muted-foreground">Gestão de utilizadores registados na plataforma</p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Pesquisar por nome, email ou telefone..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Ativos</SelectItem>
+            <SelectItem value="suspended">Suspensos</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-card rounded-xl p-4 shadow-card text-center">
+          <p className="text-2xl font-bold">{users.length}</p>
+          <p className="text-sm text-muted-foreground">Total</p>
+        </div>
+        <div className="bg-card rounded-xl p-4 shadow-card text-center">
+          <p className="text-2xl font-bold">{users.filter(u => u.status === "active").length}</p>
+          <p className="text-sm text-muted-foreground">Ativos</p>
+        </div>
+        <div className="bg-card rounded-xl p-4 shadow-card text-center">
+          <p className="text-2xl font-bold">{users.filter(u => u.status === "suspended").length}</p>
+          <p className="text-sm text-muted-foreground">Suspensos</p>
+        </div>
+        <div className="bg-card rounded-xl p-4 shadow-card text-center">
+          <p className="text-2xl font-bold">
+            {users.filter(u => {
+              if (!u.last_activity_at) return false;
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              return new Date(u.last_activity_at) >= thirtyDaysAgo;
+            }).length}
+          </p>
+          <p className="text-sm text-muted-foreground">Ativos 30d</p>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-card rounded-xl shadow-card overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left p-4 font-medium text-muted-foreground">Nome</th>
+              <th className="text-left p-4 font-medium text-muted-foreground">Email</th>
+              <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Telefone</th>
+              <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Registo</th>
+              <th className="text-center p-4 font-medium text-muted-foreground">Pedidos</th>
+              <th className="text-center p-4 font-medium text-muted-foreground">Estado</th>
+              <th className="text-center p-4 font-medium text-muted-foreground">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((user) => (
+              <tr key={user.id} className="border-b border-border/50 hover:bg-secondary/20">
+                <td className="p-4 font-medium">{user.full_name || "—"}</td>
+                <td className="p-4 text-muted-foreground">{user.email || "—"}</td>
+                <td className="p-4 text-muted-foreground hidden md:table-cell">{user.phone || "—"}</td>
+                <td className="p-4 text-muted-foreground hidden lg:table-cell">
+                  {new Date(user.created_at).toLocaleDateString("pt-PT")}
+                </td>
+                <td className="p-4 text-center">{requestCounts[user.user_id] || 0}</td>
+                <td className="p-4 text-center">
+                  <Badge variant={user.status === "active" ? "default" : "destructive"}>
+                    {user.status === "active" ? "Ativo" : "Suspenso"}
+                  </Badge>
+                </td>
+                <td className="p-4 text-center">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => toggleStatus(user.user_id, user.status)}
+                  >
+                    {user.status === "active" ? (
+                      <UserX className="h-4 w-4 text-destructive" />
+                    ) : (
+                      <UserCheck className="h-4 w-4 text-primary" />
+                    )}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filtered.length === 0 && (
+          <p className="text-center text-muted-foreground py-8">Nenhum utilizador encontrado.</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default UsersContent;

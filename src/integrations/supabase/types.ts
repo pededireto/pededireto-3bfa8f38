@@ -440,6 +440,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          plan_type: string
           premium_level: string | null
           price: number
           updated_at: string
@@ -452,6 +453,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          plan_type?: string
           premium_level?: string | null
           price?: number
           updated_at?: string
@@ -464,11 +466,63 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          plan_type?: string
           premium_level?: string | null
           price?: number
           updated_at?: string
         }
         Relationships: []
+      }
+      consumer_subscriptions: {
+        Row: {
+          auto_renew: boolean
+          created_at: string
+          end_date: string | null
+          id: string
+          plan_id: string | null
+          start_date: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_renew?: boolean
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          plan_id?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_renew?: boolean
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          plan_id?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumer_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumer_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       expiration_logs: {
         Row: {
@@ -612,30 +666,94 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
+          last_activity_at: string | null
+          phone: string | null
+          status: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          last_activity_at?: string | null
+          phone?: string | null
+          status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          address?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          last_activity_at?: string | null
+          phone?: string | null
+          status?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      request_business_matches: {
+        Row: {
+          business_id: string
+          id: string
+          price_quote: string | null
+          request_id: string
+          responded_at: string | null
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          price_quote?: string | null
+          request_id: string
+          responded_at?: string | null
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          price_quote?: string | null
+          request_id?: string
+          responded_at?: string | null
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_business_matches_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_business_matches_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_business_matches_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       restaurants: {
         Row: {
@@ -788,6 +906,70 @@ export type Database = {
           termo?: string
         }
         Relationships: []
+      }
+      service_requests: {
+        Row: {
+          address: string | null
+          assigned_to_admin: string | null
+          category_id: string | null
+          closed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          status: string
+          subcategory_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          assigned_to_admin?: string | null
+          category_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          assigned_to_admin?: string | null
+          category_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_requests_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       site_settings: {
         Row: {

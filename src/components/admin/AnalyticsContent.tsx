@@ -1,8 +1,11 @@
-import { useAnalyticsSummary } from "@/hooks/useAnalytics";
-import { Loader2, Eye, MousePointerClick, MessageCircle, Phone, Globe, Mail } from "lucide-react";
+import { useAnalyticsSummary, useUserStats } from "@/hooks/useAnalytics";
+import { useServiceRequestStats } from "@/hooks/useServiceRequests";
+import { Loader2, Eye, MousePointerClick, MessageCircle, Phone, Globe, Mail, Users, Inbox } from "lucide-react";
 
 const AnalyticsContent = () => {
   const { data: analytics, isLoading } = useAnalyticsSummary();
+  const { data: userStats } = useUserStats();
+  const { data: requestStats } = useServiceRequestStats();
 
   if (isLoading) {
     return (
@@ -98,6 +101,55 @@ const AnalyticsContent = () => {
             <Globe className="h-8 w-8 text-pink-500 mx-auto mb-2" />
             <p className="text-2xl font-bold">{analytics.clicksBreakdown.app}</p>
             <p className="text-sm text-muted-foreground">App</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Users & Requests Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-card rounded-xl p-6 shadow-card">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Utilizadores</h2>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold">{userStats?.total || 0}</p>
+              <p className="text-sm text-muted-foreground">Total</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold">{userStats?.newThisMonth || 0}</p>
+              <p className="text-sm text-muted-foreground">Novos este mês</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold">{userStats?.activeLast30 || 0}</p>
+              <p className="text-sm text-muted-foreground">Ativos 30d</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-card rounded-xl p-6 shadow-card">
+          <div className="flex items-center gap-2 mb-4">
+            <Inbox className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Pedidos (Leads)</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold">{requestStats?.total || 0}</p>
+              <p className="text-sm text-muted-foreground">Total</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold">{requestStats?.thisMonth || 0}</p>
+              <p className="text-sm text-muted-foreground">Este mês</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold">{requestStats?.forwardRate || 0}%</p>
+              <p className="text-sm text-muted-foreground">Encaminhamento</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold">{requestStats?.conclusionRate || 0}%</p>
+              <p className="text-sm text-muted-foreground">Conclusão</p>
+            </div>
           </div>
         </div>
       </div>
