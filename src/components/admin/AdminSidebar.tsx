@@ -15,6 +15,7 @@ import {
   BookOpen,
   Crown,
   SearchX,
+  TrendingUp,
   Bell,
   UserCog,
   ClipboardList,
@@ -29,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { useUncontactedCount } from "@/hooks/useExpirationLogs";
 import { usePendingRequestsCount } from "@/hooks/useActionRequests";
 
-export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs" | "service-requests" | "business-modules" | "homepage";
+export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs" | "service-requests" | "business-modules" | "homepage" | "revenue";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -57,6 +58,7 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "audit-logs", label: "Auditoria", icon: History },
   { id: "business-modules", label: "Config. Ficha", icon: Puzzle },
   { id: "homepage", label: "Homepage", icon: Home },
+  { id: "revenue", label: "Receita & Crescimento", icon: TrendingUp },
   { id: "settings", label: "Configurações", icon: Settings },
 ];
 
