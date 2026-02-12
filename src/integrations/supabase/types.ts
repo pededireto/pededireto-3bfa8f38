@@ -186,6 +186,106 @@ export type Database = {
           },
         ]
       }
+      business_module_values: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          module_id: string
+          updated_at: string
+          value: string | null
+          value_json: Json | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          module_id: string
+          updated_at?: string
+          value?: string | null
+          value_json?: Json | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          module_id?: string
+          updated_at?: string
+          value?: string | null
+          value_json?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_module_values_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_module_values_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_module_values_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "business_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_modules: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_public_default: boolean
+          is_required: boolean
+          label: string
+          name: string
+          options: Json | null
+          order_index: number
+          plan_restriction: string | null
+          section: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_public_default?: boolean
+          is_required?: boolean
+          label: string
+          name: string
+          options?: Json | null
+          order_index?: number
+          plan_restriction?: string | null
+          section: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_public_default?: boolean
+          is_required?: boolean
+          label?: string
+          name?: string
+          options?: Json | null
+          order_index?: number
+          plan_restriction?: string | null
+          section?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_subcategories: {
         Row: {
           business_id: string
@@ -247,14 +347,17 @@ export type Database = {
           cta_whatsapp: string | null
           description: string | null
           display_order: number | null
+          facebook_url: string | null
           id: string
           images: string[] | null
+          instagram_url: string | null
           is_active: boolean | null
           is_featured: boolean | null
           is_premium: boolean | null
           logo_url: string | null
           name: string
           nif: string | null
+          other_social_url: string | null
           owner_email: string | null
           owner_name: string | null
           owner_phone: string | null
@@ -292,14 +395,17 @@ export type Database = {
           cta_whatsapp?: string | null
           description?: string | null
           display_order?: number | null
+          facebook_url?: string | null
           id?: string
           images?: string[] | null
+          instagram_url?: string | null
           is_active?: boolean | null
           is_featured?: boolean | null
           is_premium?: boolean | null
           logo_url?: string | null
           name: string
           nif?: string | null
+          other_social_url?: string | null
           owner_email?: string | null
           owner_name?: string | null
           owner_phone?: string | null
@@ -337,14 +443,17 @@ export type Database = {
           cta_whatsapp?: string | null
           description?: string | null
           display_order?: number | null
+          facebook_url?: string | null
           id?: string
           images?: string[] | null
+          instagram_url?: string | null
           is_active?: boolean | null
           is_featured?: boolean | null
           is_premium?: boolean | null
           logo_url?: string | null
           name?: string
           nif?: string | null
+          other_social_url?: string | null
           owner_email?: string | null
           owner_name?: string | null
           owner_phone?: string | null

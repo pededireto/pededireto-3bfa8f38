@@ -20,14 +20,15 @@ import {
   ClipboardList,
   History,
   Users,
-  Inbox
+  Inbox,
+  Puzzle
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUncontactedCount } from "@/hooks/useExpirationLogs";
 import { usePendingRequestsCount } from "@/hooks/useActionRequests";
 
-export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs" | "service-requests";
+export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs" | "service-requests" | "business-modules";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -53,6 +54,7 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "commercial-users", label: "Eq. Comercial", icon: UserCog },
   { id: "action-requests", label: "Pedidos Comerciais", icon: ClipboardList },
   { id: "audit-logs", label: "Auditoria", icon: History },
+  { id: "business-modules", label: "Config. Ficha", icon: Puzzle },
   { id: "settings", label: "Configurações", icon: Settings },
 ];
 
