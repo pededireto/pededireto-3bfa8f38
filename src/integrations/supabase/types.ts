@@ -742,36 +742,45 @@ export type Database = {
       }
       commercial_commissions: {
         Row: {
+          adjustment_type: string | null
           amount: number
           business_id: string
           commercial_id: string
           commission_model_id: string
           created_at: string
           id: string
+          original_commission_id: string | null
           paid_at: string | null
           reference_month: string
+          revenue_event_id: string | null
           status: string
         }
         Insert: {
+          adjustment_type?: string | null
           amount?: number
           business_id: string
           commercial_id: string
           commission_model_id: string
           created_at?: string
           id?: string
+          original_commission_id?: string | null
           paid_at?: string | null
           reference_month: string
+          revenue_event_id?: string | null
           status?: string
         }
         Update: {
+          adjustment_type?: string | null
           amount?: number
           business_id?: string
           commercial_id?: string
           commission_model_id?: string
           created_at?: string
           id?: string
+          original_commission_id?: string | null
           paid_at?: string | null
           reference_month?: string
+          revenue_event_id?: string | null
           status?: string
         }
         Relationships: [
@@ -801,6 +810,20 @@ export type Database = {
             columns: ["commission_model_id"]
             isOneToOne: false
             referencedRelation: "commission_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_commissions_original_commission_id_fkey"
+            columns: ["original_commission_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_commissions_revenue_event_id_fkey"
+            columns: ["revenue_event_id"]
+            isOneToOne: false
+            referencedRelation: "revenue_events"
             referencedColumns: ["id"]
           },
         ]
@@ -847,6 +870,50 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_audit_logs: {
+        Row: {
+          changed_by: string
+          commission_id: string
+          created_at: string
+          id: string
+          new_amount: number | null
+          new_status: string | null
+          old_amount: number | null
+          old_status: string | null
+          reason: string | null
+        }
+        Insert: {
+          changed_by: string
+          commission_id: string
+          created_at?: string
+          id?: string
+          new_amount?: number | null
+          new_status?: string | null
+          old_amount?: number | null
+          old_status?: string | null
+          reason?: string | null
+        }
+        Update: {
+          changed_by?: string
+          commission_id?: string
+          created_at?: string
+          id?: string
+          new_amount?: number | null
+          new_status?: string | null
+          old_amount?: number | null
+          old_status?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_audit_logs_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_commissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_models: {
         Row: {
           created_at: string
@@ -877,6 +944,10 @@ export type Database = {
       commission_rules: {
         Row: {
           applies_to: string
+          applies_to_event_type: string | null
+          applies_to_role: string | null
+          applies_to_team: string | null
+          applies_to_user: string | null
           commission_model_id: string
           commission_type: string
           created_at: string
@@ -887,6 +958,10 @@ export type Database = {
         }
         Insert: {
           applies_to: string
+          applies_to_event_type?: string | null
+          applies_to_role?: string | null
+          applies_to_team?: string | null
+          applies_to_user?: string | null
           commission_model_id: string
           commission_type: string
           created_at?: string
@@ -897,6 +972,10 @@ export type Database = {
         }
         Update: {
           applies_to?: string
+          applies_to_event_type?: string | null
+          applies_to_role?: string | null
+          applies_to_team?: string | null
+          applies_to_user?: string | null
           commission_model_id?: string
           commission_type?: string
           created_at?: string
@@ -906,6 +985,13 @@ export type Database = {
           value?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "commission_rules_applies_to_team_fkey"
+            columns: ["applies_to_team"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "commission_rules_commission_model_id_fkey"
             columns: ["commission_model_id"]
@@ -1367,6 +1453,92 @@ export type Database = {
           },
         ]
       }
+      revenue_events: {
+        Row: {
+          amount: number
+          assigned_user_id: string
+          business_id: string
+          created_at: string | null
+          event_date: string | null
+          event_type: string
+          id: string
+          plan_id: string | null
+          triggered_by: string
+        }
+        Insert: {
+          amount: number
+          assigned_user_id: string
+          business_id: string
+          created_at?: string | null
+          event_date?: string | null
+          event_type: string
+          id?: string
+          plan_id?: string | null
+          triggered_by: string
+        }
+        Update: {
+          amount?: number
+          assigned_user_id?: string
+          business_id?: string
+          created_at?: string | null
+          event_date?: string | null
+          event_type?: string
+          id?: string
+          plan_id?: string | null
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_events_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenue_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenue_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenue_events_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       saved_searches: {
         Row: {
           created_at: string | null
@@ -1601,6 +1773,56 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       user_favorites: {
         Row: {
           business_id: string
@@ -1719,9 +1941,35 @@ export type Database = {
       }
     }
     Functions: {
+      create_revenue_event:
+        | {
+            Args: {
+              p_amount: number
+              p_assigned_user_id?: string
+              p_business_id: string
+              p_event_type: string
+              p_plan_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_assigned_user_id: string
+              p_business_id: string
+              p_event_type: string
+              p_plan_id: string
+              p_triggered_by: string
+            }
+            Returns: string
+          }
       get_business_favorites_count: {
         Args: { business_uuid: string }
         Returns: number
+      }
+      has_permission: {
+        Args: { _permission: string; _user_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
@@ -1748,7 +1996,13 @@ export type Database = {
     }
     Enums: {
       alcance_tipo: "local" | "nacional" | "hibrido"
-      app_role: "admin" | "user" | "commercial"
+      app_role:
+        | "admin"
+        | "user"
+        | "commercial"
+        | "super_admin"
+        | "cs"
+        | "onboarding"
       commercial_status_tipo:
         | "nao_contactado"
         | "contactado"
@@ -1756,6 +2010,15 @@ export type Database = {
         | "cliente"
         | "perdido"
       premium_level_tipo: "SUPER" | "CATEGORIA" | "SUBCATEGORIA"
+      revenue_event_type:
+        | "sale"
+        | "upsell"
+        | "churn_recovery"
+        | "reactivation"
+        | "downgrade"
+        | "refund"
+        | "bonus"
+        | "manual_adjustment"
       subscription_plan_tipo:
         | "free"
         | "1_month"
@@ -1891,7 +2154,14 @@ export const Constants = {
   public: {
     Enums: {
       alcance_tipo: ["local", "nacional", "hibrido"],
-      app_role: ["admin", "user", "commercial"],
+      app_role: [
+        "admin",
+        "user",
+        "commercial",
+        "super_admin",
+        "cs",
+        "onboarding",
+      ],
       commercial_status_tipo: [
         "nao_contactado",
         "contactado",
@@ -1900,6 +2170,16 @@ export const Constants = {
         "perdido",
       ],
       premium_level_tipo: ["SUPER", "CATEGORIA", "SUBCATEGORIA"],
+      revenue_event_type: [
+        "sale",
+        "upsell",
+        "churn_recovery",
+        "reactivation",
+        "downgrade",
+        "refund",
+        "bonus",
+        "manual_adjustment",
+      ],
       subscription_plan_tipo: [
         "free",
         "1_month",
