@@ -24,6 +24,7 @@ import UserDashboard from "./pages/UserDashboard";
 import InstitutionalPage from "./pages/InstitutionalPage";
 import RegisterBusiness from "./pages/RegisterBusiness";
 import CommercialPage from "./pages/CommercialPage";
+import BusinessDashboard from "./pages/BusinessDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -93,6 +94,7 @@ const App = () => {
                       </ProtectedRoute>
                     }
                   />
+                  <Route path="/business-dashboard" element={<BusinessDashboard />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
