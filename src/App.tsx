@@ -11,6 +11,7 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import EmergencyBanner from "@/components/EmergencyBanner";
 import ScrollToTop from "@/components/ScrollToTop";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import CookieConsent from "@/components/CookieConsent";
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import SubcategoryPage from "./pages/SubcategoryPage";
@@ -101,6 +102,7 @@ const App = () => {
                   <Route path="/pedir-servico" element={<RequestServicePage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                <CookieConsent />
               </BrowserRouter>
             </TooltipProvider>
           </ThemeProvider>

@@ -1,11 +1,37 @@
 <!doctype html>
 <html lang="pt">
   <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W3LKHZQ0GF"></script>
+    <!-- Google Consent Mode v2 — must come BEFORE gtag snippet -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+
+      gtag('consent', 'default', {
+        'ad_storage': 'denied',
+        'ad_user_data': 'denied',
+        'ad_personalization': 'denied',
+        'analytics_storage': 'denied'
+      });
+
+      // Restore consent from previous session
+      (function() {
+        try {
+          var consent = localStorage.getItem('cookie_consent');
+          if (consent === 'granted') {
+            gtag('consent', 'update', {
+              'ad_storage': 'granted',
+              'ad_user_data': 'granted',
+              'ad_personalization': 'granted',
+              'analytics_storage': 'granted'
+            });
+          }
+        } catch(e) {}
+      })();
+    </script>
+
+    <!-- Google tag (gtag.js) — loaded AFTER consent defaults -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W3LKHZQ0GF"></script>
+    <script>
       gtag('js', new Date());
       gtag('config', 'G-W3LKHZQ0GF');
     </script>
