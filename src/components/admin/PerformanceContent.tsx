@@ -4,6 +4,8 @@ import {
   usePerformanceTimeSeries,
   useCommercialCommissions,
   useMarkCommissionPaid,
+  useValidateCommission,
+  useReverseCommission,
   useCommercialAssignments,
   useDeactivateAssignment,
   useCommercialUsers,
@@ -12,9 +14,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, TrendingUp, Users, DollarSign, Download, CheckCircle } from "lucide-react";
+import { Loader2, TrendingUp, Users, DollarSign, Download, CheckCircle, RotateCcw, ShieldCheck } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const PerformanceContent = () => {
@@ -32,8 +36,14 @@ const PerformanceContent = () => {
   const { data: allAssignments = [] } = useCommercialAssignments();
   const { data: commercialUsers = [] } = useCommercialUsers();
   const markPaid = useMarkCommissionPaid();
+  const validateCommission = useValidateCommission();
+  const reverseCommission = useReverseCommission();
   const deactivateAssignment = useDeactivateAssignment();
   const createAssignment = useCreateAssignment();
+
+  const [reverseDialogOpen, setReverseDialogOpen] = useState(false);
+  const [reverseTarget, setReverseTarget] = useState<string | null>(null);
+  const [reverseReason, setReverseReason] = useState("");
 
   const [assignBusinessId, setAssignBusinessId] = useState("");
   const [assignCommercialId, setAssignCommercialId] = useState("");
@@ -223,26 +233,59 @@ const PerformanceContent = () => {
               </tr>
             </thead>
             <tbody>
-              {allCommissions.map((c: any) => (
-                <tr key={c.id} className="border-t border-border">
-                  <td className="p-3 text-sm">{c.profiles?.full_name || c.profiles?.email || "-"}</td>
-                  <td className="p-3 text-sm">{c.businesses?.name || "-"}</td>
-                  <td className="p-3 text-sm">{c.reference_month}</td>
-                  <td className="p-3 text-sm text-right font-medium">{Number(c.amount).toFixed(2)}€</td>
-                  <td className="p-3">
-                    <Badge variant="secondary" className={c.status === "paid" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
-                      {c.status === "paid" ? "Paga" : "Gerada"}
-                    </Badge>
-                  </td>
-                  <td className="p-3 text-right">
-                    {c.status === "generated" && (
-                      <Button size="sm" variant="outline" onClick={() => handleMarkPaid(c.id)}>
-                        <CheckCircle className="h-3 w-3 mr-1" /> Pagar
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {allCommissions.map((c: any) => {
+                const isNegative = Number(c.amount) < 0;
+                const statusLabel: Record<string, string> = {
+                  generated: "Gerada", validated: "Validada", paid: "Paga", reversed: "Revertida", cancelled: "Cancelada",
+                };
+                const statusClass: Record<string, string> = {
+                  generated: "bg-warning/10 text-warning",
+                  validated: "bg-blue-500/10 text-blue-600",
+                  paid: "bg-success/10 text-success",
+                  reversed: "bg-destructive/10 text-destructive",
+                  cancelled: "bg-muted text-muted-foreground",
+                };
+                return (
+                  <tr key={c.id} className={`border-t border-border ${isNegative ? "bg-destructive/5" : ""}`}>
+                    <td className="p-3 text-sm">{c.profiles?.full_name || c.profiles?.email || "-"}</td>
+                    <td className="p-3 text-sm">{c.businesses?.name || "-"}</td>
+                    <td className="p-3 text-sm">{c.reference_month}</td>
+                    <td className={`p-3 text-sm text-right font-medium ${isNegative ? "text-destructive" : ""}`}>
+                      {Number(c.amount).toFixed(2)}€
+                      {c.adjustment_type && <span className="text-xs text-muted-foreground ml-1">({c.adjustment_type})</span>}
+                    </td>
+                    <td className="p-3">
+                      <Badge variant="secondary" className={statusClass[c.status] || ""}>
+                        {statusLabel[c.status] || c.status}
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-right space-x-1">
+                      {c.status === "generated" && !c.adjustment_type && (
+                        <Button size="sm" variant="outline" onClick={async () => {
+                          try { await validateCommission.mutateAsync(c.id); toast({ title: "Comissão validada" }); }
+                          catch { toast({ title: "Erro", variant: "destructive" }); }
+                        }}>
+                          <ShieldCheck className="h-3 w-3 mr-1" /> Validar
+                        </Button>
+                      )}
+                      {c.status === "validated" && (
+                        <Button size="sm" variant="outline" onClick={() => handleMarkPaid(c.id)}>
+                          <CheckCircle className="h-3 w-3 mr-1" /> Pagar
+                        </Button>
+                      )}
+                      {(c.status === "paid" || c.status === "validated") && !c.adjustment_type && (
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => {
+                          setReverseTarget(c.id);
+                          setReverseReason("");
+                          setReverseDialogOpen(true);
+                        }}>
+                          <RotateCcw className="h-3 w-3 mr-1" /> Reverter
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {allCommissions.length === 0 && (
                 <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Sem comissões registadas.</td></tr>
               )}
@@ -318,6 +361,27 @@ const PerformanceContent = () => {
           </table>
         </div>
       </div>
+
+      {/* Reverse Dialog */}
+      <Dialog open={reverseDialogOpen} onOpenChange={setReverseDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Reverter Comissão</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Textarea placeholder="Motivo da reversão (obrigatório)" value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} rows={3} />
+            <Button className="w-full" disabled={!reverseReason.trim() || reverseCommission.isPending} onClick={async () => {
+              if (!reverseTarget || !reverseReason.trim()) return;
+              try {
+                await reverseCommission.mutateAsync({ id: reverseTarget, reason: reverseReason.trim() });
+                toast({ title: "Comissão revertida com sucesso" });
+                setReverseDialogOpen(false);
+              } catch { toast({ title: "Erro ao reverter", variant: "destructive" }); }
+            }}>
+              {reverseCommission.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Confirmar Reversão
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

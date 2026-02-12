@@ -1333,6 +1333,7 @@ export type Database = {
           responded_at: string | null
           sent_at: string
           status: string
+          viewed_at: string | null
         }
         Insert: {
           business_id: string
@@ -1342,6 +1343,7 @@ export type Database = {
           responded_at?: string | null
           sent_at?: string
           status?: string
+          viewed_at?: string | null
         }
         Update: {
           business_id?: string
@@ -1351,6 +1353,7 @@ export type Database = {
           responded_at?: string | null
           sent_at?: string
           status?: string
+          viewed_at?: string | null
         }
         Relationships: [
           {
@@ -1623,9 +1626,12 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          location_city: string | null
+          location_postal_code: string | null
           status: string
           subcategory_id: string | null
           updated_at: string
+          urgency: string
           user_id: string
         }
         Insert: {
@@ -1636,9 +1642,12 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          location_city?: string | null
+          location_postal_code?: string | null
           status?: string
           subcategory_id?: string | null
           updated_at?: string
+          urgency?: string
           user_id: string
         }
         Update: {
@@ -1649,9 +1658,12 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          location_city?: string | null
+          location_postal_code?: string | null
           status?: string
           subcategory_id?: string | null
           updated_at?: string
+          urgency?: string
           user_id?: string
         }
         Relationships: [
@@ -1941,28 +1953,17 @@ export type Database = {
       }
     }
     Functions: {
-      create_revenue_event:
-        | {
-            Args: {
-              p_amount: number
-              p_assigned_user_id?: string
-              p_business_id: string
-              p_event_type: string
-              p_plan_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_assigned_user_id: string
-              p_business_id: string
-              p_event_type: string
-              p_plan_id: string
-              p_triggered_by: string
-            }
-            Returns: string
-          }
+      create_revenue_event: {
+        Args: {
+          p_amount: number
+          p_assigned_user_id: string
+          p_business_id: string
+          p_event_type: string
+          p_plan_id: string
+          p_triggered_by: string
+        }
+        Returns: string
+      }
       get_business_favorites_count: {
         Args: { business_uuid: string }
         Returns: number
@@ -1980,6 +1981,10 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_commercial: { Args: never; Returns: boolean }
+      match_request_to_businesses: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
       search_businesses_and_subcategories: {
         Args: { search_term: string }
         Returns: {

@@ -237,9 +237,11 @@ export interface CommercialCommission {
   commission_model_id: string;
   reference_month: string;
   amount: number;
-  status: "generated" | "paid";
+  status: "generated" | "validated" | "paid" | "reversed" | "cancelled";
   created_at: string;
   paid_at: string | null;
+  adjustment_type: string | null;
+  original_commission_id: string | null;
 }
 
 export const useCommercialCommissions = (commercialId?: string) => {
@@ -280,13 +282,129 @@ export const useMarkCommissionPaid = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      // Get current commission for audit
+      const { data: current } = await supabase
+        .from("commercial_commissions" as any)
+        .select("status, amount")
+        .eq("id", id)
+        .single();
+
       const { error } = await supabase
         .from("commercial_commissions" as any)
         .update({ status: "paid", paid_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
+
+      // Audit log
+      const currentData = current as any;
+      if (currentData) {
+        await supabase.from("commission_audit_logs" as any).insert({
+          commission_id: id,
+          changed_by: (await supabase.auth.getUser()).data.user?.id,
+          old_status: currentData.status,
+          new_status: "paid",
+          old_amount: currentData.amount,
+          new_amount: currentData.amount,
+          reason: "Marcada como paga",
+        } as any);
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["commercial-commissions"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["commercial-commissions"] });
+      qc.invalidateQueries({ queryKey: ["commission-audit-logs"] });
+    },
+  });
+};
+
+export const useValidateCommission = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data: current } = await supabase
+        .from("commercial_commissions" as any)
+        .select("status, amount")
+        .eq("id", id)
+        .single();
+
+      const { error } = await supabase
+        .from("commercial_commissions" as any)
+        .update({ status: "validated" })
+        .eq("id", id);
+      if (error) throw error;
+
+      const currentData = current as any;
+      if (currentData) {
+        await supabase.from("commission_audit_logs" as any).insert({
+          commission_id: id,
+          changed_by: (await supabase.auth.getUser()).data.user?.id,
+          old_status: currentData.status,
+          new_status: "validated",
+          old_amount: currentData.amount,
+          new_amount: currentData.amount,
+          reason: "Validada por admin",
+        } as any);
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["commercial-commissions"] });
+      qc.invalidateQueries({ queryKey: ["commission-audit-logs"] });
+    },
+  });
+};
+
+export const useReverseCommission = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      // Get original commission
+      const { data: original, error: fetchErr } = await supabase
+        .from("commercial_commissions" as any)
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const orig = original as any;
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+
+      // Create negative commission
+      const { error: insertErr } = await supabase
+        .from("commercial_commissions" as any)
+        .insert({
+          commercial_id: orig.commercial_id,
+          business_id: orig.business_id,
+          commission_model_id: orig.commission_model_id,
+          reference_month: orig.reference_month,
+          amount: -Math.abs(Number(orig.amount)),
+          status: "generated",
+          adjustment_type: "reversal",
+          original_commission_id: id,
+          revenue_event_id: orig.revenue_event_id,
+        } as any);
+      if (insertErr) throw insertErr;
+
+      // Update original to reversed
+      const { error: updateErr } = await supabase
+        .from("commercial_commissions" as any)
+        .update({ status: "reversed" })
+        .eq("id", id);
+      if (updateErr) throw updateErr;
+
+      // Audit log
+      await supabase.from("commission_audit_logs" as any).insert({
+        commission_id: id,
+        changed_by: userId,
+        old_status: orig.status,
+        new_status: "reversed",
+        old_amount: orig.amount,
+        new_amount: -Math.abs(Number(orig.amount)),
+        reason,
+      } as any);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["commercial-commissions"] });
+      qc.invalidateQueries({ queryKey: ["commission-audit-logs"] });
+    },
   });
 };
 

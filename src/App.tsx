@@ -26,6 +26,7 @@ import RegisterBusiness from "./pages/RegisterBusiness";
 import CommercialPage from "./pages/CommercialPage";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import ProfilePage from "./pages/ProfilePage";
+import RequestServicePage from "./pages/RequestServicePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -97,6 +98,7 @@ const App = () => {
                     }
                   />
                   <Route path="/business-dashboard" element={<BusinessDashboard />} />
+                  <Route path="/pedir-servico" element={<RequestServicePage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>

@@ -25,14 +25,16 @@ import {
   Puzzle,
   Home,
   Handshake,
-  Coins
+  Coins,
+  ShieldCheck,
+  Target
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUncontactedCount } from "@/hooks/useExpirationLogs";
 import { usePendingRequestsCount } from "@/hooks/useActionRequests";
 
-export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs" | "service-requests" | "business-modules" | "homepage" | "revenue" | "performance" | "commission-models";
+export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs" | "service-requests" | "business-modules" | "homepage" | "revenue" | "performance" | "commission-models" | "commission-audit" | "leads-dashboard";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -63,6 +65,8 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "revenue", label: "Receita & Crescimento", icon: TrendingUp },
   { id: "performance", label: "Performance Comercial", icon: Handshake },
   { id: "commission-models", label: "Modelos Comissão", icon: Coins },
+  { id: "commission-audit", label: "Auditoria Comissões", icon: ShieldCheck },
+  { id: "leads-dashboard", label: "Dashboard Leads", icon: Target },
   { id: "settings", label: "Configurações", icon: Settings },
 ];
 

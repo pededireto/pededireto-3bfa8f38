@@ -30,6 +30,8 @@ import HomepageContent from "@/components/admin/HomepageContent";
 import RevenueDashboardContent from "@/components/admin/RevenueDashboardContent";
 import PerformanceContent from "@/components/admin/PerformanceContent";
 import CommissionModelsContent from "@/components/admin/CommissionModelsContent";
+import CommissionAuditContent from "@/components/admin/CommissionAuditContent";
+import LeadsDashboardContent from "@/components/admin/LeadsDashboardContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -60,6 +62,8 @@ const AdminPage = () => {
     if (activeTab === "revenue") return <RevenueDashboardContent />;
     if (activeTab === "performance") return <PerformanceContent />;
     if (activeTab === "commission-models") return <CommissionModelsContent />;
+    if (activeTab === "commission-audit") return <CommissionAuditContent />;
+    if (activeTab === "leads-dashboard") return <LeadsDashboardContent />;
 
     if (isLoading) {
       return (
