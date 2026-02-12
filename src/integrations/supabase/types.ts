@@ -144,6 +144,64 @@ export type Database = {
         }
         Relationships: []
       }
+      business_commercial_assignments: {
+        Row: {
+          assigned_at: string
+          business_id: string
+          commercial_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          role: string
+          unassigned_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          business_id: string
+          commercial_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role: string
+          unassigned_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          business_id?: string
+          commercial_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role?: string
+          unassigned_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_commercial_assignments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_commercial_assignments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_commercial_assignments_commercial_id_fkey"
+            columns: ["commercial_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       business_contact_logs: {
         Row: {
           business_id: string
@@ -454,6 +512,10 @@ export type Database = {
           city: string | null
           commercial_status: Database["public"]["Enums"]["commercial_status_tipo"]
           contacted_at: string | null
+          conversion_date: string | null
+          conversion_plan_id: string | null
+          conversion_price: number | null
+          converted_by: string | null
           coordinates: Json | null
           created_at: string | null
           cta_app: string | null
@@ -502,6 +564,10 @@ export type Database = {
           city?: string | null
           commercial_status?: Database["public"]["Enums"]["commercial_status_tipo"]
           contacted_at?: string | null
+          conversion_date?: string | null
+          conversion_plan_id?: string | null
+          conversion_price?: number | null
+          converted_by?: string | null
           coordinates?: Json | null
           created_at?: string | null
           cta_app?: string | null
@@ -550,6 +616,10 @@ export type Database = {
           city?: string | null
           commercial_status?: Database["public"]["Enums"]["commercial_status_tipo"]
           contacted_at?: string | null
+          conversion_date?: string | null
+          conversion_plan_id?: string | null
+          conversion_price?: number | null
+          converted_by?: string | null
           coordinates?: Json | null
           created_at?: string | null
           cta_app?: string | null
@@ -597,6 +667,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_conversion_plan_id_fkey"
+            columns: ["conversion_plan_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_converted_by_fkey"
+            columns: ["converted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "businesses_plan_id_fkey"
@@ -656,6 +740,71 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_commissions: {
+        Row: {
+          amount: number
+          business_id: string
+          commercial_id: string
+          commission_model_id: string
+          created_at: string
+          id: string
+          paid_at: string | null
+          reference_month: string
+          status: string
+        }
+        Insert: {
+          amount?: number
+          business_id: string
+          commercial_id: string
+          commission_model_id: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          reference_month: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          commercial_id?: string
+          commission_model_id?: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          reference_month?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_commissions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_commissions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_commissions_commercial_id_fkey"
+            columns: ["commercial_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "commercial_commissions_commission_model_id_fkey"
+            columns: ["commission_model_id"]
+            isOneToOne: false
+            referencedRelation: "commission_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_plans: {
         Row: {
           created_at: string
@@ -697,6 +846,81 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      commission_models: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commission_rules: {
+        Row: {
+          applies_to: string
+          commission_model_id: string
+          commission_type: string
+          created_at: string
+          duration_months: number | null
+          id: string
+          plan_id: string | null
+          value: number
+        }
+        Insert: {
+          applies_to: string
+          commission_model_id: string
+          commission_type: string
+          created_at?: string
+          duration_months?: number | null
+          id?: string
+          plan_id?: string | null
+          value?: number
+        }
+        Update: {
+          applies_to?: string
+          commission_model_id?: string
+          commission_type?: string
+          created_at?: string
+          duration_months?: number | null
+          id?: string
+          plan_id?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_rules_commission_model_id_fkey"
+            columns: ["commission_model_id"]
+            isOneToOne: false
+            referencedRelation: "commission_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       consumer_subscriptions: {
         Row: {

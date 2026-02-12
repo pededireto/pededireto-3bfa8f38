@@ -28,6 +28,8 @@ import ServiceRequestsContent from "@/components/admin/ServiceRequestsContent";
 import BusinessModulesContent from "@/components/admin/BusinessModulesContent";
 import HomepageContent from "@/components/admin/HomepageContent";
 import RevenueDashboardContent from "@/components/admin/RevenueDashboardContent";
+import PerformanceContent from "@/components/admin/PerformanceContent";
+import CommissionModelsContent from "@/components/admin/CommissionModelsContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -56,6 +58,8 @@ const AdminPage = () => {
     if (activeTab === "business-modules") return <BusinessModulesContent />;
     if (activeTab === "homepage") return <HomepageContent />;
     if (activeTab === "revenue") return <RevenueDashboardContent />;
+    if (activeTab === "performance") return <PerformanceContent />;
+    if (activeTab === "commission-models") return <CommissionModelsContent />;
 
     if (isLoading) {
       return (

@@ -4,11 +4,13 @@ import {
   LogOut,
   ExternalLink,
   ClipboardList,
+  BarChart3,
+  DollarSign,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-export type CommercialTab = "businesses" | "my-requests";
+export type CommercialTab = "dashboard" | "businesses" | "my-businesses" | "my-commissions" | "my-requests";
 
 interface CommercialSidebarProps {
   activeTab: CommercialTab;
@@ -17,7 +19,10 @@ interface CommercialSidebarProps {
 }
 
 const sidebarItems: { id: CommercialTab; label: string; icon: React.ElementType }[] = [
+  { id: "dashboard", label: "Dashboard", icon: BarChart3 },
   { id: "businesses", label: "Negócios", icon: Building2 },
+  { id: "my-businesses", label: "Meus Negócios", icon: Building2 },
+  { id: "my-commissions", label: "Minhas Comissões", icon: DollarSign },
   { id: "my-requests", label: "Os Meus Pedidos", icon: ClipboardList },
 ];
 
