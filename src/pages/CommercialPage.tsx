@@ -8,9 +8,12 @@ import { cn } from "@/lib/utils";
 import CommercialSidebar, { CommercialTab } from "@/components/commercial/CommercialSidebar";
 import CommercialBusinessesContent from "@/components/commercial/CommercialBusinessesContent";
 import CommercialRequestsContent from "@/components/commercial/CommercialRequestsContent";
+import CommercialDashboardContent from "@/components/commercial/CommercialDashboardContent";
+import CommercialMyBusinessesContent from "@/components/commercial/CommercialMyBusinessesContent";
+import CommercialCommissionsContent from "@/components/commercial/CommercialCommissionsContent";
 
 const CommercialPage = () => {
-  const [activeTab, setActiveTab] = useState<CommercialTab>("businesses");
+  const [activeTab, setActiveTab] = useState<CommercialTab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { data: businesses = [], isLoading: businessesLoading } = useAllBusinesses();
@@ -20,6 +23,9 @@ const CommercialPage = () => {
 
   const renderContent = () => {
     if (activeTab === "my-requests") return <CommercialRequestsContent />;
+    if (activeTab === "dashboard") return <CommercialDashboardContent />;
+    if (activeTab === "my-businesses") return <CommercialMyBusinessesContent />;
+    if (activeTab === "my-commissions") return <CommercialCommissionsContent />;
 
     if (isLoading) {
       return (
