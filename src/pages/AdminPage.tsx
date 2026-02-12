@@ -25,6 +25,7 @@ import ActionRequestsContent from "@/components/admin/ActionRequestsContent";
 import AuditLogsContent from "@/components/admin/AuditLogsContent";
 import UsersContent from "@/components/admin/UsersContent";
 import ServiceRequestsContent from "@/components/admin/ServiceRequestsContent";
+import BusinessModulesContent from "@/components/admin/BusinessModulesContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -50,6 +51,7 @@ const AdminPage = () => {
     if (activeTab === "audit-logs") return <AuditLogsContent />;
     if (activeTab === "users") return <UsersContent />;
     if (activeTab === "service-requests") return <ServiceRequestsContent />;
+    if (activeTab === "business-modules") return <BusinessModulesContent />;
 
     if (isLoading) {
       return (

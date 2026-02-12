@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { BusinessWithCategory, useUpdateBusiness, useCreateBusiness, CommercialStatus, SubscriptionPlan, SubscriptionStatus, PremiumLevel } from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
+import { useActiveBusinessModules, useBusinessModuleValues, useUpsertBusinessModuleValues, BusinessModule } from "@/hooks/useBusinessModules";
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
@@ -19,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ChevronDown, ChevronRight, Building2, Globe, Scale, Handshake,
   CreditCard, DollarSign, ShieldCheck, Loader2, Phone, Mail, MessageCircle,
-  MessageSquare, Plus
+  MessageSquare, Plus, Puzzle
 } from "lucide-react";
 
 // ---------- types ----------
@@ -169,6 +170,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: commercialPlans = [] } = useCommercialPlans(true);
   const { data: editSubcategoryIds } = useBusinessSubcategoryIds(business?.id);
+  const { data: activeModules = [] } = useActiveBusinessModules();
+  const { data: existingModuleValues = [] } = useBusinessModuleValues(business?.id);
+  const upsertModuleValues = useUpsertBusinessModuleValues();
 
   const isEditing = !!business;
 
@@ -190,6 +194,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
     is_featured: false, is_premium: false, premium_level: "" as string,
     display_order: 0,
   });
+
+  // Dynamic module values state
+  const [moduleValues, setModuleValues] = useState<Record<string, { value: string | null; value_json: any }>>({});
 
   // Load business data when editing
   useEffect(() => {
@@ -220,6 +227,17 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
       setForm(prev => ({ ...prev, subcategory_ids: editSubcategoryIds }));
     }
   }, [editSubcategoryIds, business]);
+
+  // Load existing module values
+  useEffect(() => {
+    if (existingModuleValues.length > 0) {
+      const map: Record<string, { value: string | null; value_json: any }> = {};
+      existingModuleValues.forEach((v) => {
+        map[v.module_id] = { value: v.value, value_json: v.value_json };
+      });
+      setModuleValues(map);
+    }
+  }, [existingModuleValues]);
 
   const filteredSubcategories = allSubcategories.filter(s => s.category_id === form.category_id);
 
@@ -266,6 +284,17 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
         toast({ title: "Dados obrigatórios em falta", description: `Para marcar como cliente: ${missing.join(", ")}`, variant: "destructive" });
         return;
       }
+    }
+
+    // Validate required dynamic modules
+    const requiredModules = activeModules.filter((m) => m.is_required);
+    const missingModules = requiredModules.filter((m) => {
+      const val = moduleValues[m.id];
+      return !val || (!val.value && !val.value_json);
+    });
+    if (missingModules.length > 0) {
+      toast({ title: "Campos adicionais obrigatórios em falta", description: missingModules.map((m) => m.label).join(", "), variant: "destructive" });
+      return;
     }
 
     try {
@@ -332,6 +361,19 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
 
       if (form.subcategory_ids.length > 0) {
         await syncSubcategories.mutateAsync({ businessId, subcategoryIds: form.subcategory_ids });
+      }
+
+      // Save dynamic module values
+      const moduleEntries = Object.entries(moduleValues).filter(([_, v]) => v.value || v.value_json);
+      if (moduleEntries.length > 0) {
+        await upsertModuleValues.mutateAsync({
+          businessId,
+          values: moduleEntries.map(([moduleId, v]) => ({
+            module_id: moduleId,
+            value: v.value,
+            value_json: v.value_json,
+          })),
+        });
       }
 
       onSaved();
@@ -635,6 +677,96 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
               </div>
             </div>
           </div>
+        </Section>
+      )}
+
+      {/* 8. Campos Adicionais (Dynamic Modules) */}
+      {activeModules.length > 0 && (
+        <Section title="8. Campos Adicionais" icon={Puzzle} defaultOpen={isEditing}>
+          {(() => {
+            const grouped = activeModules.reduce<Record<string, BusinessModule[]>>((acc, m) => {
+              (acc[m.section] = acc[m.section] || []).push(m);
+              return acc;
+            }, {});
+            const sectionLabels: Record<string, string> = {
+              presenca_publica: "Presença Pública",
+              dados_privados: "Dados Privados",
+              marketing: "Marketing",
+            };
+            return Object.entries(grouped).map(([section, mods]) => (
+              <div key={section} className="space-y-3 mb-4">
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground">{sectionLabels[section] || section}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {mods.map((mod) => {
+                    const val = moduleValues[mod.id] || { value: null, value_json: null };
+                    const setModVal = (v: string | null, vj?: any) =>
+                      setModuleValues((prev) => ({ ...prev, [mod.id]: { value: v, value_json: vj ?? prev[mod.id]?.value_json ?? null } }));
+
+                    return (
+                      <div key={mod.id} className="space-y-1">
+                        <Label>{mod.label} {mod.is_required && <span className="text-destructive">*</span>}</Label>
+                        {mod.type === "text" && (
+                          <Input value={val.value || ""} onChange={(e) => setModVal(e.target.value)} />
+                        )}
+                        {mod.type === "textarea" && (
+                          <Textarea value={val.value || ""} onChange={(e) => setModVal(e.target.value)} rows={3} />
+                        )}
+                        {mod.type === "url" && (
+                          <Input type="url" value={val.value || ""} onChange={(e) => setModVal(e.target.value)} placeholder="https://..." />
+                        )}
+                        {mod.type === "image" && (
+                          <Input type="url" value={val.value || ""} onChange={(e) => setModVal(e.target.value)} placeholder="URL da imagem" />
+                        )}
+                        {mod.type === "video" && (
+                          <Input type="url" value={val.value || ""} onChange={(e) => setModVal(e.target.value)} placeholder="URL do vídeo (YouTube, Vimeo)" />
+                        )}
+                        {mod.type === "boolean" && (
+                          <Switch checked={val.value === "true"} onCheckedChange={(c) => setModVal(c ? "true" : "false")} />
+                        )}
+                        {mod.type === "select" && Array.isArray(mod.options) && (
+                          <Select value={val.value || ""} onValueChange={(v) => setModVal(v)}>
+                            <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                            <SelectContent>
+                              {mod.options.map((opt: string) => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {mod.type === "gallery" && (
+                          <div className="space-y-2">
+                            {(Array.isArray(val.value_json) ? val.value_json : []).map((url: string, i: number) => (
+                              <div key={i} className="flex gap-2">
+                                <Input
+                                  value={url}
+                                  onChange={(e) => {
+                                    const arr = [...(val.value_json || [])];
+                                    arr[i] = e.target.value;
+                                    setModuleValues((prev) => ({ ...prev, [mod.id]: { value: null, value_json: arr } }));
+                                  }}
+                                  placeholder="URL da imagem"
+                                />
+                                <Button type="button" variant="ghost" size="sm" onClick={() => {
+                                  const arr = (val.value_json || []).filter((_: any, idx: number) => idx !== i);
+                                  setModuleValues((prev) => ({ ...prev, [mod.id]: { value: null, value_json: arr } }));
+                                }}>✕</Button>
+                              </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={() => {
+                              const arr = [...(val.value_json || []), ""];
+                              setModuleValues((prev) => ({ ...prev, [mod.id]: { value: null, value_json: arr } }));
+                            }}>
+                              <Plus className="h-3 w-3 mr-1" /> Adicionar imagem
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ));
+          })()}
         </Section>
       )}
 

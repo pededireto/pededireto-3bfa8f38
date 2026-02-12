@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useBusiness } from "@/hooks/useBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
+import { useActiveBusinessModules, useBusinessModuleValues } from "@/hooks/useBusinessModules";
 import { useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -22,6 +23,8 @@ const BusinessPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: business, isLoading } = useBusiness(slug);
   const trackEvent = useTrackEvent();
+  const { data: activeModules = [] } = useActiveBusinessModules();
+  const { data: moduleValues = [] } = useBusinessModuleValues(business?.id);
 
   // Track view on page load
   useEffect(() => {
@@ -197,6 +200,77 @@ const BusinessPage = () => {
                       )}
                     </div>
                   )}
+
+                  {/* Dynamic Module Values */}
+                  {(() => {
+                    const publicModules = activeModules.filter(
+                      (m) => m.is_public_default && m.section === "presenca_publica"
+                    );
+                    const valuesMap = new Map(moduleValues.map((v) => [v.module_id, v]));
+                    const filledModules = publicModules.filter((m) => {
+                      const v = valuesMap.get(m.id);
+                      return v && (v.value || v.value_json);
+                    });
+
+                    if (filledModules.length === 0) return null;
+
+                    return (
+                      <div className="space-y-3">
+                        {filledModules.map((mod) => {
+                          const v = valuesMap.get(mod.id)!;
+                          return (
+                            <div key={mod.id}>
+                              {mod.type === "url" && v.value && (
+                                <a href={v.value} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-primary hover:underline">
+                                  <ExternalLink className="w-4 h-4" />
+                                  {mod.label}
+                                </a>
+                              )}
+                              {(mod.type === "text" || mod.type === "textarea") && v.value && (
+                                <div>
+                                  <span className="text-sm font-medium">{mod.label}:</span>{" "}
+                                  <span className="text-muted-foreground">{v.value}</span>
+                                </div>
+                              )}
+                              {mod.type === "image" && v.value && (
+                                <div>
+                                  <span className="text-sm font-medium block mb-1">{mod.label}</span>
+                                  <img src={v.value} alt={mod.label} className="rounded-lg max-w-full max-h-64 object-contain" />
+                                </div>
+                              )}
+                              {mod.type === "gallery" && Array.isArray(v.value_json) && v.value_json.length > 0 && (
+                                <div>
+                                  <span className="text-sm font-medium block mb-2">{mod.label}</span>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    {v.value_json.map((url: string, i: number) => (
+                                      <img key={i} src={url} alt={`${mod.label} ${i + 1}`} className="rounded-lg w-full aspect-square object-cover" />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {mod.type === "video" && v.value && (
+                                <div>
+                                  <span className="text-sm font-medium block mb-1">{mod.label}</span>
+                                  <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+                                    <iframe src={v.value.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")} className="w-full h-full" allowFullScreen title={mod.label} />
+                                  </div>
+                                </div>
+                              )}
+                              {mod.type === "boolean" && v.value === "true" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm">{mod.label}</span>
+                              )}
+                              {mod.type === "select" && v.value && (
+                                <div>
+                                  <span className="text-sm font-medium">{mod.label}:</span>{" "}
+                                  <span className="text-muted-foreground">{v.value}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
