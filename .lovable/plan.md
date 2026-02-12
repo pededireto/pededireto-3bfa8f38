@@ -1,452 +1,279 @@
+Ficha: Implementação Completa — Fase 6 + Fase 7 + Motor de Leads (Com Ajustes Críticos)
 
+Objetivo
 
-## Arquitetura Multi-Role, Motor de Receita e Backoffice Unificado
+Implementar e concluir FASE 6 (Reversões), FASE 7 (Dashboards por Role) e o MOTOR DE PEDIDOS (Leads) com lógica comercial integrada, incluindo as correções arquiteturais requisitadas (teams, enums, workflow de comissões, idempotência, audit logs e segurança). A execução deve ser faseada e testada; as migrações devem ter rollback e scripts de validação.
 
-Arquitetura Multi-Role Enterprise, Motor de Receita e Backoffice Seguro (Versão Consolidada)
+Requisitos técnicos obrigatórios (não negociáveis)
 
-Este plano evolui a plataforma para uma arquitetura enterprise-ready, segura, auditável e escalável, suportando crescimento de equipas, novos roles, reversões financeiras e controlo administrativo rigoroso.
+1) Estados de comissão
 
-PRINCÍPIOS BASE
+- Workflow de status da tabela commercial_commissions deve suportar:
 
-revenue_events é a entidade financeira central.
+  - generated
 
-create_revenue_event() é a única fonte oficial de criação de eventos.
+  - validated
 
-O Backoffice é exclusivo para Admin/Super Admin.
+  - paid
 
-Todos os utilizadores (Admin, Team, Comerciais, CS, Onboarding, Utilizadores da plataforma, Negócios) têm acesso à sua ficha de perfil.
+  - reversed
 
-Sistema preparado para crescimento de equipa, múltiplas equipas e regras diferenciadas.
+  - cancelled
 
-Estrutura auditável (nenhuma alteração financeira sem rasto).
+- Transições autorizadas e regras de autorização:
 
-ESTADO ATUAL (Base Existente)
+  - generated -> validated (admin)
 
-app_role enum: admin, user, commercial
+  - validated -> paid (admin/finance)
 
-revenue_events já existe
+  - any -> reversed (admin, com reason obrigatório)
 
-commercial_commissions já tem revenue_event_id
+- Todas as transições devem gerar registo em commission_audit_logs.
 
-commission_rules já existe
+2) Teams (nova entidade)
 
-create_revenue_event() já existe
+- Criar tabelas:
 
-handle_business_activation() trigger existe
+  - teams (id, name, created_at)
 
-/admin e /comercial já existem
+  - team_members (id, team_id, profile_id, role, created_at)
 
-FASE 1 — Evolução Estrutural da Base de Dados
-1.1 Expandir enum app_role
+- Permitir que commission_rules tenha coluna applies_to_team (UUID nullable).
 
-Adicionar:
+3) Enum para event_type
 
-super_admin
+- Criar enum `revenue_event_type` com valores:
 
-cs
+  sale, upsell, churn_recovery, reactivation, downgrade, refund, bonus, manual_adjustment
 
-onboarding
+- Alterar coluna revenue_events.event_type para usar este enum.
 
-Resultado:
+4) Idempotência lógica
 
-admin | super_admin | commercial | cs | onboarding | user
+- Criar índice/constraint único lógico para evitar duplicação de revenue_events:
 
-1.2 Criar enum revenue_event_type
+  exemplo de expressão a validar/implementar:
 
-Substituir TEXT por ENUM:
+  UNIQUE (
 
-sale
-upsell
-churn_recovery
-reactivation
-downgrade
-refund
-bonus
-manual_adjustment
+    business_id,
 
-Evita validações por trigger.
-Garante integridade estrutural.
+    event_type,
 
-1.3 Evoluir revenue_events
+    plan_id,
 
-Adicionar constraint de idempotência lógica:
+    date_trunc('month', event_date)  -- Implementar como index expression conforme Postgres
 
-UNIQUE (
-business_id,
-event_type,
-plan_id,
-date_trunc('month', created_at)
-)
+  )
 
-Evita duplicação acidental.
+- Documentar exactamente a expressão implementada e razão.
 
-Garantir que:
+5) create_revenue_event()
 
-amount pode ser negativo (refund, downgrade)
+- Substituir versão actual por função com assinatura:
 
-assigned_user_id e triggered_by nunca são NULL
+  create_revenue_event(
 
-1.4 Criar Estrutura de Teams (Preparação para Escala)
+    p_business_id uuid,
 
-Nova tabela:
+    p_event_type revenue_event_type,
 
-teams
+    p_plan_id uuid,
 
-id
+    p_amount numeric,
 
-name
+    p_assigned_user_id uuid,
 
-created_at
+    p_triggered_by uuid
 
-team_members
+  ) RETURNS uuid -- retorna revenue_event_id
 
-id
+- Regras:
 
-team_id
+  - NÃO usar auth.uid() internamente
 
-user_id
+  - Validar existence: business, assigned_user ([profiles.id](http://profiles.id)), plan (se fornecido)
 
-role
+  - Determinar commission_model ativo; se não existir -> RAISE EXCEPTION com mensagem clara (ex: 'No active commission model found')
 
-created_at
+  - Buscar commission_rule com prioridade:
 
-Permite:
+      1. applies_to_user (commission_rule.applies_to_user = p_assigned_user_id)
 
-Modelos diferentes por equipa
+      2. applies_to_team (commission_rule.applies_to_team in teams of p_assigned_user_id)
 
-Segmentação futura
+      3. applies_to_role (commission_rule.applies_to_role = role)
 
-Expansão geográfica
+      4. applies_to_event_type (commission_rule.applies_to_event_type = p_event_type)
 
-1.5 Evoluir commission_rules
+      5. plan_id specific then rule with plan_id null (global)
 
-Adicionar:
+  - Se nenhuma regra encontrada -> RAISE EXCEPTION
 
-applies_to_role TEXT NULL
+  - Calcular valores e criar revenue_event
 
-applies_to_event_type revenue_event_type NULL
+  - Inserir commercial_commissions conforme duration_months (recorrência), com status = 'generated'
 
-applies_to_team UUID NULL
+  - Tudo dentro de transação com tratamento de erros; função devolve revenue_event_id no final
 
-applies_to_user UUID NULL
+  - Validar e documentar idempotência: se tentativa de criar revenue_event duplicado -> RAISE EXCEPTION 'Duplicate revenue event'
 
-Hierarquia de prioridade futura:
+6) FK e referência de utilizadores
 
-applies_to_user
+- Padronizar FK para `profiles.id` (não profiles.user_id)
 
-applies_to_team
+- Atualizar todas as foreign keys e RLS que apontem para user_id para apontar para [profiles.id](http://profiles.id), ou justificar inconsciência se necessário.
 
-applies_to_role
+7) commission_audit_logs
 
-global
+- Garantir que qualquer alteração relevante em commercial_commissions (status/amount/original_commission_id) grava um registo na tabela commission_audit_logs com: commission_id, action, performed_by, role, old_status, new_status, old_amount, new_amount, reason, created_at.
 
-NULL = aplica a todos.
+8) useReverseCommission()
 
-1.6 Evoluir commercial_commissions
+- Implementar hook/endpoint em src/hooks/useCommercialPerformance.ts:
 
-Expandir estados para:
+  - Recebe commission_id e reason
 
-generated
-validated
-paid
-reversed
-cancelled
+  - Verifica permissão (has_permission('manage_commissions') ou is admin)
 
-Adicionar:
+  - Cria uma nova commercial_commissions com amount negativo, adjustment_type='reversal', original_commission_id apontando ao original
 
-adjustment_type TEXT NULL (chargeback, reversal, correction)
+  - Atualiza original.status -> 'reversed'
 
-original_commission_id UUID NULL
+  - Grava audit log
 
-Permitir valores negativos.
+  - Tudo atómico
 
-1.7 Criar commission_audit_logs
+9) RLS e Security
 
-Nova tabela:
+- Revenue_events: enum-based type; RLS:
 
-commission_audit_logs
+  - admin/super_admin: full access
 
-id
+  - commercial/cs/onboarding: SELECT/UPDATE onde assigned_user_id = [profiles.id](http://profiles.id) OR triggered_by = [profiles.id](http://profiles.id)
 
-commission_id
+  - request_business_matches RLS: negócios veem apenas matches do seu negócio; comerciais veem matches dos negócios a que estão atribuídos via business_commercial_assignments
 
-changed_by
+- Todas as funções definidoras devem ser SECURITY DEFINER com owner = admin-role DB user; garantir que o definer tem permissões necessárias.
 
-old_status
+10) Backoffice
 
-new_status
+- /backoffice **ACESSO EXCLUSIVO** apenas para admin | super_admin. NÃO permitir qualquer role não-admin.
 
-old_amount
+- Outros roles têm portais próprios (/comercial, /cs, /onboarding).
 
-new_amount
+11) Perfil
 
-reason
+- Implementar /perfil para todos os tipos de utilizadores com edição de dados e alteração de password via Supabase Auth.
 
-created_at
+12) Testes & migrações
 
-Obrigatório para qualquer alteração financeira.
+- Entregar migrations SQL com:
 
-1.8 Atualizar create_revenue_event()
+  - Up e Down (rollback)
 
-Regras:
+  - Script de validação pós-migração (checks)
 
-Não usar auth.uid()
+  - Plano de migração de dados (se necessário)
 
-Recebe explicitamente:
+- Implementar testes:
 
-p_business_id
+  - Unit tests para create_revenue_event e match_request_to_businesses
 
-p_event_type
+  - Integration tests para fluxo: criar pedido -> auto-match -> business responde -> conversão -> comissão -> reversão
 
-p_plan_id
+Fase 6 — Implementação (detalhada)
 
-p_amount
+- Implementar useReverseCommission(), UI de reversão no PerformanceContent, badges e estilos de comissões negativas.
 
-p_assigned_user_id
+- Garantir validações de autorização.
 
-p_triggered_by
+Fase 7 — Dashboards por role (detalhada)
 
-Validar:
+- Implementar hooks em src/hooks/useRoleDashboard.ts com KPIs por role
 
-Utilizador existe
+- Componentes para Admin, Commercial, CS, Onboarding com RLS
 
-Modelo ativo existe
+Motor de Leads — Implementação (detalhada)
 
-Regra existe
+- Expandir service_requests com location_city, location_postal_code, urgency
 
-Lançar EXCEPTION clara se falhar
+- Expandir request_business_matches com viewed_at e RLS adequada
 
-Filtrar regras por:
+- Implementar função SQL match_request_to_businesses(p_request_id uuid) SECURITY DEFINER:
 
-applies_to_user
+  - Seleciona negócios com subscription_status = 'active'
 
-applies_to_team
+  - Filtra por category_id, city (quando fornecido)
 
-applies_to_role
+  - Ordena por premium_level (premium first) e por subscription_plan priority
 
-applies_to_event_type
+  - Limite 3
 
-Criar revenue_event
+  - Inserir em request_business_matches e criar business_notifications
 
-Criar comissões
+- Hook useLeadsDashboard.ts com KPIs e time-series
 
-Status inicial = generated
+- Admin LeadsDashboardContent, ServiceRequestsContent com Auto-match
 
-Garantir atomicidade controlada
+- Frontend RequestServicePage (/pedir-servico) com autenticação; ao submeter executa match_request_to_businesses
 
-FASE 2 — Sistema de Permissões Dinâmico
-2.1 role_permissions
+Sequência de implementação e rollout
 
-Tabela:
+1) Migrations (enum, teams, columns novas, constraints, indices)
 
-role_permissions
+2) Atualizar create_revenue_event() com a nova assinatura + testes unitários
 
-id
+3) Atualizar commercial_commissions estados + audit logs
 
-role
+4) RLS revisado
 
-permission
+5) Implementar useReverseCommission() + UI
 
-created_at
+6) role_permissions + has_permission()
 
-UNIQUE(role, permission)
+7) Proteção Backoffice + /perfil
 
-2.2 has_permission()
+8) Motor de Leads (migrations + match function + UI)
 
-Função:
+9) Dashboards por role
 
-has_permission(_user_id uuid, _permission text)
+10) Testes de integração + deploy em staging + validação manual
 
-SECURITY DEFINER
-Ignora RLS recursiva.
+11) Deploy em produção com feature flags, monitorização e rollback plan
 
-FASE 3 — Segurança do Backoffice
-3.1 Acesso ao Backoffice
+Critérios de aceitação (QA)
 
-/backoffice deve ser acessível APENAS a:
+- create_revenue_event() deve devolver event_id e ser idempotente
 
-admin
-super_admin
+- Para um teste end-to-end: criar pedido -> match automático -> business recebe notificação -> business responde -> admin marca conversão -> commission gerada (generated) -> admin valida -> comissão marcada paid -> admin reverte (reversal) -> audit log criado e valor negativo gerado
 
-Nunca:
+- RLS efetivo em staging testado com múltiplos users
 
-commercial
-cs
-onboarding
-user
+- Backoffice inacessível para roles não-admin
 
-Regra:
+- /perfil funcional para todos
 
-requireAdminOnly
+Entregar
 
-Os outros roles NÃO entram no Backoffice.
+- SQL migrations (up/down)
 
-3.2 Portais Separados
+- Funções SQL com documentação inline
 
-Admin → /backoffice
+- Hooks React + componentes + rotas
 
-Comerciais → /comercial
+- Test suites (unit + integration)
 
-CS → /cs
+- Documentação técnica (README de migração + runbook de rollback)
 
-Onboarding → /onboarding
+Observações finais
 
-User → Portal normal
+- Não avançar com botão 24h até cobertura mínima por região e validação de resposta
 
-Nada de “qualquer role não-user”.
+- Implementar AI-matching futuramente (após ter histórico e dados)
 
-FASE 4 — Perfil de Utilizador (Obrigatório para Todos)
+- Entregar changelog e instruções de rollout
 
-Criar página:
+FIM DA PROMPT
 
-/perfil
-
-Disponível para:
-
-Admin
-
-Team
-
-Comerciais
-
-CS
-
-Onboarding
-
-Users da plataforma
-
-Negócios
-
-Funcionalidades:
-
-Atualizar nome
-
-Atualizar email
-
-Atualizar telefone
-
-Atualizar password
-
-Ver role
-
-Ver equipa
-
-Histórico de atividade básico
-
-Usar Supabase Auth para password reset seguro.
-
-FASE 5 — Backoffice Admin
-
-Sidebar dinâmica baseada em permissões.
-
-Secções:
-
-Geral
-Gestão
-Financeiro
-Configurações
-Auditoria
-
-Adicionar nova secção:
-
-Auditoria → Logs de Comissões
-
-FASE 6 — Reversões
-
-Hook useReverseCommission()
-
-Criar comissão negativa
-
-Ligar original_commission_id
-
-Atualizar estado da original para reversed
-
-Criar registo em commission_audit_logs
-
-FASE 7 — Dashboards por Role
-
-Admin:
-
-MRR
-
-Receita total
-
-Comissões geradas
-
-Comissões validadas
-
-Comissões pagas
-
-Reversões
-
-Receita líquida
-
-Commercial:
-
-Minhas comissões
-
-Gerado / Validado / Pago
-
-CS:
-
-Churn recovery
-
-Receita recuperada
-
-Onboarding:
-
-Ativações concluídas
-
-O QUE NÃO MUDA
-
-businesses
-
-sistema de planos
-
-frontend público
-
-homepage modular
-
-SEQUÊNCIA DE IMPLEMENTAÇÃO
-
-Migração estrutural SQL (enum, teams, colunas novas, audit logs)
-
-Atualização create_revenue_event()
-
-Atualização commercial_commissions estados
-
-RLS reforçado
-
-role_permissions + has_permission()
-
-Proteção Backoffice (admin only)
-
-Página /perfil para todos
-
-Evolução dashboards
-
-Sistema de reversões
-
-Exportações
-
-OBJETIVO FINAL
-
-Sistema:
-
-Multi-role
-
-Seguro
-
-Auditável
-
-Escalável
-
-Preparado para múltiplas equipas
-
-Preparado para crescimento 10x
-
-Financeiramente consistente
-
-Backoffice protegido
-
-Utilizadores com autonomia sobre os seus dados
+&nbsp;
