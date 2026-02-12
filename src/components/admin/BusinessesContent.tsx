@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { BusinessWithCategory, useCreateBusiness, useDeleteBusiness, SUBSCRIPTION_PLANS, SubscriptionPlan, SubscriptionStatus, CommercialStatus } from "@/hooks/useBusinesses";
+import { BusinessWithCategory, useCreateBusiness, useDeleteBusiness, useUpdateBusiness, SUBSCRIPTION_PLANS, SubscriptionPlan, SubscriptionStatus, CommercialStatus } from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Download, Pencil } from "lucide-react";
+import { Plus, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Download, Pencil, Power } from "lucide-react";
 import ContactLogsDialog from "@/components/admin/ContactLogsDialog";
 import BusinessFileCard from "@/components/admin/BusinessFileCard";
 import ImportBySourceDialog from "@/components/admin/ImportBySourceDialog";
@@ -37,6 +37,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const createBusiness = useCreateBusiness();
   
   const deleteBusiness = useDeleteBusiness();
+  const updateBusiness = useUpdateBusiness();
   const syncSubcategories = useSyncBusinessSubcategories();
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: commercialPlans = [] } = useCommercialPlans(true);
@@ -60,8 +61,20 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     setDialogOpen(true);
   };
 
+  const handleToggleActive = async (business: BusinessWithCategory) => {
+    const newStatus = !business.is_active;
+    const label = newStatus ? "ativar" : "inativar";
+    if (!confirm(`Tem certeza que deseja ${label} "${business.name}"?`)) return;
+    try {
+      await updateBusiness.mutateAsync({ id: business.id, is_active: newStatus });
+      toast({ title: newStatus ? "Negócio ativado" : "Negócio inativado" });
+    } catch {
+      toast({ title: "Erro", description: `Não foi possível ${label} o negócio`, variant: "destructive" });
+    }
+  };
+
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja remover este negócio?")) return;
+    if (!confirm("Tem certeza que deseja remover este negócio permanentemente?")) return;
     try {
       await deleteBusiness.mutateAsync(id);
       toast({ title: "Negócio removido com sucesso" });
@@ -398,8 +411,9 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                   <td className="p-4">
                     <div className="flex justify-end gap-2">
                       <ContactLogsDialog businessId={business.id} businessName={business.name} />
-                      <Button size="sm" variant="ghost" onClick={() => openEditDialog(business)}><Pencil className="h-4 w-4" /></Button>
-                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(business.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEditDialog(business)} title="Editar"><Pencil className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleToggleActive(business)} title={business.is_active ? "Inativar" : "Ativar"} className={business.is_active ? "text-warning hover:text-warning" : "text-success hover:text-success"}><Power className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(business.id)} title="Apagar permanentemente"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </td>
                 </tr>
