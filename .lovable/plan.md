@@ -1,507 +1,452 @@
 
 
-## Evolucao Estrutural - Monetizacao, Homepage Modular e Regras por Plano
+## Arquitetura Multi-Role, Motor de Receita e Backoffice Unificado
 
-Este plano implementa as 3 partes (A, B, C) de forma incremental sem alterar tabelas ou funcionalidades existentes.
+Arquitetura Multi-Role Enterprise, Motor de Receita e Backoffice Seguro (Versão Consolidada)
 
----
+Este plano evolui a plataforma para uma arquitetura enterprise-ready, segura, auditável e escalável, suportando crescimento de equipas, novos roles, reversões financeiras e controlo administrativo rigoroso.
 
-### Parte A - Consolidar Monetizacao (Destaques)
+PRINCÍPIOS BASE
 
-**Base de Dados (Migracao SQL)**
+revenue_events é a entidade financeira central.
 
-Criar tabela `business_highlights`:
+create_revenue_event() é a única fonte oficial de criação de eventos.
 
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | gen_random_uuid() |
-| business_id | uuid FK businesses(id) ON DELETE CASCADE | |
-| level | TEXT NOT NULL | 'super', 'category', 'subcategory' |
-| category_id | uuid NULL | obrigatorio se level=category |
-| subcategory_id | uuid NULL | obrigatorio se level=subcategory |
-| is_active | BOOLEAN DEFAULT true | |
-| start_date | TIMESTAMPTZ NULL | destaque temporario |
-| end_date | TIMESTAMPTZ NULL | destaque temporario |
-| display_order | INTEGER DEFAULT 0 | |
-| created_at | TIMESTAMPTZ DEFAULT now() | |
-| updated_at | TIMESTAMPTZ DEFAULT now() | |
+O Backoffice é exclusivo para Admin/Super Admin.
 
-Constraints CHECK:
-- level IN ('super', 'category', 'subcategory')
-- level='super' implica category_id IS NULL AND subcategory_id IS NULL
-- level='category' implica category_id IS NOT NULL
-- level='subcategory' implica subcategory_id IS NOT NULL
+Todos os utilizadores (Admin, Team, Comerciais, CS, Onboarding, Utilizadores da plataforma, Negócios) têm acesso à sua ficha de perfil.
 
-Indices: (business_id), (level), (category_id), (subcategory_id), (is_active)
+Sistema preparado para crescimento de equipa, múltiplas equipas e regras diferenciadas.
 
-RLS: SELECT publico onde is_active=true; ALL para admins
+Estrutura auditável (nenhuma alteração financeira sem rasto).
 
-Trigger: updated_at automatico
+ESTADO ATUAL (Base Existente)
 
-**Nota importante sobre retrocompatibilidade:**
-A tabela `business_highlights` funciona em paralelo com os campos `is_premium`/`premium_level` da tabela `businesses`. Os hooks existentes (`useSuperHighlights`, `useFeaturedBusinesses`) continuam a funcionar. Novos hooks serao criados para ler de `business_highlights`, e a migracaoo dos dados sera feita numa fase futura.
+app_role enum: admin, user, commercial
 
-**Configuracoes Admin (SettingsContent.tsx)**
+revenue_events já existe
 
-Adicionar nova seccao "Configuracao de Destaques Avancada" com:
-- Limite Super Destaques (site_settings key: `highlights_super_limit`, default 6)
-- Limite por Categoria (key: `highlights_category_limit`, default 3)
-- Limite por Subcategoria (key: `highlights_subcategory_limit`, default 3)
-- Metodo de ordenacao (key: `highlights_sort_method`, valores: manual / recentes / aleatorio)
-- Switch: Filtrar por data ativa (key: `highlights_filter_by_date`, default false)
+commercial_commissions já tem revenue_event_id
 
-Estes campos usam o sistema `site_settings` ja existente - sao apenas novos registos.
+commission_rules já existe
 
-**Novos Hooks**
+create_revenue_event() já existe
 
-Novo ficheiro: `src/hooks/useBusinessHighlights.ts`
-- `useBusinessHighlights(level, categoryId?, subcategoryId?)` - query a business_highlights com join businesses
-- `useCreateHighlight`, `useUpdateHighlight`, `useDeleteHighlight` - mutations CRUD
-- Respeita limites de site_settings e filtro de datas
+handle_business_activation() trigger existe
 
-**Admin - Gestao de Destaques**
+/admin e /comercial já existem
 
-Atualizar `src/components/admin/FeaturedContent.tsx`:
-- Adicionar seccao para gerir destaques via `business_highlights`
-- Permitir criar destaque (escolher negocio, nivel, categoria/subcategoria, datas)
-- Listar destaques agrupados por nivel
-- Toggle ativo/inativo
-- Editar ordem e datas
-- Manter logica existente de `is_premium`/`is_featured` intacta (coexistencia)
+FASE 1 — Evolução Estrutural da Base de Dados
+1.1 Expandir enum app_role
 
----
+Adicionar:
 
-### Parte B - Homepage Modular
+super_admin
 
-**Base de Dados (Migracao SQL)**
+cs
 
-Criar tabela `homepage_blocks`:
+onboarding
 
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | gen_random_uuid() |
-| type | TEXT NOT NULL | hero, categorias, super_destaques, destaques, negocios_premium, banner, texto, personalizado |
-| title | TEXT NULL | titulo opcional do bloco |
-| config | JSONB NULL | configuracao especifica por tipo |
-| is_active | BOOLEAN DEFAULT true | |
-| order_index | INTEGER DEFAULT 0 | |
-| start_date | TIMESTAMPTZ NULL | bloco temporario |
-| end_date | TIMESTAMPTZ NULL | bloco temporario |
-| created_at | TIMESTAMPTZ DEFAULT now() | |
-| updated_at | TIMESTAMPTZ DEFAULT now() | |
+Resultado:
 
-Constraint CHECK: type IN ('hero','categorias','super_destaques','destaques','negocios_premium','banner','texto','personalizado','featured_categories')
+admin | super_admin | commercial | cs | onboarding | user
 
-RLS: SELECT publico (is_active=true); ALL para admins
+1.2 Criar enum revenue_event_type
 
-Trigger: updated_at automatico
+Substituir TEXT por ENUM:
 
-Seed inicial com blocos correspondentes ao layout atual:
-1. type=hero, order_index=0
-2. type=super_destaques, order_index=1
-3. type=featured_categories, order_index=2
-4. type=categorias, order_index=3
-5. type=destaques, order_index=4
+sale
+upsell
+churn_recovery
+reactivation
+downgrade
+refund
+bonus
+manual_adjustment
 
-Isto garante que a homepage renderiza exatamente como antes sem necessidade de configuracao.
+Evita validações por trigger.
+Garante integridade estrutural.
 
-**Novos Hooks**
+1.3 Evoluir revenue_events
 
-Novo ficheiro: `src/hooks/useHomepageBlocks.ts`
-- `useHomepageBlocks()` - lista blocos ativos, ordenados, filtrados por data
-- `useAllHomepageBlocks()` - admin, todos os blocos
-- CRUD mutations
+Adicionar constraint de idempotência lógica:
 
-**Admin - Nova aba "Homepage"**
+UNIQUE (
+business_id,
+event_type,
+plan_id,
+date_trunc('month', created_at)
+)
 
-Ficheiro: `src/components/admin/AdminSidebar.tsx`
-- Adicionar `"homepage"` ao tipo AdminTab
-- Novo item: icone `LayoutDashboard` (ou `Home`), label "Homepage"
-
-Ficheiro: `src/pages/AdminPage.tsx`
-- Importar e renderizar HomepageContent
-
-Novo ficheiro: `src/components/admin/HomepageContent.tsx`
-- Lista de blocos com drag-like reordenacao (order_index numerico)
-- Para cada bloco: tipo, titulo, ativo/inativo, datas, config
-- Criar novo bloco com tipo
-- Editar config conforme tipo:
-  - banner: titulo, descricao, link, imagem_url
-  - negocios_premium: limite, ordenacao
-  - texto: conteudo HTML simples
-  - hero/categorias/super_destaques/destaques: sem config extra (usam site_settings)
-- Eliminar bloco (com confirmacao)
-
-**Homepage Publica - Renderizacao Dinamica**
-
-Ficheiro: `src/pages/Index.tsx`
-- Carregar blocos via `useHomepageBlocks()`
-- Iterar blocos ordenados e renderizar componente conforme type
-- Fallback: se nao existirem blocos na BD, manter layout atual hardcoded (seguranca)
-- Componentes existentes (HeroSection, SuperHighlightsSection, etc.) continuam a ser usados
-
-Novo ficheiro: `src/components/HomepageBlockRenderer.tsx`
-- Switch por tipo de bloco
-- Renderiza componentes existentes ou novos (BannerBlock, TextBlock, PremiumBusinessBlock)
-
-Novos componentes simples:
-- `src/components/BannerBlock.tsx` - renderiza banner a partir do config JSON
-- `src/components/TextBlock.tsx` - renderiza texto/HTML sanitizado
-- `src/components/PremiumBusinessBlock.tsx` - lista de negocios premium com limite do config
-
----
-
-### Parte C - Sistema de Regras por Plano
-
-**Base de Dados (Migracao SQL)**
-
-Criar tabela `plan_rules`:
+Evita duplicação acidental.
 
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | gen_random_uuid() |
-| plan_id | uuid FK commercial_plans(id) ON DELETE CASCADE | UNIQUE |
-| max_gallery_images | INTEGER NULL | null = sem limite |
-| max_modules | INTEGER NULL | null = sem limite |
-| allow_video | BOOLEAN DEFAULT false | |
-| allow_category_highlight | BOOLEAN DEFAULT false | |
-| allow_super_highlight | BOOLEAN DEFAULT false | |
-| allow_premium_block | BOOLEAN DEFAULT false | |
-| created_at | TIMESTAMPTZ DEFAULT now() | |
-| updated_at | TIMESTAMPTZ DEFAULT now() | |
+Garantir que:
 
-Constraint: UNIQUE(plan_id)
+amount pode ser negativo (refund, downgrade)
 
-RLS: SELECT publico; ALL para admins
+assigned_user_id e triggered_by nunca são NULL
 
-Trigger: updated_at automatico
+1.4 Criar Estrutura de Teams (Preparação para Escala)
 
-**Novos Hooks**
+Nova tabela:
 
-Novo ficheiro: `src/hooks/usePlanRules.ts`
-- `usePlanRules()` - listar todas as regras
-- `usePlanRuleByPlanId(planId)` - regra de um plano especifico
-- `useUpsertPlanRule` - criar/atualizar
+teams
 
-**Admin - Regras na aba Planos**
+id
 
-Ficheiro: `src/components/admin/PlansContent.tsx`
-- Adicionar seccao no dialogo de edicao de plano: "Regras e Permissoes"
-- Campos: max_gallery_images, max_modules, allow_video, allow_category_highlight, allow_super_highlight, allow_premium_block
-- Ao guardar plano, fazer upsert em plan_rules
+name
 
-**Validacao Progressiva**
+created_at
 
-Ficheiro: `src/components/admin/BusinessFileCard.tsx`
-- Ao carregar, verificar plan_id do negocio e carregar regras
-- Na seccao de modulos dinamicos:
-  - Se max_modules definido, limitar numero de campos visiveis/editaveis
-  - Se allow_video=false, desabilitar campos tipo video
-  - Se max_gallery_images definido, limitar numero de imagens em galleries
-- Mostrar aviso visual quando funcionalidade bloqueada por plano
-- NAO bloquear gravacao - apenas avisar (fase progressiva)
+team_members
 
-Ficheiro: `src/components/admin/FeaturedContent.tsx`
-- Ao tentar adicionar negocio como Super Destaque, verificar allow_super_highlight
-- Ao tentar adicionar como Destaque Categoria, verificar allow_category_highlight
-- Mostrar aviso se plano nao permite
+id
 
----
+team_id
 
-### Resumo de Ficheiros
+user_id
 
-| Ficheiro | Acao |
-|---|---|
-| Migracao SQL | 3 tabelas (business_highlights, homepage_blocks, plan_rules), indices, RLS, triggers, seed homepage |
-| `src/hooks/useBusinessHighlights.ts` | **Novo** - CRUD destaques |
-| `src/hooks/useHomepageBlocks.ts` | **Novo** - CRUD blocos homepage |
-| `src/hooks/usePlanRules.ts` | **Novo** - regras por plano |
-| `src/components/admin/HomepageContent.tsx` | **Novo** - gestao homepage |
-| `src/components/HomepageBlockRenderer.tsx` | **Novo** - renderer dinamico |
-| `src/components/BannerBlock.tsx` | **Novo** - bloco banner |
-| `src/components/TextBlock.tsx` | **Novo** - bloco texto |
-| `src/components/PremiumBusinessBlock.tsx` | **Novo** - bloco negocios premium |
-| `src/components/admin/AdminSidebar.tsx` | Nova aba "homepage" |
-| `src/pages/AdminPage.tsx` | Renderizar HomepageContent |
-| `src/pages/Index.tsx` | Renderizacao dinamica de blocos |
-| `src/components/admin/SettingsContent.tsx` | Seccao configuracao destaques avancada |
-| `src/components/admin/FeaturedContent.tsx` | Gestao via business_highlights + validacao plano |
-| `src/components/admin/PlansContent.tsx` | Seccao regras no dialogo |
-| `src/components/admin/BusinessFileCard.tsx` | Validacao progressiva por regras |
+role
 
-### O que NAO muda
+created_at
 
-- Tabela businesses (zero alteracoes)
-- Campos is_premium, is_featured, premium_level continuam a funcionar
-- Hooks existentes (useSuperHighlights, useFeaturedBusinesses) permanecem intactos
-- Layout publico continua identico (seed garante blocos iguais ao atual)
-- Sistema de categorias, subcategorias, subscricoes
-- Autenticacao, SEO, footer, header
-- Sistema de modulos dinamicos (business_modules)
-- Sistema de pedidos (service_requests)
+Permite:
 
-Parte D - Backoffice do Negócio (Portal Comercial)
-Objetivo
+Modelos diferentes por equipa
 
-Criar área autenticada para cada negócio (role: commercial_user) onde pode:
+Segmentação futura
 
-Editar a sua ficha (mesmos campos já existentes)
+Expansão geográfica
 
-Gerir módulos dinâmicos
+1.5 Evoluir commission_rules
 
-Consultar plano atual
+Adicionar:
 
-Fazer upgrade de plano
+applies_to_role TEXT NULL
 
-Receber notificações (pedidos, alertas, sistema)
+applies_to_event_type revenue_event_type NULL
 
-Consultar pedidos de orçamento recebidos
+applies_to_team UUID NULL
 
-No futuro: gerir faturação e histórico de destaques
+applies_to_user UUID NULL
 
-Implementação incremental e compatível com estrutura existente.
+Hierarquia de prioridade futura:
 
-Arquitetura Geral
+applies_to_user
 
-Nova área:
+applies_to_team
 
-/business-dashboard
+applies_to_role
 
-Separada do Admin.
+global
 
-Acesso apenas a utilizadores com negócio associado.
+NULL = aplica a todos.
 
-Base de Dados (sem alterar businesses)
+1.6 Evoluir commercial_commissions
 
-Não alterar tabela businesses.
+Expandir estados para:
 
-Aproveitar:
+generated
+validated
+paid
+reversed
+cancelled
+
+Adicionar:
+
+adjustment_type TEXT NULL (chargeback, reversal, correction)
+
+original_commission_id UUID NULL
+
+Permitir valores negativos.
+
+1.7 Criar commission_audit_logs
+
+Nova tabela:
+
+commission_audit_logs
+
+id
+
+commission_id
+
+changed_by
+
+old_status
+
+new_status
+
+old_amount
+
+new_amount
+
+reason
+
+created_at
+
+Obrigatório para qualquer alteração financeira.
+
+1.8 Atualizar create_revenue_event()
+
+Regras:
+
+Não usar auth.uid()
+
+Recebe explicitamente:
+
+p_business_id
+
+p_event_type
+
+p_plan_id
+
+p_amount
+
+p_assigned_user_id
+
+p_triggered_by
+
+Validar:
+
+Utilizador existe
+
+Modelo ativo existe
+
+Regra existe
+
+Lançar EXCEPTION clara se falhar
+
+Filtrar regras por:
+
+applies_to_user
+
+applies_to_team
+
+applies_to_role
+
+applies_to_event_type
+
+Criar revenue_event
+
+Criar comissões
+
+Status inicial = generated
+
+Garantir atomicidade controlada
+
+FASE 2 — Sistema de Permissões Dinâmico
+2.1 role_permissions
+
+Tabela:
+
+role_permissions
+
+id
+
+role
+
+permission
+
+created_at
+
+UNIQUE(role, permission)
+
+2.2 has_permission()
+
+Função:
+
+has_permission(_user_id uuid, _permission text)
+
+SECURITY DEFINER
+Ignora RLS recursiva.
+
+FASE 3 — Segurança do Backoffice
+3.1 Acesso ao Backoffice
+
+/backoffice deve ser acessível APENAS a:
+
+admin
+super_admin
+
+Nunca:
+
+commercial
+cs
+onboarding
+user
+
+Regra:
+
+requireAdminOnly
+
+Os outros roles NÃO entram no Backoffice.
+
+3.2 Portais Separados
+
+Admin → /backoffice
+
+Comerciais → /comercial
+
+CS → /cs
+
+Onboarding → /onboarding
+
+User → Portal normal
+
+Nada de “qualquer role não-user”.
+
+FASE 4 — Perfil de Utilizador (Obrigatório para Todos)
+
+Criar página:
+
+/perfil
+
+Disponível para:
+
+Admin
+
+Team
+
+Comerciais
+
+CS
+
+Onboarding
+
+Users da plataforma
+
+Negócios
+
+Funcionalidades:
+
+Atualizar nome
+
+Atualizar email
+
+Atualizar telefone
+
+Atualizar password
+
+Ver role
+
+Ver equipa
+
+Histórico de atividade básico
+
+Usar Supabase Auth para password reset seguro.
+
+FASE 5 — Backoffice Admin
+
+Sidebar dinâmica baseada em permissões.
+
+Secções:
+
+Geral
+Gestão
+Financeiro
+Configurações
+Auditoria
+
+Adicionar nova secção:
+
+Auditoria → Logs de Comissões
+
+FASE 6 — Reversões
+
+Hook useReverseCommission()
+
+Criar comissão negativa
+
+Ligar original_commission_id
+
+Atualizar estado da original para reversed
+
+Criar registo em commission_audit_logs
+
+FASE 7 — Dashboards por Role
+
+Admin:
+
+MRR
+
+Receita total
+
+Comissões geradas
+
+Comissões validadas
+
+Comissões pagas
+
+Reversões
+
+Receita líquida
+
+Commercial:
+
+Minhas comissões
+
+Gerado / Validado / Pago
+
+CS:
+
+Churn recovery
+
+Receita recuperada
+
+Onboarding:
+
+Ativações concluídas
+
+O QUE NÃO MUDA
 
 businesses
 
-business_modules
+sistema de planos
 
-business_module_values
+frontend público
 
-service_requests
+homepage modular
 
-commercial_plans
+SEQUÊNCIA DE IMPLEMENTAÇÃO
 
-plan_rules
+Migração estrutural SQL (enum, teams, colunas novas, audit logs)
 
-business_highlights
+Atualização create_revenue_event()
 
-Criar tabela adicional para notificações internas:
+Atualização commercial_commissions estados
 
-business_notifications
+RLS reforçado
 
-Campo | Tipo | Notas
-id | uuid PK | gen_random_uuid()
-business_id | uuid FK businesses(id) ON DELETE CASCADE
-type | TEXT NOT NULL | 'request', 'system', 'plan', 'highlight'
-title | TEXT NOT NULL
-message | TEXT NOT NULL
-is_read | BOOLEAN DEFAULT false
-created_at | TIMESTAMPTZ DEFAULT now()
+role_permissions + has_permission()
 
-Indices:
-(business_id)
-(is_read)
+Proteção Backoffice (admin only)
 
-RLS:
-SELECT apenas se business_id pertence ao utilizador autenticado
-INSERT sistema/admin
-UPDATE apenas para marcar como lida
+Página /perfil para todos
 
-Estrutura Frontend
+Evolução dashboards
 
-Nova pasta:
+Sistema de reversões
 
-src/pages/business-dashboard/
+Exportações
 
-Criar página principal:
+OBJETIVO FINAL
 
-BusinessDashboard.tsx
+Sistema:
 
-Layout próprio:
+Multi-role
 
-src/components/business/BusinessSidebar.tsx
-src/components/business/BusinessLayout.tsx
+Seguro
 
-Abas do Backoffice do Negócio
-1️⃣ Dashboard
+Auditável
 
-Resumo com:
+Escalável
 
-Plano atual
+Preparado para múltiplas equipas
 
-Status do plano (ativo/inativo)
+Preparado para crescimento 10x
 
-Número de pedidos recebidos
+Financeiramente consistente
 
-Destaques ativos
+Backoffice protegido
 
-Alertas importantes
-
-Botão Upgrade Plano
-
-Hook:
-useBusinessDashboardData()
-
-2️⃣ A Minha Ficha
-
-Reutilizar BusinessFileCard.tsx
-
-Mas:
-
-Apenas editar o próprio negócio
-
-Aplicar validações por plan_rules
-
-Mostrar avisos quando funcionalidade bloqueada
-
-Sem alterar lógica existente.
-
-3️⃣ O Meu Plano
-
-Mostrar:
-
-Plano atual
-
-Regras associadas (max_gallery_images, allow_video, etc.)
-
-Benefícios do plano atual
-
-Lista de planos disponíveis
-
-Hook:
-useCommercialPlans()
-
-Botão:
-“Fazer Upgrade”
-
-Fase inicial:
-Redirecionamento para contacto/admin (sem gateway pagamento ainda).
-
-4️⃣ Pedidos Recebidos
-
-Usar tabela service_requests.
-
-Criar:
-
-src/components/business/BusinessRequestsContent.tsx
-
-Listar:
-
-Nome cliente
-
-Serviço pedido
-
-Data
-
-Estado (novo / respondido / fechado)
-
-Botão visualizar detalhe
-
-Marcar pedido como lido gera business_notification automática.
-
-5️⃣ Notificações
-
-Listar business_notifications.
-
-Permitir:
-
-Marcar como lida
-
-Filtrar por tipo
-
-Badge no sidebar com número de não lidas.
-
-Integração com Monetização
-Ao ativar destaque:
-
-Criar business_notification tipo 'highlight'
-
-Ao receber pedido:
-
-Criar business_notification tipo 'request'
-
-Ao plano expirar:
-
-Criar business_notification tipo 'plan'
-
-Sistema de Permissões
-
-Atualizar middleware/auth:
-
-Admin → acesso total
-
-Commercial User → acesso apenas ao seu negócio
-
-Consumer → sem acesso
-
-Verificação obrigatória de business_id associado ao user_id.
-
-Hooks Necessários
-
-Novo ficheiro:
-
-src/hooks/useBusinessDashboard.ts
-src/hooks/useBusinessNotifications.ts
-
-Funções:
-
-useBusinessByUser()
-useBusinessRequests()
-useBusinessNotifications()
-useMarkNotificationAsRead()
-
-Fase Inicial (Importante)
-
-Não integrar pagamentos ainda.
-
-Plano upgrade apenas altera plan_id manualmente via admin (fase 1).
-
-Gateway pagamento entra em fase posterior.
-
-Resumo de Ficheiros Adicionados
-
-Ficheiro | Ação
-src/pages/business-dashboard/BusinessDashboard.tsx | Novo
-src/components/business/BusinessSidebar.tsx | Novo
-src/components/business/BusinessLayout.tsx | Novo
-src/components/business/BusinessRequestsContent.tsx | Novo
-src/hooks/useBusinessDashboard.ts | Novo
-src/hooks/useBusinessNotifications.ts | Novo
-Migracao SQL | business_notifications
-
-O que NÃO muda
-
-Tabela businesses
-Sistema atual de pedidos
-Sistema de modulos dinamicos
-Sistema de destaques
-Sistema de planos
-Admin Backoffice
-
-Resultado Estratégico
-
-Após implementação:
-
-Cada negócio passa a ter área própria
-
-Monetização deixa de ser invisível
-
-Plataforma ganha estrutura SaaS real
-
-Base pronta para:
-
-Pagamentos online
-
-Renovação automática
-
-Venda de destaques
-
-Upsell automático
-
-Estatísticas futuras
+Utilizadores com autonomia sobre os seus dados
