@@ -18,14 +18,16 @@ import {
   Bell,
   UserCog,
   ClipboardList,
-  History
+  History,
+  Users,
+  Inbox
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUncontactedCount } from "@/hooks/useExpirationLogs";
 import { usePendingRequestsCount } from "@/hooks/useActionRequests";
 
-export type AdminTab = "dashboard" | "businesses" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs";
+export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs" | "service-requests";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -36,6 +38,8 @@ interface AdminSidebarProps {
 const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "businesses", label: "Negócios", icon: Building2 },
+  { id: "users", label: "Utilizadores", icon: Users },
+  { id: "service-requests", label: "Pedidos", icon: Inbox },
   { id: "categories", label: "Categorias", icon: FolderOpen },
   { id: "featured", label: "Destaques", icon: Crown },
   { id: "plans", label: "Planos", icon: CreditCard },

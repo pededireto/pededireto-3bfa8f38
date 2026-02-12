@@ -5,12 +5,16 @@ import {
   Lightbulb,
   TrendingUp,
   AlertTriangle,
-  CalendarClock
+  CalendarClock,
+  Users,
+  Inbox
 } from "lucide-react";
 import { BusinessWithCategory, useExpiringSubscriptions } from "@/hooks/useBusinesses";
 import { Category } from "@/hooks/useCategories";
 import { Suggestion } from "@/hooks/useSuggestions";
 import { Badge } from "@/components/ui/badge";
+import { useUserStats } from "@/hooks/useAnalytics";
+import { useServiceRequestStats } from "@/hooks/useServiceRequests";
 
 interface DashboardContentProps {
   businesses: BusinessWithCategory[];
@@ -48,7 +52,8 @@ const DashboardContent = ({ businesses, categories, suggestions }: DashboardCont
   const activeBusinesses = businesses.filter(b => b.is_active).length;
   const activeSubscriptions = businesses.filter(b => b.subscription_status === "active").length;
   const { data: expiring7 = [] } = useExpiringSubscriptions(7);
-
+  const { data: userStats } = useUserStats();
+  const { data: requestStats } = useServiceRequestStats();
   return (
     <div className="space-y-6">
       <div>
@@ -56,12 +61,18 @@ const DashboardContent = ({ businesses, categories, suggestions }: DashboardCont
         <p className="text-muted-foreground">Visão geral da plataforma Pede Direto</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Negócios" value={businesses.length} icon={Building2} />
-        <StatCard title="Ativos" value={activeBusinesses} icon={Building2} />
-        <StatCard title="Em Destaque" value={featuredCount} icon={Star} />
+        <StatCard title="Negócios Ativos" value={activeBusinesses} icon={Building2} />
         <StatCard title="Categorias" value={categories.filter(c => c.is_active).length} icon={FolderOpen} />
         <StatCard title="Subscrições Ativas" value={activeSubscriptions} icon={CalendarClock} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="Total Utilizadores" value={userStats?.total || 0} icon={Users} />
+        <StatCard title="Novos este Mês" value={userStats?.newThisMonth || 0} icon={Users} />
+        <StatCard title="Total Pedidos" value={requestStats?.total || 0} icon={Inbox} />
+        <StatCard title="Pedidos este Mês" value={requestStats?.thisMonth || 0} icon={Inbox} />
       </div>
 
       {/* Subscription Alerts */}

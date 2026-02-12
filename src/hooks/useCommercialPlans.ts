@@ -10,6 +10,7 @@ export interface CommercialPlan {
   premium_level: "SUPER" | "CATEGORIA" | "SUBCATEGORIA" | null;
   description: string | null;
   display_order: number;
+  plan_type: "business" | "consumer";
   created_at: string;
   updated_at: string;
 }
