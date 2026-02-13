@@ -48,6 +48,19 @@ const BusinessPage = () => {
     });
   };
 
+  // GA4 generate_lead tracking — envia para Google Analytics (não afeta Supabase)
+  const trackGA4Lead = (contactType: string) => {
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag("event", "generate_lead", {
+        contact_type: contactType,
+        business_id: business?.id,
+        business_name: business?.name,
+        business_category: business?.categories?.name,
+        business_city: business?.city,
+      });
+    }
+  };
+
   const getAlcanceLabel = () => {
     if (!business) return "";
     switch (business.alcance) {
@@ -288,6 +301,7 @@ const BusinessPage = () => {
                         className="btn-cta-whatsapp w-full justify-center text-base"
                         onClick={() => {
                           handleCtaClick("whatsapp");
+                          trackGA4Lead("whatsapp");
                           window.open(`https://wa.me/${business.cta_whatsapp!.replace(/\D/g, "")}`, "_blank");
                         }}
                       >
@@ -301,6 +315,7 @@ const BusinessPage = () => {
                         className="btn-cta-phone w-full justify-center text-base"
                         onClick={() => {
                           handleCtaClick("phone");
+                          trackGA4Lead("phone");
                           window.open(`tel:${business.cta_phone}`, "_blank");
                         }}
                       >
@@ -315,6 +330,7 @@ const BusinessPage = () => {
                         className="w-full justify-center text-base"
                         onClick={() => {
                           handleCtaClick("email");
+                          trackGA4Lead("email");
                           window.open(`mailto:${business.cta_email}`, "_blank");
                         }}
                       >
@@ -329,6 +345,7 @@ const BusinessPage = () => {
                         className="w-full justify-center text-base"
                         onClick={() => {
                           handleCtaClick("website");
+                          trackGA4Lead("website");
                           window.open(business.cta_website!, "_blank");
                         }}
                       >
