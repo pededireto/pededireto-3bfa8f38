@@ -67,6 +67,8 @@ export type Database = {
           created_at: string | null
           event_type: string
           id: string
+          position: number | null
+          search_log_id: string | null
         }
         Insert: {
           business_id?: string | null
@@ -75,6 +77,8 @@ export type Database = {
           created_at?: string | null
           event_type: string
           id?: string
+          position?: number | null
+          search_log_id?: string | null
         }
         Update: {
           business_id?: string | null
@@ -83,6 +87,8 @@ export type Database = {
           created_at?: string | null
           event_type?: string
           id?: string
+          position?: number | null
+          search_log_id?: string | null
         }
         Relationships: [
           {
@@ -143,6 +149,48 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      business_analytics_events: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          event_type: string
+          id: string
+          search_log_id: string | null
+          user_city: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          event_type: string
+          id?: string
+          search_log_id?: string | null
+          user_city?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          search_log_id?: string | null
+          user_city?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_analytics_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_analytics_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       business_commercial_assignments: {
         Row: {
@@ -1238,8 +1286,125 @@ export type Database = {
         }
         Relationships: []
       }
+      intent_categories: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          id: string
+          intent_id: string | null
+          priority: number | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          intent_id?: string | null
+          priority?: number | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          intent_id?: string | null
+          priority?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intent_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pattern_categories: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          id: string
+          pattern_id: string | null
+          priority: number | null
+          reasoning: string | null
+          subcategory_id: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          pattern_id?: string | null
+          priority?: number | null
+          reasoning?: string | null
+          subcategory_id?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          pattern_id?: string | null
+          priority?: number | null
+          reasoning?: string | null
+          subcategory_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pattern_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pattern_categories_pattern_id_fkey"
+            columns: ["pattern_id"]
+            isOneToOne: false
+            referencedRelation: "search_patterns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pattern_categories_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pattern_keywords: {
+        Row: {
+          created_at: string | null
+          id: string
+          keyword: string
+          pattern_id: string | null
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          keyword: string
+          pattern_id?: string | null
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          keyword?: string
+          pattern_id?: string | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pattern_keywords_pattern_id_fkey"
+            columns: ["pattern_id"]
+            isOneToOne: false
+            referencedRelation: "search_patterns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_rules: {
         Row: {
+          allow_analytics_pro: boolean
           allow_category_highlight: boolean
           allow_premium_block: boolean
           allow_super_highlight: boolean
@@ -1252,6 +1417,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_analytics_pro?: boolean
           allow_category_highlight?: boolean
           allow_premium_block?: boolean
           allow_super_highlight?: boolean
@@ -1264,6 +1430,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_analytics_pro?: boolean
           allow_category_highlight?: boolean
           allow_premium_block?: boolean
           allow_super_highlight?: boolean
@@ -1569,6 +1736,42 @@ export type Database = {
         }
         Relationships: []
       }
+      search_intelligence_logs: {
+        Row: {
+          created_at: string | null
+          detected_pattern_id: string | null
+          id: string
+          input_text: string
+          intent_type: string | null
+          results_count: number | null
+          urgency_level: number | null
+          user_city: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          detected_pattern_id?: string | null
+          id?: string
+          input_text: string
+          intent_type?: string | null
+          results_count?: number | null
+          urgency_level?: number | null
+          user_city?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          detected_pattern_id?: string | null
+          id?: string
+          input_text?: string
+          intent_type?: string | null
+          results_count?: number | null
+          urgency_level?: number | null
+          user_city?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       search_logs: {
         Row: {
           created_at: string
@@ -1593,6 +1796,69 @@ export type Database = {
           results_count?: number
           search_term?: string
           search_type?: string
+        }
+        Relationships: []
+      }
+      search_logs_intelligent: {
+        Row: {
+          created_at: string | null
+          detected_intent: string | null
+          id: string
+          location_detected: string | null
+          raw_query: string
+          urgency_detected: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          detected_intent?: string | null
+          id?: string
+          location_detected?: string | null
+          raw_query: string
+          urgency_detected?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          detected_intent?: string | null
+          id?: string
+          location_detected?: string | null
+          raw_query?: string
+          urgency_detected?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      search_patterns: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          intent_type: string | null
+          is_active: boolean | null
+          pattern_text: string
+          updated_at: string | null
+          urgency_level: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          intent_type?: string | null
+          is_active?: boolean | null
+          pattern_text: string
+          updated_at?: string | null
+          urgency_level?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          intent_type?: string | null
+          is_active?: boolean | null
+          pattern_text?: string
+          updated_at?: string | null
+          urgency_level?: number | null
         }
         Relationships: []
       }
@@ -1892,6 +2158,73 @@ export type Database = {
         }
         Relationships: []
       }
+      user_search_context: {
+        Row: {
+          created_at: string | null
+          default_lat: number | null
+          default_lng: number | null
+          default_radius_km: number | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_lat?: number | null
+          default_lng?: number | null
+          default_radius_km?: number | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_lat?: number | null
+          default_lng?: number | null
+          default_radius_km?: number | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_search_context_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_search_profile: {
+        Row: {
+          city: string | null
+          created_at: string | null
+          updated_at: string | null
+          user_id: string
+          zone: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          user_id: string
+          zone?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_search_profile_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       zones: {
         Row: {
           created_at: string
@@ -1921,6 +2254,17 @@ export type Database = {
       }
     }
     Views: {
+      analytics_overview: {
+        Row: {
+          active_businesses: number | null
+          total_businesses: number | null
+          total_events: number | null
+          total_requests: number | null
+          total_searches: number | null
+          total_users: number | null
+        }
+        Relationships: []
+      }
       commercial_alerts_view: {
         Row: {
           created_at: string | null
@@ -1951,6 +2295,142 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_performance: {
+        Row: {
+          converted_by: string | null
+          revenue_generated: number | null
+          total_converted: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "businesses_converted_by_fkey"
+            columns: ["converted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      dashboard_executive: {
+        Row: {
+          active_businesses: number | null
+          new_requests_this_month: number | null
+          new_users_this_month: number | null
+          revenue_this_month: number | null
+          total_businesses: number | null
+          total_requests: number | null
+          total_searches: number | null
+          total_users: number | null
+        }
+        Relationships: []
+      }
+      dashboard_growth: {
+        Row: {
+          new_businesses: number | null
+          new_users: number | null
+          week: string | null
+        }
+        Relationships: []
+      }
+      dashboard_marketplace: {
+        Row: {
+          request_business_ratio: number | null
+          total_businesses: number | null
+          total_requests: number | null
+        }
+        Relationships: []
+      }
+      dashboard_revenue: {
+        Row: {
+          average_ticket: number | null
+          month: string | null
+          total_conversions: number | null
+          total_revenue: number | null
+        }
+        Relationships: []
+      }
+      revenue_monthly: {
+        Row: {
+          month: string | null
+          total_conversions: number | null
+          total_revenue: number | null
+        }
+        Relationships: []
+      }
+      search_insights: {
+        Row: {
+          search_term: string | null
+          searches_without_results: number | null
+          total_searches: number | null
+        }
+        Relationships: []
+      }
+      view_business_performance: {
+        Row: {
+          business_id: string | null
+          ctr: number | null
+          impressions: number | null
+          profile_views: number | null
+          total_clicks: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_analytics_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_analytics_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      view_no_result_opportunities: {
+        Row: {
+          frequency: number | null
+          input_text: string | null
+          last_searched: string | null
+        }
+        Relationships: []
+      }
+      view_search_overview: {
+        Row: {
+          emergency_searches: number | null
+          info_searches: number | null
+          no_result_searches: number | null
+          percent_no_results: number | null
+          purchase_searches: number | null
+          quote_searches: number | null
+          total_searches: number | null
+        }
+        Relationships: []
+      }
+      view_searches_by_city: {
+        Row: {
+          total_searches: number | null
+          user_city: string | null
+        }
+        Relationships: []
+      }
+      view_searches_per_day: {
+        Row: {
+          search_day: string | null
+          total_searches: number | null
+        }
+        Relationships: []
+      }
+      view_top_search_terms: {
+        Row: {
+          frequency: number | null
+          input_text: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       create_revenue_event: {
@@ -1964,9 +2444,24 @@ export type Database = {
         }
         Returns: string
       }
+      detect_best_pattern: {
+        Args: { input_text: string }
+        Returns: {
+          intent_type: string
+          pattern_id: string
+          pattern_text: string
+          total_score: number
+          urgency_level: number
+        }[]
+      }
+      get_admin_intelligence: { Args: { p_days?: number }; Returns: Json }
       get_business_favorites_count: {
         Args: { business_uuid: string }
         Returns: number
+      }
+      get_business_intelligence: {
+        Args: { p_business_id: string; p_days?: number }
+        Returns: Json
       }
       has_permission: {
         Args: { _permission: string; _user_id: string }
@@ -1997,6 +2492,33 @@ export type Database = {
           result_type: string
         }[]
       }
+      search_businesses_by_intent:
+        | {
+            Args: { input_text: string; user_city?: string }
+            Returns: {
+              business_city: string
+              business_id: string
+              business_name: string
+              intent_type: string
+              is_featured: boolean
+              is_premium: boolean
+              premium_level: string
+              urgency_level: number
+            }[]
+          }
+        | {
+            Args: { input_text: string; user_city?: string; user_id?: string }
+            Returns: {
+              business_city: string
+              business_id: string
+              business_name: string
+              intent_type: string
+              is_featured: boolean
+              is_premium: boolean
+              premium_level: string
+              urgency_level: number
+            }[]
+          }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {

@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Inbox, Bell, CreditCard, ExternalLink, LogOut } from "lucide-react";
+import { LayoutDashboard, Inbox, Bell, CreditCard, ExternalLink, LogOut, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 
-export type BusinessTab = "overview" | "requests" | "notifications" | "plan";
+export type BusinessTab = "overview" | "requests" | "notifications" | "plan" | "insights";
 
 interface BusinessSidebarProps {
   businessName: string;
@@ -18,6 +18,7 @@ const items: { id: BusinessTab; label: string; icon: React.ElementType }[] = [
   { id: "overview", label: "Dashboard", icon: LayoutDashboard },
   { id: "requests", label: "Pedidos", icon: Inbox },
   { id: "notifications", label: "Notificações", icon: Bell },
+  { id: "insights", label: "Insights", icon: TrendingUp },
   { id: "plan", label: "O Meu Plano", icon: CreditCard },
 ];
 
