@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAllCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
 import { useCreateBusiness } from "@/hooks/useBusinesses";
+import { useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, Loader2, ArrowLeft, ArrowRight, Check, X } from "lucide-react";
 
@@ -33,6 +34,7 @@ export default function ImportByTextDialog() {
   const { toast } = useToast();
   const { data: categories = [] } = useAllCategories();
   const createBusiness = useCreateBusiness();
+  const syncSubcategories = useSyncBusinessSubcategories();
 
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -109,7 +111,7 @@ export default function ImportByTextDialog() {
 
     for (const biz of toImport) {
       try {
-        await createBusiness.mutateAsync({
+        const created = await createBusiness.mutateAsync({
           name: biz.name.trim(),
           slug: generateSlug(biz.name.trim()),
           category_id: categoryId,
@@ -141,6 +143,15 @@ export default function ImportByTextDialog() {
           subscription_end_date: null,
           subscription_status: "inactive",
         } as any);
+
+        // Sync subcategory into junction table so the business card shows it
+        if (subcategoryId && subcategoryId !== "none" && created?.id) {
+          await syncSubcategories.mutateAsync({
+            businessId: created.id,
+            subcategoryIds: [subcategoryId],
+          });
+        }
+
         success++;
       } catch (err: any) {
         errors.push(`${biz.name}: ${err.message}`);
