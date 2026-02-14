@@ -18,7 +18,8 @@ import {
   ExternalLink,
   Mail,
   Clock,
-  Star
+  Star,
+  Settings
 } from "lucide-react";
 
 const BusinessPage = () => {
@@ -117,6 +118,34 @@ const BusinessPage = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       
+      {/* Banner for associated user */}
+      {userIsOwner && business.claim_status === "verified" && (
+        <div className="bg-primary/10 border-b border-primary/20">
+          <div className="container py-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Settings className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="font-medium text-primary">
+                    Você já está associado a este negócio.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Clique para gerir.
+                  </p>
+                </div>
+              </div>
+              <Link to={`/dashboard/negocio/${business.id}`}>
+                <Button size="sm" className="gap-2">
+                  <Settings className="w-4 h-4" />
+                  Gerir Negócio
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner for unclaimed or unverified businesses */}
       {!(business.claim_status === "verified" && userIsOwner) && (
         <UnclaimedBusinessBanner
           businessId={business.id}
