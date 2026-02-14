@@ -106,6 +106,9 @@ const ClaimBusiness = () => {
 
   const handleClaimOrRedirect = async () => {
     if (!user) {
+      if (selectedBusiness) {
+        localStorage.setItem("claimedBusinessId", selectedBusiness.id);
+      }
       localStorage.setItem("postLoginRedirect", "/claim-business");
       toast({ title: "Conta necessária", description: "Cria uma conta ou entra para reclamar o teu negócio." });
       navigate("/register/business");
