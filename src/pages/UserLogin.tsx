@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
-import { useBusinessMembership } from "@/hooks/useBusinessMembership";
+import { useSmartRedirect } from "@/hooks/useSmartRedirect";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,7 @@ const loginSchema = z.object({
 
 const UserLogin = () => {
   const navigate = useNavigate();
-  const { signIn, user, isAdmin, isSuperAdmin, isCommercial } = useAuth();
-  const { data: membership, isLoading: membershipLoading } = useBusinessMembership();
+  const { signIn, user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -27,9 +26,11 @@ const UserLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [loginSuccess, setLoginSuccess] = useState(false);
 
-  // On mount, read ?redirect= query param and store in localStorage
+  // Smart redirect hook
+  useSmartRedirect(user);
+
+  // On mount, read ?redirect= query param
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get("redirect");
@@ -37,31 +38,6 @@ const UserLogin = () => {
       localStorage.setItem("postLoginRedirect", redirect);
     }
   }, []);
-
-  // Smart redirect after login — wait for membership to resolve
-  useEffect(() => {
-    if (!loginSuccess || !user) return;
-    // Don't redirect until membership query has finished loading
-    if (membershipLoading) return;
-
-    // Check for stored post-login redirect intent
-    const postRedirect = localStorage.getItem("postLoginRedirect");
-    if (postRedirect && postRedirect.startsWith("/") && !postRedirect.startsWith("//")) {
-      localStorage.removeItem("postLoginRedirect");
-      navigate(postRedirect, { replace: true });
-      return;
-    }
-
-    if (isAdmin || isSuperAdmin) {
-      navigate("/admin", { replace: true });
-    } else if (isCommercial) {
-      navigate("/comercial", { replace: true });
-    } else if (membership?.business_id) {
-      navigate("/business-dashboard", { replace: true });
-    } else {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [loginSuccess, user, isAdmin, isSuperAdmin, isCommercial, membership, membershipLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,9 +76,10 @@ const UserLogin = () => {
           title: "Login efetuado",
           description: "Bem-vindo de volta!",
         });
-        // Invalidate membership cache so it re-fetches with the new user
-        await queryClient.invalidateQueries({ queryKey: ["business-membership"], refetchType: "active" });
-        setLoginSuccess(true);
+        await queryClient.invalidateQueries({ 
+          queryKey: ["business-membership"], 
+          refetchType: "active" 
+        });
       }
     } finally {
       setIsLoading(false);
