@@ -14,12 +14,11 @@ type Props = {
 
 const ROLES = [
   { value: "user", label: "User" },
-  { value: "comercial", label: "Comercial" },
+  { value: "commercial", label: "Comercial" },
   { value: "admin", label: "Admin" },
   { value: "super_admin", label: "Super Admin" },
   { value: "cs", label: "CS" },
   { value: "onboarding", label: "Onboarding" },
-  { value: "business_owner", label: "Business Owner" },
 ];
 
 export default function AdminUserRoleEditorModal({ userId, open, onClose, initialRole }: Props) {
