@@ -3,6 +3,7 @@ import { useBusiness } from "@/hooks/useBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
 import { useActiveBusinessModules, useBusinessModuleValues } from "@/hooks/useBusinessModules";
 import { useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FavoriteButton from "@/components/FavoriteButton";
@@ -23,6 +24,7 @@ import {
 const BusinessPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: business, isLoading } = useBusiness(slug);
+  const { user } = useAuth();
   const trackEvent = useTrackEvent();
   const { data: activeModules = [] } = useActiveBusinessModules();
   const { data: moduleValues = [] } = useBusinessModuleValues(business?.id);
@@ -76,6 +78,9 @@ const BusinessPage = () => {
     }
   };
 
+  // Check if user is owner
+  const userIsOwner = user?.id === business?.user_id;
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -112,10 +117,12 @@ const BusinessPage = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <UnclaimedBusinessBanner
-        businessId={business.id}
-        claimStatus={business.claim_status}
-      />
+      {!(business.claim_status === "verified" && userIsOwner) && (
+        <UnclaimedBusinessBanner
+          businessId={business.id}
+          claimStatus={business.claim_status}
+        />
+      )}
       
       <main className="flex-1">
         {/* Hero Section */}
