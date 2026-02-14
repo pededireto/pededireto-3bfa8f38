@@ -1,264 +1,71 @@
-# IMPLEMENTAÇÃO PDIC (PedeDireto Intelligence Center)
 
-## Objetivo
 
-Implementar módulo SaaS completo de Analytics Profissional com:
+# Correcao: Redirecionamento pos-registo para Claim Business
 
-- Admin Global Intelligence
-- Business Premium Insights
-- Monetização via add-on
-- Dashboard estilo Stripe
-- Gráficos reais (Recharts)
-- Filtros 7d / 30d / 90d
-- Revenue Intelligence avançado
+## Problema Identificado
 
-Não redesenhar arquitetura. Apenas implementar conforme especificação abaixo.
+O fluxo atual tem uma falha critica na cadeia de redirecionamento:
 
----
-
-# 1️⃣ BACKEND (SQL)
-
-### 1.1 Feature Flag
-
-Adicionar coluna:
-
-```
-ALTER TABLE plan_rules 
-ADD COLUMN IF NOT EXISTS allow_analytics_pro BOOLEAN NOT NULL DEFAULT false;
-
+```text
+1. Utilizador escolhe "Promover negocio" em /registar
+2. Vai para /claim-business
+3. Como nao tem conta, ve botoes "Criar Conta" / "Entrar"
+4. Regista-se em /registar/consumidor
+5. Confirma email → link redireciona para "/" (raiz do site)
+6. Faz login → smart redirect envia para /dashboard (nao tem roles nem business_users)
+7. NUNCA chega a /claim-business
 ```
 
----
+O sistema perde a "intencao" do utilizador entre o registo e o login.
 
-### 1.2 Índices obrigatórios
+## Solucao
 
-```
-CREATE INDEX IF NOT EXISTS idx_sil_created_at ON search_intelligence_logs (created_at);
-CREATE INDEX IF NOT EXISTS idx_ae_business_id ON analytics_events (business_id);
-CREATE INDEX IF NOT EXISTS idx_ae_created_at ON analytics_events (created_at);
-CREATE INDEX IF NOT EXISTS idx_sr_created_at ON service_requests (created_at);
+Guardar a intencao de destino em `localStorage` e usa-la apos login.
 
-```
+### Passo 1 — ClaimBusiness.tsx guarda intencao antes de redirecionar para registo
 
----
+Quando o utilizador nao autenticado clica "Criar Conta" ou "Entrar" na pagina /claim-business, guardar `localStorage.setItem("postLoginRedirect", "/claim-business")` antes de navegar.
 
-### 1.3 Função Admin Global
+### Passo 2 — RegisterChoice.tsx guarda intencao no caminho "empresa"
 
-Criar função:
+Quando o utilizador clica "Quero promover o meu negocio", guardar `localStorage.setItem("postLoginRedirect", "/claim-business")` antes de navegar para /claim-business.
 
-```
-get_admin_intelligence(p_days integer default 30)
-returns json
+### Passo 3 — UserLogin.tsx respeita a intencao guardada
 
-```
+No `useEffect` de smart redirect, antes do fallback para /dashboard, verificar se existe `postLoginRedirect` em localStorage:
 
-Retornar JSON com estrutura:
-
-{  
-executive: {  
-total_users,  
-total_businesses,  
-active_businesses,  
-total_requests,  
-total_searches,  
-revenue_this_month,  
-mrr_estimate  
-},  
-revenue: {  
-monthly_revenue[],  
-conversions_by_plan[],  
-revenue_by_commercial[]  
-},  
-search: {  
-total_searches,  
-no_result_percent,  
-top_terms[],  
-searches_by_city[],  
-intent_breakdown[]  
-},  
-marketplace: {  
-request_business_ratio,  
-inactive_businesses,  
-avg_response_time  
-}  
-}
-
-Todos dados agregados no servidor com filtro:
-
-WHERE created_at >= NOW() - (p_days || ' days')::interval
-
-SECURITY DEFINER.
-
----
-
-### 1.4 Função Business Scoped
-
-Criar função:
-
-```
-get_business_intelligence(
-  p_business_id uuid,
-  p_days integer default 30
-)
-returns json
-
+```text
+1. Ler valor de localStorage("postLoginRedirect")
+2. Se existir, limpar localStorage e navegar para esse caminho
+3. Se nao existir, aplicar logica atual (admin/comercial/business/dashboard)
 ```
 
-Validar:
+### Passo 4 — UserRegister.tsx passa emailRedirectTo com destino
 
-- auth.uid() é owner
-- allow_analytics_pro = true
+Alterar o `emailRedirectTo` no signUp para incluir o redirect guardado como query param:
 
-Retornar:
-
-{  
-impressions,  
-clicks,  
-ctr,  
-searches_in_category,  
-searches_in_city,  
-trend[],  
-position_average  
-}
-
-Sem dados de concorrentes.
-
-SECURITY DEFINER.
-
----
-
-# 2️⃣ TRACKING
-
-analytics_events deve suportar:
-
-- event_type ('impression','click','whatsapp','phone')
-- business_id
-- search_log_id
-- position
-- city
-- created_at
-
-Impressions devem ser criadas no backend quando resultados são devolvidos.
-
----
-
-# 3️⃣ FRONTEND
-
-Framework: React + Vite  
-Usar Recharts  
-Usar React Query
-
----
-
-## 3.1 Estrutura
-
-```
-src/pages/admin/IntelligenceCenter.tsx
-src/pages/business/BusinessInsights.tsx
-
-src/hooks/useAdminIntelligence.ts
-src/hooks/useBusinessIntelligence.ts
-
-src/components/intelligence/
-  ExecutiveCards.tsx
-  RevenueChart.tsx
-  SearchDemandChart.tsx
-  MarketplaceHealth.tsx
-  BusinessPerformanceCard.tsx
-  DateRangeFilter.tsx
-  UpgradeAnalyticsCard.tsx
-
+```text
+emailRedirectTo: window.location.origin + "/login?redirect=/claim-business"
 ```
 
----
+Assim, apos confirmar email, o utilizador aterra na pagina de login com o redirect pre-definido.
 
-## 3.2 Filtro por período
+### Passo 5 — UserLogin.tsx le query param redirect
 
-Componente DateRangeFilter:
+No mount, verificar se existe `?redirect=` na URL. Se sim, guardar em localStorage como `postLoginRedirect` para uso no smart redirect.
 
-- 7 dias
-- 30 dias
-- 90 dias
+## Ficheiros Alterados
 
-Hook recebe parâmetro days.
+| Ficheiro | Alteracao |
+|----------|-----------|
+| `src/pages/ClaimBusiness.tsx` | Guardar intencao em localStorage nos links "Criar Conta" e "Entrar" |
+| `src/pages/RegisterChoice.tsx` | Guardar intencao no botao "Promover negocio" |
+| `src/pages/UserRegister.tsx` | Ler intencao de localStorage e incluir no emailRedirectTo |
+| `src/pages/UserLogin.tsx` | Ler `?redirect=` da URL + verificar localStorage antes do fallback |
 
-React Query key:
+## Seguranca
 
-Admin:  
-["intelligence","admin",days]
+- O valor de `postLoginRedirect` e validado para aceitar apenas caminhos internos (comeca com "/", sem "//")
+- Limpar localStorage apos uso para evitar loops
+- Nao expor dados sensiveis no redirect
 
-Business:  
-["intelligence","business",businessId,days]
-
-staleTime: 5 minutos
-
----
-
-# 4️⃣ DASHBOARD ADMIN (Layout Premium)
-
-Ordem:
-
-1. Executive Cards (grid 4 ou 6)
-2. Revenue Line Chart
-3. Revenue by Plan (Bar Chart)
-4. Search Demand Chart (Area)
-5. Marketplace Health Cards
-6. Tabela Top Terms (sortable)
-7. Botão Export CSV (admin only)
-
-Design minimalista, estilo Stripe.
-
----
-
-# 5️⃣ DASHBOARD BUSINESS
-
-Se allow_analytics_pro = false:  
-Render UpgradeAnalyticsCard
-
-Se true:
-
-Mostrar:
-
-- Impressões
-- Cliques
-- CTR
-- Tendência 30 dias (AreaChart)
-- Comparação média categoria (anonimizada)
-- CTA “Melhorar visibilidade”
-
----
-
-# 6️⃣ MONETIZAÇÃO
-
-O módulo é vendável como:
-
-analytics_pro
-
-Controlado por:  
-plan_rules.allow_analytics_pro
-
-Preparado para futura tabela feature_flags.
-
----
-
-# 7️⃣ NÃO FAZER
-
-- Não criar múltiplas queries no frontend
-- Não processar agregações no cliente
-- Não expor dados globais a business
-- Não criar dashboards duplicados
-
----
-
-# Resultado esperado
-
-Sistema SaaS completo de Intelligence:
-
-- Admin Global BI
-- Business Performance Insights
-- Monetizável
-- Escalável
-- Seguro
-- Dashboard premium com Recharts
-- Filtros dinâmicos
-- Export CSV
