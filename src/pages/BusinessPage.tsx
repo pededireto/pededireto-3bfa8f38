@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FavoriteButton from "@/components/FavoriteButton";
+import UnclaimedBusinessBanner from "@/components/UnclaimedBusinessBanner";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, 
@@ -110,6 +111,11 @@ const BusinessPage = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+      
+      <UnclaimedBusinessBanner
+        businessId={business.id}
+        claimStatus={business.claim_status}
+      />
       
       <main className="flex-1">
         {/* Hero Section */}
