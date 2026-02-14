@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, UserCheck, UserX } from "lucide-react";
+import { Loader2, Search, UserCheck, UserX, Shield, Building2 } from "lucide-react";
+import AdminUserRoleEditorModal from "./AdminUserRoleEditorModal";
+import AdminUserBusinessManager from "./AdminUserBusinessManager";
 
 const UsersContent = () => {
   const { data: users = [], isLoading } = useAllUsers();
@@ -15,6 +17,8 @@ const UsersContent = () => {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [roleModal, setRoleModal] = useState<{ userId: string; role?: string } | null>(null);
+  const [bizModal, setBizModal] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return users.filter(u => {
@@ -131,18 +135,37 @@ const UsersContent = () => {
                     {user.status === "active" ? "Ativo" : "Suspenso"}
                   </Badge>
                 </td>
-                <td className="p-4 text-center">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => toggleStatus(user.user_id, user.status)}
-                  >
-                    {user.status === "active" ? (
-                      <UserX className="h-4 w-4 text-destructive" />
-                    ) : (
-                      <UserCheck className="h-4 w-4 text-primary" />
-                    )}
-                  </Button>
+                <td className="p-4">
+                  <div className="flex items-center justify-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Editar Role"
+                      onClick={() => setRoleModal({ userId: user.user_id })}
+                    >
+                      <Shield className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Gerir Negócios"
+                      onClick={() => setBizModal(user.user_id)}
+                    >
+                      <Building2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => toggleStatus(user.user_id, user.status)}
+                      title={user.status === "active" ? "Suspender" : "Ativar"}
+                    >
+                      {user.status === "active" ? (
+                        <UserX className="h-4 w-4 text-destructive" />
+                      ) : (
+                        <UserCheck className="h-4 w-4 text-primary" />
+                      )}
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -152,6 +175,23 @@ const UsersContent = () => {
           <p className="text-center text-muted-foreground py-8">Nenhum utilizador encontrado.</p>
         )}
       </div>
+
+      {/* Modals */}
+      {roleModal && (
+        <AdminUserRoleEditorModal
+          userId={roleModal.userId}
+          open={true}
+          onClose={() => setRoleModal(null)}
+          initialRole={roleModal.role}
+        />
+      )}
+      {bizModal && (
+        <AdminUserBusinessManager
+          userId={bizModal}
+          open={true}
+          onClose={() => setBizModal(null)}
+        />
+      )}
     </div>
   );
 };

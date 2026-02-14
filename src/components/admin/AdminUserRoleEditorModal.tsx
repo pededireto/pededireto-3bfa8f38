@@ -1,6 +1,5 @@
-// src/components/admin/AdminUserRoleEditorModal.tsx
-import React, { useState } from "react";
-import { Modal } from "@/components/ui/modal";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
@@ -22,21 +21,26 @@ export default function AdminUserRoleEditorModal({ userId, open, onClose, initia
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Editar role do utilizador">
-      <div className="space-y-4">
-        <Select value={role} onValueChange={(v) => setRole(v)}>
-          <SelectTrigger><SelectValue placeholder="Selecionar role" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="user">User</SelectItem>
-            <SelectItem value="commercial">Commercial</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="flex gap-2 justify-end">
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={setRoleMut.isLoading}>Salvar</Button>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar role do utilizador</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Select value={role} onValueChange={(v) => setRole(v)}>
+            <SelectTrigger><SelectValue placeholder="Selecionar role" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="user">User</SelectItem>
+              <SelectItem value="commercial">Commercial</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={setRoleMut.isPending}>Salvar</Button>
+          </div>
         </div>
-      </div>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

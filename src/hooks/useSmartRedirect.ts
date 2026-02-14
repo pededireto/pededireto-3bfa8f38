@@ -2,6 +2,13 @@ import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
+interface UserContext {
+  role: string;
+  business_id: string | null;
+  business_count: number;
+  pending_count: number;
+}
+
 export function useSmartRedirect(user: any, loading?: boolean) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -14,13 +21,14 @@ export function useSmartRedirect(user: any, loading?: boolean) {
 
     const run = async () => {
       try {
-        const { data, error } = await supabase.rpc("get_user_context");
+        const { data, error } = await supabase.rpc("get_user_context" as any);
 
         if (error || !data) return;
 
+        const ctx = data as unknown as UserContext;
         hasRedirected.current = true;
 
-        // 🔴 PRIORIDADE 1 — Redirect guardado (ex: claim)
+        // Redirect guardado (ex: claim)
         const storedRedirect = localStorage.getItem("postLoginRedirect");
         if (storedRedirect) {
           localStorage.removeItem("postLoginRedirect");
@@ -28,23 +36,23 @@ export function useSmartRedirect(user: any, loading?: boolean) {
           return;
         }
 
-        // 🔴 PRIORIDADE 2 — ADMIN
-        if (data.role === "admin") {
+        // ADMIN
+        if (ctx.role === "admin") {
           if (location.pathname !== "/admin") {
             navigate("/admin", { replace: true });
           }
           return;
         }
 
-        // 🔴 PRIORIDADE 3 — BUSINESS USER
-        if (data.business_id) {
+        // BUSINESS USER
+        if (ctx.business_id) {
           if (location.pathname !== "/business-dashboard") {
             navigate("/business-dashboard", { replace: true });
           }
           return;
         }
 
-        // 🔴 PRIORIDADE 4 — CONSUMER
+        // CONSUMER
         if (location.pathname !== "/dashboard") {
           navigate("/dashboard", { replace: true });
         }
