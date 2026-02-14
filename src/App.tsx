@@ -96,9 +96,9 @@ const App = () => {
                   {/* AUTH */}
                   <Route path="/login" element={<UserLogin />} />
 
-                  {/* NEW CLEAN REGISTER STRUCTURE */}
+                  {/* REGISTER STRUCTURE */}
                   <Route path="/register" element={<RegisterChoice />} />
-                  <Route path="/register/user" element={<UserRegister />} />
+                  <Route path="/registar/consumidor" element={<UserRegister />} />
                   <Route path="/register/business" element={<RegisterBusiness />} />
 
                   {/* CLAIM FLOW */}
