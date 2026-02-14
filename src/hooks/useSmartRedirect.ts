@@ -7,6 +7,8 @@ interface UserContext {
   business_id: string | null;
   business_count: number;
   pending_count: number;
+  is_admin?: boolean;
+  is_commercial?: boolean;
 }
 
 export function useSmartRedirect(user: any, loading?: boolean) {
@@ -36,16 +38,24 @@ export function useSmartRedirect(user: any, loading?: boolean) {
           return;
         }
 
-        // ADMIN
-        if (ctx.role === "admin") {
+        // ADMIN / SUPER_ADMIN
+        if (ctx.role === "admin" || ctx.role === "super_admin" || ctx.is_admin) {
           if (location.pathname !== "/admin") {
             navigate("/admin", { replace: true });
           }
           return;
         }
 
-        // BUSINESS USER
-        if (ctx.business_id) {
+        // COMERCIAL
+        if (ctx.role === "comercial" || ctx.is_commercial) {
+          if (location.pathname !== "/comercial") {
+            navigate("/comercial", { replace: true });
+          }
+          return;
+        }
+
+        // BUSINESS USER (has at least one business)
+        if (ctx.business_id || ctx.business_count > 0) {
           if (location.pathname !== "/business-dashboard") {
             navigate("/business-dashboard", { replace: true });
           }
