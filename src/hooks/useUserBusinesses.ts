@@ -18,23 +18,27 @@ export function useUserBusinesses(userId?: string) {
     enabled: !!userId,
   });
 
-  const assign = useMutation({
-    mutationFn: async ({ businessId, userId: uid, role }: { businessId: string; userId: string; role: string }) => {
-      const { data, error } = await supabase.rpc("admin_assign_business_to_user" as any, { p_business_id: businessId, p_user_id: uid, p_role: role });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["user", "businesses", userId] }),
-  });
+const assign = useMutation({
+  mutationFn: async ({ businessId, userId: uid, role }: { businessId: string; userId: string; role: string }) => {
+    const { data, error } = await supabase.rpc("admin_assign_business_to_user", { 
+      p_user_id: uid,
+      p_business_id: businessId,
+      p_role: role 
+    });
+    if (error) throw error;
+    return data;
+  },
+  onSuccess: () => qc.invalidateQueries({ queryKey: ["user", "businesses", userId] }),
+});
 
-  const remove = useMutation({
-    mutationFn: async ({ businessId, userId: uid }: { businessId: string; userId: string }) => {
-      const { data, error } = await supabase.rpc("admin_remove_business_from_user", { p_business_id: businessId, p_user_id: uid });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["user", "businesses", userId] }),
-  });
-
-  return { list, assign, remove };
-}
+const remove = useMutation({
+  mutationFn: async ({ businessId, userId: uid }: { businessId: string; userId: string }) => {
+    const { data, error } = await supabase.rpc("admin_remove_business_from_user", { 
+      p_user_id: uid,
+      p_business_id: businessId 
+    });
+    if (error) throw error;
+    return data;
+  },
+  onSuccess: () => qc.invalidateQueries({ queryKey: ["user", "businesses", userId] }),
+});
