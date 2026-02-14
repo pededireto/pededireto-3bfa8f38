@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { useSavedSearches, useDeleteSavedSearch } from "@/hooks/useSavedSearches";
 import { useUserFavorites, useToggleFavorite } from "@/hooks/useUserFavorites";
 import Header from "@/components/Header";
@@ -13,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const UserDashboard = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const { data: membership, isLoading: membershipLoading } = useBusinessMembership();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -22,15 +24,17 @@ const UserDashboard = () => {
   const toggleFavorite = useToggleFavorite();
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authLoading || membershipLoading) return;
+    if (!user) {
       navigate("/login");
-    }
-    if (!authLoading && user && isAdmin) {
+    } else if (isAdmin) {
       navigate("/admin");
+    } else if (membership?.business_id) {
+      navigate("/business-dashboard");
     }
-  }, [user, isAdmin, authLoading, navigate]);
+  }, [user, isAdmin, authLoading, membershipLoading, membership, navigate]);
 
-  if (authLoading) {
+  if (authLoading || membershipLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
