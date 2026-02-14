@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useBusinessMembership } from "@/hooks/useBusinessMembership";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +18,8 @@ const loginSchema = z.object({
 const UserLogin = () => {
   const navigate = useNavigate();
   const { signIn, user, isAdmin, isSuperAdmin, isCommercial } = useAuth();
-  const { data: membership } = useBusinessMembership();
+  const { data: membership, isLoading: membershipLoading } = useBusinessMembership();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const [email, setEmail] = useState("");
@@ -36,30 +38,30 @@ const UserLogin = () => {
     }
   }, []);
 
-  // Smart redirect after login
+  // Smart redirect after login — wait for membership to resolve
   useEffect(() => {
     if (!loginSuccess || !user) return;
-    const timer = setTimeout(() => {
-      // Check for stored post-login redirect intent
-      const postRedirect = localStorage.getItem("postLoginRedirect");
-      if (postRedirect && postRedirect.startsWith("/") && !postRedirect.startsWith("//")) {
-        localStorage.removeItem("postLoginRedirect");
-        navigate(postRedirect, { replace: true });
-        return;
-      }
+    // Don't redirect until membership query has finished loading
+    if (membershipLoading) return;
 
-      if (isAdmin || isSuperAdmin) {
-        navigate("/admin", { replace: true });
-      } else if (isCommercial) {
-        navigate("/comercial", { replace: true });
-      } else if (membership?.business_id) {
-        navigate("/business-dashboard", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [loginSuccess, user, isAdmin, isSuperAdmin, isCommercial, membership]);
+    // Check for stored post-login redirect intent
+    const postRedirect = localStorage.getItem("postLoginRedirect");
+    if (postRedirect && postRedirect.startsWith("/") && !postRedirect.startsWith("//")) {
+      localStorage.removeItem("postLoginRedirect");
+      navigate(postRedirect, { replace: true });
+      return;
+    }
+
+    if (isAdmin || isSuperAdmin) {
+      navigate("/admin", { replace: true });
+    } else if (isCommercial) {
+      navigate("/comercial", { replace: true });
+    } else if (membership?.business_id) {
+      navigate("/business-dashboard", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [loginSuccess, user, isAdmin, isSuperAdmin, isCommercial, membership, membershipLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
