@@ -2800,6 +2800,10 @@ export type Database = {
             Args: { p_admin_notes?: string; p_business_id: string }
             Returns: Json
           }
+      admin_assign_business_to_user: {
+        Args: { p_business_id: string; p_role?: string; p_user_id: string }
+        Returns: undefined
+      }
       admin_reject_claim: {
         Args: { p_business_id: string; p_notes: string }
         Returns: Json
