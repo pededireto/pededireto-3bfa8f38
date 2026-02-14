@@ -95,49 +95,26 @@ const ClaimBusiness = () => {
     }
   };
 
-  // 🔒 UTILIZADOR NÃO AUTENTICADO
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="bg-card rounded-2xl shadow-card p-8 max-w-md w-full text-center">
-          <Building2 className="h-12 w-12 text-primary mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-foreground mb-2">
-            Reclamar Negócio
-          </h2>
-          <p className="text-muted-foreground mb-6">
-            Precisas de ter uma conta para reclamar o teu negócio.
-          </p>
+  const handleClaimOrRedirect = async () => {
+    if (!user) {
+      localStorage.setItem("postLoginRedirect", "/claim-business");
+      toast({ title: "Conta necessária", description: "Cria uma conta ou entra para reclamar o teu negócio." });
+      navigate("/register/business");
+      return;
+    }
+    await handleClaim();
+  };
 
-          <div className="space-y-3">
-            {/* 🔥 CORREÇÃO PRINCIPAL AQUI */}
-            <Link
-              to="/register/business"
-              onClick={() =>
-                localStorage.setItem("postLoginRedirect", "/claim-business")
-              }
-            >
-              <Button className="w-full btn-cta-primary">
-                Criar Conta
-              </Button>
-            </Link>
+  const handleCreateOrRedirect = async () => {
+    if (!user) {
+      localStorage.setItem("postLoginRedirect", "/claim-business");
+      toast({ title: "Conta necessária", description: "Cria uma conta ou entra para criar o teu negócio." });
+      navigate("/register/business");
+      return;
+    }
+    await handleCreateNew();
+  };
 
-            <Link
-              to="/login"
-              onClick={() =>
-                localStorage.setItem("postLoginRedirect", "/claim-business")
-              }
-            >
-              <Button variant="outline" className="w-full">
-                Já tenho conta — Entrar
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 🔓 UTILIZADOR AUTENTICADO
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
@@ -215,7 +192,7 @@ const ClaimBusiness = () => {
                   </div>
 
                   <Button
-                    onClick={handleClaim}
+                    onClick={handleClaimOrRedirect}
                     disabled={isClaiming}
                     className="w-full btn-cta-primary"
                   >
@@ -278,7 +255,7 @@ const ClaimBusiness = () => {
               </div>
 
               <Button
-                onClick={handleCreateNew}
+                onClick={handleCreateOrRedirect}
                 disabled={isCreating || !newName || !newCategoryId || !newCity}
                 className="w-full btn-cta-primary"
               >
