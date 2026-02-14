@@ -9,6 +9,8 @@ export const useBusinessMembership = () => {
     queryKey: ["business-membership", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+
+      // Try with JOIN first
       const { data, error } = await supabase
         .from("business_users")
         .select("business_id, role, businesses(id, name, slug)")
@@ -16,8 +18,19 @@ export const useBusinessMembership = () => {
         .limit(1)
         .maybeSingle();
 
-      if (error) throw error;
-      return data;
+      if (!error) return data;
+
+      // Fallback: query without JOIN (handles RLS restrictions on inactive businesses)
+      console.warn("Membership JOIN failed, using fallback:", error.message);
+      const { data: fallback, error: fallbackError } = await supabase
+        .from("business_users")
+        .select("business_id, role")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (fallbackError) throw fallbackError;
+      return fallback;
     },
     enabled: !!user?.id,
   });
