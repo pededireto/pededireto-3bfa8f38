@@ -59,6 +59,36 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_notifications: {
+        Row: {
+          business_id: string | null
+          created_at: string | null
+          id: string
+          payload: Json | null
+          resolved_at: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string | null
+          id?: string
+          payload?: Json | null
+          resolved_at?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string | null
+          id?: string
+          payload?: Json | null
+          resolved_at?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           business_id: string | null
@@ -751,6 +781,7 @@ export type Database = {
           activated_at: string | null
           address: string | null
           alcance: Database["public"]["Enums"]["alcance_tipo"] | null
+          analytics_plan: string | null
           category_id: string | null
           city: string | null
           claim_requested_at: string | null
@@ -812,6 +843,7 @@ export type Database = {
           activated_at?: string | null
           address?: string | null
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
+          analytics_plan?: string | null
           category_id?: string | null
           city?: string | null
           claim_requested_at?: string | null
@@ -873,6 +905,7 @@ export type Database = {
           activated_at?: string | null
           address?: string | null
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
+          analytics_plan?: string | null
           category_id?: string | null
           city?: string | null
           claim_requested_at?: string | null
@@ -2761,23 +2794,33 @@ export type Database = {
       }
     }
     Functions: {
-      admin_approve_claim: {
-        Args: { p_admin_notes?: string; p_business_id: string }
-        Returns: Json
-      }
+      admin_approve_claim:
+        | { Args: { p_business_id: string }; Returns: Json }
+        | {
+            Args: { p_admin_notes?: string; p_business_id: string }
+            Returns: Json
+          }
       admin_reject_claim: {
-        Args: { p_admin_notes?: string; p_business_id: string }
+        Args: { p_business_id: string; p_notes: string }
         Returns: Json
       }
-      admin_revoke_claim: {
-        Args: { p_admin_notes?: string; p_business_id: string }
-        Returns: Json
+      admin_remove_business_from_user: {
+        Args: { p_business_id: string; p_user_id: string }
+        Returns: undefined
       }
+      admin_revoke_claim:
+        | { Args: { p_business_id: string }; Returns: Json }
+        | {
+            Args: { p_admin_notes?: string; p_business_id: string }
+            Returns: Json
+          }
       auto_reject_old_claims: { Args: never; Returns: undefined }
-      claim_business: {
-        Args: { p_business_id: string; p_claim_message?: string }
-        Returns: Json
-      }
+      claim_business:
+        | { Args: { p_business_id: string }; Returns: Json }
+        | {
+            Args: { p_business_id: string; p_claim_message?: string }
+            Returns: Json
+          }
       create_revenue_event: {
         Args: {
           p_amount: number
@@ -2808,6 +2851,17 @@ export type Database = {
         Args: { p_business_id: string; p_days?: number }
         Returns: Json
       }
+      get_unlinked_businesses: {
+        Args: { p_limit?: number; p_q?: string }
+        Returns: {
+          city: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+        }[]
+      }
+      get_user_context: { Args: never; Returns: Json }
       has_permission: {
         Args: { _permission: string; _user_id: string }
         Returns: boolean

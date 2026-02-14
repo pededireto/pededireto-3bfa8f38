@@ -1,52 +1,79 @@
-// src/components/admin/AdminUserBusinessManager.tsx
-import React, { useState } from "react";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useUserBusinesses } from "@/hooks/useUserBusinesses";
 import { useUnlinkedBusinesses } from "@/hooks/useUnlinkedBusinesses";
+import { Loader2 } from "lucide-react";
 
-type Props = { userId: string };
+type Props = {
+  userId: string;
+  open: boolean;
+  onClose: () => void;
+};
 
-export default function AdminUserBusinessManager({ userId }: Props) {
-  const { query, assign, remove } = useUserBusinesses(userId);
+export default function AdminUserBusinessManager({ userId, open, onClose }: Props) {
+  const { list, assign, remove } = useUserBusinesses(userId);
   const [search, setSearch] = useState("");
   const unlinked = useUnlinkedBusinesses(search);
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Negócios associados</h3>
-      <div>
-        {query.query.isLoading ? (
-          <p>Loading…</p>
-        ) : (
-          query.query.data?.map((bu: any) => (
-            <div key={bu.id} className="flex items-center justify-between p-2 border rounded">
-              <div>
-                <div className="font-medium">{bu.business.name}</div>
-                <div className="text-xs text-muted-foreground">{bu.business.city} • {bu.role}</div>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Negócios associados</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {list.isLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
+          ) : (
+            (list.data || []).map((bu: any) => (
+              <div key={bu.id} className="flex items-center justify-between p-2 border rounded">
+                <div>
+                  <div className="font-medium">{bu.business?.name || "—"}</div>
+                  <div className="text-xs text-muted-foreground">{bu.business?.city} • {bu.role}</div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => remove.mutate({ businessId: bu.business_id, userId })}
+                  disabled={remove.isPending}
+                >
+                  Remover
+                </Button>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => remove.remove({ businessId: bu.business_id, userId })}>Remover</Button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
 
-      <h4>Adicionar negócio</h4>
-      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar negócio..." className="w-full p-2 border rounded" />
-      <div className="max-h-48 overflow-auto">
-        {unlinked.isLoading ? <p>Carregando…</p> : unlinked.data?.map((b: any) => (
-          <div key={b.id} className="flex items-center justify-between p-2 border-b">
-            <div>
-              <div className="font-medium">{b.name}</div>
-              <div className="text-xs text-muted-foreground">{b.city}</div>
-            </div>
-            <div>
-              <Button onClick={() => assign.mutate({ businessId: b.id, userId, role: "owner" })}>Associar como Owner</Button>
-            </div>
+          <h4 className="font-medium pt-2">Adicionar negócio</h4>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pesquisar negócio..."
+          />
+          <div className="max-h-48 overflow-auto space-y-1">
+            {unlinked.isLoading ? (
+              <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
+            ) : (
+              (unlinked.data || []).map((b) => (
+                <div key={b.id} className="flex items-center justify-between p-2 border-b">
+                  <div>
+                    <div className="font-medium text-sm">{b.name}</div>
+                    <div className="text-xs text-muted-foreground">{b.city}</div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => assign.mutate({ businessId: b.id, userId, role: "owner" })}
+                    disabled={assign.isPending}
+                  >
+                    Associar
+                  </Button>
+                </div>
+              ))
+            )}
           </div>
-        ))}
-      </div>
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
