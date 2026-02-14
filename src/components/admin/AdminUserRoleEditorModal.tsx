@@ -31,8 +31,11 @@ export default function AdminUserRoleEditorModal({ userId, open, onClose, initia
             <SelectTrigger><SelectValue placeholder="Selecionar role" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="user">User</SelectItem>
-              <SelectItem value="commercial">Commercial</SelectItem>
+              <SelectItem value="comercial">Comercial</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="super_admin">Super Admin</SelectItem>
+              <SelectItem value="cs">CS</SelectItem>
+              <SelectItem value="onboarding">Onboarding</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex gap-2 justify-end">
