@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Search, Building2, ArrowLeft, Loader2, MapPin, Plus, CheckCircle2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,21 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useClaimSearch, useClaimBusiness } from "@/hooks/useClaimSearch";
 import { useCategories } from "@/hooks/useCategories";
+import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ClaimBusiness = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { data: membership, isLoading: membershipLoading } = useBusinessMembership();
+
+  // Redirect authenticated users who already have a business
+  useEffect(() => {
+    if (!membershipLoading && user && membership?.business_id) {
+      navigate("/business-dashboard", { replace: true });
+    }
+  }, [user, membership, membershipLoading, navigate]);
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState("");
