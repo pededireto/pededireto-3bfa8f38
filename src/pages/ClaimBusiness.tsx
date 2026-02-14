@@ -45,7 +45,9 @@ const ClaimBusiness = () => {
 
   const handleCreateNew = async () => {
     if (!newName || !newCategoryId || !newCity || !user) return;
+
     setIsCreating(true);
+
     try {
       const slug = newName
         .toLowerCase()
@@ -63,7 +65,7 @@ const ClaimBusiness = () => {
           category_id: newCategoryId,
           owner_email: user.email || "",
           is_active: false,
-          commercial_status: "nao_contactado" as const,
+          commercial_status: "nao_contactado",
           registration_source: "claim_flow",
         }])
         .select("id")
@@ -81,26 +83,53 @@ const ClaimBusiness = () => {
 
       toast({ title: "Negócio criado!", description: "Podes agora gerir o teu perfil." });
       navigate("/business-dashboard");
+
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message || "Não foi possível criar o negócio.", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: err.message || "Não foi possível criar o negócio.",
+        variant: "destructive"
+      });
     } finally {
       setIsCreating(false);
     }
   };
 
+  // 🔒 UTILIZADOR NÃO AUTENTICADO
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="bg-card rounded-2xl shadow-card p-8 max-w-md w-full text-center">
           <Building2 className="h-12 w-12 text-primary mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-foreground mb-2">Reclamar Negócio</h2>
-          <p className="text-muted-foreground mb-6">Precisas de ter uma conta para reclamar o teu negócio.</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            Reclamar Negócio
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            Precisas de ter uma conta para reclamar o teu negócio.
+          </p>
+
           <div className="space-y-3">
-            <Link to="/registar/consumidor" onClick={() => localStorage.setItem("postLoginRedirect", "/claim-business")}>
-              <Button className="w-full btn-cta-primary">Criar Conta</Button>
+            {/* 🔥 CORREÇÃO PRINCIPAL AQUI */}
+            <Link
+              to="/register/business"
+              onClick={() =>
+                localStorage.setItem("postLoginRedirect", "/claim-business")
+              }
+            >
+              <Button className="w-full btn-cta-primary">
+                Criar Conta
+              </Button>
             </Link>
-            <Link to="/login" onClick={() => localStorage.setItem("postLoginRedirect", "/claim-business")}>
-              <Button variant="outline" className="w-full">Já tenho conta — Entrar</Button>
+
+            <Link
+              to="/login"
+              onClick={() =>
+                localStorage.setItem("postLoginRedirect", "/claim-business")
+              }
+            >
+              <Button variant="outline" className="w-full">
+                Já tenho conta — Entrar
+              </Button>
             </Link>
           </div>
         </div>
@@ -108,21 +137,29 @@ const ClaimBusiness = () => {
     );
   }
 
+  // 🔓 UTILIZADOR AUTENTICADO
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="bg-card rounded-2xl shadow-card p-8">
           <div className="text-center mb-6">
             <Link to="/" className="inline-block mb-4">
-              <h1 className="text-2xl font-bold text-primary">Pede Direto</h1>
+              <h1 className="text-2xl font-bold text-primary">
+                Pede Direto
+              </h1>
             </Link>
-            <h2 className="text-xl font-semibold text-foreground">Reclame o seu Negócio</h2>
-            <p className="text-muted-foreground mt-1">O seu negócio pode já estar listado. Procure pelo nome abaixo.</p>
+
+            <h2 className="text-xl font-semibold text-foreground">
+              Reclame o seu Negócio
+            </h2>
+
+            <p className="text-muted-foreground mt-1">
+              O seu negócio pode já estar listado. Procure pelo nome abaixo.
+            </p>
           </div>
 
           {!showCreateForm ? (
             <div className="space-y-4">
-              {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -136,7 +173,6 @@ const ClaimBusiness = () => {
                 />
               </div>
 
-              {/* Results */}
               {isSearching && (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -148,12 +184,16 @@ const ClaimBusiness = () => {
                   {results.map((r) => (
                     <button
                       key={r.id}
-                      onClick={() => setSelectedBusiness({ id: r.id, name: r.name })}
+                      onClick={() =>
+                        setSelectedBusiness({ id: r.id, name: r.name })
+                      }
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left"
                     >
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium text-foreground truncate">{r.name}</p>
+                        <p className="font-medium text-foreground truncate">
+                          {r.name}
+                        </p>
                         {r.city && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <MapPin className="h-3 w-3" /> {r.city}
@@ -165,20 +205,25 @@ const ClaimBusiness = () => {
                 </div>
               )}
 
-              {searchQuery.length >= 2 && !isSearching && results.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-2">Nenhum negócio encontrado.</p>
-              )}
-
-              {/* Selected */}
               {selectedBusiness && (
                 <div className="border-2 border-primary rounded-xl p-4 bg-primary/5">
                   <div className="flex items-center gap-3 mb-3">
                     <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <p className="font-semibold text-foreground">{selectedBusiness.name}</p>
+                    <p className="font-semibold text-foreground">
+                      {selectedBusiness.name}
+                    </p>
                   </div>
-                  <Button onClick={handleClaim} disabled={isClaiming} className="w-full btn-cta-primary">
+
+                  <Button
+                    onClick={handleClaim}
+                    disabled={isClaiming}
+                    className="w-full btn-cta-primary"
+                  >
                     {isClaiming ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> A reclamar...</>
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        A reclamar...
+                      </>
                     ) : (
                       "Reclamar este negócio"
                     )}
@@ -186,7 +231,6 @@ const ClaimBusiness = () => {
                 </div>
               )}
 
-              {/* Create new */}
               <div className="pt-4 border-t border-border">
                 <button
                   onClick={() => setShowCreateForm(true)}
@@ -201,16 +245,24 @@ const ClaimBusiness = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Nome do Negócio *</Label>
-                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex: Restaurante O Manel" />
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Ex: Restaurante O Manel"
+                />
               </div>
 
               <div className="space-y-2">
                 <Label>Categoria *</Label>
                 <Select value={newCategoryId} onValueChange={setNewCategoryId}>
-                  <SelectTrigger><SelectValue placeholder="Selecionar categoria" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar categoria" />
+                  </SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -218,7 +270,11 @@ const ClaimBusiness = () => {
 
               <div className="space-y-2">
                 <Label>Cidade *</Label>
-                <Input value={newCity} onChange={(e) => setNewCity(e.target.value)} placeholder="Ex: Lisboa" />
+                <Input
+                  value={newCity}
+                  onChange={(e) => setNewCity(e.target.value)}
+                  placeholder="Ex: Lisboa"
+                />
               </div>
 
               <Button
@@ -227,7 +283,10 @@ const ClaimBusiness = () => {
                 className="w-full btn-cta-primary"
               >
                 {isCreating ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> A criar...</>
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    A criar...
+                  </>
                 ) : (
                   "Criar Negócio"
                 )}
@@ -244,7 +303,7 @@ const ClaimBusiness = () => {
 
           <div className="mt-6 text-center">
             <Link
-              to="/registar"
+              to="/register"
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
