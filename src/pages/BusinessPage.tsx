@@ -80,7 +80,7 @@ const BusinessPage = () => {
   };
 
   // Check if user is owner
-  const userIsOwner = user?.id === business?.user_id;
+  const userIsOwner = user?.id === business?.owner_id;
 
   if (isLoading) {
     return (
