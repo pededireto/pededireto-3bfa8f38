@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUserBusinesses } from "@/hooks/useUserBusinesses";
 import { useUnlinkedBusinesses } from "@/hooks/useUnlinkedBusinesses";
+import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 type Props = {
@@ -16,6 +17,25 @@ export default function AdminUserBusinessManager({ userId, open, onClose }: Prop
   const { list, assign, remove } = useUserBusinesses(userId);
   const [search, setSearch] = useState("");
   const unlinked = useUnlinkedBusinesses(search);
+  const { toast } = useToast();
+
+  const handleAssign = async (businessId: string, businessName: string) => {
+    try {
+      await assign.mutateAsync({ businessId, userId, role: "owner" });
+      toast({ title: `"${businessName}" associado com sucesso` });
+    } catch (e: any) {
+      toast({ title: "Erro ao associar negócio", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const handleRemove = async (businessId: string, businessName: string) => {
+    try {
+      await remove.mutateAsync({ businessId, userId });
+      toast({ title: `"${businessName}" removido` });
+    } catch (e: any) {
+      toast({ title: "Erro ao remover negócio", description: e?.message, variant: "destructive" });
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -26,8 +46,8 @@ export default function AdminUserBusinessManager({ userId, open, onClose }: Prop
         <div className="space-y-4">
           {list.isLoading ? (
             <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
-          ) : (
-            (list.data || []).map((bu: any) => (
+          ) : (list.data && list.data.length > 0) ? (
+            list.data.map((bu: any) => (
               <div key={bu.id} className="flex items-center justify-between p-2 border rounded">
                 <div>
                   <div className="font-medium">{bu.business?.name || "—"}</div>
@@ -36,13 +56,15 @@ export default function AdminUserBusinessManager({ userId, open, onClose }: Prop
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => remove.mutate({ businessId: bu.business_id, userId })}
+                  onClick={() => handleRemove(bu.business_id, bu.business?.name || "")}
                   disabled={remove.isPending}
                 >
                   Remover
                 </Button>
               </div>
             ))
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhum negócio associado.</p>
           )}
 
           <h4 className="font-medium pt-2">Adicionar negócio</h4>
@@ -63,7 +85,7 @@ export default function AdminUserBusinessManager({ userId, open, onClose }: Prop
                   </div>
                   <Button
                     size="sm"
-                    onClick={() => assign.mutate({ businessId: b.id, userId, role: "owner" })}
+                    onClick={() => handleAssign(b.id, b.name)}
                     disabled={assign.isPending}
                   >
                     Associar
