@@ -34,8 +34,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUncontactedCount } from "@/hooks/useExpirationLogs";
 import { usePendingRequestsCount } from "@/hooks/useActionRequests";
+import { usePendingClaimsCount } from "@/hooks/useClaimRequests";
 
-export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs" | "service-requests" | "business-modules" | "homepage" | "revenue" | "performance" | "commission-models" | "commission-audit" | "leads-dashboard" | "intelligence";
+export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs" | "service-requests" | "business-modules" | "homepage" | "revenue" | "performance" | "commission-models" | "commission-audit" | "leads-dashboard" | "intelligence" | "claim-requests";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -47,6 +48,7 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "businesses", label: "Negócios", icon: Building2 },
   { id: "users", label: "Utilizadores", icon: Users },
+  { id: "claim-requests", label: "Pedidos de Claim", icon: ShieldCheck },
   { id: "service-requests", label: "Pedidos", icon: Inbox },
   { id: "categories", label: "Categorias", icon: FolderOpen },
   { id: "featured", label: "Destaques", icon: Crown },
@@ -76,6 +78,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
   const { signOut } = useAuth();
   const { data: uncontactedCount = 0 } = useUncontactedCount();
   const { data: pendingRequestsCount = 0 } = usePendingRequestsCount();
+  const { data: pendingClaimsCount = 0 } = usePendingClaimsCount();
 
   const handleSignOut = async () => {
     await signOut();
@@ -119,6 +122,11 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
             {item.id === "action-requests" && pendingRequestsCount > 0 && (
               <span className="ml-auto bg-warning text-warning-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
                 {pendingRequestsCount}
+              </span>
+            )}
+            {item.id === "claim-requests" && pendingClaimsCount > 0 && (
+              <span className="ml-auto bg-yellow-500 text-white text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
+                {pendingClaimsCount}
               </span>
             )}
           </button>

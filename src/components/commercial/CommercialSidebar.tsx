@@ -6,11 +6,12 @@ import {
   ClipboardList,
   BarChart3,
   DollarSign,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-export type CommercialTab = "dashboard" | "businesses" | "my-businesses" | "my-commissions" | "my-requests";
+export type CommercialTab = "dashboard" | "businesses" | "my-businesses" | "my-commissions" | "my-requests" | "claim-requests";
 
 interface CommercialSidebarProps {
   activeTab: CommercialTab;
@@ -24,6 +25,7 @@ const sidebarItems: { id: CommercialTab; label: string; icon: React.ElementType 
   { id: "my-businesses", label: "Meus Negócios", icon: Building2 },
   { id: "my-commissions", label: "Minhas Comissões", icon: DollarSign },
   { id: "my-requests", label: "Os Meus Pedidos", icon: ClipboardList },
+  { id: "claim-requests", label: "Pedidos de Claim", icon: ShieldCheck },
 ];
 
 const CommercialSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: CommercialSidebarProps) => {

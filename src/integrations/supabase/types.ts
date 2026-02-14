@@ -586,6 +586,7 @@ export type Database = {
           message: string
           title: string
           type: string
+          user_id: string | null
         }
         Insert: {
           business_id: string
@@ -595,6 +596,7 @@ export type Database = {
           message: string
           title: string
           type: string
+          user_id?: string | null
         }
         Update: {
           business_id?: string
@@ -604,6 +606,7 @@ export type Database = {
           message?: string
           title?: string
           type?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -750,6 +753,10 @@ export type Database = {
           alcance: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id: string | null
           city: string | null
+          claim_requested_at: string | null
+          claim_requested_by: string | null
+          claim_review_notes: string | null
+          claim_status: string | null
           claimed: boolean
           claimed_at: string | null
           claimed_by: string | null
@@ -797,6 +804,8 @@ export type Database = {
           subscription_start_date: string | null
           subscription_status: Database["public"]["Enums"]["subscription_status_tipo"]
           updated_at: string | null
+          verified_at: string | null
+          verified_by: string | null
           zone: string | null
         }
         Insert: {
@@ -805,6 +814,10 @@ export type Database = {
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id?: string | null
           city?: string | null
+          claim_requested_at?: string | null
+          claim_requested_by?: string | null
+          claim_review_notes?: string | null
+          claim_status?: string | null
           claimed?: boolean
           claimed_at?: string | null
           claimed_by?: string | null
@@ -852,6 +865,8 @@ export type Database = {
           subscription_start_date?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status_tipo"]
           updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
           zone?: string | null
         }
         Update: {
@@ -860,6 +875,10 @@ export type Database = {
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id?: string | null
           city?: string | null
+          claim_requested_at?: string | null
+          claim_requested_by?: string | null
+          claim_review_notes?: string | null
+          claim_status?: string | null
           claimed?: boolean
           claimed_at?: string | null
           claimed_by?: string | null
@@ -907,6 +926,8 @@ export type Database = {
           subscription_start_date?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status_tipo"]
           updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
           zone?: string | null
         }
         Relationships: [
@@ -1660,6 +1681,7 @@ export type Database = {
       }
       plan_rules: {
         Row: {
+          allow_analytics_basic: boolean | null
           allow_analytics_pro: boolean
           allow_category_highlight: boolean
           allow_premium_block: boolean
@@ -1673,6 +1695,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_analytics_basic?: boolean | null
           allow_analytics_pro?: boolean
           allow_category_highlight?: boolean
           allow_premium_block?: boolean
@@ -1686,6 +1709,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_analytics_basic?: boolean | null
           allow_analytics_pro?: boolean
           allow_category_highlight?: boolean
           allow_premium_block?: boolean
@@ -2689,7 +2713,25 @@ export type Database = {
       }
     }
     Functions: {
-      claim_business: { Args: { p_business_id: string }; Returns: undefined }
+      admin_approve_claim: {
+        Args: { p_admin_notes?: string; p_business_id: string }
+        Returns: Json
+      }
+      admin_reject_claim: {
+        Args: { p_admin_notes?: string; p_business_id: string }
+        Returns: Json
+      }
+      admin_revoke_claim: {
+        Args: { p_admin_notes?: string; p_business_id: string }
+        Returns: Json
+      }
+      auto_reject_old_claims: { Args: never; Returns: undefined }
+      claim_business:
+        | { Args: { p_business_id: string }; Returns: undefined }
+        | {
+            Args: { p_business_id: string; p_claim_message?: string }
+            Returns: Json
+          }
       create_revenue_event: {
         Args: {
           p_amount: number
@@ -2735,6 +2777,10 @@ export type Database = {
       is_commercial: { Args: never; Returns: boolean }
       match_request_to_businesses: {
         Args: { p_request_id: string }
+        Returns: undefined
+      }
+      revoke_business_access: {
+        Args: { p_business_id: string; p_user_id: string }
         Returns: undefined
       }
       search_businesses_and_subcategories: {
@@ -2788,6 +2834,32 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }
+      update_business_full: {
+        Args: {
+          p_address?: string
+          p_business_id: string
+          p_description?: string
+          p_email?: string
+          p_facebook?: string
+          p_instagram?: string
+          p_other_social?: string
+          p_phone?: string
+          p_schedule_weekdays?: string
+          p_schedule_weekend?: string
+          p_website?: string
+          p_whatsapp?: string
+        }
+        Returns: undefined
+      }
+      update_business_limited: {
+        Args: {
+          p_business_id: string
+          p_description?: string
+          p_phone?: string
+          p_website?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       alcance_tipo: "local" | "nacional" | "hibrido"
@@ -2798,7 +2870,7 @@ export type Database = {
         | "super_admin"
         | "cs"
         | "onboarding"
-      business_role: "owner" | "manager" | "staff"
+      business_role: "owner" | "manager" | "staff" | "pending_owner" | "revoked"
       commercial_status_tipo:
         | "nao_contactado"
         | "contactado"
@@ -2958,7 +3030,7 @@ export const Constants = {
         "cs",
         "onboarding",
       ],
-      business_role: ["owner", "manager", "staff"],
+      business_role: ["owner", "manager", "staff", "pending_owner", "revoked"],
       commercial_status_tipo: [
         "nao_contactado",
         "contactado",

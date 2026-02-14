@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useBusinessByUser } from "@/hooks/useBusinessDashboard";
 import { useBusinessMembership } from "@/hooks/useBusinessMembership";
+import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
 import BusinessSidebar, { BusinessTab } from "@/components/business/BusinessSidebar";
 import BusinessDashboardOverview from "@/components/business/BusinessDashboardOverview";
 import BusinessRequestsContent from "@/components/business/BusinessRequestsContent";
@@ -12,11 +13,13 @@ import BusinessNotificationsContent from "@/components/business/BusinessNotifica
 import BusinessPlanContent from "@/components/business/BusinessPlanContent";
 import BusinessInsightsContent from "@/components/business/BusinessInsightsContent";
 import TeamSection from "@/components/business/TeamSection";
+import ClaimStatusBanner from "@/components/business/ClaimStatusBanner";
 
 const BusinessDashboard = () => {
   const [activeTab, setActiveTab] = useState<BusinessTab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { data: business, isLoading } = useBusinessByUser();
+  const permissions = useBusinessClaimPermissions(business);
 
   if (isLoading) {
     return (
@@ -41,11 +44,11 @@ const BusinessDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "overview": return <BusinessDashboardOverview business={business} />;
-      case "requests": return <BusinessRequestsContent businessId={business.id} />;
+      case "requests": return permissions.canViewRequests ? <BusinessRequestsContent businessId={business.id} /> : null;
       case "notifications": return <BusinessNotificationsContent businessId={business.id} />;
-      case "insights": return <BusinessInsightsContent businessId={business.id} planId={business.plan_id} />;
+      case "insights": return <BusinessInsightsContent businessId={business.id} planId={business.plan_id} claimStatus={permissions.claimStatus} />;
       case "plan": return <BusinessPlanContent business={business} />;
-      case "team": return <TeamSection businessId={business.id} />;
+      case "team": return permissions.canViewTeam ? <TeamSection businessId={business.id} /> : null;
       default: return null;
     }
   };
@@ -69,10 +72,20 @@ const BusinessDashboard = () => {
             setActiveTab={setActiveTab}
             setSidebarOpen={setSidebarOpen}
             businessId={business.id}
+            claimStatus={permissions.claimStatus}
+            canViewInsights={permissions.canViewInsights}
+            canViewRequests={permissions.canViewRequests}
+            canViewTeam={permissions.canViewTeam}
+            isFreePlan={permissions.isFreePlan}
           />
         </aside>
         {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
-        <main className="flex-1 min-h-screen p-4 md:p-8">{renderContent()}</main>
+        <main className="flex-1 min-h-screen p-4 md:p-8 space-y-4">
+          {permissions.bannerMessage && permissions.bannerVariant && (
+            <ClaimStatusBanner message={permissions.bannerMessage} variant={permissions.bannerVariant} />
+          )}
+          {renderContent()}
+        </main>
       </div>
     </div>
   );
