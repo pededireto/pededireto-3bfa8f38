@@ -12,31 +12,36 @@ import EmergencyBanner from "@/components/EmergencyBanner";
 import ScrollToTop from "@/components/ScrollToTop";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import CookieConsent from "@/components/CookieConsent";
+
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import SubcategoryPage from "./pages/SubcategoryPage";
 import BusinessPage from "./pages/BusinessPage";
-import AdminPage from "./pages/AdminPage";
-import AdminLogin from "./pages/AdminLogin";
-import AdminRegister from "./pages/AdminRegister";
+import InstitutionalPage from "./pages/InstitutionalPage";
+
 import UserLogin from "./pages/UserLogin";
 import UserRegister from "./pages/UserRegister";
 import RegisterChoice from "./pages/RegisterChoice";
-import ClaimBusiness from "./pages/ClaimBusiness";
-import UserDashboard from "./pages/UserDashboard";
-import InstitutionalPage from "./pages/InstitutionalPage";
 import RegisterBusiness from "./pages/RegisterBusiness";
-import CommercialPage from "./pages/CommercialPage";
+import ClaimBusiness from "./pages/ClaimBusiness";
+
+import UserDashboard from "./pages/UserDashboard";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import ProfilePage from "./pages/ProfilePage";
+
+import AdminPage from "./pages/AdminPage";
+import AdminLogin from "./pages/AdminLogin";
+import AdminRegister from "./pages/AdminRegister";
+import CommercialPage from "./pages/CommercialPage";
+
 import RequestServicePage from "./pages/RequestServicePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// SPA route tracker for Google Analytics
 const RouteTracker = () => {
   const location = useLocation();
+
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).gtag) {
       (window as any).gtag("event", "page_view", {
@@ -45,6 +50,7 @@ const RouteTracker = () => {
       });
     }
   }, [location]);
+
   return null;
 };
 
@@ -54,8 +60,11 @@ const App = () => {
       console.error("Unhandled rejection:", event.reason);
       event.preventDefault();
     };
+
     window.addEventListener("unhandledrejection", handleRejection);
-    return () => window.removeEventListener("unhandledrejection", handleRejection);
+
+    return () =>
+      window.removeEventListener("unhandledrejection", handleRejection);
   }, []);
 
   return (
@@ -68,24 +77,42 @@ const App = () => {
               <Sonner />
               <OfflineIndicator />
               <EmergencyBanner />
+
               <BrowserRouter>
                 <RouteTracker />
                 <ScrollToTop />
+
                 <Routes>
+                  {/* PUBLIC */}
                   <Route path="/" element={<Index />} />
                   <Route path="/categoria/:slug" element={<CategoryPage />} />
-                  <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
+                  <Route
+                    path="/categoria/:categorySlug/:subcategorySlug"
+                    element={<SubcategoryPage />}
+                  />
                   <Route path="/negocio/:slug" element={<BusinessPage />} />
                   <Route path="/pagina/:slug" element={<InstitutionalPage />} />
-                  <Route path="/registar-negocio" element={<RegisterBusiness />} />
+
+                  {/* AUTH */}
                   <Route path="/login" element={<UserLogin />} />
-                  <Route path="/registar" element={<RegisterChoice />} />
-                  <Route path="/registar/consumidor" element={<UserRegister />} />
+
+                  {/* NEW CLEAN REGISTER STRUCTURE */}
+                  <Route path="/register" element={<RegisterChoice />} />
+                  <Route path="/register/user" element={<UserRegister />} />
+                  <Route path="/register/business" element={<RegisterBusiness />} />
+
+                  {/* CLAIM FLOW */}
                   <Route path="/claim-business" element={<ClaimBusiness />} />
+
+                  {/* DASHBOARDS */}
                   <Route path="/dashboard" element={<UserDashboard />} />
+                  <Route path="/business-dashboard" element={<BusinessDashboard />} />
                   <Route path="/perfil" element={<ProfilePage />} />
+
+                  {/* ADMIN */}
                   <Route path="/admin/login" element={<AdminLogin />} />
                   <Route path="/admin/register" element={<AdminRegister />} />
+
                   <Route
                     path="/admin"
                     element={
@@ -94,6 +121,7 @@ const App = () => {
                       </ProtectedRoute>
                     }
                   />
+
                   <Route
                     path="/comercial"
                     element={
@@ -102,10 +130,14 @@ const App = () => {
                       </ProtectedRoute>
                     }
                   />
-                  <Route path="/business-dashboard" element={<BusinessDashboard />} />
+
+                  {/* SERVICES */}
                   <Route path="/pedir-servico" element={<RequestServicePage />} />
+
+                  {/* 404 */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+
                 <CookieConsent />
               </BrowserRouter>
             </TooltipProvider>
