@@ -100,6 +100,8 @@ const UserLogin = () => {
           title: "Login efetuado",
           description: "Bem-vindo de volta!",
         });
+        // Invalidate membership cache so it re-fetches with the new user
+        await queryClient.invalidateQueries({ queryKey: ["business-membership"] });
         setLoginSuccess(true);
       }
     } finally {
