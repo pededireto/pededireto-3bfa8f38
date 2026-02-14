@@ -17,7 +17,7 @@ const loginSchema = z.object({
 
 const UserLogin = () => {
   const navigate = useNavigate();
-  const { signIn, user } = useAuth();
+  const { signIn, user, isLoading: loading } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -28,7 +28,7 @@ const UserLogin = () => {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   // Smart redirect hook
-  useSmartRedirect(user);
+  useSmartRedirect(user, loading);
 
   // On mount, read ?redirect= query param
   useEffect(() => {
