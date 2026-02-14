@@ -34,11 +34,14 @@ const ClaimBusiness = () => {
     const { error } = await claim(selectedBusiness.id);
     if (error) {
       const msg = error.message?.includes("already claimed")
-        ? "Este negócio já foi reclamado por outro utilizador."
+        ? "Este negócio já foi reclamado ou está pendente de validação."
         : "Erro ao reclamar negócio. Tenta novamente.";
       toast({ title: "Erro", description: msg, variant: "destructive" });
     } else {
-      toast({ title: "Negócio reclamado!", description: `"${selectedBusiness.name}" é agora teu.` });
+      toast({ 
+        title: "Pedido enviado!", 
+        description: "O seu pedido está em validação. Receberá uma notificação em breve." 
+      });
       navigate("/business-dashboard");
     }
   };
@@ -65,6 +68,9 @@ const ClaimBusiness = () => {
           category_id: newCategoryId,
           owner_email: user.email || "",
           is_active: false,
+          claim_status: 'pending',
+          claim_requested_by: user.id,
+          claim_requested_at: new Date().toISOString(),
           commercial_status: "nao_contactado",
           registration_source: "claim_flow",
         }])
@@ -76,12 +82,15 @@ const ClaimBusiness = () => {
       const { error: buError } = await supabase.from("business_users").insert({
         business_id: biz.id,
         user_id: user.id,
-        role: "owner",
+        role: "pending_owner",
       });
 
       if (buError) throw buError;
 
-      toast({ title: "Negócio criado!", description: "Podes agora gerir o teu perfil." });
+      toast({ 
+        title: "Pedido enviado!", 
+        description: "O negócio foi criado e está pendente de validação." 
+      });
       navigate("/business-dashboard");
 
     } catch (err: any) {
