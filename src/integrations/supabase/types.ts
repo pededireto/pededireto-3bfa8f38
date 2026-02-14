@@ -622,6 +622,38 @@ export type Database = {
           },
         ]
       }
+      business_profiles: {
+        Row: {
+          business_id: string | null
+          created_at: string | null
+          id: string
+          owner_id: string | null
+          status: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string | null
+          id?: string
+          owner_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string | null
+          id?: string
+          owner_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_profiles_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_subcategories: {
         Row: {
           business_id: string

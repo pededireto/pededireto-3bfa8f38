@@ -181,7 +181,7 @@ const UserLogin = () => {
 
         <p className="text-center text-sm text-muted-foreground mt-6">
           Não tens conta?{" "}
-          <Link to="/registar" className="text-primary hover:underline">
+          <Link to="/register" className="text-primary hover:underline">
             Cria uma aqui
           </Link>
         </p>
