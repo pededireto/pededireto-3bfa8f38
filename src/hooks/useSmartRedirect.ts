@@ -47,7 +47,7 @@ export function useSmartRedirect(user: any, loading?: boolean) {
         }
 
         // COMERCIAL
-        if (ctx.role === "comercial" || ctx.is_commercial) {
+        if (ctx.role === "commercial" || ctx.is_commercial) {
           if (location.pathname !== "/comercial") {
             navigate("/comercial", { replace: true });
           }
