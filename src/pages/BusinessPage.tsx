@@ -118,6 +118,18 @@ const BusinessPage = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       
+      {/* DEBUG BANNER - REMOVE DEPOIS */}
+      <div className="bg-yellow-500 text-black p-4">
+        <div className="container">
+          <p><strong>DEBUG INFO:</strong></p>
+          <p>Business ID: {business.id}</p>
+          <p>Claim Status: {business.claim_status || 'undefined'}</p>
+          <p>Owner ID: {business.owner_id || 'NULL'}</p>
+          <p>User ID: {user?.id || 'not logged in'}</p>
+          <p>Is Owner: {userIsOwner ? 'YES' : 'NO'}</p>
+        </div>
+      </div>
+      
       {/* Banner for associated user */}
       {userIsOwner && business.claim_status === "verified" && (
         <div className="bg-primary/10 border-b border-primary/20">
