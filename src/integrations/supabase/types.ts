@@ -2774,6 +2774,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_business_member: { Args: { p_business_id: string }; Returns: boolean }
       is_commercial: { Args: never; Returns: boolean }
       match_request_to_businesses: {
         Args: { p_request_id: string }
