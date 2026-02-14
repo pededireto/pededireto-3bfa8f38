@@ -4,12 +4,14 @@ import { Menu, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useBusinessByUser } from "@/hooks/useBusinessDashboard";
+import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import BusinessSidebar, { BusinessTab } from "@/components/business/BusinessSidebar";
 import BusinessDashboardOverview from "@/components/business/BusinessDashboardOverview";
 import BusinessRequestsContent from "@/components/business/BusinessRequestsContent";
 import BusinessNotificationsContent from "@/components/business/BusinessNotificationsContent";
 import BusinessPlanContent from "@/components/business/BusinessPlanContent";
 import BusinessInsightsContent from "@/components/business/BusinessInsightsContent";
+import TeamSection from "@/components/business/TeamSection";
 
 const BusinessDashboard = () => {
   const [activeTab, setActiveTab] = useState<BusinessTab>("overview");
@@ -43,6 +45,7 @@ const BusinessDashboard = () => {
       case "notifications": return <BusinessNotificationsContent businessId={business.id} />;
       case "insights": return <BusinessInsightsContent businessId={business.id} planId={business.plan_id} />;
       case "plan": return <BusinessPlanContent business={business} />;
+      case "team": return <TeamSection businessId={business.id} />;
       default: return null;
     }
   };

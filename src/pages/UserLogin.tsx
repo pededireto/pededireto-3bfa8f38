@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
+import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,8 @@ const loginSchema = z.object({
 
 const UserLogin = () => {
   const navigate = useNavigate();
-  const { signIn, isAdmin } = useAuth();
+  const { signIn, user, isAdmin, isSuperAdmin, isCommercial } = useAuth();
+  const { data: membership } = useBusinessMembership();
   const { toast } = useToast();
 
   const [email, setEmail] = useState("");
@@ -23,6 +25,24 @@ const UserLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [loginSuccess, setLoginSuccess] = useState(false);
+
+  // Smart redirect after login
+  useEffect(() => {
+    if (!loginSuccess || !user) return;
+    const timer = setTimeout(() => {
+      if (isAdmin || isSuperAdmin) {
+        navigate("/admin", { replace: true });
+      } else if (isCommercial) {
+        navigate("/comercial", { replace: true });
+      } else if (membership?.business_id) {
+        navigate("/business-dashboard", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [loginSuccess, user, isAdmin, isSuperAdmin, isCommercial, membership]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +81,7 @@ const UserLogin = () => {
           title: "Login efetuado",
           description: "Bem-vindo de volta!",
         });
-        navigate("/dashboard");
+        setLoginSuccess(true);
       }
     } finally {
       setIsLoading(false);

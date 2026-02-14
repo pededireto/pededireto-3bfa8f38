@@ -9,17 +9,40 @@ export const useBusinessByUser = () => {
   return useQuery({
     queryKey: ["business-by-user", user?.id],
     queryFn: async () => {
-      if (!user?.email) return null;
-      const { data, error } = await supabase
-        .from("businesses")
-        .select(`*, categories(id, name, slug, icon), subcategories(id, name, slug)`)
-        .eq("owner_email", user.email)
+      if (!user) return null;
+
+      // First try via business_users table (claim flow)
+      const { data: buData } = await supabase
+        .from("business_users")
+        .select("business_id")
+        .eq("user_id", user.id)
+        .limit(1)
         .maybeSingle();
 
-      if (error) throw error;
-      return data as unknown as BusinessWithCategory | null;
+      if (buData?.business_id) {
+        const { data, error } = await supabase
+          .from("businesses")
+          .select(`*, categories(id, name, slug, icon), subcategories(id, name, slug)`)
+          .eq("id", buData.business_id)
+          .maybeSingle();
+
+        if (!error && data) return data as unknown as BusinessWithCategory;
+      }
+
+      // Fallback to owner_email match
+      if (user.email) {
+        const { data, error } = await supabase
+          .from("businesses")
+          .select(`*, categories(id, name, slug, icon), subcategories(id, name, slug)`)
+          .eq("owner_email", user.email)
+          .maybeSingle();
+
+        if (!error && data) return data as unknown as BusinessWithCategory;
+      }
+
+      return null;
     },
-    enabled: !!user?.email,
+    enabled: !!user,
   });
 };
 

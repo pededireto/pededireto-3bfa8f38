@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Loader2 } from "lucide-react";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import { useAllBusinesses } from "@/hooks/useBusinesses";
 import { useAllCategories } from "@/hooks/useCategories";
 import { useSuggestions } from "@/hooks/useSuggestions";
@@ -103,13 +104,16 @@ const AdminPage = () => {
         <Link to="/" className="text-lg font-bold text-primary">
           Pede Direto
         </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          <NotificationBell targetRole="admin" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </div>
 
       <div className="flex">

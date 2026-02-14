@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Loader2 } from "lucide-react";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import { useAllBusinesses } from "@/hooks/useBusinesses";
 import { useAllCategories } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
@@ -45,9 +46,12 @@ const CommercialPage = () => {
     <div className="min-h-screen bg-background">
       <div className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card">
         <Link to="/" className="text-lg font-bold text-primary">Pede Direto</Link>
-        <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          <NotificationBell targetRole="commercial" />
+          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </div>
 
       <div className="flex">

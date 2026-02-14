@@ -21,6 +21,8 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminRegister from "./pages/AdminRegister";
 import UserLogin from "./pages/UserLogin";
 import UserRegister from "./pages/UserRegister";
+import RegisterChoice from "./pages/RegisterChoice";
+import ClaimBusiness from "./pages/ClaimBusiness";
 import UserDashboard from "./pages/UserDashboard";
 import InstitutionalPage from "./pages/InstitutionalPage";
 import RegisterBusiness from "./pages/RegisterBusiness";
@@ -77,7 +79,9 @@ const App = () => {
                   <Route path="/pagina/:slug" element={<InstitutionalPage />} />
                   <Route path="/registar-negocio" element={<RegisterBusiness />} />
                   <Route path="/login" element={<UserLogin />} />
-                  <Route path="/registar" element={<UserRegister />} />
+                  <Route path="/registar" element={<RegisterChoice />} />
+                  <Route path="/registar/consumidor" element={<UserRegister />} />
+                  <Route path="/claim-business" element={<ClaimBusiness />} />
                   <Route path="/dashboard" element={<UserDashboard />} />
                   <Route path="/perfil" element={<ProfilePage />} />
                   <Route path="/admin/login" element={<AdminLogin />} />
