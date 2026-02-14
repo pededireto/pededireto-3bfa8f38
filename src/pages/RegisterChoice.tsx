@@ -31,7 +31,10 @@ const RegisterChoice = () => {
             </button>
 
             <button
-              onClick={() => navigate("/claim-business")}
+              onClick={() => {
+                localStorage.setItem("postLoginRedirect", "/claim-business");
+                navigate("/claim-business");
+              }}
               className="w-full flex items-center gap-4 p-5 rounded-xl border-2 border-border bg-card hover:border-accent hover:bg-accent/5 transition-all text-left group"
             >
               <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 group-hover:bg-accent/20 transition-colors">

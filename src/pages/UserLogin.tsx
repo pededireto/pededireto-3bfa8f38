@@ -27,10 +27,27 @@ const UserLogin = () => {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loginSuccess, setLoginSuccess] = useState(false);
 
+  // On mount, read ?redirect= query param and store in localStorage
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+    if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+      localStorage.setItem("postLoginRedirect", redirect);
+    }
+  }, []);
+
   // Smart redirect after login
   useEffect(() => {
     if (!loginSuccess || !user) return;
     const timer = setTimeout(() => {
+      // Check for stored post-login redirect intent
+      const postRedirect = localStorage.getItem("postLoginRedirect");
+      if (postRedirect && postRedirect.startsWith("/") && !postRedirect.startsWith("//")) {
+        localStorage.removeItem("postLoginRedirect");
+        navigate(postRedirect, { replace: true });
+        return;
+      }
+
       if (isAdmin || isSuperAdmin) {
         navigate("/admin", { replace: true });
       } else if (isCommercial) {
