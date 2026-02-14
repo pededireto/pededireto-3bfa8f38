@@ -96,10 +96,10 @@ const ClaimBusiness = () => {
           <h2 className="text-xl font-semibold text-foreground mb-2">Reclamar Negócio</h2>
           <p className="text-muted-foreground mb-6">Precisas de ter uma conta para reclamar o teu negócio.</p>
           <div className="space-y-3">
-            <Link to="/registar/consumidor">
+            <Link to="/registar/consumidor" onClick={() => localStorage.setItem("postLoginRedirect", "/claim-business")}>
               <Button className="w-full btn-cta-primary">Criar Conta</Button>
             </Link>
-            <Link to="/login">
+            <Link to="/login" onClick={() => localStorage.setItem("postLoginRedirect", "/claim-business")}>
               <Button variant="outline" className="w-full">Já tenho conta — Entrar</Button>
             </Link>
           </div>

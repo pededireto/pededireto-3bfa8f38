@@ -89,7 +89,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, metadata?: { full_name?: string; phone?: string }) => {
-    const redirectUrl = `${window.location.origin}/`;
+    const postRedirect = localStorage.getItem("postLoginRedirect");
+    const isValidRedirect = postRedirect && postRedirect.startsWith("/") && !postRedirect.startsWith("//");
+    const redirectUrl = isValidRedirect
+      ? `${window.location.origin}/login?redirect=${encodeURIComponent(postRedirect)}`
+      : `${window.location.origin}/`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
