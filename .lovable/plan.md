@@ -1,50 +1,58 @@
 
-# Corrigir Acesso de Donos de Negocio ao Business Dashboard
+# Corrigir Recursao Infinita nas Politicas RLS
 
-## Problema Identificado
-A query do hook `useBusinessMembership` faz um JOIN com a tabela `businesses`, mas a politica RLS de `businesses` so permite SELECT de negocios com `is_active = true`. O negocio "Delivery Masters" tem `is_active = false` (estado pendente), o que causa um erro 500 no PostgREST e impede o redirect para `/business-dashboard`.
+## Problema
+A politica RLS adicionada na ultima alteracao criou um ciclo de recursao infinita:
+- `businesses` tem uma politica que consulta `business_users`
+- `business_users` tem uma politica ("Owner can manage team") que faz uma sub-consulta na propria tabela `business_users`
+- O PostgREST avalia as politicas em cadeia e deteta recursao infinita (erro 42P17)
+- **Resultado**: TODAS as queries a `businesses` falham com erro 500, tornando o site sem negocios visiveis
 
 ## Causa Raiz
-- Tabela `businesses`: politica SELECT para utilizadores normais = `is_active = true`
-- Negocio em estado pendente tem `is_active = false`
-- O JOIN `businesses(id, name, slug)` no hook retorna erro 500
-- Sem dados de membership, o utilizador fica preso no `/dashboard`
+A politica `"Business members can view their own business"` em `businesses` faz `EXISTS (SELECT 1 FROM business_users WHERE ...)`. Quando o Postgres avalia esta sub-consulta, precisa tambem verificar as politicas RLS de `business_users`, que por sua vez referencia `business_users` novamente (politica "Owner can manage team"), criando o loop.
 
 ## Solucao
 
-### 1. Adicionar politica RLS em `businesses` para membros do negocio
-Criar uma nova politica SELECT que permita utilizadores com registo em `business_users` verem o seu proprio negocio, independentemente do estado `is_active`.
+### 1. Remover a politica problematica
+Eliminar a politica `"Business members can view their own business"` que causa a recursao.
 
+### 2. Criar funcao SECURITY DEFINER
+Criar uma funcao `is_business_member(business_id uuid)` com `SECURITY DEFINER` que ignora RLS ao consultar `business_users`. Isto quebra o ciclo de recursao.
+
+```sql
+CREATE OR REPLACE FUNCTION public.is_business_member(p_business_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM business_users
+    WHERE business_id = p_business_id
+    AND user_id = auth.uid()
+  )
+$$;
+```
+
+### 3. Recriar a politica usando a funcao
 ```sql
 CREATE POLICY "Business members can view their own business"
 ON businesses FOR SELECT TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM business_users
-    WHERE business_users.business_id = businesses.id
-    AND business_users.user_id = auth.uid()
-  )
-);
+USING (public.is_business_member(id));
 ```
 
-### 2. Tornar o hook mais resiliente (fallback sem JOIN)
-Alterar `useBusinessMembership` para que, caso a query com JOIN falhe, tente uma query simples sem o JOIN. Isto garante que o redirect funcione mesmo que haja problemas com RLS.
-
-```text
-useBusinessMembership.ts:
-  - Tentar query com JOIN (comportamento atual)
-  - Se falhar (catch), fazer query simples: business_id, role apenas
-  - O redirect so precisa de business_id, nao precisa do nome/slug
-```
+A funcao `SECURITY DEFINER` executa com permissoes do criador (superuser), ignorando as politicas RLS de `business_users` e eliminando a recursao.
 
 ## Ficheiros a Modificar
 
 | Ficheiro | Alteracao |
 |----------|-----------|
-| Nova migracao SQL | Adicionar politica RLS para membros do negocio verem o seu negocio |
-| `src/hooks/useBusinessMembership.ts` | Adicionar fallback sem JOIN em caso de erro |
+| Nova migracao SQL | Drop politica antiga, criar funcao SECURITY DEFINER, recriar politica |
+
+Nenhum ficheiro de codigo precisa de ser alterado -- o hook `useBusinessMembership.ts` com fallback ja esta correto.
 
 ## Impacto
-- Donos com negocios pendentes/inativos conseguem aceder ao `/business-dashboard`
-- Sem impacto em utilizadores normais (a politica `is_active = true` continua a funcionar)
-- A nova politica RLS e segura: so permite ver negocios onde o utilizador esta na tabela `business_users`
+- Corrige imediatamente o erro 500 em todas as queries de negocios
+- Restaura a visibilidade publica de todos os negocios ativos
+- Mantem o acesso de donos a negocios inativos/pendentes
+- Sem risco de seguranca: a funcao apenas verifica se o utilizador esta associado ao negocio
