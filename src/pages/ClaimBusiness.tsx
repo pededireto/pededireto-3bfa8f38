@@ -44,6 +44,26 @@ const ClaimBusiness = () => {
   const { claim, isLoading: isClaiming } = useClaimBusiness();
   const { data: categories = [] } = useCategories();
 
+  // Auto-claim saved business after email verification + login
+  useEffect(() => {
+    const savedBusinessId = localStorage.getItem("claimedBusinessId");
+    if (!savedBusinessId || !user || membershipLoading) return;
+    if (membership?.business_id) {
+      localStorage.removeItem("claimedBusinessId");
+      navigate("/business-dashboard", { replace: true });
+      return;
+    }
+    // Auto-claim
+    (async () => {
+      localStorage.removeItem("claimedBusinessId");
+      const { error } = await claim(savedBusinessId);
+      if (!error) {
+        toast({ title: "Negócio reclamado!", description: "O seu pedido está em validação." });
+        navigate("/business-dashboard", { replace: true });
+      }
+    })();
+  }, [user, membershipLoading]);
+
   // Authenticated user claims directly
   const handleClaim = async () => {
     if (!selectedBusiness || !user) return;

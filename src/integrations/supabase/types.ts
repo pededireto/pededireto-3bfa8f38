@@ -2774,12 +2774,10 @@ export type Database = {
         Returns: Json
       }
       auto_reject_old_claims: { Args: never; Returns: undefined }
-      claim_business:
-        | { Args: { p_business_id: string }; Returns: undefined }
-        | {
-            Args: { p_business_id: string; p_claim_message?: string }
-            Returns: Json
-          }
+      claim_business: {
+        Args: { p_business_id: string; p_claim_message?: string }
+        Returns: Json
+      }
       create_revenue_event: {
         Args: {
           p_amount: number
