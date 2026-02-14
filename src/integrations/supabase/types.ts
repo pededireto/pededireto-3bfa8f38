@@ -192,6 +192,65 @@ export type Database = {
           },
         ]
       }
+      business_claim_requests: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_claim_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_claim_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_claim_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_claim_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_commercial_assignments: {
         Row: {
           assigned_at: string
@@ -359,6 +418,61 @@ export type Database = {
             columns: ["subcategory_id"]
             isOneToOne: false
             referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_invites: {
+        Row: {
+          accepted: boolean
+          accepted_at: string | null
+          business_id: string
+          created_at: string
+          email: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["business_role"]
+        }
+        Insert: {
+          accepted?: boolean
+          accepted_at?: string | null
+          business_id: string
+          created_at?: string
+          email: string
+          id?: string
+          invited_by: string
+          role?: Database["public"]["Enums"]["business_role"]
+        }
+        Update: {
+          accepted?: boolean
+          accepted_at?: string | null
+          business_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["business_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_invites_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_invites_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -551,6 +665,52 @@ export type Database = {
           },
         ]
       }
+      business_users: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["business_role"]
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["business_role"]
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["business_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_users_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_users_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           activated_at: string | null
@@ -558,6 +718,9 @@ export type Database = {
           alcance: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id: string | null
           city: string | null
+          claimed: boolean
+          claimed_at: string | null
+          claimed_by: string | null
           commercial_status: Database["public"]["Enums"]["commercial_status_tipo"]
           contacted_at: string | null
           conversion_date: string | null
@@ -610,6 +773,9 @@ export type Database = {
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id?: string | null
           city?: string | null
+          claimed?: boolean
+          claimed_at?: string | null
+          claimed_by?: string | null
           commercial_status?: Database["public"]["Enums"]["commercial_status_tipo"]
           contacted_at?: string | null
           conversion_date?: string | null
@@ -662,6 +828,9 @@ export type Database = {
           alcance?: Database["public"]["Enums"]["alcance_tipo"] | null
           category_id?: string | null
           city?: string | null
+          claimed?: boolean
+          claimed_at?: string | null
+          claimed_by?: string | null
           commercial_status?: Database["public"]["Enums"]["commercial_status_tipo"]
           contacted_at?: string | null
           conversion_date?: string | null
@@ -714,6 +883,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1314,6 +1490,54 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internal_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          related_business_id: string | null
+          target_role: string
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          related_business_id?: string | null
+          target_role: string
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          related_business_id?: string | null
+          target_role?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_notifications_related_business_id_fkey"
+            columns: ["related_business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_notifications_related_business_id_fkey"
+            columns: ["related_business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
             referencedColumns: ["id"]
           },
         ]
@@ -2433,6 +2657,7 @@ export type Database = {
       }
     }
     Functions: {
+      claim_business: { Args: { p_business_id: string }; Returns: undefined }
       create_revenue_event: {
         Args: {
           p_amount: number
@@ -2519,6 +2744,17 @@ export type Database = {
               urgency_level: number
             }[]
           }
+      search_businesses_for_claim: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: {
+          category_id: string
+          city: string
+          id: string
+          name: string
+        }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
@@ -2530,6 +2766,7 @@ export type Database = {
         | "super_admin"
         | "cs"
         | "onboarding"
+      business_role: "owner" | "manager" | "staff"
       commercial_status_tipo:
         | "nao_contactado"
         | "contactado"
@@ -2689,6 +2926,7 @@ export const Constants = {
         "cs",
         "onboarding",
       ],
+      business_role: ["owner", "manager", "staff"],
       commercial_status_tipo: [
         "nao_contactado",
         "contactado",
