@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Inbox, Bell, CreditCard, ExternalLink, LogOut, TrendingUp, Users } from "lucide-react";
+import { LayoutDashboard, Inbox, Bell, CreditCard, ExternalLink, LogOut, TrendingUp, Users, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
+import { Badge } from "@/components/ui/badge";
 
 export type BusinessTab = "overview" | "requests" | "notifications" | "plan" | "insights" | "team";
 
@@ -12,9 +13,14 @@ interface BusinessSidebarProps {
   setActiveTab: (tab: BusinessTab) => void;
   setSidebarOpen: (open: boolean) => void;
   businessId: string;
+  claimStatus?: string;
+  canViewInsights?: boolean;
+  canViewRequests?: boolean;
+  canViewTeam?: boolean;
+  isFreePlan?: boolean;
 }
 
-const items: { id: BusinessTab; label: string; icon: React.ElementType }[] = [
+const allItems: { id: BusinessTab; label: string; icon: React.ElementType }[] = [
   { id: "overview", label: "Dashboard", icon: LayoutDashboard },
   { id: "requests", label: "Pedidos", icon: Inbox },
   { id: "notifications", label: "Notificações", icon: Bell },
@@ -23,9 +29,31 @@ const items: { id: BusinessTab; label: string; icon: React.ElementType }[] = [
   { id: "plan", label: "O Meu Plano", icon: CreditCard },
 ];
 
-const BusinessSidebar = ({ businessName, activeTab, setActiveTab, setSidebarOpen, businessId }: BusinessSidebarProps) => {
+const BusinessSidebar = ({
+  businessName,
+  activeTab,
+  setActiveTab,
+  setSidebarOpen,
+  businessId,
+  claimStatus = "verified",
+  canViewInsights = true,
+  canViewRequests = true,
+  canViewTeam = true,
+  isFreePlan = false,
+}: BusinessSidebarProps) => {
   const { signOut } = useAuth();
   const { data: unreadCount = 0 } = useUnreadNotificationsCount(businessId);
+
+  const isPending = claimStatus === "pending";
+
+  const visibleItems = allItems.filter((item) => {
+    if (isPending) {
+      return item.id === "overview" || item.id === "notifications";
+    }
+    if (item.id === "requests" && !canViewRequests) return false;
+    if (item.id === "team" && !canViewTeam) return false;
+    return true;
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -36,7 +64,7 @@ const BusinessSidebar = ({ businessName, activeTab, setActiveTab, setSidebarOpen
         </Link>
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <button
             key={item.id}
             onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
@@ -51,6 +79,11 @@ const BusinessSidebar = ({ businessName, activeTab, setActiveTab, setSidebarOpen
               <span className="ml-auto bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
                 {unreadCount}
               </span>
+            )}
+            {item.id === "insights" && isFreePlan && (
+              <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0">
+                <Lock className="h-3 w-3 mr-0.5" /> Pro
+              </Badge>
             )}
           </button>
         ))}
