@@ -1017,6 +1017,54 @@ export type Database = {
         }
         Relationships: []
       }
+      claim_audit_log: {
+        Row: {
+          action: string
+          admin_notes: string | null
+          business_id: string
+          created_at: string
+          id: string
+          new_status: string | null
+          performed_by: string
+          previous_status: string | null
+        }
+        Insert: {
+          action: string
+          admin_notes?: string | null
+          business_id: string
+          created_at?: string
+          id?: string
+          new_status?: string | null
+          performed_by: string
+          previous_status?: string | null
+        }
+        Update: {
+          action?: string
+          admin_notes?: string | null
+          business_id?: string
+          created_at?: string
+          id?: string
+          new_status?: string | null
+          performed_by?: string
+          previous_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_audit_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_audit_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_commissions: {
         Row: {
           adjustment_type: string | null
