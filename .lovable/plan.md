@@ -1,62 +1,87 @@
 
 
-# Fix: Business Owner Redirect After Claim Approval
+# Fix Analytics Architecture
 
-## Root Cause
+## Summary
 
-The user `tabernadoborges@gmail.com` was approved as owner of "Sanipol Canalizacao" but **has no row in `business_users`**. The database confirms:
+The analytics system is broken due to event type mismatches in the database RPC, missing RLS policies for business owners, and an unused empty table. This fix will make business owners see their real stats.
 
-- `businesses.claim_status = 'verified'` (approved)
-- `businesses.claim_requested_by` is set
-- `business_users` table: **EMPTY** for this user/business combo
+## What Will Change
 
-This means the claim was approved but the `admin_approve_claim` function did an `UPDATE` on a `business_users` row that didn't exist (0 rows matched). The `claim_business` RPC does insert a `pending_owner` row, but if the claim was submitted before that RPC existed, or the insert failed silently, the row is missing -- and the approve function silently updates nothing.
+### For Business Owners
+- The dashboard overview will show real **Views** and **Contacts** counts from the last 30 days
+- The Insights page (paid plans) will show correct trend charts with real data instead of zeros
 
-## Why the User Lands on /dashboard
+### For Admins
+- No changes needed -- admin analytics already work via the existing `is_admin()` RLS policy
 
-The `get_user_context` RPC checks `business_users` to find the user's business. No row = no business = consumer = `/dashboard`.
+---
 
-## Fix Plan
+## Technical Changes
 
-### 1. Database: Make `admin_approve_claim` resilient (INSERT if UPDATE matches 0 rows)
+### 1. Database Migration
 
-After the `UPDATE business_users SET role = 'owner'`, check if the row was actually updated. If not, INSERT a new row as `owner` directly. This prevents this problem from ever happening again.
+**Fix the `get_business_intelligence` RPC** to use correct event types:
+- `impression` changed to `view`
+- `click` changed to `event_type LIKE 'click_%'`
+- `search` changed to query from `search_logs` table (which has the actual search data)
 
-```text
-UPDATE business_users SET role = 'owner'
-WHERE business_id = p_business_id 
-  AND user_id = v_claim_user 
-  AND role = 'pending_owner';
-
--- If no pending_owner row existed, create the owner row
-IF NOT FOUND THEN
-  INSERT INTO business_users (business_id, user_id, role)
-  VALUES (p_business_id, v_claim_user, 'owner')
-  ON CONFLICT (business_id, user_id) DO UPDATE SET role = 'owner';
-END IF;
+**Add RLS policy on `analytics_events`** for business owners:
+```
+Policy: "Business owners can view own analytics"
+ON analytics_events FOR SELECT TO authenticated
+USING (
+  business_id IN (
+    SELECT business_id FROM business_users
+    WHERE user_id = auth.uid()
+  )
+)
 ```
 
-### 2. Database: Fix the existing data for Sanipol
+**Drop the empty `business_analytics_events` table** (0 rows, unused).
 
-Insert the missing `business_users` row for `tabernadoborges@gmail.com` as `owner` of "Sanipol Canalizacao".
+### 2. New Hook: `useBusinessAnalytics`
 
-### 3. Frontend: Make UserDashboard redirect more robust
+A lightweight hook that queries `analytics_events` directly (RLS filters automatically) to return:
+- Total views (last 30 days)
+- Total contacts (all click types combined)
+- Breakdown by click type (WhatsApp, phone, website, email)
 
-The `UserDashboard` page already has a redirect to `/business-dashboard` if `membership?.business_id` exists. This will work once the database row is fixed. No frontend changes needed.
+This works for ALL verified owners regardless of plan (basic visibility).
 
-## Technical Summary
+### 3. Update `BusinessDashboardOverview.tsx`
 
-| Item | Action |
+Add two new cards to the overview grid:
+- **Visualizacoes** -- total page views in last 30 days
+- **Contactos** -- total clicks (phone + WhatsApp + website + email) in last 30 days
+
+The grid changes from 4 columns to 6 (or wraps on mobile).
+
+### 4. Update `BusinessInsightsContent.tsx`
+
+The "basic access" section (free plan) will show real numbers from the new hook instead of dashes, giving free-plan owners actual basic stats while keeping the Pro analytics (trends, CTR, position) behind the paywall.
+
+---
+
+## Files Changed
+
+| File | Action |
 |------|--------|
-| Migration: Fix `admin_approve_claim` | Add INSERT fallback when UPDATE matches 0 rows |
-| Data fix: Sanipol | Insert `business_users` row (user `18a487de...`, business `5adab599...`, role `owner`) |
-| Frontend | No changes needed -- redirect logic already correct |
+| `supabase/migrations/...` | New migration: fix RPC, add RLS, drop unused table |
+| `src/hooks/useBusinessAnalytics.ts` | **New file**: lightweight analytics hook |
+| `src/components/business/BusinessDashboardOverview.tsx` | Add Views + Contacts cards |
+| `src/components/business/BusinessInsightsContent.tsx` | Show real basic stats for free plans |
 
-## Expected Result
+## Data Flow After Fix
 
-After the fix:
-- `tabernadoborges@gmail.com` logs in
-- `get_user_context` finds the `business_users` row, returns `business_id`
-- `useSmartRedirect` sends user to `/business-dashboard`
-- Future claim approvals will always create the `business_users` row, even if the pending_owner row was missing
+```text
+BusinessPage visit -> INSERT analytics_events (event_type='view')
+Contact click      -> INSERT analytics_events (event_type='click_phone', etc.)
+                              |
+               +--------------+--------------+
+               |                             |
+         Admin Dashboard              Business Dashboard
+         RLS: is_admin()              RLS: business_id IN (my businesses)
+         Sees ALL events              Sees OWN events only
+```
 
