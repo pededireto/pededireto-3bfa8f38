@@ -180,48 +180,6 @@ export type Database = {
         }
         Relationships: []
       }
-      business_analytics_events: {
-        Row: {
-          business_id: string
-          created_at: string | null
-          event_type: string
-          id: string
-          search_log_id: string | null
-          user_city: string | null
-        }
-        Insert: {
-          business_id: string
-          created_at?: string | null
-          event_type: string
-          id?: string
-          search_log_id?: string | null
-          user_city?: string | null
-        }
-        Update: {
-          business_id?: string
-          created_at?: string | null
-          event_type?: string
-          id?: string
-          search_log_id?: string | null
-          user_city?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "business_analytics_events_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "business_analytics_events_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "commercial_alerts_view"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       business_claim_requests: {
         Row: {
           business_id: string
@@ -2729,31 +2687,6 @@ export type Database = {
         }
         Relationships: []
       }
-      view_business_performance: {
-        Row: {
-          business_id: string | null
-          ctr: number | null
-          impressions: number | null
-          profile_views: number | null
-          total_clicks: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "business_analytics_events_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "business_analytics_events_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "commercial_alerts_view"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       view_no_result_opportunities: {
         Row: {
           frequency: number | null
@@ -2852,6 +2785,14 @@ export type Database = {
       }
       get_business_intelligence: {
         Args: { p_business_id: string; p_days?: number }
+        Returns: Json
+      }
+      get_business_metrics_basic: {
+        Args: { p_business_id: string }
+        Returns: Json
+      }
+      get_business_metrics_pro: {
+        Args: { p_business_id: string }
         Returns: Json
       }
       get_unlinked_businesses: {
@@ -2957,6 +2898,10 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      track_business_event: {
+        Args: { p_business_id: string; p_event_type: string; p_metadata?: Json }
+        Returns: undefined
+      }
       unaccent: { Args: { "": string }; Returns: string }
       update_business_full: {
         Args: {

@@ -2,8 +2,9 @@ import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { useBusinessRequests } from "@/hooks/useBusinessDashboard";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
+import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { Badge } from "@/components/ui/badge";
-import { Building2, CreditCard, Inbox, Bell } from "lucide-react";
+import { Building2, CreditCard, Inbox, Bell, Eye, MousePointerClick } from "lucide-react";
 
 interface Props { business: BusinessWithCategory; }
 
@@ -11,6 +12,7 @@ const BusinessDashboardOverview = ({ business }: Props) => {
   const { data: plans = [] } = useCommercialPlans(true);
   const { data: requests = [] } = useBusinessRequests(business.id);
   const { data: unreadCount = 0 } = useUnreadNotificationsCount(business.id);
+  const { data: analytics } = useBusinessAnalytics(business.id);
   const plan = plans.find((p) => p.id === business.plan_id);
 
   return (
@@ -20,7 +22,28 @@ const BusinessDashboardOverview = ({ business }: Props) => {
         <p className="text-muted-foreground">Bem-vindo, {business.name}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-card rounded-xl p-5 shadow-card">
+          <div className="flex items-center gap-3 mb-2">
+            <Eye className="h-5 w-5 text-primary" />
+            <span className="text-sm text-muted-foreground">Visualizações (30d)</span>
+          </div>
+          <p className="text-2xl font-bold">{analytics?.views ?? "—"}</p>
+        </div>
+
+        <div className="bg-card rounded-xl p-5 shadow-card">
+          <div className="flex items-center gap-3 mb-2">
+            <MousePointerClick className="h-5 w-5 text-primary" />
+            <span className="text-sm text-muted-foreground">Contactos (30d)</span>
+          </div>
+          <p className="text-2xl font-bold">{analytics?.totalContacts ?? "—"}</p>
+          {analytics && analytics.totalContacts > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              📞{analytics.breakdown.phone} · 💬{analytics.breakdown.whatsapp} · 🌐{analytics.breakdown.website} · ✉️{analytics.breakdown.email}
+            </p>
+          )}
+        </div>
+
         <div className="bg-card rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-3 mb-2">
             <CreditCard className="h-5 w-5 text-primary" />

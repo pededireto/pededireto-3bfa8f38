@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2, TrendingUp, Lock } from "lucide-react";
 import { useBusinessIntelligence } from "@/hooks/useBusinessIntelligence";
+import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
 import DateRangeFilter from "@/components/intelligence/DateRangeFilter";
 import BusinessPerformanceCard from "@/components/intelligence/BusinessPerformanceCard";
@@ -16,6 +17,7 @@ interface BusinessInsightsContentProps {
 const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" }: BusinessInsightsContentProps) => {
   const [days, setDays] = useState(30);
   const { data: planRule, isLoading: ruleLoading } = usePlanRuleByPlanId(planId);
+  const { data: analytics } = useBusinessAnalytics(claimStatus === "verified" ? businessId : null, days);
 
   const isVerified = claimStatus === "verified";
   const hasProAccess = !!(planRule as any)?.allow_analytics_pro;
@@ -65,18 +67,18 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-card rounded-xl p-5 shadow-card">
               <p className="text-sm text-muted-foreground">Visualizações</p>
-              <p className="text-2xl font-bold">—</p>
-              <p className="text-xs text-muted-foreground mt-1">Disponível em breve</p>
+              <p className="text-2xl font-bold">{analytics?.views ?? 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">Últimos {days} dias</p>
             </div>
             <div className="bg-card rounded-xl p-5 shadow-card">
-              <p className="text-sm text-muted-foreground">Cliques Telefone</p>
-              <p className="text-2xl font-bold">—</p>
-              <p className="text-xs text-muted-foreground mt-1">Disponível em breve</p>
+              <p className="text-sm text-muted-foreground">Contactos</p>
+              <p className="text-2xl font-bold">{analytics?.totalContacts ?? 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">📞{analytics?.breakdown.phone ?? 0} · 💬{analytics?.breakdown.whatsapp ?? 0}</p>
             </div>
             <div className="bg-card rounded-xl p-5 shadow-card">
               <p className="text-sm text-muted-foreground">Cliques Website</p>
-              <p className="text-2xl font-bold">—</p>
-              <p className="text-xs text-muted-foreground mt-1">Disponível em breve</p>
+              <p className="text-2xl font-bold">{analytics?.breakdown.website ?? 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">✉️ Email: {analytics?.breakdown.email ?? 0}</p>
             </div>
           </div>
         )}
