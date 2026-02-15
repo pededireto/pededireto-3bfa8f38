@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Download, Pencil, Power } from "lucide-react";
+import { Plus, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Download, Pencil, Power, CheckSquare } from "lucide-react";
 import ContactLogsDialog from "@/components/admin/ContactLogsDialog";
 import BusinessFileCard from "@/components/admin/BusinessFileCard";
 import ImportBySourceDialog from "@/components/admin/ImportBySourceDialog";
@@ -51,6 +52,10 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const [importResults, setImportResults] = useState<{ success: number; errors: string[] } | null>(null);
   const [importing, setImporting] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<BusinessWithCategory | null>(null);
+  
+  // BULK ACTIONS STATE
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   const resetForm = () => {
     setEditingBusiness(null);
@@ -83,6 +88,80 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     }
   };
 
+  // BULK ACTIONS
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredBusinesses.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredBusinesses.map(b => b.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const handleBulkActivate = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Ativar ${selectedIds.size} negócios selecionados?`)) return;
+    
+    setIsBulkProcessing(true);
+    let success = 0;
+    let errors = 0;
+
+    for (const id of selectedIds) {
+      try {
+        await supabase.from('businesses').update({ is_active: true }).eq('id', id);
+        success++;
+      } catch {
+        errors++;
+      }
+    }
+
+    setIsBulkProcessing(false);
+    setSelectedIds(new Set());
+    toast({ 
+      title: `${success} negócios ativados`, 
+      description: errors > 0 ? `${errors} erros` : undefined 
+    });
+    
+    // Force refresh
+    window.location.reload();
+  };
+
+  const handleBulkDeactivate = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Desativar ${selectedIds.size} negócios selecionados?`)) return;
+    
+    setIsBulkProcessing(true);
+    let success = 0;
+    let errors = 0;
+
+    for (const id of selectedIds) {
+      try {
+        await supabase.from('businesses').update({ is_active: false }).eq('id', id);
+        success++;
+      } catch {
+        errors++;
+      }
+    }
+
+    setIsBulkProcessing(false);
+    setSelectedIds(new Set());
+    toast({ 
+      title: `${success} negócios desativados`,
+      description: errors > 0 ? `${errors} erros` : undefined 
+    });
+    
+    window.location.reload();
+  };
+
   // Excel import with | separated subcategories
   const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,7 +185,6 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
         try {
           if (!row.name) { errors.push(`Linha ${rowNum}: Nome em falta`); continue; }
 
-          // Find category
           let categoryId: string | null = null;
           if (row.category) {
             const cat = categories.find(c => c.name.toLowerCase() === row.category.toLowerCase());
@@ -114,7 +192,6 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             else { errors.push(`Linha ${rowNum}: Categoria "${row.category}" não encontrada`); continue; }
           }
 
-          // Find subcategories (support | separator)
           const subcategoryIds: string[] = [];
           let primarySubcategoryId: string | null = null;
           const subcatNames = (row.subcategory || row.subcategories || "")
@@ -169,7 +246,6 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
 
           const result = await createBusiness.mutateAsync(businessData);
 
-          // Sync subcategories
           if (subcategoryIds.length > 0 && result.id) {
             await syncSubcategories.mutateAsync({ businessId: result.id, subcategoryIds });
           }
@@ -190,7 +266,6 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     }
   };
 
-  // Excel export
   const handleExcelExport = () => {
     const commercialLabels: Record<string, string> = { nao_contactado: "Não Contactado", contactado: "Contactado", interessado: "Interessado", cliente: "Cliente" };
     const exportData = filteredBusinesses.map((b) => ({
@@ -242,19 +317,14 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* Export */}
           <Button variant="outline" onClick={handleExcelExport}>
             <Download className="h-4 w-4 mr-2" />
             Exportar Excel
           </Button>
 
-          {/* Import by Source */}
           <ImportBySourceDialog />
-
-          {/* Import by Text */}
           <ImportByTextDialog />
 
-          {/* Import Excel */}
           <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -305,7 +375,6 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             </DialogContent>
           </Dialog>
 
-          {/* Add / Edit Business */}
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="btn-cta-primary">
@@ -354,12 +423,55 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
         </Select>
       </div>
 
+      {/* BULK ACTIONS BAR */}
+      {selectedIds.size > 0 && (
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CheckSquare className="h-5 w-5 text-primary" />
+            <span className="font-medium">{selectedIds.size} negócios selecionados</span>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              onClick={handleBulkActivate}
+              disabled={isBulkProcessing}
+              className="bg-success hover:bg-success/90"
+            >
+              {isBulkProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Ativar Selecionados
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={handleBulkDeactivate}
+              disabled={isBulkProcessing}
+            >
+              {isBulkProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Desativar Selecionados
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Limpar
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* List */}
       <div className="bg-card rounded-xl shadow-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
+                <th className="p-4 w-12">
+                  <Checkbox 
+                    checked={selectedIds.size === filteredBusinesses.length && filteredBusinesses.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Negócio</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Categoria</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Subcategoria</th>
@@ -371,6 +483,12 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             <tbody>
               {filteredBusinesses.map((business) => (
                 <tr key={business.id} className="border-t border-border">
+                  <td className="p-4">
+                    <Checkbox 
+                      checked={selectedIds.has(business.id)}
+                      onCheckedChange={() => toggleSelect(business.id)}
+                    />
+                  </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       {business.logo_url ? (
@@ -419,14 +537,13 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                 </tr>
               ))}
               {filteredBusinesses.length === 0 && (
-                <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Nenhum negócio encontrado.</td></tr>
+                <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">Nenhum negócio encontrado.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Total count */}
       <p className="text-sm text-muted-foreground text-right">{filteredBusinesses.length} de {businesses.length} negócios</p>
     </div>
   );
