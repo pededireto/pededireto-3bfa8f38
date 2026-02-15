@@ -1,58 +1,68 @@
 
-# Corrigir Recursao Infinita nas Politicas RLS
+# Fix: Claim Approval Errors and Business Dashboard Access
 
-## Problema
-A politica RLS adicionada na ultima alteracao criou um ciclo de recursao infinita:
-- `businesses` tem uma politica que consulta `business_users`
-- `business_users` tem uma politica ("Owner can manage team") que faz uma sub-consulta na propria tabela `business_users`
-- O PostgREST avalia as politicas em cadeia e deteta recursao infinita (erro 42P17)
-- **Resultado**: TODAS as queries a `businesses` falham com erro 500, tornando o site sem negocios visiveis
+## Problems Found
 
-## Causa Raiz
-A politica `"Business members can view their own business"` em `businesses` faz `EXISTS (SELECT 1 FROM business_users WHERE ...)`. Quando o Postgres avalia esta sub-consulta, precisa tambem verificar as politicas RLS de `business_users`, que por sua vez referencia `business_users` novamente (politica "Owner can manage team"), criando o loop.
+1. **Duplicate database functions**: `admin_approve_claim` and `admin_revoke_claim` each have TWO versions in the database with different parameters. PostgreSQL treats these as overloaded functions, and the older versions insert into `admin_notifications` with types like `claim_approved` -- causing the "Invalid notification type: claim_approved" error shown in the screenshot.
 
-## Solucao
+2. **Parameter mismatch on reject**: The `admin_reject_claim` function expects `p_notes` but the frontend sends `p_admin_notes`, causing the reject action to fail.
 
-### 1. Remover a politica problematica
-Eliminar a politica `"Business members can view their own business"` que causa a recursao.
+3. **Super admin redirect blocks dashboard access**: `useSmartRedirect` always sends super_admins to `/admin`, making it impossible for `tresgate@gmail.com` (super_admin) to access `/business-dashboard` for debugging.
 
-### 2. Criar funcao SECURITY DEFINER
-Criar uma funcao `is_business_member(business_id uuid)` com `SECURITY DEFINER` que ignora RLS ao consultar `business_users`. Isto quebra o ciclo de recursao.
+---
 
-```sql
-CREATE OR REPLACE FUNCTION public.is_business_member(p_business_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM business_users
-    WHERE business_id = p_business_id
-    AND user_id = auth.uid()
-  )
-$$;
+## Fix Plan
+
+### 1. Database: Clean up duplicate RPCs
+
+Drop the old versions (single-parameter) of `admin_approve_claim` and `admin_revoke_claim` that insert into `admin_notifications`. Keep only the newer versions that use `claim_audit_log` and `business_notifications`.
+
+Also recreate `admin_reject_claim` with the correct parameter name (`p_admin_notes` instead of `p_notes`) and add audit logging + business notifications, matching the pattern of the approve function.
+
+Similarly recreate `admin_revoke_claim` to be consistent.
+
+### 2. Frontend: Fix `useSmartRedirect` for super_admin
+
+Allow super_admins to access any dashboard (not just `/admin`). Only redirect if they're on a login page, not if they're already on a valid dashboard route.
+
+### 3. Frontend: Fix `useClaimRequests` parameter names
+
+Ensure `useRejectClaim` sends `p_admin_notes` (matching the updated RPC).
+
+---
+
+## Technical Details
+
+| Component | Issue | Fix |
+|-----------|-------|-----|
+| DB: `admin_approve_claim(uuid)` | Old duplicate, inserts bad notification type | Drop this overload |
+| DB: `admin_revoke_claim(uuid)` | Old duplicate, inserts bad notification type | Drop this overload |
+| DB: `admin_reject_claim` | Parameter `p_notes` vs frontend `p_admin_notes` | Recreate with `p_admin_notes` |
+| `useSmartRedirect.ts` | Super admin always forced to `/admin` | Allow navigation to other dashboards |
+| `useClaimRequests.ts` | `useRejectClaim` sends wrong param name | Update to match new RPC |
+
+### SQL Migration Summary
+
+```text
+-- Drop old overloads
+DROP FUNCTION IF EXISTS public.admin_approve_claim(uuid);
+DROP FUNCTION IF EXISTS public.admin_revoke_claim(uuid);
+
+-- Recreate admin_reject_claim with correct param name + audit log
+DROP FUNCTION IF EXISTS public.admin_reject_claim(uuid, text);
+CREATE OR REPLACE FUNCTION public.admin_reject_claim(
+  p_business_id uuid, p_admin_notes text
+) RETURNS jsonb ...
+
+-- Recreate admin_revoke_claim (clean single version)
+DROP FUNCTION IF EXISTS public.admin_revoke_claim(uuid, text);
+CREATE OR REPLACE FUNCTION public.admin_revoke_claim(
+  p_business_id uuid, p_admin_notes text DEFAULT NULL
+) RETURNS jsonb ...
 ```
 
-### 3. Recriar a politica usando a funcao
-```sql
-CREATE POLICY "Business members can view their own business"
-ON businesses FOR SELECT TO authenticated
-USING (public.is_business_member(id));
-```
+### Frontend Changes
 
-A funcao `SECURITY DEFINER` executa com permissoes do criador (superuser), ignorando as politicas RLS de `business_users` e eliminando a recursao.
+**`useSmartRedirect.ts`**: Super admins only redirect to `/admin` from login pages, not when already on valid routes like `/business-dashboard`.
 
-## Ficheiros a Modificar
-
-| Ficheiro | Alteracao |
-|----------|-----------|
-| Nova migracao SQL | Drop politica antiga, criar funcao SECURITY DEFINER, recriar politica |
-
-Nenhum ficheiro de codigo precisa de ser alterado -- o hook `useBusinessMembership.ts` com fallback ja esta correto.
-
-## Impacto
-- Corrige imediatamente o erro 500 em todas as queries de negocios
-- Restaura a visibilidade publica de todos os negocios ativos
-- Mantem o acesso de donos a negocios inativos/pendentes
-- Sem risco de seguranca: a funcao apenas verifica se o utilizador esta associado ao negocio
+**`useClaimRequests.ts`**: No changes needed -- it already sends `p_admin_notes` correctly. The reject hook sends `p_admin_notes` which will match after the RPC is fixed.
