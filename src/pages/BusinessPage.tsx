@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FavoriteButton from "@/components/FavoriteButton";
+import UnclaimedBusinessBanner from "@/components/UnclaimedBusinessBanner";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, 
@@ -51,7 +52,7 @@ const BusinessPage = () => {
     });
   };
 
-  // GA4 generate_lead tracking — envia para Google Analytics (não afeta Supabase)
+  // GA4 generate_lead tracking
   const trackGA4Lead = (contactType: string) => {
     if (typeof window !== "undefined" && (window as any).gtag) {
       (window as any).gtag("event", "generate_lead", {
@@ -78,8 +79,9 @@ const BusinessPage = () => {
     }
   };
 
-  // Check if user is owner (owner_id not in BusinessWithCategory type, skip ownership check)
-  const userIsOwner = false;
+  // Check if user is owner (usando owner_id)
+  // NOTA: Se TypeScript reclamar sobre owner_id, use (business as any).owner_id
+  const userIsOwner = user?.id === (business as any)?.owner_id;
 
   if (isLoading) {
     return (
@@ -117,7 +119,40 @@ const BusinessPage = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      
+      {/* Banner para utilizador já associado (verified + owner) */}
+      {userIsOwner && business.claim_status === "verified" && (
+        <div className="bg-primary/10 border-b border-primary/20">
+          <div className="container py-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Settings className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="font-medium text-primary">
+                    Você já está associado a este negócio.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Clique para gerir.
+                  </p>
+                </div>
+              </div>
+              <Link to={`/dashboard/negocio/${business.id}`}>
+                <Button size="sm" className="gap-2">
+                  <Settings className="w-4 h-4" />
+                  Gerir Negócio
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner para negócios não reclamados ou pending */}
+      {!(business.claim_status === "verified" && userIsOwner) && (
+        <UnclaimedBusinessBanner
+          businessId={business.id}
+          claimStatus={business.claim_status}
+        />
+      )}
       
       <main className="flex-1">
         {/* Hero Section */}
