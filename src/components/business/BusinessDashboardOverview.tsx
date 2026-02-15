@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { useBusinessRequests } from "@/hooks/useBusinessDashboard";
@@ -9,16 +11,31 @@ import { Building2, CreditCard, Inbox, Bell, Eye, MousePointerClick } from "luci
 interface Props { business: BusinessWithCategory; }
 
 const BusinessDashboardOverview = ({ business }: Props) => {
+  const queryClient = useQueryClient();
   const { data: plans = [] } = useCommercialPlans(true);
   const { data: requests = [] } = useBusinessRequests(business.id);
   const { data: unreadCount = 0 } = useUnreadNotificationsCount(business.id);
-  const { data: analytics } = useBusinessAnalytics(business.id);
+  const { data: analytics, refetch } = useBusinessAnalytics(business.id);
   const plan = plans.find((p) => p.id === business.plan_id);
 
-  // 🔍 DEBUG - ADICIONAR ESTAS 3 LINHAS
+  // Forçar refresh quando business muda
+  useEffect(() => {
+    console.log('🔄 Invalidating cache for business:', business.id);
+    queryClient.invalidateQueries({ queryKey: ["business-analytics", business.id] });
+    
+    // Força refetch depois de 500ms
+    const timer = setTimeout(() => {
+      console.log('🔄 Force refetch analytics');
+      refetch();
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [business.id, queryClient, refetch]);
+
+  // Debug logs
   console.log('🔍 Business ID:', business.id);
-  console.log('🔍 Analytics Data:', analytics);
   console.log('🔍 Business Name:', business.name);
+  console.log('🔍 Analytics Data:', analytics);
 
   return (
     <div className="space-y-6">
@@ -34,6 +51,7 @@ const BusinessDashboardOverview = ({ business }: Props) => {
             <span className="text-sm text-muted-foreground">Visualizações (30d)</span>
           </div>
           <p className="text-2xl font-bold">{analytics?.views ?? "—"}</p>
+          {analytics && <p className="text-xs text-muted-foreground mt-1">Dados carregados</p>}
         </div>
 
         <div className="bg-card rounded-xl p-5 shadow-card">
