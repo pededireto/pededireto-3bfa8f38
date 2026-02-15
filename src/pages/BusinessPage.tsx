@@ -37,14 +37,19 @@ const BusinessPage = () => {
   // Estado para controlar se mostra o formulário de sugestão
   const [showSuggestionForm, setShowSuggestionForm] = useState(false);
 
-  // Hook de navegação entre negócios da mesma categoria
+  // Detectar se há filtro de cidade (do negócio atual ou da URL)
+  // Quando o utilizador vem de uma página filtrada por cidade, usamos essa cidade
+  const cityFilter = business?.city || null;
+
+  // Hook de navegação entre negócios da mesma categoria (com filtro de cidade)
   const {
     previousBusiness,
     nextBusiness,
     isLastBusiness,
     currentPosition,
     totalBusinesses,
-  } = useBusinessNavigation(business?.category_id, slug);
+    hasFilter,
+  } = useBusinessNavigation(business?.category_id, slug, cityFilter);
 
   // Track view on page load
   useEffect(() => {
@@ -427,6 +432,8 @@ const BusinessPage = () => {
         isLastBusiness={isLastBusiness}
         currentPosition={currentPosition}
         totalBusinesses={totalBusinesses}
+        hasFilter={hasFilter}
+        cityFilter={cityFilter}
         onShowSuggestionForm={() => setShowSuggestionForm(true)}
       />
 
