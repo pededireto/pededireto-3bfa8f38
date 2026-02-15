@@ -1,68 +1,62 @@
 
-# Fix: Claim Approval Errors and Business Dashboard Access
 
-## Problems Found
+# Fix: Business Owner Redirect After Claim Approval
 
-1. **Duplicate database functions**: `admin_approve_claim` and `admin_revoke_claim` each have TWO versions in the database with different parameters. PostgreSQL treats these as overloaded functions, and the older versions insert into `admin_notifications` with types like `claim_approved` -- causing the "Invalid notification type: claim_approved" error shown in the screenshot.
+## Root Cause
 
-2. **Parameter mismatch on reject**: The `admin_reject_claim` function expects `p_notes` but the frontend sends `p_admin_notes`, causing the reject action to fail.
+The user `tabernadoborges@gmail.com` was approved as owner of "Sanipol Canalizacao" but **has no row in `business_users`**. The database confirms:
 
-3. **Super admin redirect blocks dashboard access**: `useSmartRedirect` always sends super_admins to `/admin`, making it impossible for `tresgate@gmail.com` (super_admin) to access `/business-dashboard` for debugging.
+- `businesses.claim_status = 'verified'` (approved)
+- `businesses.claim_requested_by` is set
+- `business_users` table: **EMPTY** for this user/business combo
 
----
+This means the claim was approved but the `admin_approve_claim` function did an `UPDATE` on a `business_users` row that didn't exist (0 rows matched). The `claim_business` RPC does insert a `pending_owner` row, but if the claim was submitted before that RPC existed, or the insert failed silently, the row is missing -- and the approve function silently updates nothing.
+
+## Why the User Lands on /dashboard
+
+The `get_user_context` RPC checks `business_users` to find the user's business. No row = no business = consumer = `/dashboard`.
 
 ## Fix Plan
 
-### 1. Database: Clean up duplicate RPCs
+### 1. Database: Make `admin_approve_claim` resilient (INSERT if UPDATE matches 0 rows)
 
-Drop the old versions (single-parameter) of `admin_approve_claim` and `admin_revoke_claim` that insert into `admin_notifications`. Keep only the newer versions that use `claim_audit_log` and `business_notifications`.
-
-Also recreate `admin_reject_claim` with the correct parameter name (`p_admin_notes` instead of `p_notes`) and add audit logging + business notifications, matching the pattern of the approve function.
-
-Similarly recreate `admin_revoke_claim` to be consistent.
-
-### 2. Frontend: Fix `useSmartRedirect` for super_admin
-
-Allow super_admins to access any dashboard (not just `/admin`). Only redirect if they're on a login page, not if they're already on a valid dashboard route.
-
-### 3. Frontend: Fix `useClaimRequests` parameter names
-
-Ensure `useRejectClaim` sends `p_admin_notes` (matching the updated RPC).
-
----
-
-## Technical Details
-
-| Component | Issue | Fix |
-|-----------|-------|-----|
-| DB: `admin_approve_claim(uuid)` | Old duplicate, inserts bad notification type | Drop this overload |
-| DB: `admin_revoke_claim(uuid)` | Old duplicate, inserts bad notification type | Drop this overload |
-| DB: `admin_reject_claim` | Parameter `p_notes` vs frontend `p_admin_notes` | Recreate with `p_admin_notes` |
-| `useSmartRedirect.ts` | Super admin always forced to `/admin` | Allow navigation to other dashboards |
-| `useClaimRequests.ts` | `useRejectClaim` sends wrong param name | Update to match new RPC |
-
-### SQL Migration Summary
+After the `UPDATE business_users SET role = 'owner'`, check if the row was actually updated. If not, INSERT a new row as `owner` directly. This prevents this problem from ever happening again.
 
 ```text
--- Drop old overloads
-DROP FUNCTION IF EXISTS public.admin_approve_claim(uuid);
-DROP FUNCTION IF EXISTS public.admin_revoke_claim(uuid);
+UPDATE business_users SET role = 'owner'
+WHERE business_id = p_business_id 
+  AND user_id = v_claim_user 
+  AND role = 'pending_owner';
 
--- Recreate admin_reject_claim with correct param name + audit log
-DROP FUNCTION IF EXISTS public.admin_reject_claim(uuid, text);
-CREATE OR REPLACE FUNCTION public.admin_reject_claim(
-  p_business_id uuid, p_admin_notes text
-) RETURNS jsonb ...
-
--- Recreate admin_revoke_claim (clean single version)
-DROP FUNCTION IF EXISTS public.admin_revoke_claim(uuid, text);
-CREATE OR REPLACE FUNCTION public.admin_revoke_claim(
-  p_business_id uuid, p_admin_notes text DEFAULT NULL
-) RETURNS jsonb ...
+-- If no pending_owner row existed, create the owner row
+IF NOT FOUND THEN
+  INSERT INTO business_users (business_id, user_id, role)
+  VALUES (p_business_id, v_claim_user, 'owner')
+  ON CONFLICT (business_id, user_id) DO UPDATE SET role = 'owner';
+END IF;
 ```
 
-### Frontend Changes
+### 2. Database: Fix the existing data for Sanipol
 
-**`useSmartRedirect.ts`**: Super admins only redirect to `/admin` from login pages, not when already on valid routes like `/business-dashboard`.
+Insert the missing `business_users` row for `tabernadoborges@gmail.com` as `owner` of "Sanipol Canalizacao".
 
-**`useClaimRequests.ts`**: No changes needed -- it already sends `p_admin_notes` correctly. The reject hook sends `p_admin_notes` which will match after the RPC is fixed.
+### 3. Frontend: Make UserDashboard redirect more robust
+
+The `UserDashboard` page already has a redirect to `/business-dashboard` if `membership?.business_id` exists. This will work once the database row is fixed. No frontend changes needed.
+
+## Technical Summary
+
+| Item | Action |
+|------|--------|
+| Migration: Fix `admin_approve_claim` | Add INSERT fallback when UPDATE matches 0 rows |
+| Data fix: Sanipol | Insert `business_users` row (user `18a487de...`, business `5adab599...`, role `owner`) |
+| Frontend | No changes needed -- redirect logic already correct |
+
+## Expected Result
+
+After the fix:
+- `tabernadoborges@gmail.com` logs in
+- `get_user_context` finds the `business_users` row, returns `business_id`
+- `useSmartRedirect` sends user to `/business-dashboard`
+- Future claim approvals will always create the `business_users` row, even if the pending_owner row was missing
+
