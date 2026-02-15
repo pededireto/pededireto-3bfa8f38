@@ -38,9 +38,12 @@ export function useSmartRedirect(user: any, loading?: boolean) {
           return;
         }
 
-        // ADMIN / SUPER_ADMIN
+    // ADMIN / SUPER_ADMIN
         if (ctx.role === "admin" || ctx.role === "super_admin" || ctx.is_admin) {
-          if (location.pathname !== "/admin") {
+          // Super admins can access any dashboard for debugging
+          const validRoutes = ["/admin", "/business-dashboard", "/dashboard", "/comercial", "/perfil"];
+          const isOnValidRoute = validRoutes.some(r => location.pathname.startsWith(r));
+          if (!isOnValidRoute) {
             navigate("/admin", { replace: true });
           }
           return;
