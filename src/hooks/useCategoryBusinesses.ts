@@ -1,17 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export const useCategoryBusinesses = (categoryId?: string, currentBusinessId?: string) => {
+export const useCategoryBusinesses = (
+  categoryId?: string, 
+  currentBusinessId?: string,
+  cityFilter?: string | null
+) => {
   return useQuery({
-    queryKey: ["category-businesses", categoryId],
+    queryKey: ["category-businesses", categoryId, cityFilter],
     queryFn: async () => {
       if (!categoryId) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("businesses")
-        .select("id, name, slug")
+        .select("id, name, slug, city")
         .eq("category_id", categoryId)
         .order("name");
+
+      // Aplicar filtro de cidade se existir
+      if (cityFilter) {
+        query = query.eq("city", cityFilter);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -23,8 +34,12 @@ export const useCategoryBusinesses = (categoryId?: string, currentBusinessId?: s
 };
 
 // Hook para obter negócio anterior e próximo
-export const useBusinessNavigation = (categoryId?: string, currentSlug?: string) => {
-  const { data: businesses = [] } = useCategoryBusinesses(categoryId);
+export const useBusinessNavigation = (
+  categoryId?: string, 
+  currentSlug?: string,
+  cityFilter?: string | null
+) => {
+  const { data: businesses = [] } = useCategoryBusinesses(categoryId, undefined, cityFilter);
 
   const currentIndex = businesses.findIndex(b => b.slug === currentSlug);
   
@@ -41,5 +56,7 @@ export const useBusinessNavigation = (categoryId?: string, currentSlug?: string)
     isLastBusiness,
     totalBusinesses: businesses.length,
     currentPosition: currentIndex + 1,
+    hasFilter: !!cityFilter,
   };
 };
+
