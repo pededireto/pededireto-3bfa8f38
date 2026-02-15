@@ -136,44 +136,29 @@ const RegisterBusiness = () => {
 
       const slug = generateSlug(values.name);
 
-      // Criar negócio novo
-      const { data: biz, error: bizError } = await supabase
-        .from("businesses")
-        .insert([{
-          name: values.name,
-          slug,
-          nif: values.nif,
-          address: values.address,
-          city: values.city,
-          cta_email: values.cta_email,
-          cta_phone: values.cta_phone,
-          owner_name: values.owner_name,
-          owner_phone: values.owner_phone,
-          owner_email: values.owner_email,
-          category_id: values.category_id,
-          subcategory_id: values.subcategory_id,
-          cta_whatsapp: values.cta_whatsapp || null,
-          cta_website: values.cta_website || null,
-          is_active: false,
-          claim_status: "pending",
-          claim_requested_by: currentUser.id,
-          claim_requested_at: new Date().toISOString(),
-          commercial_status: "nao_contactado",
-          registration_source: "register_form",
-        }])
-        .select("id")
-        .single();
+      // Use server-side RPC to create business + business_users atomically
+      const { data: businessId, error: rpcError } = await supabase.rpc(
+        "register_business_with_owner" as any,
+        {
+          p_name: values.name,
+          p_slug: slug,
+          p_nif: values.nif,
+          p_address: values.address,
+          p_city: values.city,
+          p_cta_email: values.cta_email,
+          p_cta_phone: values.cta_phone,
+          p_owner_name: values.owner_name,
+          p_owner_phone: values.owner_phone,
+          p_owner_email: values.owner_email,
+          p_category_id: values.category_id,
+          p_subcategory_id: values.subcategory_id,
+          p_cta_whatsapp: values.cta_whatsapp || null,
+          p_cta_website: values.cta_website || null,
+          p_registration_source: "register_form",
+        }
+      );
 
-      if (bizError) throw bizError;
-
-      // Criar ligação business_users
-      const { error: buError } = await supabase.from("business_users").insert({
-        business_id: biz.id,
-        user_id: currentUser.id,
-        role: "pending_owner",
-      });
-
-      if (buError) throw buError;
+      if (rpcError) throw rpcError;
 
       toast({
         title: "Negócio registado!",

@@ -818,6 +818,7 @@ export type Database = {
           nif: string | null
           other_social_url: string | null
           owner_email: string | null
+          owner_id: string | null
           owner_name: string | null
           owner_phone: string | null
           plan_id: string | null
@@ -880,6 +881,7 @@ export type Database = {
           nif?: string | null
           other_social_url?: string | null
           owner_email?: string | null
+          owner_id?: string | null
           owner_name?: string | null
           owner_phone?: string | null
           plan_id?: string | null
@@ -942,6 +944,7 @@ export type Database = {
           nif?: string | null
           other_social_url?: string | null
           owner_email?: string | null
+          owner_id?: string | null
           owner_name?: string | null
           owner_phone?: string | null
           plan_id?: string | null
@@ -2883,6 +2886,26 @@ export type Database = {
       match_request_to_businesses: {
         Args: { p_request_id: string }
         Returns: undefined
+      }
+      register_business_with_owner: {
+        Args: {
+          p_address?: string
+          p_category_id?: string
+          p_city?: string
+          p_cta_email?: string
+          p_cta_phone?: string
+          p_cta_website?: string
+          p_cta_whatsapp?: string
+          p_name: string
+          p_nif?: string
+          p_owner_email?: string
+          p_owner_name?: string
+          p_owner_phone?: string
+          p_registration_source?: string
+          p_slug: string
+          p_subcategory_id?: string
+        }
+        Returns: string
       }
       revoke_business_access: {
         Args: { p_business_id: string; p_user_id: string }
