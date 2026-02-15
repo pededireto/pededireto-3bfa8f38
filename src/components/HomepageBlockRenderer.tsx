@@ -7,6 +7,7 @@ import FeaturedCategoriesSection from "@/components/FeaturedCategoriesSection";
 import BannerBlock from "@/components/BannerBlock";
 import TextBlock from "@/components/TextBlock";
 import PremiumBusinessBlock from "@/components/PremiumBusinessBlock";
+import NewBusinessesBlock from "@/components/NewBusinessesBlock";
 import { useCategories } from "@/hooks/useCategories";
 import { useFeaturedBusinesses } from "@/hooks/useBusinesses";
 
@@ -37,6 +38,8 @@ const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBl
       return <TextBlock config={block.config} title={block.title} />;
     case "negocios_premium":
       return <PremiumBusinessBlock config={block.config} />;
+    case "novos_negocios":
+      return <NewBusinessesBlock config={block.config} title={block.title} />;
     default:
       return null;
   }
