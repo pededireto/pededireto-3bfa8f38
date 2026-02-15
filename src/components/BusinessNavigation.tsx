@@ -32,8 +32,8 @@ const BusinessNavigation = ({
           <div className="flex-1">
             {previousBusiness ? (
               <Link to={`/negocio/${previousBusiness.slug}`}>
-                <Button variant="outline" className="gap-2 w-full sm:w-auto">
-                  <ChevronLeft className="w-4 h-4" />
+                <Button variant="outline" size="lg" className="gap-2 w-full sm:w-auto h-auto py-3">
+                  <ChevronLeft className="w-5 h-5" />
                   <div className="text-left">
                     <p className="text-xs text-muted-foreground">Anterior</p>
                     <p className="font-medium truncate max-w-[200px]">
@@ -60,18 +60,19 @@ const BusinessNavigation = ({
           <div className="flex-1 flex justify-end">
             {nextBusiness ? (
               <Link to={`/negocio/${nextBusiness.slug}`}>
-                <Button variant="outline" className="gap-2 w-full sm:w-auto">
+                <Button variant="outline" size="lg" className="gap-2 w-full sm:w-auto h-auto py-3">
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Próximo</p>
                     <p className="font-medium truncate max-w-[200px]">
                       {nextBusiness.name}
                     </p>
                   </div>
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-5 h-5" />
                 </Button>
               </Link>
             ) : isLastBusiness ? (
               <Button 
+                size="lg"
                 variant="default" 
                 className="gap-2"
                 onClick={onShowSuggestionForm}
@@ -92,6 +93,7 @@ const BusinessNavigation = ({
               Não encontrou a empresa ou serviço que pretendia?
             </p>
             <Button 
+              size="lg"
               onClick={onShowSuggestionForm}
               className="gap-2"
             >
