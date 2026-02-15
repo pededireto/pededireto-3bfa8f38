@@ -169,13 +169,27 @@ export const useAllBusinesses = () => {
   return useQuery({
     queryKey: ["businesses", "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("businesses")
-        .select(BUSINESS_SELECT)
-        .order("created_at", { ascending: false });
+      let allData: BusinessWithCategory[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      
+      while (true) {
+        const { data, error } = await supabase
+          .from("businesses")
+          .select(BUSINESS_SELECT)
+          .order("created_at", { ascending: false })
+          .range(from, from + batchSize - 1);
 
-      if (error) throw error;
-      return data as unknown as BusinessWithCategory[];
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        
+        allData = [...allData, ...(data as unknown as BusinessWithCategory[])];
+        
+        if (data.length < batchSize) break;
+        from += batchSize;
+      }
+
+      return allData;
     },
   });
 };
