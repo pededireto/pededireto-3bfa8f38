@@ -1,13 +1,16 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useBusiness } from "@/hooks/useBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
 import { useActiveBusinessModules, useBusinessModuleValues } from "@/hooks/useBusinessModules";
-import { useEffect } from "react";
+import { useBusinessNavigation } from "@/hooks/useCategoryBusinesses";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FavoriteButton from "@/components/FavoriteButton";
 import UnclaimedBusinessBanner from "@/components/UnclaimedBusinessBanner";
+import BusinessNavigation from "@/components/BusinessNavigation";
+import SuggestionForm from "@/components/SuggestionForm";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, 
@@ -26,9 +29,22 @@ const BusinessPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: business, isLoading } = useBusiness(slug);
   const { user } = useAuth();
+  const navigate = useNavigate();
   const trackEvent = useTrackEvent();
   const { data: activeModules = [] } = useActiveBusinessModules();
   const { data: moduleValues = [] } = useBusinessModuleValues(business?.id);
+  
+  // Estado para controlar se mostra o formulário de sugestão
+  const [showSuggestionForm, setShowSuggestionForm] = useState(false);
+
+  // Hook de navegação entre negócios da mesma categoria
+  const {
+    previousBusiness,
+    nextBusiness,
+    isLastBusiness,
+    currentPosition,
+    totalBusinesses,
+  } = useBusinessNavigation(business?.category_id, slug);
 
   // Track view on page load
   useEffect(() => {
@@ -403,6 +419,25 @@ const BusinessPage = () => {
           </div>
         </section>
       </main>
+
+      {/* Navegação entre negócios */}
+      <BusinessNavigation
+        previousBusiness={previousBusiness}
+        nextBusiness={nextBusiness}
+        isLastBusiness={isLastBusiness}
+        currentPosition={currentPosition}
+        totalBusinesses={totalBusinesses}
+        onShowSuggestionForm={() => setShowSuggestionForm(true)}
+      />
+
+      {/* Formulário de sugestão (quando chega ao fim) */}
+      {showSuggestionForm && (
+        <div className="border-t bg-muted/10">
+          <div className="container py-8">
+            <SuggestionForm />
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
