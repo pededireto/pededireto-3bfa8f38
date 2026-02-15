@@ -141,32 +141,20 @@ const ClaimBusiness = () => {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
 
-      const { data: biz, error: bizError } = await supabase
-        .from("businesses")
-        .insert([{
-          name: newName,
-          slug: `${slug}-${Date.now()}`,
-          city: newCity,
-          category_id: newCategoryId,
-          owner_email: user.email || "",
-          is_active: false,
-          claim_status: "pending",
-          claim_requested_by: user.id,
-          claim_requested_at: new Date().toISOString(),
-          commercial_status: "nao_contactado",
-          registration_source: "claim_flow",
-        }])
-        .select("id")
-        .single();
+      // Use server-side RPC to create business + assign ownership atomically
+      const { data: businessId, error: rpcError } = await supabase.rpc(
+        "register_business_with_owner" as any,
+        {
+          p_name: newName,
+          p_slug: `${slug}-${Date.now()}`,
+          p_city: newCity,
+          p_category_id: newCategoryId,
+          p_owner_email: user.email || "",
+          p_registration_source: "claim_flow",
+        }
+      );
 
-      if (bizError) throw bizError;
-
-      const { error: buError } = await supabase.from("business_users").insert({
-        business_id: biz.id,
-        user_id: user.id,
-        role: "pending_owner",
-      });
-      if (buError) throw buError;
+      if (rpcError) throw rpcError;
 
       toast({ title: "Pedido enviado!", description: "O negócio foi criado e está pendente de validação." });
       navigate("/business-dashboard");
