@@ -27,6 +27,7 @@ const BLOCK_TYPES = [
   { value: "banner", label: "Banner" },
   { value: "texto", label: "Texto" },
   { value: "personalizado", label: "Personalizado" },
+  { value: "novos_negocios", label: "Novos na Plataforma" },
 ];
 
 const typeLabel = (type: string) => BLOCK_TYPES.find((t) => t.value === type)?.label || type;
