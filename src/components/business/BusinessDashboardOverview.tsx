@@ -15,6 +15,11 @@ const BusinessDashboardOverview = ({ business }: Props) => {
   const { data: analytics } = useBusinessAnalytics(business.id);
   const plan = plans.find((p) => p.id === business.plan_id);
 
+  // 🔍 DEBUG - ADICIONAR ESTAS 3 LINHAS
+  console.log('🔍 Business ID:', business.id);
+  console.log('🔍 Analytics Data:', analytics);
+  console.log('🔍 Business Name:', business.name);
+
   return (
     <div className="space-y-6">
       <div>
