@@ -8,6 +8,8 @@ interface BusinessNavigationProps {
   isLastBusiness?: boolean;
   currentPosition?: number;
   totalBusinesses?: number;
+  hasFilter?: boolean;
+  cityFilter?: string | null;
   onShowSuggestionForm?: () => void;
 }
 
@@ -17,6 +19,8 @@ const BusinessNavigation = ({
   isLastBusiness,
   currentPosition = 0,
   totalBusinesses = 0,
+  hasFilter = false,
+  cityFilter = null,
   onShowSuggestionForm,
 }: BusinessNavigationProps) => {
   // Se não há navegação disponível, não mostra nada
@@ -87,10 +91,16 @@ const BusinessNavigation = ({
         {isLastBusiness && (
           <div className="mt-6 p-4 bg-card rounded-lg border text-center">
             <p className="font-medium mb-2">
-              Não existem mais negócios nesta categoria
+              {hasFilter && cityFilter 
+                ? `Não existem mais negócios nesta categoria em ${cityFilter}`
+                : "Não existem mais negócios nesta categoria"
+              }
             </p>
             <p className="text-sm text-muted-foreground mb-4">
-              Não encontrou a empresa ou serviço que pretendia?
+              {hasFilter && cityFilter
+                ? `Estes são todos os negócios que temos registados em ${cityFilter}. Não encontrou o que pretendia?`
+                : "Não encontrou a empresa ou serviço que pretendia?"
+              }
             </p>
             <Button 
               size="lg"
