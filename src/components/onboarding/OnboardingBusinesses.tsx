@@ -83,22 +83,30 @@ const OnboardingBusinesses = () => {
     try {
       const emailToSearch = userEmail.toLowerCase().trim();
 
+      console.log("🔍 A procurar utilizador:", emailToSearch);
+
       // 1. Buscar todos os utilizadores via RPC
-      const { data: allUsers, error: usersError } = await supabase
+      const { data: allUsersData, error: usersError } = await supabase
         .rpc("get_all_users_for_onboarding");
 
       if (usersError) {
-        console.error("Erro RPC:", usersError);
+        console.error("❌ Erro RPC:", usersError);
         toast({ 
           title: "❌ Erro ao buscar utilizadores", 
-          description: usersError.message || "Não foi possível aceder à lista de utilizadores.",
+          description: usersError.message,
           variant: "destructive" 
         });
         setIsAssociating(false);
         return;
       }
 
-      if (!allUsers || allUsers.length === 0) {
+      // A função retorna JSONB, que já vem como array JS
+      const allUsers = allUsersData || [];
+
+      console.log("👥 Total de utilizadores encontrados:", allUsers.length);
+      console.log("📋 Primeiros 3 emails:", allUsers.slice(0, 3).map((u: any) => u.email));
+
+      if (allUsers.length === 0) {
         toast({ 
           title: "❌ Nenhum utilizador encontrado", 
           description: "A base de dados não tem utilizadores registados.",
@@ -114,15 +122,20 @@ const OnboardingBusinesses = () => {
       );
 
       if (!foundUser) {
+        console.log("❌ Utilizador não encontrado");
+        console.log("📧 Emails disponíveis:", allUsers.slice(0, 5).map((u: any) => u.email));
+        
         toast({ 
           title: "❌ Utilizador não encontrado", 
-          description: `Nenhum utilizador com o email "${userEmail}" existe na plataforma. Verifica se o utilizador já fez registo.`,
+          description: `Nenhum utilizador com o email "${userEmail}" existe. Verifica se está correto.`,
           variant: "destructive",
           duration: 5000
         });
         setIsAssociating(false);
         return;
       }
+
+      console.log("✅ Utilizador encontrado:", foundUser.email, "ID:", foundUser.id);
 
       // 3. Verificar se já existe associação
       const { data: existingAssoc } = await supabase
@@ -133,14 +146,17 @@ const OnboardingBusinesses = () => {
         .maybeSingle();
 
       if (existingAssoc) {
+        console.log("⚠️ Associação já existe");
         toast({ 
           title: "⚠️ Associação já existe", 
-          description: `Este utilizador já está associado a este negócio como ${existingAssoc.role}.`,
+          description: `Este utilizador já está associado como ${existingAssoc.role}.`,
           variant: "destructive" 
         });
         setIsAssociating(false);
         return;
       }
+
+      console.log("📝 A criar associação...");
 
       // 4. Criar associação em business_users
       const { error: assocError } = await supabase
@@ -152,7 +168,7 @@ const OnboardingBusinesses = () => {
         });
 
       if (assocError) {
-        console.error("Erro ao associar:", assocError);
+        console.error("❌ Erro ao associar:", assocError);
         toast({ 
           title: "❌ Erro ao associar", 
           description: assocError.message,
@@ -162,22 +178,26 @@ const OnboardingBusinesses = () => {
         return;
       }
 
-      // 5. Atualizar claim_status para verified
+      console.log("✅ Associação criada!");
+
+      // 5. Atualizar claim_status para verified e ativar
       const { error: claimError } = await supabase
         .from("businesses")
         .update({ 
           claim_status: "verified",
-          is_active: true // Ativa automaticamente
+          is_active: true
         })
         .eq("id", selectedBusiness.id);
 
       if (claimError) {
-        console.error("Erro ao atualizar claim:", claimError);
+        console.error("⚠️ Erro ao atualizar claim:", claimError);
+      } else {
+        console.log("✅ Negócio atualizado para verified!");
       }
 
       toast({ 
         title: "✅ Associação concluída!", 
-        description: `${userEmail} agora é owner de "${selectedBusiness.name}". Negócio ativado e verificado.`,
+        description: `${userEmail} é agora owner de "${selectedBusiness.name}"`,
         duration: 5000
       });
 
@@ -186,7 +206,7 @@ const OnboardingBusinesses = () => {
       setSelectedBusiness(null);
 
     } catch (err: any) {
-      console.error("Erro geral:", err);
+      console.error("💥 Erro geral:", err);
       toast({ 
         title: "❌ Erro inesperado", 
         description: err.message, 
