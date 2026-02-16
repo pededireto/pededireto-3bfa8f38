@@ -1,7 +1,20 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Users, Building2, Link2, Bug, LayoutDashboard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Users, Building2, Link2, Bug, LayoutDashboard, LogOut, User } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { toast } from "sonner";
 import OnboardingDashboard from "@/components/onboarding/OnboardingDashboard";
 import OnboardingUsers from "@/components/onboarding/OnboardingUsers";
 import OnboardingBusinesses from "@/components/onboarding/OnboardingBusinesses";
@@ -9,8 +22,19 @@ import OnboardingConnections from "@/components/onboarding/OnboardingConnections
 import OnboardingBugReports from "@/components/onboarding/OnboardingBugReports";
 
 const OnboardingPage = () => {
-  const { isLoading, isOnboarding, isAdmin, isSuperAdmin } = useAuth();
+  const { user, isLoading, isOnboarding, isAdmin, isSuperAdmin } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Sessão terminada");
+      navigate("/");
+    } catch (error) {
+      toast.error("Erro ao terminar sessão");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -36,12 +60,50 @@ const OnboardingPage = () => {
     );
   }
 
+  const userEmail = user?.email || "";
+  const userInitials = userEmail.substring(0, 2).toUpperCase();
+
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b bg-card">
-        <div className="container mx-auto p-6">
-          <h1 className="text-3xl font-bold">🎯 Onboarding Team</h1>
-          <p className="text-muted-foreground mt-1">Gestão de utilizadores e negócios da plataforma</p>
+        <div className="container mx-auto p-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">🎯 Onboarding Team</h1>
+            <p className="text-muted-foreground mt-1">Gestão de utilizadores e negócios da plataforma</p>
+          </div>
+
+          {/* USER MENU */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {userInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">Onboarding Team</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {userEmail}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/perfil")}>
+                <User className="mr-2 h-4 w-4" />
+                <span>Perfil</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Terminar Sessão</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
