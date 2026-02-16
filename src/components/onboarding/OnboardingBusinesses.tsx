@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useOnboardingBusinesses, useBulkUpdateBusinessStatus } from "@/hooks/useOnboardingData";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Loader2, Search, Power, PowerOff, UserPlus, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,35 +81,80 @@ const OnboardingBusinesses = () => {
     setIsAssociating(true);
 
     try {
-      // 1. Buscar user_id pelo email
-      const { data: userData, error: userError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", userEmail)
-        .single();
+      const emailToSearch = userEmail.toLowerCase().trim();
 
-      if (userError || !userData) {
+      // 1. Buscar todos os utilizadores via RPC
+      const { data: allUsers, error: usersError } = await supabase
+        .rpc("get_all_users_for_onboarding");
+
+      if (usersError) {
+        console.error("Erro RPC:", usersError);
         toast({ 
-          title: "Utilizador não encontrado", 
-          description: "Verifica se o email está correto.",
+          title: "❌ Erro ao buscar utilizadores", 
+          description: usersError.message || "Não foi possível aceder à lista de utilizadores.",
           variant: "destructive" 
         });
         setIsAssociating(false);
         return;
       }
 
-      // 2. Criar associação em business_users
+      if (!allUsers || allUsers.length === 0) {
+        toast({ 
+          title: "❌ Nenhum utilizador encontrado", 
+          description: "A base de dados não tem utilizadores registados.",
+          variant: "destructive" 
+        });
+        setIsAssociating(false);
+        return;
+      }
+
+      // 2. Encontrar utilizador pelo email
+      const foundUser = allUsers.find((u: any) => 
+        u.email?.toLowerCase() === emailToSearch
+      );
+
+      if (!foundUser) {
+        toast({ 
+          title: "❌ Utilizador não encontrado", 
+          description: `Nenhum utilizador com o email "${userEmail}" existe na plataforma. Verifica se o utilizador já fez registo.`,
+          variant: "destructive",
+          duration: 5000
+        });
+        setIsAssociating(false);
+        return;
+      }
+
+      // 3. Verificar se já existe associação
+      const { data: existingAssoc } = await supabase
+        .from("business_users")
+        .select("id, role")
+        .eq("user_id", foundUser.id)
+        .eq("business_id", selectedBusiness.id)
+        .maybeSingle();
+
+      if (existingAssoc) {
+        toast({ 
+          title: "⚠️ Associação já existe", 
+          description: `Este utilizador já está associado a este negócio como ${existingAssoc.role}.`,
+          variant: "destructive" 
+        });
+        setIsAssociating(false);
+        return;
+      }
+
+      // 4. Criar associação em business_users
       const { error: assocError } = await supabase
         .from("business_users")
         .insert({
-          user_id: userData.id,
+          user_id: foundUser.id,
           business_id: selectedBusiness.id,
           role: "owner"
         });
 
       if (assocError) {
+        console.error("Erro ao associar:", assocError);
         toast({ 
-          title: "Erro ao associar", 
+          title: "❌ Erro ao associar", 
           description: assocError.message,
           variant: "destructive" 
         });
@@ -117,10 +162,13 @@ const OnboardingBusinesses = () => {
         return;
       }
 
-      // 3. Atualizar claim_status para verified
+      // 5. Atualizar claim_status para verified
       const { error: claimError } = await supabase
         .from("businesses")
-        .update({ claim_status: "verified" })
+        .update({ 
+          claim_status: "verified",
+          is_active: true // Ativa automaticamente
+        })
         .eq("id", selectedBusiness.id);
 
       if (claimError) {
@@ -129,7 +177,8 @@ const OnboardingBusinesses = () => {
 
       toast({ 
         title: "✅ Associação concluída!", 
-        description: `${userEmail} agora é owner de ${selectedBusiness.name}` 
+        description: `${userEmail} agora é owner de "${selectedBusiness.name}". Negócio ativado e verificado.`,
+        duration: 5000
       });
 
       setAssociateDialog(false);
@@ -137,7 +186,12 @@ const OnboardingBusinesses = () => {
       setSelectedBusiness(null);
 
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      console.error("Erro geral:", err);
+      toast({ 
+        title: "❌ Erro inesperado", 
+        description: err.message, 
+        variant: "destructive" 
+      });
     } finally {
       setIsAssociating(false);
     }
@@ -249,6 +303,7 @@ const OnboardingBusinesses = () => {
                       setSelectedBusiness(b);
                       setAssociateDialog(true);
                     }}
+                    title="Associar utilizador"
                   >
                     <UserPlus className="h-4 w-4" />
                   </Button>
@@ -273,7 +328,7 @@ const OnboardingBusinesses = () => {
             <form onSubmit={handleAssociate} className="space-y-4">
               <div className="space-y-2">
                 <Label>Negócio</Label>
-                <Input value={selectedBusiness.name} disabled />
+                <Input value={selectedBusiness.name} disabled className="bg-muted" />
               </div>
               <div className="space-y-2">
                 <Label>Email do Utilizador *</Label>
@@ -283,19 +338,36 @@ const OnboardingBusinesses = () => {
                   onChange={(e) => setUserEmail(e.target.value)} 
                   placeholder="email@exemplo.pt"
                   required 
+                  autoFocus
                 />
                 <p className="text-xs text-muted-foreground">
-                  O utilizador será associado como owner e o negócio ficará "verified"
+                  ℹ️ O utilizador será associado como <strong>owner</strong>, o negócio ficará <strong>verified</strong> e será <strong>ativado</strong> automaticamente.
                 </p>
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setAssociateDialog(false)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setAssociateDialog(false);
+                    setUserEmail("");
+                  }}
+                  disabled={isAssociating}
+                >
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={isAssociating}>
-                  {isAssociating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Associar
+                  {isAssociating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      A associar...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Associar
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
