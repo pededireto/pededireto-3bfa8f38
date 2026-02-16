@@ -33,7 +33,6 @@ const OnboardingPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <div className="border-b bg-card">
         <div className="container mx-auto p-6">
           <h1 className="text-3xl font-bold">🎯 Onboarding Team</h1>
@@ -41,7 +40,6 @@ const OnboardingPage = () => {
         </div>
       </div>
 
-      {/* Content */}
       <div className="container mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5 h-auto">
