@@ -34,6 +34,7 @@ import AdminPage from "./pages/AdminPage";
 import AdminLogin from "./pages/AdminLogin";
 import AdminRegister from "./pages/AdminRegister";
 import CommercialPage from "./pages/CommercialPage";
+import OnboardingPage from "./pages/OnboardingPage";
 
 import RequestServicePage from "./pages/RequestServicePage";
 import NotFound from "./pages/NotFound";
@@ -135,6 +136,15 @@ const App = () => {
                     element={
                       <ProtectedRoute requireCommercial>
                         <CommercialPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/onboarding"
+                    element={
+                      <ProtectedRoute requireOnboarding>
+                        <OnboardingPage />
                       </ProtectedRoute>
                     }
                   />
