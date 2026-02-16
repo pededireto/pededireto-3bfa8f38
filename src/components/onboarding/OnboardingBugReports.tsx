@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Bug } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
@@ -26,6 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const OnboardingBugReports = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { data: bugs = [], isPending } = useBugReports();
   const createBug = useCreateBugReport();
   const updateStatus = useUpdateBugStatus();
@@ -38,8 +41,33 @@ const OnboardingBugReports = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // 1. Criar o bug report
       await createBug.mutateAsync({ title, description, priority });
-      toast({ title: "Bug reportado", description: "O bug foi registado com sucesso." });
+
+      // 2. Criar alerta para os admins
+      const { error: alertError } = await supabase
+        .from("admin_alerts")
+        .insert({
+          type: "bug_report",
+          title: `🐛 Novo Bug: ${title}`,
+          message: `Prioridade: ${priority}\n\n${description}`,
+          severity: priority === "critical" ? "high" : priority === "high" ? "medium" : "low",
+          metadata: {
+            bug_title: title,
+            bug_priority: priority,
+            reported_by: user?.email || "unknown"
+          }
+        });
+
+      if (alertError) {
+        console.error("Erro ao criar alerta:", alertError);
+      }
+
+      toast({ 
+        title: "Bug reportado", 
+        description: "O bug foi registado e os admins foram notificados." 
+      });
+      
       setDialogOpen(false);
       setTitle("");
       setDescription("");
@@ -59,7 +87,11 @@ const OnboardingBugReports = () => {
   };
 
   if (isPending) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -68,7 +100,9 @@ const OnboardingBugReports = () => {
         <h2 className="text-2xl font-bold">🐛 Bugs</h2>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" /> Reportar Bug</Button>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" /> Reportar Bug
+            </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -77,11 +111,22 @@ const OnboardingBugReports = () => {
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
                 <Label>Título *</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Resumo do bug" />
+                <Input 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  required 
+                  placeholder="Resumo do bug" 
+                />
               </div>
               <div className="space-y-2">
                 <Label>Descrição *</Label>
-                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Descreve o problema em detalhe..." rows={4} />
+                <Textarea 
+                  value={description} 
+                  onChange={(e) => setDescription(e.target.value)} 
+                  required 
+                  placeholder="Descreve o problema em detalhe..." 
+                  rows={4} 
+                />
               </div>
               <div className="space-y-2">
                 <Label>Prioridade</Label>
@@ -96,7 +141,9 @@ const OnboardingBugReports = () => {
                 </Select>
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancelar
+                </Button>
                 <Button type="submit" disabled={createBug.isPending}>
                   {createBug.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Reportar
@@ -129,7 +176,7 @@ const OnboardingBugReports = () => {
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2">{bug.description}</p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {new Date(bug.created_at).toLocaleDateString("pt-PT")}
+                    Reportado por: {bug.reported_by_email || "—"} • {new Date(bug.created_at).toLocaleDateString("pt-PT")}
                   </p>
                 </div>
                 <Select value={bug.status} onValueChange={(v) => handleStatusChange(bug.id, v)}>
