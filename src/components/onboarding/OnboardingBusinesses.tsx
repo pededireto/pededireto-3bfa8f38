@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useOnboardingBusinesses, useBulkUpdateBusinessStatus } from "@/hooks/useOnboardingData";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Search, Power, PowerOff } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Loader2, Search, Power, PowerOff, UserPlus, CheckCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const CLAIM_COLORS: Record<string, string> = {
   verified: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
@@ -17,13 +20,33 @@ const CLAIM_COLORS: Record<string, string> = {
 
 const OnboardingBusinesses = () => {
   const { toast } = useToast();
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState(""); // Debounced
   const [claimStatus, setClaimStatus] = useState("all");
   const [isActive, setIsActive] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const { data: businesses = [], isPending } = useOnboardingBusinesses({ claimStatus, isActive: isActive === "all" ? undefined : isActive, search });
+  // Debounce search (espera 500ms após utilizador parar de escrever)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const { data: businesses = [], isPending } = useOnboardingBusinesses({ 
+    claimStatus, 
+    isActive: isActive === "all" ? undefined : isActive, 
+    search 
+  });
+  
   const bulkUpdate = useBulkUpdateBusinessStatus();
+
+  // Estado para modal de associação
+  const [associateDialog, setAssociateDialog] = useState(false);
+  const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
+  const [userEmail, setUserEmail] = useState("");
+  const [isAssociating, setIsAssociating] = useState(false);
 
   const toggleSelect = (id: string) => {
     const next = new Set(selected);
@@ -43,15 +66,89 @@ const OnboardingBusinesses = () => {
     if (selected.size === 0) return;
     try {
       await bulkUpdate.mutateAsync({ ids: Array.from(selected), is_active: activate });
-      toast({ title: activate ? "Negócios ativados" : "Negócios desativados", description: `${selected.size} negócios atualizados.` });
+      toast({ 
+        title: activate ? "Negócios ativados" : "Negócios desativados", 
+        description: `${selected.size} negócios atualizados.` 
+      });
       setSelected(new Set());
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
   };
 
+  const handleAssociate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsAssociating(true);
+
+    try {
+      // 1. Buscar user_id pelo email
+      const { data: userData, error: userError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", userEmail)
+        .single();
+
+      if (userError || !userData) {
+        toast({ 
+          title: "Utilizador não encontrado", 
+          description: "Verifica se o email está correto.",
+          variant: "destructive" 
+        });
+        setIsAssociating(false);
+        return;
+      }
+
+      // 2. Criar associação em business_users
+      const { error: assocError } = await supabase
+        .from("business_users")
+        .insert({
+          user_id: userData.id,
+          business_id: selectedBusiness.id,
+          role: "owner"
+        });
+
+      if (assocError) {
+        toast({ 
+          title: "Erro ao associar", 
+          description: assocError.message,
+          variant: "destructive" 
+        });
+        setIsAssociating(false);
+        return;
+      }
+
+      // 3. Atualizar claim_status para verified
+      const { error: claimError } = await supabase
+        .from("businesses")
+        .update({ claim_status: "verified" })
+        .eq("id", selectedBusiness.id);
+
+      if (claimError) {
+        console.error("Erro ao atualizar claim:", claimError);
+      }
+
+      toast({ 
+        title: "✅ Associação concluída!", 
+        description: `${userEmail} agora é owner de ${selectedBusiness.name}` 
+      });
+
+      setAssociateDialog(false);
+      setUserEmail("");
+      setSelectedBusiness(null);
+
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setIsAssociating(false);
+    }
+  };
+
   if (isPending) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -62,7 +159,12 @@ const OnboardingBusinesses = () => {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Pesquisar por nome..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          <Input 
+            placeholder="Pesquisar por nome..." 
+            value={searchInput} 
+            onChange={(e) => setSearchInput(e.target.value)} 
+            className="pl-10" 
+          />
         </div>
         <Select value={claimStatus} onValueChange={setClaimStatus}>
           <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
@@ -103,7 +205,10 @@ const OnboardingBusinesses = () => {
           <thead className="bg-muted/50">
             <tr>
               <th className="p-3 w-10">
-                <Checkbox checked={selected.size === businesses.length && businesses.length > 0} onCheckedChange={toggleAll} />
+                <Checkbox 
+                  checked={selected.size === businesses.length && businesses.length > 0} 
+                  onCheckedChange={toggleAll} 
+                />
               </th>
               <th className="text-left p-3 font-medium text-muted-foreground text-sm">Nome</th>
               <th className="text-left p-3 font-medium text-muted-foreground text-sm">Cidade</th>
@@ -111,6 +216,7 @@ const OnboardingBusinesses = () => {
               <th className="text-left p-3 font-medium text-muted-foreground text-sm">Claim</th>
               <th className="text-left p-3 font-medium text-muted-foreground text-sm">Owner</th>
               <th className="text-left p-3 font-medium text-muted-foreground text-sm">Criado</th>
+              <th className="text-left p-3 font-medium text-muted-foreground text-sm">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -135,6 +241,18 @@ const OnboardingBusinesses = () => {
                 <td className="p-3 text-sm text-muted-foreground">
                   {b.created_at ? new Date(b.created_at).toLocaleDateString("pt-PT") : "—"}
                 </td>
+                <td className="p-3">
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedBusiness(b);
+                      setAssociateDialog(true);
+                    }}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -144,6 +262,46 @@ const OnboardingBusinesses = () => {
         )}
       </div>
       <p className="text-xs text-muted-foreground">{businesses.length} negócios encontrados</p>
+
+      {/* MODAL ASSOCIAR UTILIZADOR */}
+      <Dialog open={associateDialog} onOpenChange={setAssociateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Associar Utilizador a Negócio</DialogTitle>
+          </DialogHeader>
+          {selectedBusiness && (
+            <form onSubmit={handleAssociate} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Negócio</Label>
+                <Input value={selectedBusiness.name} disabled />
+              </div>
+              <div className="space-y-2">
+                <Label>Email do Utilizador *</Label>
+                <Input 
+                  type="email"
+                  value={userEmail} 
+                  onChange={(e) => setUserEmail(e.target.value)} 
+                  placeholder="email@exemplo.pt"
+                  required 
+                />
+                <p className="text-xs text-muted-foreground">
+                  O utilizador será associado como owner e o negócio ficará "verified"
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setAssociateDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isAssociating}>
+                  {isAssociating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Associar
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
