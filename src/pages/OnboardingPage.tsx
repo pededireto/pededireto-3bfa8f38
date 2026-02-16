@@ -2,14 +2,9 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Users, Building2, Link2, Bug } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import OnboardingDashboard from "@/components/onboarding/OnboardingDashboard";
-import OnboardingUsers from "@/components/onboarding/OnboardingUsers";
-import OnboardingBusinesses from "@/components/onboarding/OnboardingBusinesses";
-import OnboardingConnections from "@/components/onboarding/OnboardingConnections";
-import OnboardingBugReports from "@/components/onboarding/OnboardingBugReports";
 
 const OnboardingPage = () => {
-  const { isLoading, isOnboarding } = useAuth();
+  const { isLoading, isOnboarding, isAdmin, isSuperAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
 
   if (isLoading) {
@@ -20,7 +15,7 @@ const OnboardingPage = () => {
     );
   }
 
-  if (!isOnboarding) {
+  if (!isOnboarding && !isAdmin && !isSuperAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="bg-card rounded-2xl shadow-card p-8 max-w-md w-full text-center">
@@ -38,53 +33,72 @@ const OnboardingPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b">
-        <div className="container mx-auto p-4">
-          <h1 className="text-2xl font-bold">🎯 Onboarding Team</h1>
-          <p className="text-muted-foreground">Gestão de utilizadores e negócios</p>
+      {/* Header */}
+      <div className="border-b bg-card">
+        <div className="container mx-auto p-6">
+          <h1 className="text-3xl font-bold">🎯 Onboarding Team</h1>
+          <p className="text-muted-foreground mt-1">Gestão de utilizadores e negócios da plataforma</p>
         </div>
       </div>
 
-      <div className="container mx-auto p-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="users">
-              <Users className="h-4 w-4 mr-2" />
+      {/* Content */}
+      <div className="container mx-auto p-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 h-auto">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2 py-3">
+              📊 Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2 py-3">
+              <Users className="h-4 w-4" />
               Utilizadores
             </TabsTrigger>
-            <TabsTrigger value="businesses">
-              <Building2 className="h-4 w-4 mr-2" />
+            <TabsTrigger value="businesses" className="flex items-center gap-2 py-3">
+              <Building2 className="h-4 w-4" />
               Negócios
             </TabsTrigger>
-            <TabsTrigger value="connections">
-              <Link2 className="h-4 w-4 mr-2" />
+            <TabsTrigger value="connections" className="flex items-center gap-2 py-3">
+              <Link2 className="h-4 w-4" />
               Ligações
             </TabsTrigger>
-            <TabsTrigger value="bugs">
-              <Bug className="h-4 w-4 mr-2" />
+            <TabsTrigger value="bugs" className="flex items-center gap-2 py-3">
+              <Bug className="h-4 w-4" />
               Bugs
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard">
-            <OnboardingDashboard />
+          <TabsContent value="dashboard" className="space-y-4">
+            <div className="bg-card rounded-xl p-6 border">
+              <h2 className="text-2xl font-bold mb-4">📊 Dashboard</h2>
+              <p className="text-muted-foreground">Estatísticas e visão geral virão aqui.</p>
+            </div>
           </TabsContent>
 
-          <TabsContent value="users">
-            <OnboardingUsers />
+          <TabsContent value="users" className="space-y-4">
+            <div className="bg-card rounded-xl p-6 border">
+              <h2 className="text-2xl font-bold mb-4">👥 Utilizadores</h2>
+              <p className="text-muted-foreground">Lista de utilizadores virá aqui.</p>
+            </div>
           </TabsContent>
 
-          <TabsContent value="businesses">
-            <OnboardingBusinesses />
+          <TabsContent value="businesses" className="space-y-4">
+            <div className="bg-card rounded-xl p-6 border">
+              <h2 className="text-2xl font-bold mb-4">🏢 Negócios</h2>
+              <p className="text-muted-foreground">Lista de negócios virá aqui.</p>
+            </div>
           </TabsContent>
 
-          <TabsContent value="connections">
-            <OnboardingConnections />
+          <TabsContent value="connections" className="space-y-4">
+            <div className="bg-card rounded-xl p-6 border">
+              <h2 className="text-2xl font-bold mb-4">🔗 Ligações</h2>
+              <p className="text-muted-foreground">Gestão de ligações user↔business virá aqui.</p>
+            </div>
           </TabsContent>
 
-          <TabsContent value="bugs">
-            <OnboardingBugReports />
+          <TabsContent value="bugs" className="space-y-4">
+            <div className="bg-card rounded-xl p-6 border">
+              <h2 className="text-2xl font-bold mb-4">🐛 Bugs</h2>
+              <p className="text-muted-foreground">Sistema de reports virá aqui.</p>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
