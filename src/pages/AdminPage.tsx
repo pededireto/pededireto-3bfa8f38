@@ -21,7 +21,7 @@ import SynonymsContent from "@/components/admin/SynonymsContent";
 import PlansContent from "@/components/admin/PlansContent";
 import SearchLogsContent from "@/components/admin/SearchLogsContent";
 import AlertsContent from "@/components/admin/AlertsContent";
-import CommercialUsersContent from "@/components/admin/CommercialUsersContent";
+import TeamManagement from "@/components/admin/TeamManagement";
 import ActionRequestsContent from "@/components/admin/ActionRequestsContent";
 import AuditLogsContent from "@/components/admin/AuditLogsContent";
 import UsersContent from "@/components/admin/UsersContent";
@@ -55,7 +55,7 @@ const AdminPage = () => {
     if (activeTab === "plans") return <PlansContent />;
     if (activeTab === "search-logs") return <SearchLogsContent />;
     if (activeTab === "alerts") return <AlertsContent />;
-    if (activeTab === "commercial-users") return <CommercialUsersContent />;
+    if (activeTab === "team-management") return <TeamManagement />;
     if (activeTab === "action-requests") return <ActionRequestsContent />;
     if (activeTab === "audit-logs") return <AuditLogsContent />;
     if (activeTab === "users") return <UsersContent />;

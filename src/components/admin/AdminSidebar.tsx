@@ -36,7 +36,7 @@ import { useUncontactedCount } from "@/hooks/useExpirationLogs";
 import { usePendingRequestsCount } from "@/hooks/useActionRequests";
 import { usePendingClaimsCount } from "@/hooks/useClaimRequests";
 
-export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "commercial-users" | "action-requests" | "audit-logs" | "service-requests" | "business-modules" | "homepage" | "revenue" | "performance" | "commission-models" | "commission-audit" | "leads-dashboard" | "intelligence" | "claim-requests";
+export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "team-management" | "action-requests" | "audit-logs" | "service-requests" | "business-modules" | "homepage" | "revenue" | "performance" | "commission-models" | "commission-audit" | "leads-dashboard" | "intelligence" | "claim-requests";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -60,7 +60,7 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "search-logs", label: "Pesquisas", icon: SearchX },
   { id: "pages", label: "Páginas", icon: FileText },
   { id: "synonyms", label: "Sinónimos", icon: BookOpen },
-  { id: "commercial-users", label: "Eq. Comercial", icon: UserCog },
+  { id: "team-management", label: "Equipa Pede Direto", icon: UserCog },
   { id: "action-requests", label: "Pedidos Comerciais", icon: ClipboardList },
   { id: "audit-logs", label: "Auditoria", icon: History },
   { id: "business-modules", label: "Config. Ficha", icon: Puzzle },

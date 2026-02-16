@@ -35,6 +35,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminRegister from "./pages/AdminRegister";
 import CommercialPage from "./pages/CommercialPage";
 import OnboardingPage from "./pages/OnboardingPage";
+import CustomerSuccessPage from "./pages/CustomerSuccessPage";
 
 import RequestServicePage from "./pages/RequestServicePage";
 import NotFound from "./pages/NotFound";
@@ -145,6 +146,15 @@ const App = () => {
                     element={
                       <ProtectedRoute requireOnboarding>
                         <OnboardingPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/cs"
+                    element={
+                      <ProtectedRoute requireCs>
+                        <CustomerSuccessPage />
                       </ProtectedRoute>
                     }
                   />

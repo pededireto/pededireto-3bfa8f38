@@ -180,6 +180,74 @@ export type Database = {
         }
         Relationships: []
       }
+      bug_reports: {
+        Row: {
+          assigned_to: string | null
+          business_id: string | null
+          created_at: string | null
+          description: string
+          id: string
+          priority: string | null
+          reporter_id: string
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          business_id?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          priority?: string | null
+          reporter_id: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          business_id?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          priority?: string | null
+          reporter_id?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bug_reports_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bug_reports_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bug_reports_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bug_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_claim_requests: {
         Row: {
           business_id: string
@@ -611,6 +679,13 @@ export type Database = {
             referencedRelation: "commercial_alerts_view"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "business_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
         ]
       }
       business_profiles: {
@@ -954,6 +1029,13 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "businesses_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "businesses_plan_id_fkey"
             columns: ["plan_id"]
             isOneToOne: false
@@ -1225,6 +1307,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "commission_audit_logs_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commission_audit_logs_commission_id_fkey"
             columns: ["commission_id"]
             isOneToOne: false
@@ -1309,6 +1398,13 @@ export type Database = {
             columns: ["applies_to_team"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_applies_to_user_fkey"
+            columns: ["applies_to_user"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1811,7 +1907,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       request_business_matches: {
         Row: {
@@ -2056,7 +2160,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "saved_searches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       search_intelligence_logs: {
         Row: {
@@ -2403,6 +2515,13 @@ export type Database = {
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
         ]
       }
       teams: {
@@ -2457,6 +2576,13 @@ export type Database = {
             referencedRelation: "commercial_alerts_view"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -2478,7 +2604,15 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_search_context: {
         Row: {
@@ -2668,6 +2802,22 @@ export type Database = {
           month: string | null
           total_conversions: number | null
           total_revenue: number | null
+        }
+        Relationships: []
+      }
+      onboarding_users_summary: {
+        Row: {
+          businesses_member: number | null
+          businesses_owned: number | null
+          created_at: string | null
+          email: string | null
+          email_confirmed: boolean | null
+          full_name: string | null
+          id: string | null
+          last_sign_in_at: string | null
+          status: string | null
+          user_role: Database["public"]["Enums"]["app_role"] | null
+          user_type: string | null
         }
         Relationships: []
       }
