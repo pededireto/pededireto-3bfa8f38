@@ -7,6 +7,7 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean;
   requireCommercial?: boolean;
   requireOnboarding?: boolean;
+  requireCs?: boolean;
   requireAnyStaff?: boolean;
 }
 
@@ -15,6 +16,7 @@ const ProtectedRoute = ({
   requireAdmin = false, 
   requireCommercial = false, 
   requireOnboarding = false,
+  requireCs = false,
   requireAnyStaff = false 
 }: ProtectedRouteProps) => {
   const { user, isAdmin, isCommercial, isSuperAdmin, isCs, isOnboarding, isLoading } = useAuth();
@@ -65,6 +67,18 @@ const ProtectedRoute = ({
         <div className="bg-card rounded-2xl shadow-card p-8 max-w-md w-full text-center">
           <h2 className="text-xl font-semibold text-foreground mb-2">Acesso Restrito</h2>
           <p className="text-muted-foreground mb-6">Não tens permissões de Onboarding para aceder a esta área.</p>
+          <a href="/" className="inline-block px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">Voltar ao início</a>
+        </div>
+      </div>
+    );
+  }
+
+  if (requireCs && !isCs && !isAdmin && !isSuperAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="bg-card rounded-2xl shadow-card p-8 max-w-md w-full text-center">
+          <h2 className="text-xl font-semibold text-foreground mb-2">Acesso Restrito</h2>
+          <p className="text-muted-foreground mb-6">Não tens permissões de Customer Success para aceder a esta área.</p>
           <a href="/" className="inline-block px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">Voltar ao início</a>
         </div>
       </div>

@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Users, Building2, Link2, Bug } from "lucide-react";
+import { Loader2, Users, Building2, Link2, Bug, LayoutDashboard } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import OnboardingDashboard from "@/components/onboarding/OnboardingDashboard";
+import OnboardingUsers from "@/components/onboarding/OnboardingUsers";
+import OnboardingBusinesses from "@/components/onboarding/OnboardingBusinesses";
+import OnboardingConnections from "@/components/onboarding/OnboardingConnections";
+import OnboardingBugReports from "@/components/onboarding/OnboardingBugReports";
 
 const OnboardingPage = () => {
   const { isLoading, isOnboarding, isAdmin, isSuperAdmin } = useAuth();
@@ -44,60 +49,32 @@ const OnboardingPage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5 h-auto">
             <TabsTrigger value="dashboard" className="flex items-center gap-2 py-3">
-              📊 Dashboard
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2 py-3">
               <Users className="h-4 w-4" />
-              Utilizadores
+              <span className="hidden sm:inline">Utilizadores</span>
             </TabsTrigger>
             <TabsTrigger value="businesses" className="flex items-center gap-2 py-3">
               <Building2 className="h-4 w-4" />
-              Negócios
+              <span className="hidden sm:inline">Negócios</span>
             </TabsTrigger>
             <TabsTrigger value="connections" className="flex items-center gap-2 py-3">
               <Link2 className="h-4 w-4" />
-              Ligações
+              <span className="hidden sm:inline">Ligações</span>
             </TabsTrigger>
             <TabsTrigger value="bugs" className="flex items-center gap-2 py-3">
               <Bug className="h-4 w-4" />
-              Bugs
+              <span className="hidden sm:inline">Bugs</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard" className="space-y-4">
-            <div className="bg-card rounded-xl p-6 border">
-              <h2 className="text-2xl font-bold mb-4">📊 Dashboard</h2>
-              <p className="text-muted-foreground">Estatísticas e visão geral virão aqui.</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="users" className="space-y-4">
-            <div className="bg-card rounded-xl p-6 border">
-              <h2 className="text-2xl font-bold mb-4">👥 Utilizadores</h2>
-              <p className="text-muted-foreground">Lista de utilizadores virá aqui.</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="businesses" className="space-y-4">
-            <div className="bg-card rounded-xl p-6 border">
-              <h2 className="text-2xl font-bold mb-4">🏢 Negócios</h2>
-              <p className="text-muted-foreground">Lista de negócios virá aqui.</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="connections" className="space-y-4">
-            <div className="bg-card rounded-xl p-6 border">
-              <h2 className="text-2xl font-bold mb-4">🔗 Ligações</h2>
-              <p className="text-muted-foreground">Gestão de ligações user↔business virá aqui.</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="bugs" className="space-y-4">
-            <div className="bg-card rounded-xl p-6 border">
-              <h2 className="text-2xl font-bold mb-4">🐛 Bugs</h2>
-              <p className="text-muted-foreground">Sistema de reports virá aqui.</p>
-            </div>
-          </TabsContent>
+          <TabsContent value="dashboard"><OnboardingDashboard /></TabsContent>
+          <TabsContent value="users"><OnboardingUsers /></TabsContent>
+          <TabsContent value="businesses"><OnboardingBusinesses /></TabsContent>
+          <TabsContent value="connections"><OnboardingConnections /></TabsContent>
+          <TabsContent value="bugs"><OnboardingBugReports /></TabsContent>
         </Tabs>
       </div>
     </div>

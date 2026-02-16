@@ -39,6 +39,7 @@ export interface Business {
   subscription_start_date: string | null;
   subscription_end_date: string | null;
   subscription_status: SubscriptionStatus;
+  claim_status?: string | null;
   created_at: string;
   updated_at: string;
 }
