@@ -10,7 +10,7 @@ import Footer from "@/components/Footer";
 import FavoriteButton from "@/components/FavoriteButton";
 import { UnclaimedBusinessBanner } from "@/components/business/UnclaimedBusinessBanner";
 import BusinessNavigation from "@/components/BusinessNavigation";
-import SuggestionForm from "@/components/SuggestionForm";
+import BusinessSuggestionForm from "@/components/BusinessSuggestionForm";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, 
@@ -441,7 +441,10 @@ const BusinessPage = () => {
       {showSuggestionForm && (
         <div className="border-t bg-muted/10">
           <div className="container py-8">
-            <SuggestionForm />
+            <BusinessSuggestionForm 
+              categoryName={business?.categories?.name}
+              cityName={cityFilter}
+            />
           </div>
         </div>
       )}
