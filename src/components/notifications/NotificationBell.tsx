@@ -1,57 +1,128 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useInternalNotifications, useUnreadInternalCount, useMarkNotificationRead } from "@/hooks/useNotifications";
+import { useTicketNotifications, useUnreadTicketNotifCount, useMarkTicketNotifRead, useMarkAllTicketNotifsRead } from "@/hooks/useTickets";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { pt } from "date-fns/locale";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface NotificationBellProps {
   targetRole: string;
 }
 
+const TYPE_ICONS: Record<string, string> = {
+  new_ticket: "🎫",
+  new_message: "💬",
+  ticket_resolved: "✅",
+  ticket_escalated: "🚨",
+};
+
 const NotificationBell = ({ targetRole }: NotificationBellProps) => {
   const [open, setOpen] = useState(false);
-  const { data: notifications = [] } = useInternalNotifications(targetRole);
-  const { data: unreadCount = 0 } = useUnreadInternalCount(targetRole);
-  const markRead = useMarkNotificationRead();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: internalNotifications = [] } = useInternalNotifications(targetRole);
+  const { data: internalUnread = 0 } = useUnreadInternalCount(targetRole);
+  const markInternalRead = useMarkNotificationRead();
 
-  const handleClick = (id: string, isRead: boolean) => {
-    if (!isRead) {
-      markRead.mutate(id);
-    }
+  const { data: ticketNotifications = [] } = useTicketNotifications();
+  const { data: ticketUnread = 0 } = useUnreadTicketNotifCount();
+  const markTicketRead = useMarkTicketNotifRead();
+  const markAllTicketRead = useMarkAllTicketNotifsRead();
+
+  const totalUnread = internalUnread + ticketUnread;
+
+  // Realtime subscription for ticket notifications
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`ticket-notifs-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "ticket_notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["ticket-notifications"] });
+          queryClient.invalidateQueries({ queryKey: ["ticket-notifications-unread"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+
+  const handleInternalClick = (id: string, isRead: boolean) => {
+    if (!isRead) markInternalRead.mutate(id);
   };
+
+  const handleTicketClick = (id: string, isRead: boolean) => {
+    if (!isRead) markTicketRead.mutate(id);
+  };
+
+  // Merge and sort all notifications
+  const allNotifications = [
+    ...internalNotifications.map((n: any) => ({ ...n, source: "internal" })),
+    ...ticketNotifications.map((n: any) => ({ ...n, source: "ticket" })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 25);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
+          {totalUnread > 0 && (
             <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
-              {unreadCount > 9 ? "9+" : unreadCount}
+              {totalUnread > 9 ? "9+" : totalUnread}
             </span>
           )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0 max-h-96 overflow-y-auto" align="end">
-        <div className="p-3 border-b border-border">
+        <div className="p-3 border-b border-border flex items-center justify-between">
           <p className="font-semibold text-sm text-foreground">Notificações</p>
+          {ticketUnread > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => markAllTicketRead.mutate()}
+            >
+              Marcar todas lidas
+            </Button>
+          )}
         </div>
-        {notifications.length === 0 ? (
+        {allNotifications.length === 0 ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             Sem notificações
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {notifications.slice(0, 20).map((n) => (
+            {allNotifications.map((n: any) => (
               <button
-                key={n.id}
-                onClick={() => handleClick(n.id, n.is_read)}
+                key={`${n.source}-${n.id}`}
+                onClick={() => {
+                  if (n.source === "internal") handleInternalClick(n.id, n.is_read);
+                  else handleTicketClick(n.id, n.is_read);
+                }}
                 className={`w-full text-left p-3 hover:bg-secondary/50 transition-colors ${!n.is_read ? "bg-primary/5" : ""}`}
               >
-                <p className="text-sm font-medium text-foreground">{n.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                <p className="text-sm font-medium text-foreground">
+                  {n.source === "ticket" && TYPE_ICONS[n.type] ? `${TYPE_ICONS[n.type]} ` : ""}
+                  {n.title || n.message || "Notificação"}
+                </p>
+                {n.message && n.title && (
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                )}
                 <p className="text-xs text-muted-foreground mt-1">
                   {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: pt })}
                 </p>

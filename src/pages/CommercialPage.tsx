@@ -13,6 +13,7 @@ import CommercialDashboardContent from "@/components/commercial/CommercialDashbo
 import CommercialMyBusinessesContent from "@/components/commercial/CommercialMyBusinessesContent";
 import CommercialCommissionsContent from "@/components/commercial/CommercialCommissionsContent";
 import CommercialClaimRequestsContent from "@/components/commercial/CommercialClaimRequestsContent";
+import TicketsTable from "@/components/tickets/TicketsTable";
 
 const CommercialPage = () => {
   const [activeTab, setActiveTab] = useState<CommercialTab>("dashboard");
@@ -29,6 +30,7 @@ const CommercialPage = () => {
     if (activeTab === "my-businesses") return <CommercialMyBusinessesContent />;
     if (activeTab === "my-commissions") return <CommercialCommissionsContent />;
     if (activeTab === "claim-requests") return <CommercialClaimRequestsContent />;
+    if (activeTab === "tickets") return <TicketsTable department="commercial" creatorRole="commercial" allowedCreateDepartments={["cs", "it_admin"]} />;
 
     if (isLoading) {
       return (

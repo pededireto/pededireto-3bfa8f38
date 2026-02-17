@@ -87,7 +87,7 @@ const OnboardingBusinesses = () => {
 
       // 1. Buscar todos os utilizadores via RPC
       const { data: allUsersData, error: usersError } = await supabase
-        .rpc("get_all_users_for_onboarding");
+        .rpc("get_all_users_for_onboarding" as any);
 
       if (usersError) {
         console.error("❌ Erro RPC:", usersError);
@@ -101,7 +101,7 @@ const OnboardingBusinesses = () => {
       }
 
       // A função retorna JSONB, que já vem como array JS
-      const allUsers = allUsersData || [];
+      const allUsers: any[] = Array.isArray(allUsersData) ? allUsersData : [];
 
       console.log("👥 Total de utilizadores encontrados:", allUsers.length);
       console.log("📋 Primeiros 3 emails:", allUsers.slice(0, 3).map((u: any) => u.email));

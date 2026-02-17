@@ -59,6 +59,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_alerts: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          metadata: Json | null
+          severity: string | null
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          metadata?: Json | null
+          severity?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          metadata?: Json | null
+          severity?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       admin_notifications: {
         Row: {
           business_id: string | null
@@ -2485,6 +2521,151 @@ export type Database = {
         }
         Relationships: []
       }
+      support_ticket_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_internal_note: boolean | null
+          message: string
+          ticket_id: string
+          user_id: string
+          user_role: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_internal_note?: boolean | null
+          message: string
+          ticket_id: string
+          user_id: string
+          user_role?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_internal_note?: boolean | null
+          message?: string
+          ticket_id?: string
+          user_id?: string
+          user_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "my_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets_sla_violations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to_department: string
+          assigned_to_user: string | null
+          business_id: string | null
+          category: string | null
+          closed_at: string | null
+          created_at: string | null
+          created_by: string
+          created_by_role: string | null
+          description: string
+          first_response_at: string | null
+          id: string
+          priority: string | null
+          resolved_at: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to_department: string
+          assigned_to_user?: string | null
+          business_id?: string | null
+          category?: string | null
+          closed_at?: string | null
+          created_at?: string | null
+          created_by: string
+          created_by_role?: string | null
+          description: string
+          first_response_at?: string | null
+          id?: string
+          priority?: string | null
+          resolved_at?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to_department?: string
+          assigned_to_user?: string | null
+          business_id?: string | null
+          category?: string | null
+          closed_at?: string | null
+          created_at?: string | null
+          created_by?: string
+          created_by_role?: string | null
+          description?: string
+          first_response_at?: string | null
+          id?: string
+          priority?: string | null
+          resolved_at?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_assigned_to_user_fkey"
+            columns: ["assigned_to_user"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           created_at: string
@@ -2541,6 +2722,177 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      ticket_audit_log: {
+        Row: {
+          change_type: string | null
+          changed_by: string
+          created_at: string | null
+          id: string
+          new_value: string | null
+          notes: string | null
+          old_value: string | null
+          ticket_id: string
+        }
+        Insert: {
+          change_type?: string | null
+          changed_by: string
+          created_at?: string | null
+          id?: string
+          new_value?: string | null
+          notes?: string | null
+          old_value?: string | null
+          ticket_id: string
+        }
+        Update: {
+          change_type?: string | null
+          changed_by?: string
+          created_at?: string | null
+          id?: string
+          new_value?: string | null
+          notes?: string | null
+          old_value?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_audit_log_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "my_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_audit_log_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_audit_log_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets_sla_violations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string | null
+          ticket_id: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          ticket_id: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          ticket_id?: string
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_notifications_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "my_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_notifications_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_notifications_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets_sla_violations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_response_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          department: string | null
+          id: string
+          is_active: boolean | null
+          shortcut: string | null
+          template_text: string
+          title: string
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department?: string | null
+          id?: string
+          is_active?: boolean | null
+          shortcut?: string | null
+          template_text: string
+          title: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department?: string | null
+          id?: string
+          is_active?: boolean | null
+          shortcut?: string | null
+          template_text?: string
+          title?: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_response_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_favorites: {
         Row: {
@@ -2805,6 +3157,19 @@ export type Database = {
         }
         Relationships: []
       }
+      my_tickets: {
+        Row: {
+          assigned_to_department: string | null
+          business_name: string | null
+          created_at: string | null
+          id: string | null
+          priority: string | null
+          relacao: string | null
+          status: string | null
+          title: string | null
+        }
+        Relationships: []
+      }
       onboarding_users_summary: {
         Row: {
           businesses_member: number | null
@@ -2821,6 +3186,17 @@ export type Database = {
         }
         Relationships: []
       }
+      popular_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          department: string | null
+          shortcut: string | null
+          title: string | null
+          usage_count: number | null
+        }
+        Relationships: []
+      }
       revenue_monthly: {
         Row: {
           month: string | null
@@ -2834,6 +3210,68 @@ export type Database = {
           search_term: string | null
           searches_without_results: number | null
           total_searches: number | null
+        }
+        Relationships: []
+      }
+      ticket_history_detailed: {
+        Row: {
+          change_type: string | null
+          changed_by_email: string | null
+          changed_by_name: string | null
+          created_at: string | null
+          id: string | null
+          new_value: string | null
+          notes: string | null
+          old_value: string | null
+          ticket_id: string | null
+          ticket_title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_audit_log_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "my_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_audit_log_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_audit_log_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets_sla_violations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets_by_department: {
+        Row: {
+          avg_hours_first_response: number | null
+          departamento: string | null
+          sem_resposta: number | null
+          status: string | null
+          total: number | null
+        }
+        Relationships: []
+      }
+      tickets_sla_violations: {
+        Row: {
+          assigned_to_department: string | null
+          business_name: string | null
+          created_at: string | null
+          hours_open: number | null
+          id: string | null
+          priority: string | null
+          sla_hours: number | null
+          sla_status: string | null
+          status: string | null
+          title: string | null
         }
         Relationships: []
       }
@@ -2900,6 +3338,7 @@ export type Database = {
         Args: { p_admin_notes?: string; p_business_id: string }
         Returns: Json
       }
+      auto_escalate_sla_violations: { Args: never; Returns: undefined }
       auto_reject_old_claims: { Args: never; Returns: undefined }
       claim_business:
         | { Args: { p_business_id: string }; Returns: Json }
@@ -2929,6 +3368,7 @@ export type Database = {
         }[]
       }
       get_admin_intelligence: { Args: { p_days?: number }; Returns: Json }
+      get_all_users_for_onboarding: { Args: never; Returns: Json }
       get_business_favorites_count: {
         Args: { business_uuid: string }
         Returns: number
