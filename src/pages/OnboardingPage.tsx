@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Users, Building2, Link2, Bug, LayoutDashboard, LogOut, User } from "lucide-react";
+import { Loader2, Users, Building2, Link2, Bug, LayoutDashboard, LogOut, User, Ticket } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import OnboardingUsers from "@/components/onboarding/OnboardingUsers";
 import OnboardingBusinesses from "@/components/onboarding/OnboardingBusinesses";
 import OnboardingConnections from "@/components/onboarding/OnboardingConnections";
 import OnboardingBugReports from "@/components/onboarding/OnboardingBugReports";
+import TicketsTable from "@/components/tickets/TicketsTable";
 
 const OnboardingPage = () => {
   const { user, isLoading, isOnboarding, isAdmin, isSuperAdmin } = useAuth();
@@ -109,7 +110,7 @@ const OnboardingPage = () => {
 
       <div className="container mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 h-auto">
+          <TabsList className="grid w-full grid-cols-6 h-auto">
             <TabsTrigger value="dashboard" className="flex items-center gap-2 py-3">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
@@ -126,6 +127,10 @@ const OnboardingPage = () => {
               <Link2 className="h-4 w-4" />
               <span className="hidden sm:inline">Ligações</span>
             </TabsTrigger>
+            <TabsTrigger value="tickets" className="flex items-center gap-2 py-3">
+              <Ticket className="h-4 w-4" />
+              <span className="hidden sm:inline">Tickets</span>
+            </TabsTrigger>
             <TabsTrigger value="bugs" className="flex items-center gap-2 py-3">
               <Bug className="h-4 w-4" />
               <span className="hidden sm:inline">Bugs</span>
@@ -136,6 +141,9 @@ const OnboardingPage = () => {
           <TabsContent value="users"><OnboardingUsers /></TabsContent>
           <TabsContent value="businesses"><OnboardingBusinesses /></TabsContent>
           <TabsContent value="connections"><OnboardingConnections /></TabsContent>
+          <TabsContent value="tickets">
+            <TicketsTable department="onboarding" creatorRole="onboarding" allowedCreateDepartments={["cs", "it_admin"]} />
+          </TabsContent>
           <TabsContent value="bugs"><OnboardingBugReports /></TabsContent>
         </Tabs>
       </div>

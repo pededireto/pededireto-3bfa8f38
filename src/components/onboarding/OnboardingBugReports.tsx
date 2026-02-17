@@ -46,7 +46,7 @@ const OnboardingBugReports = () => {
 
       // 2. Criar alerta para os admins
       const { error: alertError } = await supabase
-        .from("admin_alerts")
+        .from("admin_alerts" as any)
         .insert({
           type: "bug_report",
           title: `🐛 Novo Bug: ${title}`,
