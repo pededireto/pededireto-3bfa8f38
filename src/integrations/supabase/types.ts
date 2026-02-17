@@ -545,6 +545,89 @@ export type Database = {
         }
         Relationships: []
       }
+      business_claim_history: {
+        Row: {
+          approved_at: string | null
+          business_id: string
+          claimed_for_email: string | null
+          claimed_for_name: string | null
+          claimed_for_phone: string | null
+          created_at: string | null
+          discount_percentage: number | null
+          id: string
+          notes: string | null
+          offered_plan: string | null
+          processed_by: string
+          rejected_at: string | null
+          rejection_reason: string | null
+          status: string | null
+          trial_months: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          business_id: string
+          claimed_for_email?: string | null
+          claimed_for_name?: string | null
+          claimed_for_phone?: string | null
+          created_at?: string | null
+          discount_percentage?: number | null
+          id?: string
+          notes?: string | null
+          offered_plan?: string | null
+          processed_by: string
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          trial_months?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          business_id?: string
+          claimed_for_email?: string | null
+          claimed_for_name?: string | null
+          claimed_for_phone?: string | null
+          created_at?: string | null
+          discount_percentage?: number | null
+          id?: string
+          notes?: string | null
+          offered_plan?: string | null
+          processed_by?: string
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          trial_months?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_claim_history_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_claim_history_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_claim_history_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_claim_history_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_claim_requests: {
         Row: {
           business_id: string
@@ -2269,6 +2352,42 @@ export type Database = {
           },
         ]
       }
+      consumer_plans: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          features: Json | null
+          id: string
+          limits: Json | null
+          name: string
+          price_monthly: number | null
+          price_yearly: number | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          features?: Json | null
+          id?: string
+          limits?: Json | null
+          name: string
+          price_monthly?: number | null
+          price_yearly?: number | null
+          slug: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          features?: Json | null
+          id?: string
+          limits?: Json | null
+          name?: string
+          price_monthly?: number | null
+          price_yearly?: number | null
+          slug?: string
+        }
+        Relationships: []
+      }
       consumer_subscriptions: {
         Row: {
           auto_renew: boolean
@@ -2846,6 +2965,51 @@ export type Database = {
           },
         ]
       }
+      plan_changes: {
+        Row: {
+          changed_by: string | null
+          created_at: string | null
+          id: string
+          new_plan_id: string | null
+          notes: string | null
+          old_plan_id: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_plan_id?: string | null
+          notes?: string | null
+          old_plan_id?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_plan_id?: string | null
+          notes?: string | null
+          old_plan_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_changes_new_plan_id_fkey"
+            columns: ["new_plan_id"]
+            isOneToOne: false
+            referencedRelation: "consumer_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_changes_old_plan_id_fkey"
+            columns: ["old_plan_id"]
+            isOneToOne: false
+            referencedRelation: "consumer_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_rules: {
         Row: {
           allow_analytics_basic: boolean | null
@@ -2902,6 +3066,8 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          consumer_plan_expires_at: string | null
+          consumer_plan_id: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -2914,6 +3080,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          consumer_plan_expires_at?: string | null
+          consumer_plan_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -2926,6 +3094,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          consumer_plan_expires_at?: string | null
+          consumer_plan_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -2937,6 +3107,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_consumer_plan_id_fkey"
+            columns: ["consumer_plan_id"]
+            isOneToOne: false
+            referencedRelation: "consumer_plans"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_user_id_fkey"
             columns: ["user_id"]
