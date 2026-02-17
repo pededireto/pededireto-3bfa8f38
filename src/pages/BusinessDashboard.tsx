@@ -14,6 +14,7 @@ import BusinessPlanContent from "@/components/business/BusinessPlanContent";
 import BusinessInsightsContent from "@/components/business/BusinessInsightsContent";
 import TeamSection from "@/components/business/TeamSection";
 import ClaimStatusBanner from "@/components/business/ClaimStatusBanner";
+import BusinessReviewsPanel from "@/components/business/BusinessReviewsPanel";
 
 const BusinessDashboard = () => {
   const [activeTab, setActiveTab] = useState<BusinessTab>("overview");
@@ -49,6 +50,7 @@ const BusinessDashboard = () => {
       case "insights": return <BusinessInsightsContent businessId={business.id} planId={business.plan_id} claimStatus={permissions.claimStatus} />;
       case "plan": return <BusinessPlanContent business={business} />;
       case "team": return permissions.canViewTeam ? <TeamSection businessId={business.id} /> : null;
+      case "reviews": return <BusinessReviewsPanel businessId={business.id} />;
       default: return null;
     }
   };

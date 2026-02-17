@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, LayoutDashboard, Ticket, Building2, BarChart3, LogOut, User } from "lucide-react";
+import { Loader2, LayoutDashboard, Ticket, Building2, BarChart3, LogOut, User, Star } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import NotificationBell from "@/components/notifications/NotificationBell";
 import CsDashboard from "@/components/cs/CsDashboard";
 import CsMetrics from "@/components/cs/CsMetrics";
 import TicketsTable from "@/components/tickets/TicketsTable";
+import AdminReviewsPanel from "@/components/admin/AdminReviewsPanel";
 
 const CustomerSuccessPage = () => {
   const { user, isLoading, isCs, isAdmin, isSuperAdmin } = useAuth();
@@ -90,7 +91,7 @@ const CustomerSuccessPage = () => {
 
       <div className="container mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 h-auto">
+          <TabsList className="grid w-full grid-cols-5 h-auto">
             <TabsTrigger value="dashboard" className="flex items-center gap-2 py-3">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
@@ -98,6 +99,10 @@ const CustomerSuccessPage = () => {
             <TabsTrigger value="tickets" className="flex items-center gap-2 py-3">
               <Ticket className="h-4 w-4" />
               <span className="hidden sm:inline">Tickets</span>
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="flex items-center gap-2 py-3">
+              <Star className="h-4 w-4" />
+              <span className="hidden sm:inline">Avaliações</span>
             </TabsTrigger>
             <TabsTrigger value="businesses" className="flex items-center gap-2 py-3">
               <Building2 className="h-4 w-4" />
@@ -113,6 +118,7 @@ const CustomerSuccessPage = () => {
           <TabsContent value="tickets">
             <TicketsTable department="cs" creatorRole="cs" />
           </TabsContent>
+          <TabsContent value="reviews"><AdminReviewsPanel /></TabsContent>
           <TabsContent value="businesses">
             <div className="bg-card rounded-xl border p-8 text-center">
               <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />

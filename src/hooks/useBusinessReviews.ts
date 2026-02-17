@@ -84,9 +84,6 @@ export interface RespondToReviewInput {
 // QUERIES
 // ============================================================================
 
-/**
- * Buscar reviews de um negócio
- */
 export const useBusinessReviews = (businessId: string | undefined, filters?: {
   verified?: boolean;
   minRating?: number;
@@ -97,22 +94,19 @@ export const useBusinessReviews = (businessId: string | undefined, filters?: {
     queryFn: async () => {
       if (!businessId) return [];
 
-      let query = supabase
+      let query = (supabase as any)
         .from("business_reviews")
         .select("*")
         .eq("business_id", businessId)
         .eq("moderation_status", "approved");
 
-      // Filtros opcionais
       if (filters?.verified) {
         query = query.eq("is_verified", true);
       }
-
       if (filters?.minRating) {
         query = query.gte("rating", filters.minRating);
       }
 
-      // Ordenação
       switch (filters?.orderBy) {
         case "rating_high":
           query = query.order("rating", { ascending: false });
@@ -137,16 +131,13 @@ export const useBusinessReviews = (businessId: string | undefined, filters?: {
   });
 };
 
-/**
- * Buscar estatísticas de reviews de um negócio
- */
 export const useBusinessReviewStats = (businessId: string | undefined) => {
   return useQuery({
     queryKey: ["business-review-stats", businessId],
     queryFn: async () => {
       if (!businessId) return null;
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("business_review_stats")
         .select("*")
         .eq("business_id", businessId)
@@ -159,9 +150,6 @@ export const useBusinessReviewStats = (businessId: string | undefined) => {
   });
 };
 
-/**
- * Verificar se o utilizador já deixou review neste negócio
- */
 export const useUserReviewForBusiness = (businessId: string | undefined) => {
   const { user } = useAuth();
 
@@ -170,7 +158,7 @@ export const useUserReviewForBusiness = (businessId: string | undefined) => {
     queryFn: async () => {
       if (!businessId || !user?.id) return null;
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("business_reviews")
         .select("*")
         .eq("business_id", businessId)
@@ -184,9 +172,6 @@ export const useUserReviewForBusiness = (businessId: string | undefined) => {
   });
 };
 
-/**
- * Verificar se o utilizador votou numa review
- */
 export const useUserVoteForReview = (reviewId: string | undefined) => {
   const { user } = useAuth();
 
@@ -195,7 +180,7 @@ export const useUserVoteForReview = (reviewId: string | undefined) => {
     queryFn: async () => {
       if (!reviewId || !user?.id) return null;
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("review_helpfulness_votes")
         .select("*")
         .eq("review_id", reviewId)
@@ -210,12 +195,40 @@ export const useUserVoteForReview = (reviewId: string | undefined) => {
 };
 
 // ============================================================================
+// ALL REVIEWS (for admin/moderation)
+// ============================================================================
+
+export const useAllReviews = (filters?: {
+  status?: string;
+  minRating?: number;
+  search?: string;
+}) => {
+  return useQuery({
+    queryKey: ["all-reviews", filters],
+    queryFn: async () => {
+      let query = (supabase as any)
+        .from("business_reviews")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (filters?.status && filters.status !== "all") {
+        query = query.eq("moderation_status", filters.status);
+      }
+      if (filters?.minRating) {
+        query = query.gte("rating", filters.minRating);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as BusinessReview[];
+    },
+  });
+};
+
+// ============================================================================
 // MUTATIONS
 // ============================================================================
 
-/**
- * Criar uma review
- */
 export const useCreateReview = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -224,7 +237,7 @@ export const useCreateReview = () => {
     mutationFn: async (input: CreateReviewInput) => {
       if (!user?.id) throw new Error("User not authenticated");
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("business_reviews")
         .insert({
           business_id: input.business_id,
@@ -233,7 +246,7 @@ export const useCreateReview = () => {
           title: input.title || null,
           comment: input.comment || null,
           photos: input.photos || [],
-          moderation_status: "approved", // Auto-aprovar (pode mudar para "pending")
+          moderation_status: "approved",
         })
         .select()
         .single();
@@ -242,23 +255,20 @@ export const useCreateReview = () => {
       return data as BusinessReview;
     },
     onSuccess: (data) => {
-      // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: ["business-reviews", data.business_id] });
       queryClient.invalidateQueries({ queryKey: ["business-review-stats", data.business_id] });
       queryClient.invalidateQueries({ queryKey: ["user-review", data.business_id] });
+      queryClient.invalidateQueries({ queryKey: ["all-reviews"] });
     },
   });
 };
 
-/**
- * Atualizar uma review
- */
 export const useUpdateReview = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: UpdateReviewInput) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("business_reviews")
         .update({
           rating: updates.rating,
@@ -278,32 +288,29 @@ export const useUpdateReview = () => {
       queryClient.invalidateQueries({ queryKey: ["business-reviews", data.business_id] });
       queryClient.invalidateQueries({ queryKey: ["business-review-stats", data.business_id] });
       queryClient.invalidateQueries({ queryKey: ["user-review", data.business_id] });
+      queryClient.invalidateQueries({ queryKey: ["all-reviews"] });
     },
   });
 };
 
-/**
- * Apagar uma review
- */
 export const useDeleteReview = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (reviewId: string) => {
-      // Buscar review antes de apagar (para invalidar queries)
-      const { data: review } = await supabase
+      const { data: review } = await (supabase as any)
         .from("business_reviews")
         .select("business_id")
         .eq("id", reviewId)
         .single();
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("business_reviews")
         .delete()
         .eq("id", reviewId);
 
       if (error) throw error;
-      return review?.business_id;
+      return review?.business_id as string | undefined;
     },
     onSuccess: (businessId) => {
       if (businessId) {
@@ -311,13 +318,11 @@ export const useDeleteReview = () => {
         queryClient.invalidateQueries({ queryKey: ["business-review-stats", businessId] });
         queryClient.invalidateQueries({ queryKey: ["user-review", businessId] });
       }
+      queryClient.invalidateQueries({ queryKey: ["all-reviews"] });
     },
   });
 };
 
-/**
- * Votar útil/não útil numa review
- */
 export const useVoteReviewHelpfulness = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -326,7 +331,7 @@ export const useVoteReviewHelpfulness = () => {
     mutationFn: async (input: VoteHelpfulInput) => {
       if (!user?.id) throw new Error("User not authenticated");
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("review_helpfulness_votes")
         .upsert(
           {
@@ -334,9 +339,7 @@ export const useVoteReviewHelpfulness = () => {
             user_id: user.id,
             is_helpful: input.is_helpful,
           },
-          {
-            onConflict: "review_id,user_id",
-          }
+          { onConflict: "review_id,user_id" }
         )
         .select()
         .single();
@@ -351,9 +354,6 @@ export const useVoteReviewHelpfulness = () => {
   });
 };
 
-/**
- * Remover voto de útil/não útil
- */
 export const useRemoveVote = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -362,7 +362,7 @@ export const useRemoveVote = () => {
     mutationFn: async (reviewId: string) => {
       if (!user?.id) throw new Error("User not authenticated");
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("review_helpfulness_votes")
         .delete()
         .eq("review_id", reviewId)
@@ -378,9 +378,6 @@ export const useRemoveVote = () => {
   });
 };
 
-/**
- * Responder a uma review (para donos de negócio)
- */
 export const useRespondToReview = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -389,7 +386,7 @@ export const useRespondToReview = () => {
     mutationFn: async (input: RespondToReviewInput) => {
       if (!user?.id) throw new Error("User not authenticated");
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("business_reviews")
         .update({
           business_response: input.response,
@@ -405,19 +402,17 @@ export const useRespondToReview = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["business-reviews", data.business_id] });
+      queryClient.invalidateQueries({ queryKey: ["all-reviews"] });
     },
   });
 };
 
-/**
- * Denunciar uma review
- */
 export const useFlagReview = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ reviewId, reason }: { reviewId: string; reason: string }) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("business_reviews")
         .update({
           is_flagged: true,
@@ -432,6 +427,36 @@ export const useFlagReview = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["business-reviews", data.business_id] });
+      queryClient.invalidateQueries({ queryKey: ["all-reviews"] });
+    },
+  });
+};
+
+export const useModerateReview = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ reviewId, status }: { reviewId: string; status: "approved" | "rejected" }) => {
+      if (!user?.id) throw new Error("User not authenticated");
+
+      const { data, error } = await (supabase as any)
+        .from("business_reviews")
+        .update({
+          moderation_status: status,
+          moderated_by: user.id,
+          moderated_at: new Date().toISOString(),
+        })
+        .eq("id", reviewId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as BusinessReview;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["business-reviews", data.business_id] });
+      queryClient.invalidateQueries({ queryKey: ["all-reviews"] });
     },
   });
 };

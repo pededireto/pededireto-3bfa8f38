@@ -242,6 +242,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             subscription_price: 0,
             subscription_start_date: null, subscription_end_date: null,
             subscription_status: "inactive" as SubscriptionStatus,
+            public_address: null,
           };
 
           const result = await createBusiness.mutateAsync(businessData);
