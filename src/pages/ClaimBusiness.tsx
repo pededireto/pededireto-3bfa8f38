@@ -104,8 +104,11 @@ const ClaimBusiness = () => {
 
       if (signUpError) throw signUpError;
 
-      const newUser = signUpData.user;
-      if (!newUser) {
+      // ✅ CRITICAL: Check if session is available (auto-confirmed)
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        // Email confirmation required
         toast({
           title: "Verifique o seu email",
           description: "Enviámos um email de confirmação. Após confirmar, entre na sua conta para concluir o claim.",
@@ -113,10 +116,11 @@ const ClaimBusiness = () => {
         // Save intent so after email verification the user can be redirected
         localStorage.setItem("claimedBusinessId", selectedBusiness.id);
         localStorage.setItem("postLoginRedirect", "/claim-business");
+        setIsSigningUp(false);
         return;
       }
 
-      // If auto-confirmed (session available), claim immediately
+      // ✅ Session is available - now we can claim
       const { error: claimError } = await claim(selectedBusiness.id);
       if (claimError) throw claimError;
 
