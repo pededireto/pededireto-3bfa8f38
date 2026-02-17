@@ -251,6 +251,19 @@ const BusinessPage = () => {
                     <span>{getAlcanceLabel()}</span>
                   </div>
 
+                  {/* Morada Comercial (Pública) - NOVO */}
+                  {business.public_address && (
+                    <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-medium block mb-1">Morada</span>
+                          <p className="text-sm text-muted-foreground">{business.public_address}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Description */}
                   {business.description && (
                     <p className="text-lg text-muted-foreground leading-relaxed">
