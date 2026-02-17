@@ -37,7 +37,7 @@ import { useUncontactedCount } from "@/hooks/useExpirationLogs";
 import { usePendingRequestsCount } from "@/hooks/useActionRequests";
 import { usePendingClaimsCount } from "@/hooks/useClaimRequests";
 
-export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "team-management" | "action-requests" | "audit-logs" | "service-requests" | "business-modules" | "homepage" | "revenue" | "performance" | "commission-models" | "commission-audit" | "leads-dashboard" | "intelligence" | "claim-requests" | "tickets";
+export type AdminTab = "dashboard" | "businesses" | "users" | "categories" | "featured" | "plans" | "subscriptions" | "alerts" | "suggestions" | "analytics" | "search-logs" | "settings" | "pages" | "synonyms" | "team-management" | "action-requests" | "audit-logs" | "service-requests" | "business-modules" | "homepage" | "revenue" | "performance" | "commission-models" | "commission-audit" | "leads-dashboard" | "intelligence" | "claim-requests" | "tickets" | "reviews";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -73,6 +73,7 @@ const sidebarItems: { id: AdminTab; label: string; icon: React.ElementType }[] =
   { id: "leads-dashboard", label: "Dashboard Leads", icon: Target },
   { id: "intelligence", label: "Intelligence Center", icon: Brain },
   { id: "tickets", label: "Tickets", icon: Ticket },
+  { id: "reviews", label: "Avaliações", icon: Star },
   { id: "settings", label: "Configurações", icon: Settings },
 ];
 
