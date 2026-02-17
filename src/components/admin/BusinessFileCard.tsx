@@ -181,6 +181,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
     name: "", slug: "", description: "", logo_url: "",
     // Public presence
     city: "", zone: "", alcance: "local" as "local" | "nacional" | "hibrido",
+    public_address: "", // NOVO - morada comercial pública
     category_id: "", subcategory_ids: [] as string[],
     cta_phone: "", cta_email: "", cta_whatsapp: "", cta_website: "",
     schedule_weekdays: "", schedule_weekend: "",
@@ -206,6 +207,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
         description: business.description || "", logo_url: business.logo_url || "",
         city: business.city || "", zone: business.zone || "",
         alcance: business.alcance || "local",
+        public_address: (business as any).public_address || "", // NOVO
         category_id: business.category_id || "", subcategory_ids: [],
         cta_phone: business.cta_phone || "", cta_email: business.cta_email || "",
         cta_whatsapp: business.cta_whatsapp || "", cta_website: business.cta_website || "",
@@ -312,6 +314,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
         city: form.city || null,
         zone: form.zone || null,
         alcance: form.alcance,
+        public_address: form.public_address || null, // NOVO
         schedule_weekdays: form.schedule_weekdays || null,
         schedule_weekend: form.schedule_weekend || null,
         cta_website: form.cta_website || null,
@@ -462,6 +465,19 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
               <Label>Zona</Label>
               <Input value={form.zone} onChange={(e) => set("zone", e.target.value)} />
             </div>
+          </div>
+
+          {/* Morada Comercial (Pública) - NOVO */}
+          <div className="space-y-2 mt-4">
+            <Label>Morada Comercial</Label>
+            <Input 
+              value={form.public_address} 
+              onChange={(e) => set("public_address", e.target.value)} 
+              placeholder="Ex: Rua do Comércio, 123, Porto"
+            />
+            <p className="text-xs text-muted-foreground">
+              Esta morada será visível ao público na página do negócio.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
