@@ -20,6 +20,7 @@ export interface Business {
   city: string | null;
   zone: string | null;
   alcance: "local" | "nacional" | "hibrido";
+  public_address: string | null; // 👈 NOVO CAMPO ADICIONADO
   coordinates: Json | null;
   schedule_weekdays: string | null;
   schedule_weekend: string | null;
