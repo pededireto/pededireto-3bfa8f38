@@ -38,6 +38,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import CustomerSuccessPage from "./pages/CustomerSuccessPage";
 
 import RequestServicePage from "./pages/RequestServicePage";
+import UpgradePage from "./pages/UpgradePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -161,6 +162,7 @@ const App = () => {
 
                   {/* SERVICES */}
                   <Route path="/pedir-servico" element={<RequestServicePage />} />
+                  <Route path="/upgrade" element={<UpgradePage />} />
 
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />

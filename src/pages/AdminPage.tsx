@@ -37,6 +37,8 @@ import IntelligenceCenterContent from "@/components/admin/IntelligenceCenterCont
 import ClaimRequestsContent from "@/components/admin/ClaimRequestsContent";
 import TicketsTable from "@/components/tickets/TicketsTable";
 import AdminReviewsPanel from "@/components/admin/AdminReviewsPanel";
+import TestUsersPanel from "@/components/admin/TestUsersPanel";
+import PendingClaimsPanel from "@/components/admin/PendingClaimsPanel";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -73,6 +75,8 @@ const AdminPage = () => {
     if (activeTab === "claim-requests") return <ClaimRequestsContent />;
     if (activeTab === "tickets") return <TicketsTable showAll creatorRole="admin" />;
     if (activeTab === "reviews") return <AdminReviewsPanel />;
+    if (activeTab === "test-users") return <TestUsersPanel />;
+    if (activeTab === "pending-claims") return <PendingClaimsPanel />;
 
     if (isLoading) {
       return (

@@ -11,6 +11,7 @@ import FavoriteButton from "@/components/FavoriteButton";
 import { UnclaimedBusinessBanner } from "@/components/business/UnclaimedBusinessBanner";
 import BusinessNavigation from "@/components/BusinessNavigation";
 import BusinessSuggestionForm from "@/components/BusinessSuggestionForm";
+import { GoogleMapsLink } from "@/components/business/GoogleMapsLink";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, 
@@ -251,14 +252,19 @@ const BusinessPage = () => {
                     <span>{getAlcanceLabel()}</span>
                   </div>
 
-                  {/* Morada Comercial (Pública) - NOVO */}
+                  {/* Morada Comercial (Pública) */}
                   {business.public_address && (
                     <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                       <div className="flex items-start gap-2">
                         <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                        <div>
+                        <div className="flex-1">
                           <span className="font-medium block mb-1">Morada</span>
-                          <p className="text-sm text-muted-foreground">{business.public_address}</p>
+                          <p className="text-sm text-muted-foreground mb-2">{business.public_address}</p>
+                          <GoogleMapsLink
+                            address={business.public_address}
+                            businessName={business.name}
+                            variant="button"
+                          />
                         </div>
                       </div>
                     </div>
