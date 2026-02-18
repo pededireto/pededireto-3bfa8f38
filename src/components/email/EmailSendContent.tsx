@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Send, Search } from "lucide-react";
+import { Send, Search, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,8 @@ const EmailSendContent = () => {
 
   const [businessSearchQuery, setBusinessSearchQuery] = useState("");
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
+  const [manualEmail, setManualEmail] = useState("");
+  const [useManualEmail, setUseManualEmail] = useState(false);
   const [templateId, setTemplateId] = useState("");
   const [subject, setSubject] = useState("");
   const [html, setHtml] = useState("");
@@ -24,24 +26,25 @@ const EmailSendContent = () => {
 
   const { data: businesses = [] } = useBusinessSearch(businessSearchQuery);
 
-  // ✅ CORREÇÃO: Re-renderiza o template sempre que o negócio muda
+  // Destinatário final — negócio ou email manual
+  const recipientEmail = selectedBusiness?.email || (useManualEmail ? manualEmail : "");
+
+  // Re-renderiza template quando negócio ou templateId muda
   useEffect(() => {
     if (!templateId) return;
     const t = templates.find((t: any) => t.id === templateId);
     if (!t) return;
 
     if (selectedBusiness) {
-      // Negócio disponível → substitui variáveis
       const vars = {
         nome: selectedBusiness.name || "",
         email: selectedBusiness.email || "",
         cidade: selectedBusiness.city || "",
-        link_dashboard: selectedBusiness.dashboard_url || "https://pededireto.pt",
+        link_dashboard: "https://pededireto.pt",
       };
       setSubject(renderTemplate(t.subject, vars));
       setHtml(renderTemplate(t.html_content, vars));
     } else {
-      // Sem negócio → guarda em bruto (sem substituir)
       setSubject(t.subject);
       setHtml(t.html_content);
     }
@@ -50,10 +53,11 @@ const EmailSendContent = () => {
   const selectBusiness = (b: any) => {
     setSelectedBusiness(b);
     setBusinessSearchQuery("");
+    setUseManualEmail(false);
+    setManualEmail("");
   };
 
   const selectTemplate = (id: string) => {
-    // Apenas atualiza o ID — o useEffect trata do render
     if (id === "none") {
       setTemplateId("");
       setSubject("");
@@ -63,23 +67,42 @@ const EmailSendContent = () => {
     }
   };
 
+  const handleReset = () => {
+    setSelectedBusiness(null);
+    setBusinessSearchQuery("");
+    setUseManualEmail(false);
+    setManualEmail("");
+  };
+
   const handleSend = async () => {
-    if (!selectedBusiness?.email || !subject || !html) {
+    if (!recipientEmail || !subject || !html) {
       toast({ title: "Preencha todos os campos", variant: "destructive" });
       return;
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipientEmail)) {
+      toast({ title: "Email inválido", description: "Verifique o endereço de email.", variant: "destructive" });
+      return;
+    }
+
     setSending(true);
     try {
       await sendEmail.mutateAsync({
-        to: selectedBusiness.email,
+        to: recipientEmail,
         subject,
         html,
         templateId: templateId || undefined,
-        metadata: { business_id: selectedBusiness.id, recipient_type: "business" },
+        metadata: {
+          business_id: selectedBusiness?.id || null,
+          recipient_type: selectedBusiness ? "business" : "manual",
+        },
       });
       toast({ title: "Email enviado com sucesso!" });
       setSelectedBusiness(null);
       setBusinessSearchQuery("");
+      setUseManualEmail(false);
+      setManualEmail("");
       setSubject("");
       setHtml("");
       setTemplateId("");
@@ -94,53 +117,17 @@ const EmailSendContent = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-foreground">Enviar Email</h2>
-        <p className="text-muted-foreground">Envio individual a um negócio</p>
+        <p className="text-muted-foreground">Envio individual a um negócio ou email avulso</p>
       </div>
 
       <Card>
         <CardContent className="p-6 space-y-6">
-          {/* Business Search */}
+
+          {/* ===== DESTINATÁRIO ===== */}
           <div className="space-y-2">
-            <Label>Destinatário (Negócio) *</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Pesquisar por nome, email ou responsável..."
-                value={businessSearchQuery}
-                onChange={(e) => setBusinessSearchQuery(e.target.value)}
-                className="pl-10"
-                disabled={!!selectedBusiness}
-              />
-            </div>
+            <Label>Destinatário *</Label>
 
-            {businesses.length > 0 && !selectedBusiness && (
-              <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
-                {businesses.map((b: any) => (
-                  <button
-                    key={b.id}
-                    className="w-full text-left p-3 hover:bg-muted transition-colors"
-                    onClick={() => selectBusiness(b)}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{b.name}</p>
-                        <p className="text-xs text-muted-foreground">{b.email}</p>
-                        {b.ownerName && (
-                          <p className="text-xs text-muted-foreground">Responsável: {b.ownerName}</p>
-                        )}
-                        {b.city && (
-                          <p className="text-xs text-muted-foreground">📍 {b.city}</p>
-                        )}
-                      </div>
-                      <Badge variant={b.isActive ? "default" : "secondary"} className="text-xs">
-                        {b.isActive ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
+            {/* Negócio selecionado */}
             {selectedBusiness && (
               <div className="p-4 bg-primary/10 border-2 border-primary rounded-lg">
                 <div className="flex items-start justify-between">
@@ -154,25 +141,98 @@ const EmailSendContent = () => {
                       <p className="text-xs text-muted-foreground">📍 {selectedBusiness.city}</p>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedBusiness(null)}
-                  >
-                    Alterar
-                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleReset}>Alterar</Button>
                 </div>
               </div>
             )}
 
-            {businessSearchQuery.length >= 2 && businesses.length === 0 && !selectedBusiness && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhum negócio encontrado para "{businessSearchQuery}"
-              </p>
+            {/* Email manual ativo */}
+            {useManualEmail && !selectedBusiness && (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder="email@exemplo.com"
+                    value={manualEmail}
+                    onChange={(e) => setManualEmail(e.target.value)}
+                    className="flex-1"
+                    autoFocus
+                  />
+                  <Button variant="outline" size="sm" onClick={handleReset}>Cancelar</Button>
+                </div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <UserX className="w-3 h-3" />
+                  Email avulso — sem negócio associado na base de dados.
+                </p>
+              </div>
+            )}
+
+            {/* Pesquisa de negócio */}
+            {!selectedBusiness && !useManualEmail && (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Pesquisar negócio por nome, email ou responsável..."
+                    value={businessSearchQuery}
+                    onChange={(e) => setBusinessSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                {/* Resultados */}
+                {businesses.length > 0 && (
+                  <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                    {businesses.map((b: any) => (
+                      <button
+                        key={b.id}
+                        className="w-full text-left p-3 hover:bg-muted transition-colors"
+                        onClick={() => selectBusiness(b)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{b.name}</p>
+                            <p className="text-xs text-muted-foreground">{b.email}</p>
+                            {b.ownerName && <p className="text-xs text-muted-foreground">Responsável: {b.ownerName}</p>}
+                            {b.city && <p className="text-xs text-muted-foreground">📍 {b.city}</p>}
+                          </div>
+                          <Badge variant={b.isActive ? "default" : "secondary"} className="text-xs">
+                            {b.isActive ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Sem resultados → opção de email manual */}
+                {businessSearchQuery.length >= 2 && businesses.length === 0 && (
+                  <div className="border rounded-lg p-4 text-center space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum negócio encontrado para "<strong>{businessSearchQuery}</strong>"
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setUseManualEmail(true);
+                        // Se parece um email, pré-preenche automaticamente
+                        if (businessSearchQuery.includes("@")) {
+                          setManualEmail(businessSearchQuery);
+                        }
+                        setBusinessSearchQuery("");
+                      }}
+                    >
+                      <UserX className="w-4 h-4 mr-2" />
+                      Enviar para este email sem negócio associado
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
-          {/* Template Selection */}
+          {/* ===== TEMPLATE ===== */}
           <div className="space-y-2">
             <Label>Template (opcional)</Label>
             <Select value={templateId} onValueChange={selectTemplate}>
@@ -186,15 +246,9 @@ const EmailSendContent = () => {
                 ))}
               </SelectContent>
             </Select>
-            {/* ✅ Aviso visual se template selecionado mas sem negócio */}
-            {templateId && !selectedBusiness && (
-              <p className="text-xs text-amber-500">
-                ⚠️ Selecione um negócio para substituir as variáveis (nome, cidade, etc.)
-              </p>
-            )}
           </div>
 
-          {/* Subject */}
+          {/* ===== ASSUNTO ===== */}
           <div className="space-y-2">
             <Label>Assunto *</Label>
             <Input
@@ -204,7 +258,7 @@ const EmailSendContent = () => {
             />
           </div>
 
-          {/* HTML Content */}
+          {/* ===== HTML ===== */}
           <div className="space-y-2">
             <Label>Conteúdo HTML *</Label>
             <Textarea
@@ -212,31 +266,27 @@ const EmailSendContent = () => {
               value={html}
               onChange={(e) => setHtml(e.target.value)}
               className="font-mono text-xs"
-              placeholder="<p>Olá {{nome}},</p>..."
+              placeholder="<p>Olá,</p>..."
             />
             <p className="text-xs text-muted-foreground">
-              💡 Variáveis disponíveis: {'{{nome}}'}, {'{{email}}'}, {'{{cidade}}'}, {'{{link_dashboard}}'}
+              💡 Variáveis disponíveis (só com negócio associado): {'{{nome}}'}, {'{{email}}'}, {'{{cidade}}'}, {'{{link_dashboard}}'}
             </p>
           </div>
 
-          {/* Send Button */}
+          {/* ===== ENVIAR ===== */}
           <Button
             onClick={handleSend}
-            disabled={sending || !selectedBusiness?.email || !subject || !html}
+            disabled={sending || !recipientEmail || !subject || !html}
             className="w-full"
             size="lg"
           >
             <Send className="w-4 h-4 mr-2" />
-            {sending ? "A enviar..." : "Enviar Email"}
+            {sending ? "A enviar..." : `Enviar Email${recipientEmail ? ` para ${recipientEmail}` : ""}`}
           </Button>
+
         </CardContent>
       </Card>
     </div>
-  );
-};
-
-export default EmailSendContent;
-
   );
 };
 
