@@ -7,42 +7,73 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ─────────────────────────────────────────────
 // ✅ NORMALIZAÇÃO DE CAMPOS
-function normalizeBusiness(raw: any): any {
-  const pick = (...keys: string[]) => {
-    for (const k of keys) {
-      const val = raw[k];
-      if (val && typeof val === "string" && val.trim() && !["−", "-", "n/a", "N/A"].includes(val.trim())) {
-        return val.trim();
-      }
-    }
-    return null;
-  };
+// Aceita qualquer nome de campo que a AI possa devolver
+// e converte valores inválidos/vazios para null
+// ─────────────────────────────────────────────
+const INVALID_VALUES = new Set([
+  "", "-", "−", "--", "n/a", "N/A", "na", "NA",
+  "não disponível", "nao disponivel",
+  "Não disponível", "Nao disponivel",
+  "NÃO DISPONÍVEL", "NAO DISPONIVEL",
+  "indisponível", "indisponivel",
+  "sem info", "sem informação", "sem informacao",
+  "desconhecido", "unknown", "none", "null", "undefined",
+]);
 
-  // Recolhe todos os emails distintos encontrados
+function pickVal(...values: any[]): string | null {
+  for (const val of values) {
+    if (val === null || val === undefined) continue;
+    if (typeof val !== "string") continue;
+    const s = val.trim();
+    if (s === "") continue;
+    if (INVALID_VALUES.has(s)) continue;
+    // Rejeita strings que só têm underscores (ex: "__website__")
+    if (/^_+$/.test(s)) continue;
+    if (/^__.*__$/.test(s)) continue;
+    return s;
+  }
+  return null;
+}
+
+function normalizeBusiness(raw: any): any {
+  // Recolhe todos os emails distintos encontrados em qualquer campo
   const allEmails = [
     raw.email, raw.cta_email, raw.owner_email,
     raw.email_negocio, raw.email_responsavel,
   ]
-    .filter((v) => v && typeof v === "string" && v.includes("@"))
-    .map((v) => v.trim().toLowerCase())
-    .filter((v, i, arr) => arr.indexOf(v) === i);
+    .map((v) => (v && typeof v === "string" ? v.trim().toLowerCase() : null))
+    .filter((v): v is string => {
+      if (!v) return false;
+      if (INVALID_VALUES.has(v)) return false;
+      return v.includes("@");
+    })
+    .filter((v, i, arr) => arr.indexOf(v) === i); // dedup
 
-  const cta_email   = allEmails[0] || null;
-  const owner_email = allEmails[1] || allEmails[0] || null;
+  const cta_email   = allEmails[0] ?? null;
+  const owner_email = allEmails[1] ?? allEmails[0] ?? null;
+
+  // Website: garante que começa com http(s)
+  let website = pickVal(raw.website, raw.cta_website, raw.site, raw.url, raw.web);
+  if (website && !website.startsWith("http") && website.includes(".")) {
+    website = "https://" + website;
+  }
+  // Se ainda não parece URL válida, descarta
+  if (website && !website.includes(".")) website = null;
 
   return {
-    name:         pick("name", "nome", "negocio", "business"),
-    address:      pick("address", "morada", "endereco", "endereço", "addr"),
-    city:         pick("city", "cidade", "localidade"),
-    cta_phone:    pick("phone", "telefone", "cta_phone", "tel", "telephone"),
-    cta_whatsapp: pick("whatsapp", "cta_whatsapp", "wp", "wpp"),
-    cta_website:  pick("website", "site", "cta_website", "url", "web"),
-    owner_name:   pick("owner_name", "responsavel", "responsável", "proprietario", "contact_name"),
+    name:         pickVal(raw.name, raw.nome, raw.negocio, raw.business),
+    address:      pickVal(raw.address, raw.morada, raw.endereco, raw.endereço, raw.addr),
+    city:         pickVal(raw.city, raw.cidade, raw.localidade),
+    cta_phone:    pickVal(raw.cta_phone, raw.phone, raw.telefone, raw.tel, raw.telephone),
+    cta_whatsapp: pickVal(raw.cta_whatsapp, raw.whatsapp, raw.wp, raw.wpp),
+    cta_website:  website,
+    owner_name:   pickVal(raw.owner_name, raw.responsavel, raw.responsável, raw.proprietario, raw.contact_name),
     cta_email,
     owner_email,
-    category:     pick("category", "categoria"),
-    subcategory:  pick("subcategory", "subcategoria"),
+    category:     pickVal(raw.category, raw.categoria),
+    subcategory:  pickVal(raw.subcategory, raw.subcategoria),
   };
 }
 
@@ -75,11 +106,14 @@ serve(async (req) => {
       categoryId,
       subcategoryId,
       saveToDatabase = false,
-      businesses: preSelectedBusinesses, // ← frontend envia os já filtrados no passo 3
+      businesses: preSelectedBusinesses,
     } = await req.json();
 
-    // ✅ MODO GRAVAÇÃO: usa directamente os businesses pré-seleccionados pelo frontend
-    // Não re-extrai do texto — evita processar novamente e garante que só os selecionados são gravados
+    // ─────────────────────────────────────────────
+    // ✅ MODO GRAVAÇÃO (passo 3 → BD)
+    // Usa os businesses já normalizados enviados pelo frontend.
+    // Não re-extrai do texto.
+    // ─────────────────────────────────────────────
     if (saveToDatabase && preSelectedBusinesses?.length > 0) {
       const adminClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -93,43 +127,60 @@ serve(async (req) => {
       };
 
       for (const b of preSelectedBusinesses) {
+        // Re-normaliza cada business antes de gravar
+        // (garante que valores inválidos não entram na BD mesmo se vieram do frontend)
+        const safe = normalizeBusiness(b);
+
+        if (!safe.name) {
+          results.errors.push(`(sem nome): ignorado`);
+          continue;
+        }
+
         try {
           const { data, error } = await adminClient.rpc("upsert_business_from_import", {
-            p_name:                b.name,
-            p_city:                b.city          || null,
-            p_address:             b.address        || null,
-            p_cta_email:           b.cta_email      || null,
-            p_owner_email:         b.owner_email    || null,
-            p_cta_phone:           b.cta_phone      || null,
-            p_cta_whatsapp:        b.cta_whatsapp   || null,
-            p_cta_website:         b.cta_website    || null,
-            p_owner_name:          b.owner_name     || null,
-            p_category_id:         b.category_id    || null,
-            p_subcategory_id:      b.subcategory_id || null,
+            p_name:                safe.name,
+            p_city:                safe.city          ?? null,
+            p_address:             safe.address        ?? null,
+            p_cta_email:           safe.cta_email      ?? null,
+            p_owner_email:         safe.owner_email    ?? null,
+            p_cta_phone:           safe.cta_phone      ?? null,
+            p_cta_whatsapp:        safe.cta_whatsapp   ?? null,
+            p_cta_website:         safe.cta_website    ?? null,
+            p_owner_name:          safe.owner_name     ?? null,
+            p_category_id:         categoryId          ?? b.category_id   ?? null,
+            p_subcategory_id:      (subcategoryId && subcategoryId !== "none")
+                                     ? subcategoryId
+                                     : (b.subcategory_id ?? null),
             p_registration_source: "import_text",
           });
 
           if (error) {
-            console.error(`Upsert error for "${b.name}":`, error);
-            results.errors.push(`${b.name}: ${error.message}`);
+            console.error(`Upsert error for "${safe.name}":`, error);
+            results.errors.push(`${safe.name}: ${error.message}`);
           } else {
             const action = (data as any)?.action;
             if (action === "inserted") results.inserted++;
             if (action === "updated")  results.updated++;
           }
         } catch (e: any) {
-          results.errors.push(`${b.name}: ${e.message}`);
+          results.errors.push(`${safe.name}: ${e.message}`);
         }
       }
 
-      console.log(`Upsert complete: ${results.inserted} inserted, ${results.updated} updated, ${results.errors.length} errors`);
+      console.log(
+        `Upsert complete: ${results.inserted} inserted, ` +
+        `${results.updated} updated, ${results.errors.length} errors`
+      );
 
       return new Response(JSON.stringify({ businesses: preSelectedBusinesses, results }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ✅ MODO EXTRAÇÃO (passo 2 → 3): extrai do texto e devolve pré-visualização
+    // ─────────────────────────────────────────────
+    // ✅ MODO EXTRAÇÃO (passo 2 → pré-visualização)
+    // Extrai do texto via AI e devolve businesses normalizados
+    // ─────────────────────────────────────────────
     if (!text || text.trim().length < 20) {
       return new Response(
         JSON.stringify({ error: "Texto demasiado curto para extração" }),
@@ -169,12 +220,12 @@ REGRAS OBRIGATÓRIAS:
 - Extrai APENAS negócios reais mencionados no texto
 - O campo "name" é OBRIGATÓRIO — se um negócio não tiver nome claro, ignora-o
 - Nunca inventes dados
-- Campos não encontrados devem ser null
-- Valores como "-", "N/A", "n/a", "—" devem ser tratados como null
+- Campos não encontrados devem ser null (NUNCA uses strings como "Não disponível", "-", "N/A" — usa null)
+- Valores como "-", "N/A", "n/a", "—", "Não disponível" devem ser null
 - Se o texto indicar cidade ou localidade por contexto (cabeçalho), aplica essa cidade aos negócios seguintes até novo cabeçalho
 - Se encontrares 2 emails distintos para o mesmo negócio, coloca o email do negócio em "email" e o do responsável em "owner_email"
 - Se encontrares apenas 1 email, coloca-o em "email" — o sistema duplica-o automaticamente
-- URLs que comecem por "http" ou "https" são websites
+- URLs que comecem por "http" ou "https", ou que contenham ".pt", ".com", ".eu" são websites
 - Telefones devem ser mantidos como string, exatamente como aparecem no texto
 - Remove espaços desnecessários no início/fim dos valores
 - Retorna no MÁXIMO ${safeLimit} negócios
@@ -183,7 +234,10 @@ ${categoryInstruction}
 TEXTO A PROCESSAR:
 ${text.substring(0, 30000)}`;
 
-    console.log(`Extracting businesses (${text.length} chars), categoryId=${categoryId || "none"}`);
+    console.log(
+      `Extracting businesses (${text.length} chars), ` +
+      `categoryId=${categoryId || "none"}, subcategoryId=${subcategoryId || "none"}`
+    );
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -196,7 +250,10 @@ ${text.substring(0, 30000)}`;
         messages: [
           {
             role: "system",
-            content: "Extrais dados estruturados de texto colado por administradores. Respondes APENAS com JSON válido via tool calling.",
+            content:
+              "Extrais dados estruturados de texto colado por administradores. " +
+              "Respondes APENAS com JSON válido via tool calling. " +
+              "NUNCA uses strings como 'Não disponível', 'N/A', '-' — usa sempre null para campos sem informação.",
           },
           { role: "user", content: extractionPrompt },
         ],
@@ -214,17 +271,17 @@ ${text.substring(0, 30000)}`;
                     items: {
                       type: "object",
                       properties: {
-                        name:        { type: "string" },
-                        address:     { type: "string", nullable: true },
-                        city:        { type: "string", nullable: true },
-                        phone:       { type: "string", nullable: true },
-                        whatsapp:    { type: "string", nullable: true },
-                        email:       { type: "string", nullable: true },
-                        owner_email: { type: "string", nullable: true },
-                        owner_name:  { type: "string", nullable: true },
-                        website:     { type: "string", nullable: true },
-                        category:    { type: "string", nullable: true },
-                        subcategory: { type: "string", nullable: true },
+                        name:        { type: "string",  description: "Nome do negócio (obrigatório)" },
+                        address:     { type: "string",  nullable: true, description: "Morada completa ou null" },
+                        city:        { type: "string",  nullable: true, description: "Cidade ou null" },
+                        phone:       { type: "string",  nullable: true, description: "Telefone ou null (nunca 'Não disponível')" },
+                        whatsapp:    { type: "string",  nullable: true, description: "WhatsApp ou null (nunca 'Não disponível')" },
+                        email:       { type: "string",  nullable: true, description: "Email do negócio ou null" },
+                        owner_email: { type: "string",  nullable: true, description: "Email do responsável ou null" },
+                        owner_name:  { type: "string",  nullable: true, description: "Nome do responsável ou null" },
+                        website:     { type: "string",  nullable: true, description: "URL do website ou null (nunca 'Não disponível')" },
+                        category:    { type: "string",  nullable: true },
+                        subcategory: { type: "string",  nullable: true },
                       },
                       required: ["name"],
                     },
@@ -242,14 +299,16 @@ ${text.substring(0, 30000)}`;
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit excedido, tente novamente mais tarde" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Rate limit excedido, tente novamente mais tarde" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
       if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos AI insuficientes" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Créditos AI insuficientes" }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
@@ -276,7 +335,7 @@ ${text.substring(0, 30000)}`;
       );
     }
 
-    // ✅ Normaliza campos + aplica categoria do dropdown se existir
+    // ✅ Normaliza + aplica categoria do dropdown + sanitiza todos os valores inválidos
     businesses = businesses
       .slice(0, safeLimit)
       .filter((b: any) => b.name && b.name.trim())
@@ -284,8 +343,9 @@ ${text.substring(0, 30000)}`;
         const normalized = normalizeBusiness(b);
         return {
           ...normalized,
-          category_id:    categoryId    || null,
+          category_id:    categoryId ?? null,
           subcategory_id: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
+          // Só mostra categoria/subcategoria textual se não foi escolhida no dropdown
           category:    categoryId    ? null : normalized.category,
           subcategory: subcategoryId ? null : normalized.subcategory,
         };
