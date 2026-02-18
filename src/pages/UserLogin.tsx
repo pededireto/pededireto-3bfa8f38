@@ -147,6 +147,16 @@ const UserLogin = () => {
                 "Entrar"
               )}
             </Button>
+
+            {/* NOVO: Link Esqueci-me da senha */}
+            <div className="text-center">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Esqueci-me da senha
+              </Link>
+            </div>
           </form>
 
           <div className="mt-6 text-center">
