@@ -94,21 +94,29 @@ serve(async (req) => {
 
     const extractionPrompt = `Recebes um texto colado por um administrador com uma lista de negócios,
 proveniente de pesquisas no Google, Google AI, blogs, excertos de Excel ou outros sites.
-O texto pode estar desorganizado, conter cabeçalhos, separações por cidade ou freguesia,
-tabelas em texto simples e campos como "N/A" ou "-".
+O texto pode estar desorganizado, numa só linha, ou em formato de tabela copiada do Excel.
 
 A tua tarefa é extrair uma lista estruturada de negócios.
+
+FORMATOS POSSÍVEIS DO TEXTO:
+- Linhas separadas: cada linha é um campo diferente
+- Texto corrido numa linha: campos separados por espaços (ex: "Nome Categoria Subcategoria Cidade Telefone WhatsApp Email Website Estado ...")
+- Tabela copiada do Excel: colunas separadas por tabs ou espaços múltiplos
+- O texto pode ter DUAS colunas de contacto telefónico seguidas: a primeira é o Telefone ("phone"), a segunda é o WhatsApp ("whatsapp") — são campos distintos, NÃO é duplicação
+- Palavras como "Ativo", "Inativo", "Gratuito", "Premium", "Não Contactado", "Sim", "Não", datas (ex: "18/02/2026") são metadados internos — ignora-os completamente
+- Nomes de categorias e subcategorias que apareçam no texto (ex: "Serviços de Reparações & Obras", "Canalizadores") devem ser ignorados se já foram escolhidos no dropdown
 
 REGRAS OBRIGATÓRIAS:
 - Extrai APENAS negócios reais mencionados no texto
 - O campo "name" é OBRIGATÓRIO — se um negócio não tiver nome claro, ignora-o
 - Nunca inventes dados
 - Campos não encontrados devem ser null
-- Valores como "-", "N/A", "n/a" devem ser tratados como null
+- Valores como "-", "N/A", "n/a", "—" devem ser tratados como null
 - Se o texto indicar cidade ou localidade por contexto (cabeçalho), aplica essa cidade aos negócios seguintes até novo cabeçalho
-- Se encontrares 2 emails para o mesmo negócio, coloca o email do negócio em "email" e o email do responsável em "owner_email"
-- Se encontrares apenas 1 email, coloca-o em "email" — o sistema irá duplicá-lo automaticamente para o responsável
-- Telefones devem ser mantidos como string, exatamente como aparecem no texto
+- Se encontrares 2 emails distintos para o mesmo negócio, coloca o email do negócio em "email" e o do responsável em "owner_email"
+- Se encontrares apenas 1 email, coloca-o em "email" — o sistema duplica-o automaticamente
+- URLs que comecem por "http" ou "https" são websites
+- Telefones devem ser mantidos como string, exatamente como aparecem (sem duplicar)
 - Remove espaços desnecessários no início/fim dos valores
 - Retorna no MÁXIMO ${safeLimit} negócios
 ${categoryInstruction}
