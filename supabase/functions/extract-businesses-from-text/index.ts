@@ -8,67 +8,41 @@ const corsHeaders = {
 };
 
 // ✅ NORMALIZAÇÃO DE CAMPOS
-// Recebe o objeto bruto da IA e normaliza para os nomes corretos da BD
 function normalizeBusiness(raw: any): any {
-  // Helper para pegar o primeiro valor não nulo de uma lista de chaves
   const pick = (...keys: string[]) => {
     for (const k of keys) {
       const val = raw[k];
-      if (val && typeof val === "string" && val.trim() && val.trim() !== "-") {
+      if (val && typeof val === "string" && val.trim() && !["−", "-", "n/a", "N/A"].includes(val.trim())) {
         return val.trim();
       }
     }
     return null;
   };
 
-  // ── EMAILS ──────────────────────────────────────────────────────────────
-  // Recolhe todos os emails distintos encontrados no objeto
+  // Recolhe todos os emails distintos encontrados
   const allEmails = [
     raw.email, raw.cta_email, raw.owner_email,
     raw.email_negocio, raw.email_responsavel,
   ]
     .filter((v) => v && typeof v === "string" && v.includes("@"))
     .map((v) => v.trim().toLowerCase())
-    .filter((v, i, arr) => arr.indexOf(v) === i); // únicos
+    .filter((v, i, arr) => arr.indexOf(v) === i);
 
-  const cta_email   = allEmails[0] || null; // 1º email → negócio
-  const owner_email = allEmails[1] || allEmails[0] || null; // 2º se existir, senão reutiliza o 1º
-
-  // ── TELEFONES ────────────────────────────────────────────────────────────
-  const cta_phone = pick(
-    "phone", "telefone", "cta_phone", "tel", "telephone"
-  );
-
-  // ── WHATSAPP ─────────────────────────────────────────────────────────────
-  const cta_whatsapp = pick(
-    "whatsapp", "cta_whatsapp", "wp", "wpp"
-  );
-
-  // ── WEBSITE ──────────────────────────────────────────────────────────────
-  const cta_website = pick(
-    "website", "site", "cta_website", "url", "web"
-  );
-
-  // ── OUTROS CAMPOS ────────────────────────────────────────────────────────
-  const name       = pick("name", "nome", "negocio", "business");
-  const address    = pick("address", "morada", "endereco", "endereço", "addr");
-  const city       = pick("city", "cidade", "localidade");
-  const category    = pick("category", "categoria");
-  const subcategory = pick("subcategory", "subcategoria");
-  const owner_name  = pick("owner_name", "responsavel", "responsável", "proprietario", "contact_name");
+  const cta_email   = allEmails[0] || null;
+  const owner_email = allEmails[1] || allEmails[0] || null;
 
   return {
-    name,
-    address,
-    city,
-    cta_phone,
-    cta_whatsapp,
+    name:          pick("name", "nome", "negocio", "business"),
+    address:       pick("address", "morada", "endereco", "endereço", "addr"),
+    city:          pick("city", "cidade", "localidade"),
+    cta_phone:     pick("phone", "telefone", "cta_phone", "tel", "telephone"),
+    cta_whatsapp:  pick("whatsapp", "cta_whatsapp", "wp", "wpp"),
+    cta_website:   pick("website", "site", "cta_website", "url", "web"),
+    owner_name:    pick("owner_name", "responsavel", "responsável", "proprietario", "contact_name"),
     cta_email,
-    owner_email,   // ← igual a cta_email se só houver 1
-    owner_name,
-    cta_website,
-    category,
-    subcategory,
+    owner_email,
+    category:      pick("category", "categoria"),
+    subcategory:   pick("subcategory", "subcategoria"),
   };
 }
 
@@ -95,7 +69,7 @@ serve(async (req) => {
       });
     }
 
-    const { text, limit = 100, categoryId, subcategoryId } = await req.json();
+    const { text, limit = 100, categoryId, subcategoryId, saveToDatabase = false } = await req.json();
 
     if (!text || text.trim().length < 20) {
       return new Response(
@@ -142,7 +116,7 @@ ${categoryInstruction}
 TEXTO A PROCESSAR:
 ${text.substring(0, 30000)}`;
 
-    console.log(`Extracting businesses (${text.length} chars), categoryId=${categoryId || "none"}`);
+    console.log(`Extracting businesses (${text.length} chars), categoryId=${categoryId || "none"}, save=${saveToDatabase}`);
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -173,17 +147,17 @@ ${text.substring(0, 30000)}`;
                     items: {
                       type: "object",
                       properties: {
-                        name:         { type: "string" },
-                        address:      { type: "string", nullable: true },
-                        city:         { type: "string", nullable: true },
-                        phone:        { type: "string", nullable: true },
-                        whatsapp:     { type: "string", nullable: true },
-                        email:        { type: "string", nullable: true },
-                        owner_email:  { type: "string", nullable: true },
-                        owner_name:   { type: "string", nullable: true },
-                        website:      { type: "string", nullable: true },
-                        category:     { type: "string", nullable: true },
-                        subcategory:  { type: "string", nullable: true },
+                        name:        { type: "string" },
+                        address:     { type: "string", nullable: true },
+                        city:        { type: "string", nullable: true },
+                        phone:       { type: "string", nullable: true },
+                        whatsapp:    { type: "string", nullable: true },
+                        email:       { type: "string", nullable: true },
+                        owner_email: { type: "string", nullable: true },
+                        owner_name:  { type: "string", nullable: true },
+                        website:     { type: "string", nullable: true },
+                        category:    { type: "string", nullable: true },
+                        subcategory: { type: "string", nullable: true },
                       },
                       required: ["name"],
                     },
@@ -235,7 +209,7 @@ ${text.substring(0, 30000)}`;
       );
     }
 
-    // ✅ Normaliza campos + aplica categoria do dropdown se existir
+    // ✅ Normaliza campos
     businesses = businesses
       .slice(0, safeLimit)
       .filter((b: any) => b.name && b.name.trim())
@@ -243,7 +217,6 @@ ${text.substring(0, 30000)}`;
         const normalized = normalizeBusiness(b);
         return {
           ...normalized,
-          // Dropdown sobrepõe sempre o que a IA extraiu
           category_id:    categoryId    || null,
           subcategory_id: subcategoryId || null,
           category:    categoryId    ? null : normalized.category,
@@ -251,8 +224,59 @@ ${text.substring(0, 30000)}`;
         };
       });
 
-    console.log(`Extracted and normalized ${businesses.length} businesses.`);
+    console.log(`Extracted ${businesses.length} businesses.`);
 
+    // ✅ SE saveToDatabase=true → chama upsert_business_from_import para cada negócio
+    if (saveToDatabase && businesses.length > 0) {
+      const adminClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      const results = {
+        inserted: 0,
+        updated:  0,
+        errors:   [] as string[],
+      };
+
+      for (const b of businesses) {
+        try {
+          const { data, error } = await adminClient.rpc("upsert_business_from_import", {
+            p_name:               b.name,
+            p_city:               b.city               || null,
+            p_address:            b.address             || null,
+            p_cta_email:          b.cta_email           || null,
+            p_owner_email:        b.owner_email         || null,
+            p_cta_phone:          b.cta_phone           || null,
+            p_cta_whatsapp:       b.cta_whatsapp        || null,
+            p_cta_website:        b.cta_website         || null,
+            p_owner_name:         b.owner_name          || null,
+            p_category_id:        b.category_id         || null,
+            p_subcategory_id:     b.subcategory_id      || null,
+            p_registration_source: "import_text",
+          });
+
+          if (error) {
+            console.error(`Upsert error for "${b.name}":`, error);
+            results.errors.push(`${b.name}: ${error.message}`);
+          } else {
+            const action = (data as any)?.action;
+            if (action === "inserted") results.inserted++;
+            if (action === "updated")  results.updated++;
+          }
+        } catch (e: any) {
+          results.errors.push(`${b.name}: ${e.message}`);
+        }
+      }
+
+      console.log(`Upsert complete: ${results.inserted} inserted, ${results.updated} updated, ${results.errors.length} errors`);
+
+      return new Response(JSON.stringify({ businesses, results }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ✅ SE saveToDatabase=false → devolve apenas a pré-visualização (passo 3 do frontend)
     return new Response(JSON.stringify({ businesses }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
