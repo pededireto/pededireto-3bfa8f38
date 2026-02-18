@@ -48,7 +48,7 @@ const ResetPassword = () => {
       // Log do reset
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase.from('password_reset_logs').insert({
+        await (supabase as any).from('password_reset_logs').insert({
           user_id: user.id,
           reset_method: 'self_service',
           completed_at: new Date().toISOString(),
