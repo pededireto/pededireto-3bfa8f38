@@ -14,3 +14,15 @@ verify_jwt = false
 
 [functions.extract-businesses-from-text]
 verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.email-webhook]
+verify_jwt = false
+
+[functions.process-cadences]
+verify_jwt = false
+
+[functions.receive-email]
+verify_jwt = false

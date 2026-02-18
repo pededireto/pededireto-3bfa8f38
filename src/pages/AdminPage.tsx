@@ -39,6 +39,7 @@ import TicketsTable from "@/components/tickets/TicketsTable";
 import AdminReviewsPanel from "@/components/admin/AdminReviewsPanel";
 import TestUsersPanel from "@/components/admin/TestUsersPanel";
 import PendingClaimsPanel from "@/components/admin/PendingClaimsPanel";
+import EmailHub from "@/components/email/EmailHub";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -77,6 +78,7 @@ const AdminPage = () => {
     if (activeTab === "reviews") return <AdminReviewsPanel />;
     if (activeTab === "test-users") return <TestUsersPanel />;
     if (activeTab === "pending-claims") return <PendingClaimsPanel />;
+    if (activeTab === "emails") return <EmailHub showInbox />;
 
     if (isLoading) {
       return (

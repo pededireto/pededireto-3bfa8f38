@@ -5059,6 +5059,26 @@ export type Database = {
         }
         Relationships: []
       }
+      cadence_enrollment_summary: {
+        Row: {
+          active_count: number | null
+          cadence_id: string | null
+          cadence_name: string | null
+          cancelled_count: number | null
+          completed_count: number | null
+          paused_count: number | null
+          total_enrolled: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_cadence_enrollments_cadence_id_fkey"
+            columns: ["cadence_id"]
+            isOneToOne: false
+            referencedRelation: "email_cadences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_alerts_view: {
         Row: {
           created_at: string | null
@@ -5142,6 +5162,30 @@ export type Database = {
           total_revenue: number | null
         }
         Relationships: []
+      }
+      email_performance_summary: {
+        Row: {
+          bounce_rate: number | null
+          campaign_id: string | null
+          campaign_name: string | null
+          click_rate: number | null
+          open_rate: number | null
+          reply_rate: number | null
+          total_bounced: number | null
+          total_clicked: number | null
+          total_opened: number | null
+          total_replied: number | null
+          total_sent: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       my_tickets: {
         Row: {

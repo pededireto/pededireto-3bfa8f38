@@ -8,11 +8,12 @@ import {
   DollarSign,
   ShieldCheck,
   Ticket,
+  MailPlus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-export type CommercialTab = "dashboard" | "businesses" | "my-businesses" | "my-commissions" | "my-requests" | "claim-requests" | "tickets";
+export type CommercialTab = "dashboard" | "businesses" | "my-businesses" | "my-commissions" | "my-requests" | "claim-requests" | "tickets" | "emails";
 
 interface CommercialSidebarProps {
   activeTab: CommercialTab;
@@ -27,6 +28,7 @@ const sidebarItems: { id: CommercialTab; label: string; icon: React.ElementType 
   { id: "my-commissions", label: "Minhas Comissões", icon: DollarSign },
   { id: "my-requests", label: "Os Meus Pedidos", icon: ClipboardList },
   { id: "claim-requests", label: "Pedidos de Claim", icon: ShieldCheck },
+  { id: "emails", label: "Email Marketing", icon: MailPlus },
   { id: "tickets", label: "Tickets", icon: Ticket },
 ];
 
