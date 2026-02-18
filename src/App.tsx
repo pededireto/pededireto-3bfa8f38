@@ -26,6 +26,11 @@ import RegisterChoice from "./pages/RegisterChoice";
 import RegisterBusiness from "./pages/RegisterBusiness";
 import ClaimBusiness from "./pages/ClaimBusiness";
 
+// NOVOS IMPORTS - Sistema de Password Recovery e Perfil
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import UserProfile from "./pages/UserProfile";
+
 import UserDashboard from "./pages/UserDashboard";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import ProfilePage from "./pages/ProfilePage";
@@ -112,6 +117,10 @@ const App = () => {
                   <Route path="/registar/consumidor" element={<UserRegister />} />
                   <Route path="/register/business" element={<RegisterBusiness />} />
 
+                  {/* PASSWORD RECOVERY - NOVO */}
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+
                   {/* CLAIM FLOW */}
                   <Route path="/claim-business" element={<ClaimBusiness />} />
 
@@ -119,6 +128,9 @@ const App = () => {
                   <Route path="/dashboard" element={<UserDashboard />} />
                   <Route path="/business-dashboard" element={<BusinessDashboard />} />
                   <Route path="/perfil" element={<ProfilePage />} />
+                  
+                  {/* USER PROFILE - NOVO */}
+                  <Route path="/profile" element={<UserProfile />} />
 
                   {/* ADMIN */}
                   <Route path="/admin/login" element={<AdminLogin />} />
