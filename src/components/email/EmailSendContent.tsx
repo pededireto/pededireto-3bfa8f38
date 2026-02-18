@@ -1,48 +1,49 @@
 import { useState } from "react";
-import { Send, FileText, Search } from "lucide-react";
+import { Send, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEmailTemplates, useSendEmail, renderTemplate } from "@/hooks/useEmailMarketing";
+import { Badge } from "@/components/ui/badge";
+import { useEmailTemplates, useSendEmail, renderTemplate, useBusinessSearch } from "@/hooks/useEmailMarketing";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const EmailSendContent = () => {
   const { toast } = useToast();
   const { data: templates = [] } = useEmailTemplates();
   const sendEmail = useSendEmail();
 
-  const [businessSearch, setBusinessSearch] = useState("");
-  const [businesses, setBusinesses] = useState<any[]>([]);
+  const [businessSearchQuery, setBusinessSearchQuery] = useState("");
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
   const [templateId, setTemplateId] = useState("");
   const [subject, setSubject] = useState("");
   const [html, setHtml] = useState("");
   const [sending, setSending] = useState(false);
 
-  const searchBusinesses = async (q: string) => {
-    setBusinessSearch(q);
-    if (q.length < 2) { setBusinesses([]); return; }
-    const { data } = await (supabase as any).from("businesses").select("id, name, email, city").ilike("name", `%${q}%`).not("email", "is", null).limit(10);
-    setBusinesses(data || []);
-  };
+  // ✅ USAR O HOOK CORRETO
+  const { data: businesses = [] } = useBusinessSearch(businessSearchQuery);
 
   const selectBusiness = (b: any) => {
     setSelectedBusiness(b);
-    setBusinesses([]);
-    setBusinessSearch(b.name);
+    setBusinessSearchQuery(""); // Limpa search após selecionar
   };
 
   const selectTemplate = (id: string) => {
     setTemplateId(id);
     const t = templates.find((t: any) => t.id === id);
     if (t && selectedBusiness) {
-      setSubject(renderTemplate(t.subject, { nome: selectedBusiness.name, email: selectedBusiness.email, cidade: selectedBusiness.city || "" }));
-      setHtml(renderTemplate(t.html_content, { nome: selectedBusiness.name, email: selectedBusiness.email, cidade: selectedBusiness.city || "" }));
+      setSubject(renderTemplate(t.subject, { 
+        nome: selectedBusiness.name, 
+        email: selectedBusiness.email, 
+        cidade: selectedBusiness.city || "" 
+      }));
+      setHtml(renderTemplate(t.html_content, { 
+        nome: selectedBusiness.name, 
+        email: selectedBusiness.email, 
+        cidade: selectedBusiness.city || "" 
+      }));
     } else if (t) {
       setSubject(t.subject);
       setHtml(t.html_content);
@@ -64,8 +65,9 @@ const EmailSendContent = () => {
         metadata: { business_id: selectedBusiness.id, recipient_type: "business" },
       });
       toast({ title: "Email enviado com sucesso!" });
+      // Limpar form
       setSelectedBusiness(null);
-      setBusinessSearch("");
+      setBusinessSearchQuery("");
       setSubject("");
       setHtml("");
       setTemplateId("");
@@ -91,27 +93,74 @@ const EmailSendContent = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Pesquisar negócio..."
-                value={businessSearch}
-                onChange={(e) => searchBusinesses(e.target.value)}
+                placeholder="Pesquisar por nome, email ou responsável..."
+                value={businessSearchQuery}
+                onChange={(e) => setBusinessSearchQuery(e.target.value)}
                 className="pl-10"
+                disabled={!!selectedBusiness}
               />
             </div>
-            {businesses.length > 0 && (
-              <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+            
+            {/* Resultados da busca */}
+            {businesses.length > 0 && !selectedBusiness && (
+              <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
                 {businesses.map((b: any) => (
-                  <button key={b.id} className="w-full text-left p-3 hover:bg-muted transition-colors" onClick={() => selectBusiness(b)}>
-                    <p className="text-sm font-medium text-foreground">{b.name}</p>
-                    <p className="text-xs text-muted-foreground">{b.email} • {b.city}</p>
+                  <button 
+                    key={b.id} 
+                    className="w-full text-left p-3 hover:bg-muted transition-colors" 
+                    onClick={() => selectBusiness(b)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{b.name}</p>
+                        <p className="text-xs text-muted-foreground">{b.email}</p>
+                        {b.ownerName && (
+                          <p className="text-xs text-muted-foreground">Responsável: {b.ownerName}</p>
+                        )}
+                        {b.city && (
+                          <p className="text-xs text-muted-foreground">📍 {b.city}</p>
+                        )}
+                      </div>
+                      {/* Badge de status */}
+                      <Badge variant={b.isActive ? "default" : "secondary"} className="text-xs">
+                        {b.isActive ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </div>
                   </button>
                 ))}
               </div>
             )}
+            
+            {/* Negócio selecionado */}
             {selectedBusiness && (
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <p className="text-sm font-medium text-foreground">{selectedBusiness.name}</p>
-                <p className="text-xs text-muted-foreground">{selectedBusiness.email}</p>
+              <div className="p-4 bg-primary/10 border-2 border-primary rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-foreground">{selectedBusiness.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">✉️ {selectedBusiness.email}</p>
+                    {selectedBusiness.ownerName && (
+                      <p className="text-xs text-muted-foreground">👤 {selectedBusiness.ownerName}</p>
+                    )}
+                    {selectedBusiness.city && (
+                      <p className="text-xs text-muted-foreground">📍 {selectedBusiness.city}</p>
+                    )}
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setSelectedBusiness(null)}
+                  >
+                    Alterar
+                  </Button>
+                </div>
               </div>
+            )}
+            
+            {/* Mensagem quando não há resultados */}
+            {businessSearchQuery.length >= 2 && businesses.length === 0 && !selectedBusiness && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhum negócio encontrado para "{businessSearchQuery}"
+              </p>
             )}
           </div>
 
@@ -119,7 +168,9 @@ const EmailSendContent = () => {
           <div className="space-y-2">
             <Label>Template (opcional)</Label>
             <Select value={templateId} onValueChange={selectTemplate}>
-              <SelectTrigger><SelectValue placeholder="Sem template / escrever manualmente" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Sem template / escrever manualmente" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sem template</SelectItem>
                 {templates.filter((t: any) => t.is_active).map((t: any) => (
@@ -132,17 +183,37 @@ const EmailSendContent = () => {
           {/* Subject */}
           <div className="space-y-2">
             <Label>Assunto *</Label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Assunto do email" />
+            <Input 
+              value={subject} 
+              onChange={(e) => setSubject(e.target.value)} 
+              placeholder="Assunto do email" 
+            />
           </div>
 
           {/* HTML Content */}
           <div className="space-y-2">
             <Label>Conteúdo HTML *</Label>
-            <Textarea rows={12} value={html} onChange={(e) => setHtml(e.target.value)} className="font-mono text-xs" placeholder="<p>Olá {{nome}},</p>..." />
+            <Textarea 
+              rows={12} 
+              value={html} 
+              onChange={(e) => setHtml(e.target.value)} 
+              className="font-mono text-xs" 
+              placeholder="<p>Olá {{nome}},</p>..." 
+            />
+            <p className="text-xs text-muted-foreground">
+              💡 Variáveis disponíveis: {'{{nome}}'}, {'{{email}}'}, {'{{cidade}}'}
+            </p>
           </div>
 
-          <Button onClick={handleSend} disabled={sending || !selectedBusiness?.email}>
-            <Send className="w-4 h-4 mr-2" />{sending ? "A enviar..." : "Enviar Email"}
+          {/* Send Button */}
+          <Button 
+            onClick={handleSend} 
+            disabled={sending || !selectedBusiness?.email || !subject || !html}
+            className="w-full"
+            size="lg"
+          >
+            <Send className="w-4 h-4 mr-2" />
+            {sending ? "A enviar..." : "Enviar Email"}
           </Button>
         </CardContent>
       </Card>
