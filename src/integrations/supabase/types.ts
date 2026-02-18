@@ -2881,6 +2881,51 @@ export type Database = {
           },
         ]
       }
+      password_reset_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          email_sent_at: string | null
+          id: string
+          reset_by: string | null
+          reset_method: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          email_sent_at?: string | null
+          id?: string
+          reset_by?: string | null
+          reset_method: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          email_sent_at?: string | null
+          id?: string
+          reset_by?: string | null
+          reset_method?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "password_reset_logs_reset_by_fkey"
+            columns: ["reset_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "password_reset_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pattern_categories: {
         Row: {
           category_id: string | null
@@ -4275,6 +4320,47 @@ export type Database = {
           },
         ]
       }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -4724,12 +4810,10 @@ export type Database = {
         Args: { bid: string }
         Returns: number
       }
-      claim_business:
-        | { Args: { p_business_id: string }; Returns: Json }
-        | {
-            Args: { p_business_id: string; p_claim_message?: string }
-            Returns: Json
-          }
+      claim_business: {
+        Args: { p_business_id: string; p_claim_message?: string }
+        Returns: Json
+      }
       cleanup_old_analytics_events: {
         Args: { days_to_keep?: number }
         Returns: number

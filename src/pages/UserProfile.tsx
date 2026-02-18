@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useUser } from "@supabase/auth-helpers-react";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, User, Lock, Eye, EyeOff } from "lucide-react";
 
 const UserProfile = () => {
-  const user = useUser();
+  const { user } = useAuth();
   const { toast } = useToast();
   
   // Profile
@@ -110,7 +110,7 @@ const UserProfile = () => {
       if (error) throw error;
 
       // Log do reset
-      await supabase.from('password_reset_logs').insert({
+      await (supabase as any).from('password_reset_logs').insert({
         user_id: user!.id,
         reset_method: 'self_service',
         completed_at: new Date().toISOString(),
