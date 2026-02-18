@@ -2,60 +2,67 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // ✅ VERIFICAR AUTH
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: corsHeaders,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    // ✅ CRIAR CLIENT AUTENTICADO
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(
-      authHeader.replace("Bearer ", "")
-    );
-    if (claimsError || !claimsData?.claims) {
+    // ✅ OBTER USER AUTENTICADO (MÉTODO CORRETO)
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error("Auth error:", userError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: corsHeaders,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
 
-    const { to, subject, html, templateId, campaignId, cadenceEnrollmentId, metadata } =
-      await req.json();
+    const userId = user.id;
+
+    // ✅ PARSE REQUEST BODY
+    const { to, subject, html, templateId, campaignId, cadenceEnrollmentId, metadata } = await req.json();
 
     if (!to || !subject || !html) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: to, subject, html" }),
-        { status: 400, headers: corsHeaders }
-      );
+      return new Response(JSON.stringify({ error: "Missing required fields: to, subject, html" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
+    // ✅ VERIFICAR RESEND API KEY
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "RESEND_API_KEY not configured" }),
-        { status: 500, headers: corsHeaders }
-      );
+      console.error("RESEND_API_KEY not configured");
+      return new Response(JSON.stringify({ error: "Email service not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Send via Resend
+    // ✅ ENVIAR VIA RESEND
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -75,18 +82,18 @@ Deno.serve(async (req) => {
     if (!resendRes.ok) {
       console.error("Resend error:", resendData);
       return new Response(
-        JSON.stringify({ error: "Failed to send email", details: resendData }),
-        { status: 500, headers: corsHeaders }
+        JSON.stringify({
+          error: "Failed to send email",
+          details: resendData,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Use service role for DB writes to bypass RLS
-    const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // ✅ USAR SERVICE ROLE PARA ESCREVER NA DB (BYPASS RLS)
+    const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Log the email
+    // ✅ LOG DO EMAIL
     const { error: logError } = await adminClient.from("email_logs").insert({
       campaign_id: campaignId || null,
       template_id: templateId || null,
@@ -104,25 +111,37 @@ Deno.serve(async (req) => {
 
     if (logError) {
       console.error("Log error:", logError);
+      // Não falhar o request por causa do log
     }
 
-    // Create notification
-    await adminClient.from("email_notifications").insert({
+    // ✅ CRIAR NOTIFICAÇÃO
+    const { error: notifError } = await adminClient.from("email_notifications").insert({
       user_id: userId,
       type: "email_sent",
       title: `Email enviado para ${to}`,
       message: `Assunto: ${subject}`,
     });
 
-    return new Response(
-      JSON.stringify({ success: true, id: resendData.id }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    if (notifError) {
+      console.error("Notification error:", notifError);
+      // Não falhar o request por causa da notificação
+    }
+
+    // ✅ RETORNAR SUCESSO
+    return new Response(JSON.stringify({ success: true, id: resendData.id }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Send email error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: corsHeaders }
+      JSON.stringify({
+        error: error.message || "Internal server error",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 });
