@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Pede Direto <noreply@pededireto.pt>",
+        from: "Pede Direto <geral@pededireto.pt>",
         to: [to],
         subject,
         html,
