@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Send, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,31 +22,44 @@ const EmailSendContent = () => {
   const [html, setHtml] = useState("");
   const [sending, setSending] = useState(false);
 
-  // ✅ USAR O HOOK CORRETO
   const { data: businesses = [] } = useBusinessSearch(businessSearchQuery);
+
+  // ✅ CORREÇÃO: Re-renderiza o template sempre que o negócio muda
+  useEffect(() => {
+    if (!templateId) return;
+    const t = templates.find((t: any) => t.id === templateId);
+    if (!t) return;
+
+    if (selectedBusiness) {
+      // Negócio disponível → substitui variáveis
+      const vars = {
+        nome: selectedBusiness.name || "",
+        email: selectedBusiness.email || "",
+        cidade: selectedBusiness.city || "",
+        link_dashboard: selectedBusiness.dashboard_url || "https://pededireto.pt",
+      };
+      setSubject(renderTemplate(t.subject, vars));
+      setHtml(renderTemplate(t.html_content, vars));
+    } else {
+      // Sem negócio → guarda em bruto (sem substituir)
+      setSubject(t.subject);
+      setHtml(t.html_content);
+    }
+  }, [selectedBusiness, templateId, templates]);
 
   const selectBusiness = (b: any) => {
     setSelectedBusiness(b);
-    setBusinessSearchQuery(""); // Limpa search após selecionar
+    setBusinessSearchQuery("");
   };
 
   const selectTemplate = (id: string) => {
-    setTemplateId(id);
-    const t = templates.find((t: any) => t.id === id);
-    if (t && selectedBusiness) {
-      setSubject(renderTemplate(t.subject, { 
-        nome: selectedBusiness.name, 
-        email: selectedBusiness.email, 
-        cidade: selectedBusiness.city || "" 
-      }));
-      setHtml(renderTemplate(t.html_content, { 
-        nome: selectedBusiness.name, 
-        email: selectedBusiness.email, 
-        cidade: selectedBusiness.city || "" 
-      }));
-    } else if (t) {
-      setSubject(t.subject);
-      setHtml(t.html_content);
+    // Apenas atualiza o ID — o useEffect trata do render
+    if (id === "none") {
+      setTemplateId("");
+      setSubject("");
+      setHtml("");
+    } else {
+      setTemplateId(id);
     }
   };
 
@@ -65,7 +78,6 @@ const EmailSendContent = () => {
         metadata: { business_id: selectedBusiness.id, recipient_type: "business" },
       });
       toast({ title: "Email enviado com sucesso!" });
-      // Limpar form
       setSelectedBusiness(null);
       setBusinessSearchQuery("");
       setSubject("");
@@ -100,14 +112,13 @@ const EmailSendContent = () => {
                 disabled={!!selectedBusiness}
               />
             </div>
-            
-            {/* Resultados da busca */}
+
             {businesses.length > 0 && !selectedBusiness && (
               <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
                 {businesses.map((b: any) => (
-                  <button 
-                    key={b.id} 
-                    className="w-full text-left p-3 hover:bg-muted transition-colors" 
+                  <button
+                    key={b.id}
+                    className="w-full text-left p-3 hover:bg-muted transition-colors"
                     onClick={() => selectBusiness(b)}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -121,7 +132,6 @@ const EmailSendContent = () => {
                           <p className="text-xs text-muted-foreground">📍 {b.city}</p>
                         )}
                       </div>
-                      {/* Badge de status */}
                       <Badge variant={b.isActive ? "default" : "secondary"} className="text-xs">
                         {b.isActive ? "Ativo" : "Inativo"}
                       </Badge>
@@ -130,8 +140,7 @@ const EmailSendContent = () => {
                 ))}
               </div>
             )}
-            
-            {/* Negócio selecionado */}
+
             {selectedBusiness && (
               <div className="p-4 bg-primary/10 border-2 border-primary rounded-lg">
                 <div className="flex items-start justify-between">
@@ -145,8 +154,8 @@ const EmailSendContent = () => {
                       <p className="text-xs text-muted-foreground">📍 {selectedBusiness.city}</p>
                     )}
                   </div>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => setSelectedBusiness(null)}
                   >
@@ -155,8 +164,7 @@ const EmailSendContent = () => {
                 </div>
               </div>
             )}
-            
-            {/* Mensagem quando não há resultados */}
+
             {businessSearchQuery.length >= 2 && businesses.length === 0 && !selectedBusiness && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Nenhum negócio encontrado para "{businessSearchQuery}"
@@ -178,36 +186,42 @@ const EmailSendContent = () => {
                 ))}
               </SelectContent>
             </Select>
+            {/* ✅ Aviso visual se template selecionado mas sem negócio */}
+            {templateId && !selectedBusiness && (
+              <p className="text-xs text-amber-500">
+                ⚠️ Selecione um negócio para substituir as variáveis (nome, cidade, etc.)
+              </p>
+            )}
           </div>
 
           {/* Subject */}
           <div className="space-y-2">
             <Label>Assunto *</Label>
-            <Input 
-              value={subject} 
-              onChange={(e) => setSubject(e.target.value)} 
-              placeholder="Assunto do email" 
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Assunto do email"
             />
           </div>
 
           {/* HTML Content */}
           <div className="space-y-2">
             <Label>Conteúdo HTML *</Label>
-            <Textarea 
-              rows={12} 
-              value={html} 
-              onChange={(e) => setHtml(e.target.value)} 
-              className="font-mono text-xs" 
-              placeholder="<p>Olá {{nome}},</p>..." 
+            <Textarea
+              rows={12}
+              value={html}
+              onChange={(e) => setHtml(e.target.value)}
+              className="font-mono text-xs"
+              placeholder="<p>Olá {{nome}},</p>..."
             />
             <p className="text-xs text-muted-foreground">
-              💡 Variáveis disponíveis: {'{{nome}}'}, {'{{email}}'}, {'{{cidade}}'}
+              💡 Variáveis disponíveis: {'{{nome}}'}, {'{{email}}'}, {'{{cidade}}'}, {'{{link_dashboard}}'}
             </p>
           </div>
 
           {/* Send Button */}
-          <Button 
-            onClick={handleSend} 
+          <Button
+            onClick={handleSend}
             disabled={sending || !selectedBusiness?.email || !subject || !html}
             className="w-full"
             size="lg"
@@ -218,6 +232,11 @@ const EmailSendContent = () => {
         </CardContent>
       </Card>
     </div>
+  );
+};
+
+export default EmailSendContent;
+
   );
 };
 
