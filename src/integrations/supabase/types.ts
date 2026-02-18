@@ -2439,6 +2439,551 @@ export type Database = {
           },
         ]
       }
+      email_cadence_enrollments: {
+        Row: {
+          business_id: string | null
+          cadence_id: string
+          cancelled_at: string | null
+          completed_at: string | null
+          current_step: number | null
+          enrolled_at: string | null
+          enrolled_by: string | null
+          id: string
+          pause_on_click: boolean | null
+          pause_on_reply: boolean | null
+          recipient_email: string
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          cadence_id: string
+          cancelled_at?: string | null
+          completed_at?: string | null
+          current_step?: number | null
+          enrolled_at?: string | null
+          enrolled_by?: string | null
+          id?: string
+          pause_on_click?: boolean | null
+          pause_on_reply?: boolean | null
+          recipient_email: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          cadence_id?: string
+          cancelled_at?: string | null
+          completed_at?: string | null
+          current_step?: number | null
+          enrolled_at?: string | null
+          enrolled_by?: string | null
+          id?: string
+          pause_on_click?: boolean | null
+          pause_on_reply?: boolean | null
+          recipient_email?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_cadence_enrollments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_cadence_enrollments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_cadence_enrollments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_cadence_enrollments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_cadence_enrollments_cadence_id_fkey"
+            columns: ["cadence_id"]
+            isOneToOne: false
+            referencedRelation: "email_cadences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_cadence_enrollments_enrolled_by_fkey"
+            columns: ["enrolled_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_cadence_enrollments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_cadence_steps: {
+        Row: {
+          cadence_id: string
+          delay_days: number
+          delay_hours: number | null
+          id: string
+          step_order: number
+          template_id: string
+        }
+        Insert: {
+          cadence_id: string
+          delay_days?: number
+          delay_hours?: number | null
+          id?: string
+          step_order: number
+          template_id: string
+        }
+        Update: {
+          cadence_id?: string
+          delay_days?: number
+          delay_hours?: number | null
+          id?: string
+          step_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_cadence_steps_cadence_id_fkey"
+            columns: ["cadence_id"]
+            isOneToOne: false
+            referencedRelation: "email_cadences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_cadence_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_cadences: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_cadences_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_campaigns: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          recipient_count: number | null
+          scheduled_at: string | null
+          segment_criteria: Json | null
+          sent_at: string | null
+          status: string | null
+          template_id: string | null
+          total_recipients: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          recipient_count?: number | null
+          scheduled_at?: string | null
+          segment_criteria?: Json | null
+          sent_at?: string | null
+          status?: string | null
+          template_id?: string | null
+          total_recipients?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          recipient_count?: number | null
+          scheduled_at?: string | null
+          segment_criteria?: Json | null
+          sent_at?: string | null
+          status?: string | null
+          template_id?: string | null
+          total_recipients?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaigns_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_inbox: {
+        Row: {
+          assigned_to: string | null
+          body_html: string | null
+          body_text: string | null
+          business_id: string | null
+          from_email: string
+          from_name: string | null
+          id: string
+          provider_message_id: string | null
+          received_at: string | null
+          status: string | null
+          subject: string
+          tags: string[] | null
+          ticket_id: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          body_html?: string | null
+          body_text?: string | null
+          business_id?: string | null
+          from_email: string
+          from_name?: string | null
+          id?: string
+          provider_message_id?: string | null
+          received_at?: string | null
+          status?: string | null
+          subject: string
+          tags?: string[] | null
+          ticket_id?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          body_html?: string | null
+          body_text?: string | null
+          business_id?: string | null
+          from_email?: string
+          from_name?: string | null
+          id?: string
+          provider_message_id?: string | null
+          received_at?: string | null
+          status?: string | null
+          subject?: string
+          tags?: string[] | null
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_inbox_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "my_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets_sla_violations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_logs: {
+        Row: {
+          bounce_reason: string | null
+          bounced: boolean | null
+          campaign_id: string | null
+          clicked_at: string | null
+          html_content: string | null
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          provider: string | null
+          provider_id: string | null
+          provider_status: string | null
+          recipient_email: string
+          recipient_id: string | null
+          recipient_type: string | null
+          replied_at: string | null
+          sent_at: string | null
+          sent_by: string | null
+          subject: string
+          template_id: string | null
+        }
+        Insert: {
+          bounce_reason?: string | null
+          bounced?: boolean | null
+          campaign_id?: string | null
+          clicked_at?: string | null
+          html_content?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          provider?: string | null
+          provider_id?: string | null
+          provider_status?: string | null
+          recipient_email: string
+          recipient_id?: string | null
+          recipient_type?: string | null
+          replied_at?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          subject: string
+          template_id?: string | null
+        }
+        Update: {
+          bounce_reason?: string | null
+          bounced?: boolean | null
+          campaign_id?: string | null
+          clicked_at?: string | null
+          html_content?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          provider?: string | null
+          provider_id?: string | null
+          provider_status?: string | null
+          recipient_email?: string
+          recipient_id?: string | null
+          recipient_type?: string | null
+          replied_at?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          subject?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_logs_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_notifications: {
+        Row: {
+          created_at: string | null
+          email_log_id: string | null
+          id: string
+          inbox_id: string | null
+          is_read: boolean | null
+          message: string | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_log_id?: string | null
+          id?: string
+          inbox_id?: string | null
+          is_read?: boolean | null
+          message?: string | null
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email_log_id?: string | null
+          id?: string
+          inbox_id?: string | null
+          is_read?: boolean | null
+          message?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_notifications_email_log_id_fkey"
+            columns: ["email_log_id"]
+            isOneToOne: false
+            referencedRelation: "email_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_notifications_inbox_id_fkey"
+            columns: ["inbox_id"]
+            isOneToOne: false
+            referencedRelation: "email_inbox"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          html_content: string
+          id: string
+          is_active: boolean | null
+          name: string
+          subject: string
+          text_content: string | null
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          html_content: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          subject: string
+          text_content?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          html_content?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          subject?: string
+          text_content?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expiration_logs: {
         Row: {
           business_id: string
