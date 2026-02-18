@@ -32,17 +32,17 @@ function normalizeBusiness(raw: any): any {
   const owner_email = allEmails[1] || allEmails[0] || null;
 
   return {
-    name:          pick("name", "nome", "negocio", "business"),
-    address:       pick("address", "morada", "endereco", "endereço", "addr"),
-    city:          pick("city", "cidade", "localidade"),
-    cta_phone:     pick("phone", "telefone", "cta_phone", "tel", "telephone"),
-    cta_whatsapp:  pick("whatsapp", "cta_whatsapp", "wp", "wpp"),
-    cta_website:   pick("website", "site", "cta_website", "url", "web"),
-    owner_name:    pick("owner_name", "responsavel", "responsável", "proprietario", "contact_name"),
+    name:         pick("name", "nome", "negocio", "business"),
+    address:      pick("address", "morada", "endereco", "endereço", "addr"),
+    city:         pick("city", "cidade", "localidade"),
+    cta_phone:    pick("phone", "telefone", "cta_phone", "tel", "telephone"),
+    cta_whatsapp: pick("whatsapp", "cta_whatsapp", "wp", "wpp"),
+    cta_website:  pick("website", "site", "cta_website", "url", "web"),
+    owner_name:   pick("owner_name", "responsavel", "responsável", "proprietario", "contact_name"),
     cta_email,
     owner_email,
-    category:      pick("category", "categoria"),
-    subcategory:   pick("subcategory", "subcategoria"),
+    category:     pick("category", "categoria"),
+    subcategory:  pick("subcategory", "subcategoria"),
   };
 }
 
@@ -69,8 +69,67 @@ serve(async (req) => {
       });
     }
 
-    const { text, limit = 100, categoryId, subcategoryId, saveToDatabase = false } = await req.json();
+    const {
+      text,
+      limit = 100,
+      categoryId,
+      subcategoryId,
+      saveToDatabase = false,
+      businesses: preSelectedBusinesses, // ← frontend envia os já filtrados no passo 3
+    } = await req.json();
 
+    // ✅ MODO GRAVAÇÃO: usa directamente os businesses pré-seleccionados pelo frontend
+    // Não re-extrai do texto — evita processar novamente e garante que só os selecionados são gravados
+    if (saveToDatabase && preSelectedBusinesses?.length > 0) {
+      const adminClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      const results = {
+        inserted: 0,
+        updated:  0,
+        errors:   [] as string[],
+      };
+
+      for (const b of preSelectedBusinesses) {
+        try {
+          const { data, error } = await adminClient.rpc("upsert_business_from_import", {
+            p_name:                b.name,
+            p_city:                b.city          || null,
+            p_address:             b.address        || null,
+            p_cta_email:           b.cta_email      || null,
+            p_owner_email:         b.owner_email    || null,
+            p_cta_phone:           b.cta_phone      || null,
+            p_cta_whatsapp:        b.cta_whatsapp   || null,
+            p_cta_website:         b.cta_website    || null,
+            p_owner_name:          b.owner_name     || null,
+            p_category_id:         b.category_id    || null,
+            p_subcategory_id:      b.subcategory_id || null,
+            p_registration_source: "import_text",
+          });
+
+          if (error) {
+            console.error(`Upsert error for "${b.name}":`, error);
+            results.errors.push(`${b.name}: ${error.message}`);
+          } else {
+            const action = (data as any)?.action;
+            if (action === "inserted") results.inserted++;
+            if (action === "updated")  results.updated++;
+          }
+        } catch (e: any) {
+          results.errors.push(`${b.name}: ${e.message}`);
+        }
+      }
+
+      console.log(`Upsert complete: ${results.inserted} inserted, ${results.updated} updated, ${results.errors.length} errors`);
+
+      return new Response(JSON.stringify({ businesses: preSelectedBusinesses, results }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ✅ MODO EXTRAÇÃO (passo 2 → 3): extrai do texto e devolve pré-visualização
     if (!text || text.trim().length < 20) {
       return new Response(
         JSON.stringify({ error: "Texto demasiado curto para extração" }),
@@ -116,7 +175,7 @@ REGRAS OBRIGATÓRIAS:
 - Se encontrares 2 emails distintos para o mesmo negócio, coloca o email do negócio em "email" e o do responsável em "owner_email"
 - Se encontrares apenas 1 email, coloca-o em "email" — o sistema duplica-o automaticamente
 - URLs que comecem por "http" ou "https" são websites
-- Telefones devem ser mantidos como string, exatamente como aparecem (sem duplicar)
+- Telefones devem ser mantidos como string, exatamente como aparecem no texto
 - Remove espaços desnecessários no início/fim dos valores
 - Retorna no MÁXIMO ${safeLimit} negócios
 ${categoryInstruction}
@@ -124,7 +183,7 @@ ${categoryInstruction}
 TEXTO A PROCESSAR:
 ${text.substring(0, 30000)}`;
 
-    console.log(`Extracting businesses (${text.length} chars), categoryId=${categoryId || "none"}, save=${saveToDatabase}`);
+    console.log(`Extracting businesses (${text.length} chars), categoryId=${categoryId || "none"}`);
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -217,7 +276,7 @@ ${text.substring(0, 30000)}`;
       );
     }
 
-    // ✅ Normaliza campos
+    // ✅ Normaliza campos + aplica categoria do dropdown se existir
     businesses = businesses
       .slice(0, safeLimit)
       .filter((b: any) => b.name && b.name.trim())
@@ -226,65 +285,14 @@ ${text.substring(0, 30000)}`;
         return {
           ...normalized,
           category_id:    categoryId    || null,
-          subcategory_id: subcategoryId || null,
+          subcategory_id: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
           category:    categoryId    ? null : normalized.category,
           subcategory: subcategoryId ? null : normalized.subcategory,
         };
       });
 
-    console.log(`Extracted ${businesses.length} businesses.`);
+    console.log(`Extracted and normalized ${businesses.length} businesses.`);
 
-    // ✅ SE saveToDatabase=true → chama upsert_business_from_import para cada negócio
-    if (saveToDatabase && businesses.length > 0) {
-      const adminClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
-
-      const results = {
-        inserted: 0,
-        updated:  0,
-        errors:   [] as string[],
-      };
-
-      for (const b of businesses) {
-        try {
-          const { data, error } = await adminClient.rpc("upsert_business_from_import", {
-            p_name:               b.name,
-            p_city:               b.city               || null,
-            p_address:            b.address             || null,
-            p_cta_email:          b.cta_email           || null,
-            p_owner_email:        b.owner_email         || null,
-            p_cta_phone:          b.cta_phone           || null,
-            p_cta_whatsapp:       b.cta_whatsapp        || null,
-            p_cta_website:        b.cta_website         || null,
-            p_owner_name:         b.owner_name          || null,
-            p_category_id:        b.category_id         || null,
-            p_subcategory_id:     b.subcategory_id      || null,
-            p_registration_source: "import_text",
-          });
-
-          if (error) {
-            console.error(`Upsert error for "${b.name}":`, error);
-            results.errors.push(`${b.name}: ${error.message}`);
-          } else {
-            const action = (data as any)?.action;
-            if (action === "inserted") results.inserted++;
-            if (action === "updated")  results.updated++;
-          }
-        } catch (e: any) {
-          results.errors.push(`${b.name}: ${e.message}`);
-        }
-      }
-
-      console.log(`Upsert complete: ${results.inserted} inserted, ${results.updated} updated, ${results.errors.length} errors`);
-
-      return new Response(JSON.stringify({ businesses, results }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // ✅ SE saveToDatabase=false → devolve apenas a pré-visualização (passo 3 do frontend)
     return new Response(JSON.stringify({ businesses }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
