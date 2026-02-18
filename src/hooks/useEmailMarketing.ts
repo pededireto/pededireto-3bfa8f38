@@ -2,6 +2,35 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
+// ─── BUSINESS SEARCH (NOVA FUNÇÃO) ────────────────────────
+export const useBusinessSearch = (searchQuery: string) => {
+  return useQuery({
+    queryKey: ["business-search", searchQuery],
+    queryFn: async () => {
+      if (!searchQuery || searchQuery.length < 2) return [];
+      
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("id, name, owner_email, owner_name, city, is_active")
+        .or(`name.ilike.%${searchQuery}%,owner_email.ilike.%${searchQuery}%,owner_name.ilike.%${searchQuery}%`)
+        .limit(20);
+      
+      if (error) throw error;
+      
+      // Map para formato esperado pelo frontend
+      return data.map(b => ({
+        id: b.id,
+        name: b.name,
+        email: b.owner_email, // ✅ MAPEADO CORRETAMENTE
+        ownerName: b.owner_name,
+        city: b.city,
+        isActive: b.is_active, // Para mostrar status visual no frontend
+      }));
+    },
+    enabled: searchQuery.length >= 2,
+  });
+};
+
 // ─── TEMPLATES ────────────────────────────────────────────
 export const useEmailTemplates = () => {
   return useQuery({
