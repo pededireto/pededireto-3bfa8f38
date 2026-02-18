@@ -7,8 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAllCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
-import { useCreateBusiness } from "@/hooks/useBusinesses";
-import { useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, Loader2, ArrowLeft, ArrowRight, Check, X } from "lucide-react";
 
@@ -16,25 +14,21 @@ interface ScrapedBusiness {
   name: string;
   address: string | null;
   city: string | null;
-  phone: string | null;
-  whatsapp: string | null;
-  email: string | null;
-  website: string | null;
+  cta_phone: string | null;
+  cta_whatsapp: string | null;
+  cta_email: string | null;
+  owner_email: string | null;
+  owner_name: string | null;
+  cta_website: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  category: string | null;
+  subcategory: string | null;
 }
-
-const generateSlug = (name: string) =>
-  name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 
 export default function ImportByTextDialog() {
   const { toast } = useToast();
   const { data: categories = [] } = useAllCategories();
-  const createBusiness = useCreateBusiness();
-  const syncSubcategories = useSyncBusinessSubcategories();
 
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -59,12 +53,19 @@ export default function ImportByTextDialog() {
     setImporting(false);
   };
 
+  // ── PASSO 2 → 3: Extração via Edge Function (só preview, sem gravar) ──
   const handleExtract = async () => {
     if (!text.trim() || !categoryId) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("extract-businesses-from-text", {
-        body: { text, limit: 200 },
+        body: {
+          text,
+          limit: 200,
+          categoryId:    categoryId    || null,
+          subcategoryId: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
+          saveToDatabase: false, // ← só extrai, não grava ainda
+        },
       });
 
       if (error) throw error;
@@ -102,85 +103,64 @@ export default function ImportByTextDialog() {
     }
   };
 
+  // ── PASSO 3: Importação real via Edge Function (saveToDatabase: true) ──
   const handleImport = async () => {
     const toImport = businesses.filter((_, i) => selected.has(i));
     if (toImport.length === 0) return;
     setImporting(true);
-    let success = 0;
-    const errors: string[] = [];
-
-    for (const biz of toImport) {
-      try {
-        const created = await createBusiness.mutateAsync({
-          name: biz.name.trim(),
-          slug: generateSlug(biz.name.trim()),
-          category_id: categoryId,
-          subcategory_id: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
-          description: null,
-          city: biz.city || null,
-          zone: null,
-          alcance: "local",
-          logo_url: null,
-          cta_whatsapp: biz.whatsapp || null,
-          cta_phone: biz.phone || null,
-          cta_email: biz.email || null,
-          cta_website: biz.website || null,
-          cta_app: null,
-          images: [],
-          coordinates: null,
-          schedule_weekdays: null,
-          schedule_weekend: null,
-          is_active: false,
-          is_featured: false,
-          is_premium: false,
-          premium_level: null,
-          commercial_status: "nao_contactado",
-          display_order: 0,
-          plan_id: null,
-          subscription_plan: "free",
-          subscription_price: 0,
-          subscription_start_date: null,
-          subscription_end_date: null,
-          subscription_status: "inactive",
-        } as any);
-
-        // Sync subcategory into junction table so the business card shows it
-        if (subcategoryId && subcategoryId !== "none" && created?.id) {
-          await syncSubcategories.mutateAsync({
-            businessId: created.id,
-            subcategoryIds: [subcategoryId],
-          });
-        }
-
-        success++;
-      } catch (err: any) {
-        errors.push(`${biz.name}: ${err.message}`);
-      }
-    }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from("audit_logs").insert({
-          user_id: user.id,
-          user_email: user.email,
-          action: "import_text",
-          target_table: "businesses",
-          target_id: "text_paste",
-          target_name: `Importação por Texto: ${success} negócios`,
-          changes: { total: toImport.length, success, errors: errors.length } as any,
-        });
-      }
-    } catch {}
+      const { data, error } = await supabase.functions.invoke("extract-businesses-from-text", {
+        body: {
+          text,
+          limit: 200,
+          categoryId:    categoryId    || null,
+          subcategoryId: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
+          saveToDatabase: true,         // ← agora grava na BD
+          businesses:    toImport,      // ← só os selecionados
+        },
+      });
 
-    toast({
-      title: "Importação concluída",
-      description: `${success} importados, ${errors.length} erros`,
-      variant: errors.length > 0 ? "destructive" : "default",
-    });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-    setOpen(false);
-    reset();
+      const results = data?.results || { inserted: 0, updated: 0, errors: [] };
+
+      // Audit log
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("audit_logs").insert({
+            user_id: user.id,
+            user_email: user.email,
+            action: "import_text",
+            target_table: "businesses",
+            target_id: "text_paste",
+            target_name: `Importação por Texto: ${results.inserted} criados, ${results.updated} atualizados`,
+            changes: {
+              total: toImport.length,
+              inserted: results.inserted,
+              updated: results.updated,
+              errors: results.errors.length,
+            } as any,
+          });
+        }
+      } catch {}
+
+      toast({
+        title: "Importação concluída",
+        description: `✅ ${results.inserted} criados · 🔄 ${results.updated} atualizados${results.errors.length > 0 ? ` · ❌ ${results.errors.length} erros` : ""}`,
+        variant: results.errors.length > 0 ? "destructive" : "default",
+      });
+
+      setOpen(false);
+      reset();
+
+    } catch (err: any) {
+      toast({ title: "Erro na importação", description: err.message || "Erro desconhecido", variant: "destructive" });
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -196,7 +176,7 @@ export default function ImportByTextDialog() {
           <DialogTitle>Importar por Texto — Passo {step}/3</DialogTitle>
         </DialogHeader>
 
-        {/* Step 1: Text + Category */}
+        {/* ── Step 1: Texto + Categoria ── */}
         {step === 1 && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -240,7 +220,7 @@ export default function ImportByTextDialog() {
           </div>
         )}
 
-        {/* Step 2: Extracting */}
+        {/* ── Step 2: Extração ── */}
         {step === 2 && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -270,7 +250,7 @@ export default function ImportByTextDialog() {
           </div>
         )}
 
-        {/* Step 3: Preview + Import */}
+        {/* ── Step 3: Preview + Importar ── */}
         {step === 3 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -308,12 +288,18 @@ export default function ImportByTextDialog() {
                       </td>
                       <td className="p-2 font-medium">{b.name}</td>
                       <td className="p-2 text-muted-foreground">{b.city || "-"}</td>
-                      <td className="p-2 text-muted-foreground">{b.phone || "-"}</td>
-                      <td className="p-2 text-muted-foreground">{b.email || "-"}</td>
+                      <td className="p-2 text-muted-foreground">{b.cta_phone || "-"}</td>
+                      <td className="p-2 text-muted-foreground">{b.cta_email || "-"}</td>
                       <td className="p-2 text-muted-foreground">
-                        {b.website ? (
-                          <a href={b.website.startsWith("http") ? b.website : `https://${b.website}`} target="_blank" rel="noopener noreferrer" className="text-primary underline truncate max-w-[120px] inline-block" onClick={(e) => e.stopPropagation()}>
-                            {b.website}
+                        {b.cta_website ? (
+                          <a
+                            href={b.cta_website.startsWith("http") ? b.cta_website : `https://${b.cta_website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary underline truncate max-w-[120px] inline-block"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {b.cta_website}
                           </a>
                         ) : "-"}
                       </td>
@@ -325,7 +311,7 @@ export default function ImportByTextDialog() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              ⚠️ Os negócios selecionados serão importados como <strong>inativos</strong>.
+              ⚠️ Os negócios selecionados serão importados como <strong>inativos</strong>. Se já existirem pelo nome, os dados serão atualizados.
             </p>
 
             <div className="flex justify-between">
