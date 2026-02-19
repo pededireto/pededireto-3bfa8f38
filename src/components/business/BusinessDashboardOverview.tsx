@@ -5,22 +5,28 @@ import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { useBusinessRequests } from "@/hooks/useBusinessDashboard";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
+import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Building2, CreditCard, Inbox, Bell,
-  Eye, MousePointerClick, TrendingUp, Phone,
-  MessageCircle, Globe, Mail, Calendar
+  Eye, MousePointerClick, TrendingUp,
+  Calendar, ArrowRight
 } from "lucide-react";
 
-interface Props { business: BusinessWithCategory; }
+interface Props {
+  business: BusinessWithCategory;
+  onNavigate?: (tab: string) => void;
+}
 
-const BusinessDashboardOverview = ({ business }: Props) => {
+const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
   const queryClient = useQueryClient();
   const { data: plans = [] } = useCommercialPlans(true);
   const { data: requests = [] } = useBusinessRequests(business.id);
   const { data: unreadCount = 0 } = useUnreadNotificationsCount(business.id);
   const { data: analytics, refetch } = useBusinessAnalytics(business.id);
+  const permissions = useBusinessClaimPermissions(business);
   const plan = plans.find((p) => p.id === business.plan_id);
 
   useEffect(() => {
@@ -45,11 +51,15 @@ const BusinessDashboardOverview = ({ business }: Props) => {
         <p className="text-muted-foreground">Bem-vindo, <span className="font-medium text-foreground">{business.name}</span></p>
       </div>
 
-      {/* Profile Score + Subscription - Top Row */}
+      {/* Profile Score + Subscription */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Profile Score - takes 2 cols */}
         <div className="md:col-span-2">
-          <BusinessProfileScore businessId={business.id} />
+          <BusinessProfileScore
+            businessId={business.id}
+            canViewPro={permissions.canViewProAnalytics}
+            onInsightsClick={() => onNavigate?.("insights")}
+            onUpgradeClick={() => onNavigate?.("plan")}
+          />
         </div>
 
         {/* Subscription Card */}
@@ -78,13 +88,21 @@ const BusinessDashboardOverview = ({ business }: Props) => {
                 </span>
               </div>
             )}
+            {permissions.isFreePlan && (
+              <Button
+                size="sm"
+                className="w-full mt-3 text-xs"
+                onClick={() => onNavigate?.("plan")}
+              >
+                Melhorar Plano <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Analytics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Visualizações */}
         <div className="bg-card rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-2 mb-2">
             <Eye className="h-4 w-4 text-primary" />
@@ -94,7 +112,6 @@ const BusinessDashboardOverview = ({ business }: Props) => {
           <p className="text-xs text-muted-foreground mt-1">Últimos 30 dias</p>
         </div>
 
-        {/* Contactos */}
         <div className="bg-card rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-2 mb-2">
             <MousePointerClick className="h-4 w-4 text-primary" />
@@ -111,7 +128,6 @@ const BusinessDashboardOverview = ({ business }: Props) => {
           )}
         </div>
 
-        {/* Pedidos */}
         <div className="bg-card rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-2 mb-2">
             <Inbox className="h-4 w-4 text-primary" />
@@ -121,7 +137,6 @@ const BusinessDashboardOverview = ({ business }: Props) => {
           <p className="text-xs text-muted-foreground mt-1">Total recebidos</p>
         </div>
 
-        {/* Notificações */}
         <div className="bg-card rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-2 mb-2">
             <Bell className="h-4 w-4 text-primary" />
@@ -132,19 +147,16 @@ const BusinessDashboardOverview = ({ business }: Props) => {
         </div>
       </div>
 
-      {/* Status Row */}
+      {/* Status + Conversão */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Estado do Negócio */}
         <div className="bg-card rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-3 mb-3">
             <Building2 className="h-5 w-5 text-primary" />
             <span className="text-sm text-muted-foreground">Estado do Negócio</span>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge variant={business.is_active ? "default" : "secondary"} className="text-sm px-3 py-1">
-              {business.is_active ? "✅ Visível ao público" : "⚠️ Não visível"}
-            </Badge>
-          </div>
+          <Badge variant={business.is_active ? "default" : "secondary"} className="text-sm px-3 py-1">
+            {business.is_active ? "✅ Visível ao público" : "⚠️ Não visível"}
+          </Badge>
           {!business.is_active && (
             <p className="text-xs text-muted-foreground mt-2">
               O teu negócio não está visível nas pesquisas. Contacta o suporte para ativar.
@@ -152,7 +164,6 @@ const BusinessDashboardOverview = ({ business }: Props) => {
           )}
         </div>
 
-        {/* CTR rápido */}
         {analytics && analytics.views > 0 && (
           <div className="bg-card rounded-xl p-5 shadow-card">
             <div className="flex items-center gap-3 mb-3">
@@ -167,6 +178,16 @@ const BusinessDashboardOverview = ({ business }: Props) => {
             <p className="text-xs text-muted-foreground mt-1">
               {analytics.totalContacts} contactos em {analytics.views} visualizações
             </p>
+            {permissions.canViewProAnalytics && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="mt-2 text-xs p-0 h-auto text-primary"
+                onClick={() => onNavigate?.("insights")}
+              >
+                Ver análise completa <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            )}
           </div>
         )}
       </div>
