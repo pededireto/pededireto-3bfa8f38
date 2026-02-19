@@ -10,6 +10,8 @@ export interface PlanRule {
   allow_category_highlight: boolean;
   allow_super_highlight: boolean;
   allow_premium_block: boolean;
+  allow_analytics_basic: boolean;
+  allow_analytics_pro: boolean;
   created_at: string;
   updated_at: string;
 }
