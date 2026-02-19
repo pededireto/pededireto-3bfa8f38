@@ -40,6 +40,8 @@ const Footer = () => {
   const { data: settings } = useSiteSettings();
   const { data: pages = [] } = useFooterPages();
 
+  const whatsappNumber = settings?.contacto_whatsapp?.replace(/\D/g, "");
+
   const socials = ["facebook", "instagram", "twitter", "linkedin", "youtube"]
     .map((key) => ({ key, url: settings?.[`footer_${key}`] }))
     .filter((s) => s.url);
@@ -49,28 +51,29 @@ const Footer = () => {
       <div className="container">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
 
-          {/* Brand */}
+          {/* Marca */}
           <div className="md:col-span-2">
             <Link to="/" className="inline-block mb-4">
               <span className="text-2xl font-bold text-primary">Pede Direto</span>
             </Link>
+
             <p className="text-foreground/70 max-w-md">
-              {settings?.footer_text || "Encontre rapidamente o contacto que resolve o seu problema. Restaurantes, serviços, lojas e profissionais — tudo num só sítio."}
+              {settings?.footer_text ||
+                "Encontre rapidamente o contacto que resolve o seu problema. Restaurantes, serviços, lojas e profissionais — tudo num só sítio."}
             </p>
 
-            {/* Social links */}
             {socials.length > 0 && (
-              <div className="flex gap-4 mt-4">
+              <div className="flex gap-4 mt-6">
                 {socials.map((s) => (
-                  
+                  <a
                     key={s.key}
                     href={s.url!}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label={`Link para ${s.key}`}
                     className="text-foreground/70 hover:text-primary hover:scale-110 transition-all"
-                    title={s.key}
                   >
-                    {socialIcons[s.key] || <span>🔗</span>}
+                    {socialIcons[s.key]}
                   </a>
                 ))}
               </div>
@@ -79,7 +82,7 @@ const Footer = () => {
 
           {/* Navegação */}
           <div>
-            <h4 className="font-semibold mb-4 text-foreground">Navegação</h4>
+            <h4 className="font-semibold mb-4">Navegação</h4>
             <ul className="space-y-2 text-foreground/70">
               <li>
                 <Link to="/" className="hover:text-primary transition-colors">Início</Link>
@@ -89,24 +92,33 @@ const Footer = () => {
               </li>
               {pages.map((page) => (
                 <li key={page.id}>
-                  <Link to={`/pagina/${page.slug}`} className="hover:text-primary transition-colors">
+                  <Link
+                    to={`/pagina/${page.slug}`}
+                    className="hover:text-primary transition-colors"
+                  >
                     {page.title}
                   </Link>
                 </li>
               ))}
               <li>
-                <Link to="/admin/login" className="hover:text-primary transition-colors">Área Admin</Link>
+                <Link
+                  to="/admin/login"
+                  className="hover:text-primary transition-colors"
+                >
+                  Área Admin
+                </Link>
               </li>
             </ul>
           </div>
 
           {/* Contacto */}
           <div>
-            <h4 className="font-semibold mb-4 text-foreground">Contacto</h4>
-            <ul className="space-y-2 text-foreground/70">
+            <h4 className="font-semibold mb-4">Contacto</h4>
+            <ul className="space-y-3 text-foreground/70">
+
               {(settings?.contacto_email || settings?.footer_email) && (
                 <li>
-                  
+                  <a
                     href={`mailto:${settings?.contacto_email || settings?.footer_email}`}
                     className="flex items-center gap-2 hover:text-primary transition-colors"
                   >
@@ -115,10 +127,11 @@ const Footer = () => {
                   </a>
                 </li>
               )}
-              {settings?.contacto_whatsapp && (
+
+              {whatsappNumber && (
                 <li>
-                  
-                    href={`https://api.whatsapp.com/send/?phone=${settings.contacto_whatsapp}&text&type=phone_number&app_absent=0`}
+                  <a
+                    href={`https://api.whatsapp.com/send?phone=${whatsappNumber}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 hover:text-primary transition-colors"
@@ -128,23 +141,26 @@ const Footer = () => {
                   </a>
                 </li>
               )}
+
               {settings?.footer_phone && (
                 <li>{settings.footer_phone}</li>
               )}
+
               <li>Portugal</li>
+
             </ul>
           </div>
-
         </div>
 
         {/* Copyright */}
-        <div className="border-t border-border/50 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-foreground/50 text-sm">
+        <div className="border-t border-border/50 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-foreground/50">
+          <p>
             © {new Date().getFullYear()} Pede Direto. Todos os direitos reservados.
           </p>
-          <p className="text-foreground/50 text-sm">
+
+          <p>
             {settings?.footer_link ? (
-              
+              <a
                 href={settings.footer_link}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -157,7 +173,6 @@ const Footer = () => {
             )}
           </p>
         </div>
-
       </div>
     </footer>
   );
