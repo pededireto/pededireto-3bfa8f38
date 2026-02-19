@@ -88,11 +88,11 @@ const App = () => {
               <Sonner />
               <OfflineIndicator />
               <EmergencyBanner />
-              <SessionExpiredModal />
 
               <BrowserRouter>
                 <RouteTracker />
                 <ScrollToTop />
+                <SessionExpiredModal />
 
                 <Routes>
                   {/* PUBLIC */}
@@ -124,7 +124,7 @@ const App = () => {
                   <Route path="/dashboard" element={<UserDashboard />} />
                   <Route path="/business-dashboard" element={<BusinessDashboard />} />
                   <Route path="/perfil" element={<ProfilePage />} />
-                  
+
                   {/* USER PROFILE - NOVO */}
                   <Route path="/profile" element={<UserProfile />} />
 
