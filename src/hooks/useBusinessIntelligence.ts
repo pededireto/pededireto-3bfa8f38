@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface ContactBreakdown {
+  click_phone: number;
+  click_whatsapp: number;
+  click_website: number;
+  click_email: number;
+}
+
 export interface BusinessIntelligenceData {
   impressions: number;
   clicks: number;
@@ -9,7 +16,31 @@ export interface BusinessIntelligenceData {
   searches_in_city: number;
   trend: { day: string; impressions: number; clicks: number }[];
   position_average: number;
+  previous: {
+    impressions: number;
+    clicks: number;
+  };
+  peak_hour: number | null;
+  peak_dow: number | null;
+  contacts: ContactBreakdown;
 }
+
+const DOW_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+export const getPeakDowLabel = (dow: number | null): string => {
+  if (dow === null) return "-";
+  return DOW_LABELS[dow] ?? "-";
+};
+
+export const getPeakHourLabel = (hour: number | null): string => {
+  if (hour === null) return "-";
+  return `${String(hour).padStart(2, "0")}h - ${String(hour + 1).padStart(2, "0")}h`;
+};
+
+export const getVariation = (current: number, previous: number): number => {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 100);
+};
 
 export const useBusinessIntelligence = (businessId: string | null | undefined, days: number = 30) => {
   return useQuery({
@@ -21,8 +52,17 @@ export const useBusinessIntelligence = (businessId: string | null | undefined, d
       });
       if (error) throw error;
 
-      // Mapear estrutura aninhada para o formato esperado pelo componente
       const raw = data as any;
+
+      // Mapear contact breakdown
+      const contactsArray: { event_type: string; total: number }[] = raw?.contacts ?? [];
+      const contacts: ContactBreakdown = {
+        click_phone: contactsArray.find((c) => c.event_type === "click_phone")?.total ?? 0,
+        click_whatsapp: contactsArray.find((c) => c.event_type === "click_whatsapp")?.total ?? 0,
+        click_website: contactsArray.find((c) => c.event_type === "click_website")?.total ?? 0,
+        click_email: contactsArray.find((c) => c.event_type === "click_email")?.total ?? 0,
+      };
+
       return {
         impressions: raw?.summary?.impressions ?? 0,
         clicks: raw?.summary?.clicks ?? 0,
@@ -30,6 +70,13 @@ export const useBusinessIntelligence = (businessId: string | null | undefined, d
         position_average: raw?.summary?.avg_position ?? 0,
         searches_in_category: raw?.demand?.category_searches ?? 0,
         searches_in_city: raw?.demand?.city_searches ?? 0,
+        previous: {
+          impressions: raw?.previous?.impressions ?? 0,
+          clicks: raw?.previous?.clicks ?? 0,
+        },
+        peak_hour: raw?.peak_hour ?? null,
+        peak_dow: raw?.peak_dow ?? null,
+        contacts,
         trend: (raw?.trend ?? []).map((t: any) => ({
           day: t.day?.split("T")[0] ?? t.day,
           impressions: t.impressions ?? 0,
