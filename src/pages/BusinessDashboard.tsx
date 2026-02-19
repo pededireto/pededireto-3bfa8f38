@@ -44,7 +44,13 @@ const BusinessDashboard = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case "overview": return <BusinessDashboardOverview business={business} />;
+      case "overview":
+        return (
+          <BusinessDashboardOverview
+            business={business}
+            onNavigate={(tab) => setActiveTab(tab as BusinessTab)}
+          />
+        );
       case "requests": return permissions.canViewRequests ? <BusinessRequestsContent businessId={business.id} /> : null;
       case "notifications": return <BusinessNotificationsContent businessId={business.id} />;
       case "insights": return <BusinessInsightsContent businessId={business.id} planId={business.plan_id} claimStatus={permissions.claimStatus} />;
