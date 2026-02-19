@@ -5389,6 +5389,13 @@ export type Database = {
         Args: { p_admin_notes?: string; p_business_id: string }
         Returns: Json
       }
+      admin_set_user_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       auto_escalate_sla_violations: { Args: never; Returns: undefined }
       auto_reject_old_claims: { Args: never; Returns: undefined }
       calculate_business_conversion_rate: {
@@ -5579,6 +5586,25 @@ export type Database = {
           p_website?: string
         }
         Returns: undefined
+      }
+      upsert_business_from_import: {
+        Args: {
+          p_address?: string
+          p_category_id?: string
+          p_city?: string
+          p_cta_email?: string
+          p_cta_phone?: string
+          p_cta_website?: string
+          p_cta_whatsapp?: string
+          p_name: string
+          p_owner_email?: string
+          p_owner_name?: string
+          p_owner_phone?: string
+          p_registration_source?: string
+          p_slug?: string
+          p_subcategory_id?: string
+        }
+        Returns: Json
       }
     }
     Enums: {
