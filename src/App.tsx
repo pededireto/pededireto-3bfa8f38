@@ -4,8 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { useSmartRedirect } from "@/hooks/useSmartRedirect";
+import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import OfflineIndicator from "@/components/OfflineIndicator";
@@ -13,6 +12,7 @@ import EmergencyBanner from "@/components/EmergencyBanner";
 import ScrollToTop from "@/components/ScrollToTop";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import CookieConsent from "@/components/CookieConsent";
+import SessionExpiredModal from "@/components/SessionExpiredModal";
 
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
@@ -63,11 +63,7 @@ const RouteTracker = () => {
   return null;
 };
 
-const SmartRedirectGlobal = () => {
-  const { user, isLoading: loading } = useAuth();
-  useSmartRedirect(user, loading);
-  return null;
-};
+// SmartRedirectGlobal removed — redirect logic only runs on auth pages via useSmartRedirect hook
 
 const App = () => {
   useEffect(() => {
@@ -92,9 +88,9 @@ const App = () => {
               <Sonner />
               <OfflineIndicator />
               <EmergencyBanner />
+              <SessionExpiredModal />
 
               <BrowserRouter>
-                <SmartRedirectGlobal />
                 <RouteTracker />
                 <ScrollToTop />
 
