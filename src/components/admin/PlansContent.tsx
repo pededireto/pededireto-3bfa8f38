@@ -29,6 +29,8 @@ const emptyRules = {
   allow_category_highlight: false,
   allow_super_highlight: false,
   allow_premium_block: false,
+  allow_analytics_basic: false,
+  allow_analytics_pro: false,
 };
 
 const PlansContent = () => {
@@ -72,6 +74,8 @@ const PlansContent = () => {
       allow_category_highlight: existingRule.allow_category_highlight,
       allow_super_highlight: existingRule.allow_super_highlight,
       allow_premium_block: existingRule.allow_premium_block,
+      allow_analytics_basic: existingRule.allow_analytics_basic,
+      allow_analytics_pro: existingRule.allow_analytics_pro,
     } : emptyRules);
     setDialogOpen(true);
   };
@@ -273,6 +277,14 @@ const PlansContent = () => {
                 <div className="flex items-center gap-2">
                   <Switch checked={rules.allow_premium_block} onCheckedChange={(v) => setRules({ ...rules, allow_premium_block: v })} />
                   <Label className="text-xs">Bloco Premium</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={rules.allow_analytics_basic} onCheckedChange={(v) => setRules({ ...rules, allow_analytics_basic: v })} />
+                  <Label className="text-xs">Analytics Basic</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={rules.allow_analytics_pro} onCheckedChange={(v) => setRules({ ...rules, allow_analytics_pro: v })} />
+                  <Label className="text-xs">Analytics Pro</Label>
                 </div>
               </div>
             </div>
