@@ -38,7 +38,7 @@ const Header = () => {
               {page.title}
             </Link>
           ))}
-          <Link to="/registar-negocio" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+          <Link to="/claim-business" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
             📢 Registar Negócio
           </Link>
           {user ? (
@@ -90,7 +90,7 @@ const Header = () => {
                   {page.title}
                 </Link>
               ))}
-              <Link to="/registar-negocio" className="text-lg font-medium text-primary hover:text-primary/80 transition-colors" onClick={() => setIsOpen(false)}>
+              <Link to="/claim-business" className="text-lg font-medium text-primary hover:text-primary/80 transition-colors" onClick={() => setIsOpen(false)}>
                 📢 Registar Negócio
               </Link>
               {user ? (
