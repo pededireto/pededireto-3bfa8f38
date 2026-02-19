@@ -48,6 +48,7 @@ const Footer = () => {
     <footer className="bg-card text-foreground py-12 border-t border-border/50">
       <div className="container">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+
           {/* Brand */}
           <div className="md:col-span-2">
             <Link to="/" className="inline-block mb-4">
@@ -56,6 +57,7 @@ const Footer = () => {
             <p className="text-foreground/70 max-w-md">
               {settings?.footer_text || "Encontre rapidamente o contacto que resolve o seu problema. Restaurantes, serviços, lojas e profissionais — tudo num só sítio."}
             </p>
+
             {/* Social links */}
             {socials.length > 0 && (
               <div className="flex gap-4 mt-4">
@@ -75,7 +77,7 @@ const Footer = () => {
             )}
           </div>
 
-          {/* Links */}
+          {/* Navegação */}
           <div>
             <h4 className="font-semibold mb-4 text-foreground">Navegação</h4>
             <ul className="space-y-2 text-foreground/70">
@@ -98,13 +100,16 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Contacto */}
           <div>
             <h4 className="font-semibold mb-4 text-foreground">Contacto</h4>
             <ul className="space-y-2 text-foreground/70">
               {(settings?.contacto_email || settings?.footer_email) && (
                 <li>
-                  <a href={`mailto:${settings?.contacto_email || settings?.footer_email}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                  
+                    href={`mailto:${settings?.contacto_email || settings?.footer_email}`}
+                    className="flex items-center gap-2 hover:text-primary transition-colors"
+                  >
                     <Mail className="h-4 w-4" />
                     {settings?.contacto_email || settings?.footer_email}
                   </a>
@@ -129,6 +134,7 @@ const Footer = () => {
               <li>Portugal</li>
             </ul>
           </div>
+
         </div>
 
         {/* Copyright */}
@@ -151,12 +157,10 @@ const Footer = () => {
             )}
           </p>
         </div>
+
       </div>
     </footer>
   );
-};
-
-export default Footer;
 };
 
 export default Footer;
