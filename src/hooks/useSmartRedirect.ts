@@ -11,15 +11,34 @@ interface UserContext {
   is_commercial?: boolean;
 }
 
+// Pages where smart redirect should run (auth entry points)
+const REDIRECT_ELIGIBLE_PATHS = [
+  "/login",
+  "/register",
+  "/registar/consumidor",
+  "/register/business",
+  "/admin/login",
+  "/admin/register",
+  "/dashboard",
+];
+
 export function useSmartRedirect(user: any, loading?: boolean) {
   const navigate = useNavigate();
   const location = useLocation();
   const hasRedirected = useRef(false);
 
   useEffect(() => {
-    if (!user) return;
+    // Reset on user change
+    if (!user) {
+      hasRedirected.current = false;
+      return;
+    }
     if (loading) return;
     if (hasRedirected.current) return;
+
+    // Only run on eligible pages — don't redirect from public/active pages
+    const isEligible = REDIRECT_ELIGIBLE_PATHS.some(p => location.pathname === p);
+    if (!isEligible) return;
 
     const run = async () => {
       try {
@@ -31,7 +50,6 @@ export function useSmartRedirect(user: any, loading?: boolean) {
         }
 
         const ctx = data as unknown as UserContext;
-        console.log("🔍 User Context:", ctx); // Debug
         hasRedirected.current = true;
 
         // Redirect guardado (ex: claim)
@@ -44,65 +62,36 @@ export function useSmartRedirect(user: any, loading?: boolean) {
 
         // 🎯 ONBOARDING TEAM
         if (ctx.role === "onboarding") {
-          console.log("✅ Redirecting to /onboarding");
-          if (location.pathname !== "/onboarding") {
-            navigate("/onboarding", { replace: true });
-          }
+          navigate("/onboarding", { replace: true });
           return;
         }
 
         // 💬 CS TEAM
         if (ctx.role === "cs") {
-          console.log("✅ Redirecting to /cs");
-          if (location.pathname !== "/cs") {
-            navigate("/cs", { replace: true });
-          }
+          navigate("/cs", { replace: true });
           return;
         }
 
         // 🏪 COMERCIAL TEAM
         if (ctx.role === "commercial" || ctx.is_commercial) {
-          console.log("✅ Redirecting to /comercial");
-          if (location.pathname !== "/comercial") {
-            navigate("/comercial", { replace: true });
-          }
+          navigate("/comercial", { replace: true });
           return;
         }
 
-        // 👑 ADMIN / SUPER_ADMIN (acesso total a todos os painéis)
+        // 👑 ADMIN / SUPER_ADMIN
         if (ctx.role === "admin" || ctx.role === "super_admin" || ctx.is_admin) {
-          console.log("✅ Admin detected, allowing any route");
-          const validAdminRoutes = [
-            "/admin",
-            "/business-dashboard",
-            "/comercial",
-            "/onboarding",
-            "/cs",
-            "/perfil",
-            "/dashboard"
-          ];
-          const isOnValidRoute = validAdminRoutes.some(r => location.pathname.startsWith(r));
-          
-          if (!isOnValidRoute) {
-            navigate("/admin", { replace: true });
-          }
+          navigate("/admin", { replace: true });
           return;
         }
 
-        // 🏢 BUSINESS USER (tem pelo menos 1 negócio)
+        // 🏢 BUSINESS USER
         if (ctx.business_id || ctx.business_count > 0) {
-          console.log("✅ Business user, redirecting to /business-dashboard");
-          if (location.pathname !== "/business-dashboard") {
-            navigate("/business-dashboard", { replace: true });
-          }
+          navigate("/business-dashboard", { replace: true });
           return;
         }
 
-        // 👤 CONSUMER (utilizador normal sem negócio)
-        console.log("✅ Consumer user, redirecting to /dashboard");
-        if (location.pathname !== "/dashboard") {
-          navigate("/dashboard", { replace: true });
-        }
+        // 👤 CONSUMER
+        navigate("/dashboard", { replace: true });
 
       } catch (err) {
         console.error("Smart redirect error:", err);
@@ -110,5 +99,5 @@ export function useSmartRedirect(user: any, loading?: boolean) {
     };
 
     run();
-  }, [user, loading, navigate, location]);
+  }, [user, loading, navigate, location.pathname]);
 }
