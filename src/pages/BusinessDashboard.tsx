@@ -4,7 +4,6 @@ import { Menu, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useBusinessByUser } from "@/hooks/useBusinessDashboard";
-import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
 import BusinessSidebar, { BusinessTab } from "@/components/business/BusinessSidebar";
 import BusinessDashboardOverview from "@/components/business/BusinessDashboardOverview";
@@ -12,6 +11,7 @@ import BusinessRequestsContent from "@/components/business/BusinessRequestsConte
 import BusinessNotificationsContent from "@/components/business/BusinessNotificationsContent";
 import BusinessPlanContent from "@/components/business/BusinessPlanContent";
 import BusinessInsightsContent from "@/components/business/BusinessInsightsContent";
+import BusinessEditContent from "@/components/business/BusinessEditContent";
 import TeamSection from "@/components/business/TeamSection";
 import ClaimStatusBanner from "@/components/business/ClaimStatusBanner";
 import BusinessReviewsPanel from "@/components/business/BusinessReviewsPanel";
@@ -51,13 +51,22 @@ const BusinessDashboard = () => {
             onNavigate={(tab) => setActiveTab(tab as BusinessTab)}
           />
         );
-      case "requests": return permissions.canViewRequests ? <BusinessRequestsContent businessId={business.id} /> : null;
-      case "notifications": return <BusinessNotificationsContent businessId={business.id} />;
-      case "insights": return <BusinessInsightsContent businessId={business.id} planId={business.plan_id} claimStatus={permissions.claimStatus} />;
-      case "plan": return <BusinessPlanContent business={business} />;
-      case "team": return permissions.canViewTeam ? <TeamSection businessId={business.id} /> : null;
-      case "reviews": return <BusinessReviewsPanel businessId={business.id} />;
-      default: return null;
+      case "requests":
+        return permissions.canViewRequests ? <BusinessRequestsContent businessId={business.id} /> : null;
+      case "notifications":
+        return <BusinessNotificationsContent businessId={business.id} />;
+      case "insights":
+        return <BusinessInsightsContent businessId={business.id} planId={business.plan_id} claimStatus={permissions.claimStatus} />;
+      case "edit":
+        return <BusinessEditContent business={business} />;
+      case "plan":
+        return <BusinessPlanContent business={business} />;
+      case "team":
+        return permissions.canViewTeam ? <TeamSection businessId={business.id} /> : null;
+      case "reviews":
+        return <BusinessReviewsPanel businessId={business.id} />;
+      default:
+        return null;
     }
   };
 
@@ -87,7 +96,9 @@ const BusinessDashboard = () => {
             isFreePlan={permissions.isFreePlan}
           />
         </aside>
-        {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+        {sidebarOpen && (
+          <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        )}
         <main className="flex-1 min-h-screen p-4 md:p-8 space-y-4">
           {permissions.bannerMessage && permissions.bannerVariant && (
             <ClaimStatusBanner message={permissions.bannerMessage} variant={permissions.bannerVariant} />
