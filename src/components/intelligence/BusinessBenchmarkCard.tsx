@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Minus, Users, BarChart2, MapPin, Tag } from "lucide-react";
+import { TrendingUp, TrendingDown, Trophy, Lightbulb, MapPin, Tag, BarChart2, MessageCircle, Globe, Mail } from "lucide-react";
 import { useBusinessBenchmark } from "@/hooks/useBusinessBenchmark";
 import { Loader2 } from "lucide-react";
 
@@ -18,7 +18,7 @@ const CompareBar = ({ value, avg, label }: { value: number; avg: number; label: 
     <div className="space-y-2">
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">{label}</span>
-        <span className={`flex items-center gap-1 font-medium ${isAbove ? "text-green-500" : "text-red-500"}`}>
+        <span className={`flex items-center gap-1 font-medium ${isAbove ? "text-green-500" : "text-red-400"}`}>
           {isAbove ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
           {diff > 0 ? "+" : ""}{diff}% vs média
         </span>
@@ -43,6 +43,86 @@ const CompareBar = ({ value, avg, label }: { value: number; avg: number; label: 
   );
 };
 
+const RankBadge = ({ rank, total, label }: { rank: number | null; total: number; label: string }) => {
+  if (!rank) {
+    return (
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border/40">
+        <Trophy className="h-4 w-4 text-muted-foreground" />
+        <div>
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className="text-xs text-muted-foreground">Sem dados suficientes ainda</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isTop3 = rank <= 3;
+  const isTop10 = rank <= Math.ceil(total * 0.1);
+  const color = rank === 1 ? "text-yellow-400" : rank <= 3 ? "text-slate-300" : isTop10 ? "text-amber-600" : "text-muted-foreground";
+  const bg = rank === 1 ? "bg-yellow-400/10 border-yellow-400/30" : rank <= 3 ? "bg-slate-300/10 border-slate-300/30" : "bg-muted/30 border-border/40";
+
+  return (
+    <div className={`flex items-center gap-3 p-3 rounded-lg border ${bg}`}>
+      <Trophy className={`h-5 w-5 ${color}`} />
+      <div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm font-bold">
+          <span className={color}>#{rank}</span>
+          <span className="text-muted-foreground font-normal"> de {total}</span>
+        </p>
+      </div>
+      {isTop3 && <span className="ml-auto text-xs font-medium text-yellow-400">🏆 Top 3!</span>}
+      {!isTop3 && isTop10 && <span className="ml-auto text-xs font-medium text-amber-600">⭐ Top 10%</span>}
+    </div>
+  );
+};
+
+const generateSuggestions = (data: any): { icon: any; text: string; priority: "high" | "medium" | "low" }[] => {
+  const suggestions = [];
+  const my = data.my_stats;
+  const catAvg = data.category_stats;
+  const cityTotal = data.city_stats.total_businesses;
+  const totalClicks = my.clicks || 0;
+  const whatsappPct = totalClicks > 0 ? Math.round((my.whatsapp / totalClicks) * 100) : 0;
+  const websitePct = totalClicks > 0 ? Math.round((my.website / totalClicks) * 100) : 0;
+
+  if (my.views === 0) {
+    suggestions.push({ icon: TrendingUp, text: "O teu negócio ainda não teve visitas neste período. Completa o perfil com foto, descrição e horários para aparecer melhor nos resultados.", priority: "high" as const });
+  }
+
+  if (my.views > 0 && my.views < (catAvg.avg_views ?? 0) * 0.5) {
+    suggestions.push({ icon: TrendingUp, text: `As tuas ${my.views} visualizações estão abaixo da média (${catAvg.avg_views}). Adiciona mais palavras-chave na descrição para melhorar a visibilidade.`, priority: "high" as const });
+  }
+
+  if (whatsappPct >= 40) {
+    suggestions.push({ icon: MessageCircle, text: `O WhatsApp representa ${whatsappPct}% dos teus contactos. Garante que o número está sempre atualizado e responde rapidamente para não perder clientes.`, priority: "medium" as const });
+  }
+
+  if (my.whatsapp === 0 && totalClicks > 0) {
+    suggestions.push({ icon: MessageCircle, text: "Nenhum cliente clicou no WhatsApp. Adiciona o teu número de WhatsApp ao perfil — é o canal preferido dos utilizadores da Pede Direto.", priority: "high" as const });
+  }
+
+  if (websitePct === 0 && totalClicks > 1) {
+    suggestions.push({ icon: Globe, text: "Adiciona o link do teu website ao perfil para capturar mais clientes que preferem conhecer melhor o negócio antes de contactar.", priority: "medium" as const });
+  }
+
+  if (data.ranking.city_rank && data.ranking.city_rank <= 3 && cityTotal > 3) {
+    suggestions.push({ icon: Trophy, text: `Estás no Top ${data.ranking.city_rank} da tua cidade! Mantém o perfil atualizado e responde rapidamente para não perder essa posição.`, priority: "low" as const });
+  }
+
+  if (cityTotal >= 5 && (!data.ranking.city_rank || data.ranking.city_rank > 3)) {
+    suggestions.push({ icon: MapPin, text: `Há ${cityTotal} concorrentes diretos na tua cidade. Destaca-te adicionando fotos de qualidade, horários detalhados e respondendo a avaliações.`, priority: "medium" as const });
+  }
+
+  if (my.email === 0 && totalClicks > 2) {
+    suggestions.push({ icon: Mail, text: "Adiciona um email público ao perfil para alcançar clientes que preferem contacto por email.", priority: "low" as const });
+  }
+
+  return suggestions
+    .sort((a, b) => (a.priority === "high" ? -1 : b.priority === "high" ? 1 : 0))
+    .slice(0, 3);
+};
+
 const BusinessBenchmarkCard = ({ businessId, days }: BusinessBenchmarkCardProps) => {
   const { data, isLoading } = useBusinessBenchmark(businessId, days);
 
@@ -65,19 +145,36 @@ const BusinessBenchmarkCard = ({ businessId, days }: BusinessBenchmarkCardProps)
   const cityAvgViews = data.city_stats.avg_views ?? 0;
   const cityAvgClicks = data.city_stats.avg_clicks ?? 0;
 
-  return (
-    <div className="space-y-4">
+  const suggestions = generateSuggestions(data);
 
-      {/* Header */}
+  const priorityColor = { high: "border-red-500/40 bg-red-500/5", medium: "border-yellow-500/40 bg-yellow-500/5", low: "border-green-500/40 bg-green-500/5" };
+  const priorityDot = { high: "bg-red-500", medium: "bg-yellow-500", low: "bg-green-500" };
+
+  return (
+    <div className="space-y-6">
+
       <div className="flex items-center gap-2">
         <BarChart2 className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold">Benchmarking</h2>
         <span className="text-xs text-muted-foreground">— como se compara com a concorrência</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Rankings */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <RankBadge
+          rank={data.ranking.subcat_rank}
+          total={data.ranking.subcat_total}
+          label={`Ranking em ${data.subcategory_stats.name}`}
+        />
+        <RankBadge
+          rank={data.ranking.city_rank}
+          total={data.ranking.city_total}
+          label={`Ranking em ${data.city_stats.city}`}
+        />
+      </div>
 
-        {/* Categoria */}
+      {/* Compare bars */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-card rounded-xl p-5 shadow-card space-y-4">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -85,21 +182,16 @@ const BusinessBenchmarkCard = ({ businessId, days }: BusinessBenchmarkCardProps)
             </div>
             <div>
               <p className="text-xs font-semibold">{data.category_stats.name}</p>
-              <p className="text-xs text-muted-foreground">{data.category_stats.total_businesses} negócios na categoria</p>
+              <p className="text-xs text-muted-foreground">{data.category_stats.total_businesses} negócios</p>
             </div>
           </div>
-
           <CompareBar value={myViews} avg={catAvgViews} label="Visualizações" />
           <CompareBar value={myClicks} avg={catAvgClicks} label="Cliques" />
-
           <div className="pt-1 border-t border-border/50">
-            <p className="text-xs text-muted-foreground">
-              Total na categoria: <span className="font-medium text-foreground">{data.category_stats.total_views} views · {data.category_stats.total_clicks} cliques</span>
-            </p>
+            <p className="text-xs text-muted-foreground">Total: <span className="font-medium text-foreground">{data.category_stats.total_views} views · {data.category_stats.total_clicks} cliques</span></p>
           </div>
         </div>
 
-        {/* Subcategoria */}
         <div className="bg-card rounded-xl p-5 shadow-card space-y-4">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
@@ -107,21 +199,16 @@ const BusinessBenchmarkCard = ({ businessId, days }: BusinessBenchmarkCardProps)
             </div>
             <div>
               <p className="text-xs font-semibold">{data.subcategory_stats.name}</p>
-              <p className="text-xs text-muted-foreground">{data.subcategory_stats.total_businesses} negócios na subcategoria</p>
+              <p className="text-xs text-muted-foreground">{data.subcategory_stats.total_businesses} negócios</p>
             </div>
           </div>
-
           <CompareBar value={myViews} avg={subAvgViews} label="Visualizações" />
           <CompareBar value={myClicks} avg={subAvgClicks} label="Cliques" />
-
           <div className="pt-1 border-t border-border/50">
-            <p className="text-xs text-muted-foreground">
-              Total na subcategoria: <span className="font-medium text-foreground">{data.subcategory_stats.total_views} views</span>
-            </p>
+            <p className="text-xs text-muted-foreground">Total: <span className="font-medium text-foreground">{data.subcategory_stats.total_views} views</span></p>
           </div>
         </div>
 
-        {/* Cidade */}
         <div className="bg-card rounded-xl p-5 shadow-card space-y-4">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-green-500/10 flex items-center justify-center">
@@ -129,23 +216,41 @@ const BusinessBenchmarkCard = ({ businessId, days }: BusinessBenchmarkCardProps)
             </div>
             <div>
               <p className="text-xs font-semibold">{data.city_stats.city}</p>
-              <p className="text-xs text-muted-foreground">{data.city_stats.total_businesses} concorrentes diretos na cidade</p>
+              <p className="text-xs text-muted-foreground">{data.city_stats.total_businesses} concorrentes diretos</p>
             </div>
           </div>
-
           <CompareBar value={myViews} avg={cityAvgViews} label="Visualizações" />
           <CompareBar value={myClicks} avg={cityAvgClicks} label="Cliques" />
-
           <div className="pt-1 border-t border-border/50">
-            <p className="text-xs text-muted-foreground">
-              Comparação com <span className="font-medium text-foreground">{data.city_stats.total_businesses} negócios</span> da mesma subcategoria e cidade
-            </p>
+            <p className="text-xs text-muted-foreground">Mesma subcategoria e cidade</p>
           </div>
         </div>
-
       </div>
 
-      {/* Nota de privacidade */}
+      {/* Sugestões inteligentes */}
+      {suggestions.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-4 w-4 text-yellow-400" />
+            <h3 className="text-sm font-semibold">Sugestões para melhorar</h3>
+          </div>
+          <div className="space-y-2">
+            {suggestions.map((s, i) => {
+              const Icon = s.icon;
+              return (
+                <div key={i} className={`flex items-start gap-3 p-4 rounded-lg border ${priorityColor[s.priority]}`}>
+                  <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+                    <div className={`w-2 h-2 rounded-full ${priorityDot[s.priority]}`} />
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-foreground/90 leading-relaxed">{s.text}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <p className="text-xs text-muted-foreground text-center">
         🔒 Os dados mostrados são médias agregadas — nunca são revelados dados individuais de outros negócios.
       </p>
