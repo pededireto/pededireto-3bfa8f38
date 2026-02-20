@@ -7,6 +7,8 @@ import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
+import BusinessProAlerts from "@/components/business/BusinessProAlerts";
+import BusinessSearchPosition from "@/components/business/BusinessSearchPosition";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +52,20 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">Bem-vindo, <span className="font-medium text-foreground">{business.name}</span></p>
       </div>
+
+      {/* Alertas Proativos PRO — aparece só se tiver alertas */}
+      {permissions.canViewProAnalytics && (
+        <BusinessProAlerts
+          businessId={business.id}
+          business={{
+            category_id: business.category_id,
+            cta_whatsapp: business.cta_whatsapp,
+            schedule_weekdays: business.schedule_weekdays,
+            description: business.description,
+          }}
+          onNavigate={onNavigate}
+        />
+      )}
 
       {/* Profile Score + Subscription */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -147,49 +163,60 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         </div>
       </div>
 
-      {/* Status + Conversão */}
+      {/* Posição nas Pesquisas + Conversão */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-card rounded-xl p-5 shadow-card">
-          <div className="flex items-center gap-3 mb-3">
-            <Building2 className="h-5 w-5 text-primary" />
-            <span className="text-sm text-muted-foreground">Estado do Negócio</span>
-          </div>
-          <Badge variant={business.is_active ? "default" : "secondary"} className="text-sm px-3 py-1">
-            {business.is_active ? "✅ Visível ao público" : "⚠️ Não visível"}
-          </Badge>
-          {!business.is_active && (
-            <p className="text-xs text-muted-foreground mt-2">
-              O teu negócio não está visível nas pesquisas. Contacta o suporte para ativar.
-            </p>
-          )}
-        </div>
+        {/* Posição nas Pesquisas — PRO feature com blur para free */}
+        <BusinessSearchPosition
+          businessId={business.id}
+          canViewPro={permissions.canViewProAnalytics}
+          onUpgradeClick={() => onNavigate?.("plan")}
+        />
 
-        {analytics && analytics.views > 0 && (
+        <div className="space-y-4">
+          {/* Estado do Negócio */}
           <div className="bg-card rounded-xl p-5 shadow-card">
             <div className="flex items-center gap-3 mb-3">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <span className="text-sm text-muted-foreground">Taxa de Conversão</span>
+              <Building2 className="h-5 w-5 text-primary" />
+              <span className="text-sm text-muted-foreground">Estado do Negócio</span>
             </div>
-            <p className="text-2xl font-bold">
-              {analytics.totalContacts > 0
-                ? `${Math.round((analytics.totalContacts / analytics.views) * 100)}%`
-                : "0%"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {analytics.totalContacts} contactos em {analytics.views} visualizações
-            </p>
-            {permissions.canViewProAnalytics && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="mt-2 text-xs p-0 h-auto text-primary"
-                onClick={() => onNavigate?.("insights")}
-              >
-                Ver análise completa <ArrowRight className="h-3 w-3 ml-1" />
-              </Button>
+            <Badge variant={business.is_active ? "default" : "secondary"} className="text-sm px-3 py-1">
+              {business.is_active ? "✅ Visível ao público" : "⚠️ Não visível"}
+            </Badge>
+            {!business.is_active && (
+              <p className="text-xs text-muted-foreground mt-2">
+                O teu negócio não está visível nas pesquisas. Contacta o suporte para ativar.
+              </p>
             )}
           </div>
-        )}
+
+          {/* Taxa de Conversão */}
+          {analytics && analytics.views > 0 && (
+            <div className="bg-card rounded-xl p-5 shadow-card">
+              <div className="flex items-center gap-3 mb-3">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <span className="text-sm text-muted-foreground">Taxa de Conversão</span>
+              </div>
+              <p className="text-2xl font-bold">
+                {analytics.totalContacts > 0
+                  ? `${Math.round((analytics.totalContacts / analytics.views) * 100)}%`
+                  : "0%"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {analytics.totalContacts} contactos em {analytics.views} visualizações
+              </p>
+              {permissions.canViewProAnalytics && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="mt-2 text-xs p-0 h-auto text-primary"
+                  onClick={() => onNavigate?.("insights")}
+                >
+                  Ver análise completa <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
