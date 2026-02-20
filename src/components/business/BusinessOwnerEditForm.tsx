@@ -11,7 +11,85 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronRight, Building2, Globe, Clock, Share2, Loader2, Save } from "lucide-react";
+import { ChevronDown, ChevronRight, Building2, Globe, Clock, Share2, Loader2, Save, Wand2 } from "lucide-react";
+
+// ── Parser de horários do Google ──────────────────────────
+const DAY_MAP: Record<string, string> = {
+  "segunda-feira": "segunda-feira", "segunda": "segunda-feira",
+  "terca-feira": "terça-feira", "terça-feira": "terça-feira", "terça": "terça-feira", "terca": "terça-feira",
+  "quarta-feira": "quarta-feira", "quarta": "quarta-feira",
+  "quinta-feira": "quinta-feira", "quinta": "quinta-feira",
+  "sexta-feira": "sexta-feira", "sexta": "sexta-feira",
+  "sabado": "sábado", "sábado": "sábado",
+  "domingo": "domingo",
+};
+
+const WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira"];
+const WEEKEND = ["sábado", "domingo"];
+
+function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string } {
+  // Normalizar: – → -, remover tabs
+  let text = raw.replace(/–|—/g, "-").replace(/\t/g, " ").trim();
+
+  const schedule: Record<string, string> = {};
+
+  // Chave: regex que identifica nomes de dias (com ou sem acento)
+  // Inserir newline antes de cada nome de dia para fragmentar string contínua do Google
+  const dayPattern = /(segunda-feira|terca-feira|terça-feira|quarta-feira|quinta-feira|sexta-feira|sábado|sabado|domingo|segunda|terça|terca|quarta|quinta|sexta)/gi;
+  const segmented = text.replace(dayPattern, "\n$1");
+
+  const lines = segmented.split(/\n/).map(l => l.trim()).filter(Boolean);
+
+  for (const line of lines) {
+    const norm = line.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    for (const [key, dayName] of Object.entries(DAY_MAP)) {
+      const keyNorm = key.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (norm.startsWith(keyNorm)) {
+        const rest = line.slice(key.length).trim();
+        const isEncerrado = /encerrado|fechado/i.test(rest);
+        schedule[dayName] = isEncerrado || !rest ? (rest ? "Encerrado" : "Encerrado") : rest;
+        if (rest) schedule[dayName] = isEncerrado ? "Encerrado" : rest;
+        break;
+      }
+    }
+  }
+
+  // Agrupar semana
+  const weekdayHours = WEEKDAYS.map(d => schedule[d]).filter(Boolean);
+  const allSame = weekdayHours.length > 0 && weekdayHours.every(h => h === weekdayHours[0]);
+
+  const weekdays = allSame
+    ? weekdayHours[0]
+    : WEEKDAYS.filter(d => schedule[d]).map(d => `${d} ${schedule[d]}`).join("  ");
+
+  const weekend = WEEKEND.filter(d => schedule[d]).map(d => `${d} ${schedule[d]}`).join("  ");
+
+  return { weekdays, weekend };
+}
+
+// ── Componente de input de horário com botão formatar ─────
+function ScheduleInput({ label, value, onChange, placeholder, onPaste }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onPaste={onPaste}
+        placeholder={placeholder}
+        rows={2}
+        className="text-sm resize-none"
+      />
+    </div>
+  );
+}
 
 interface BusinessOwnerEditFormProps {
   business: any;
@@ -49,27 +127,25 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: editSubcategoryIds } = useBusinessSubcategoryIds(business?.id);
 
+  const [rawSchedulePaste, setRawSchedulePaste] = useState("");
+  const [showPasteBox, setShowPasteBox] = useState(false);
+
   const [form, setForm] = useState({
-    // Identidade
     name: "",
     description: "",
     logo_url: "",
-    // Presença pública
     category_id: "",
     subcategory_ids: [] as string[],
     city: "",
     zone: "",
     alcance: "local" as "local" | "nacional" | "hibrido",
     public_address: "",
-    // Contactos
     cta_phone: "",
     cta_email: "",
     cta_whatsapp: "",
     cta_website: "",
-    // Horários
     schedule_weekdays: "",
     schedule_weekend: "",
-    // Redes sociais
     instagram_url: "",
     facebook_url: "",
     other_social_url: "",
@@ -117,6 +193,16 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         ? prev.subcategory_ids.filter(id => id !== subId)
         : [...prev.subcategory_ids, subId],
     }));
+  };
+
+  const handleFormatSchedule = () => {
+    if (!rawSchedulePaste.trim()) return;
+    const { weekdays, weekend } = parseGoogleSchedule(rawSchedulePaste);
+    if (weekdays) set("schedule_weekdays", weekdays);
+    if (weekend) set("schedule_weekend", weekend);
+    setRawSchedulePaste("");
+    setShowPasteBox(false);
+    toast({ title: "✅ Horário formatado!" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -278,14 +364,59 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
 
       {/* 3. Horários */}
       <Section title="Horários" icon={Clock} defaultOpen={false}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Horário semana</Label>
-            <Input value={form.schedule_weekdays} onChange={e => set("schedule_weekdays", e.target.value)} placeholder="Ex: 09:00–18:00" />
+        <div className="space-y-4">
+
+          {/* Botão para colar do Google */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Podes copiar o horário diretamente do Google e colar aqui.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPasteBox(v => !v)}
+              className="flex items-center gap-1.5 text-xs"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              Colar do Google
+            </Button>
           </div>
-          <div className="space-y-2">
-            <Label>Horário fim-de-semana</Label>
-            <Input value={form.schedule_weekend} onChange={e => set("schedule_weekend", e.target.value)} placeholder="Ex: Encerrado" />
+
+          {showPasteBox && (
+            <div className="border border-primary/30 bg-primary/5 rounded-lg p-4 space-y-3">
+              <Label className="text-sm font-medium">Cola aqui o horário do Google</Label>
+              <Textarea
+                value={rawSchedulePaste}
+                onChange={e => setRawSchedulePaste(e.target.value)}
+                placeholder={"sexta-feira\n09:00-22:00\nsábado\n12:00-18:00\ndomingo\nEncerrado\nsegunda-feira\n09:00-22:00\n..."}
+                rows={6}
+                className="text-sm font-mono"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <Button type="button" size="sm" onClick={handleFormatSchedule} disabled={!rawSchedulePaste.trim()}>
+                  <Wand2 className="h-3.5 w-3.5 mr-1.5" />
+                  Formatar automaticamente
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => { setShowPasteBox(false); setRawSchedulePaste(""); }}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ScheduleInput
+              label="Horário dias úteis"
+              value={form.schedule_weekdays}
+              onChange={v => set("schedule_weekdays", v)}
+              placeholder="Ex: 09:00-18:00"
+            />
+            <ScheduleInput
+              label="Horário fim-de-semana"
+              value={form.schedule_weekend}
+              onChange={v => set("schedule_weekend", v)}
+              placeholder="Ex: sábado 10:00-14:00  domingo Encerrado"
+            />
           </div>
         </div>
       </Section>
@@ -322,5 +453,26 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     </form>
   );
 };
+
+// Componente auxiliar (definido fora para evitar re-render)
+function ScheduleInput({ label, value, onChange, placeholder }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={2}
+        className="text-sm resize-none"
+      />
+    </div>
+  );
+}
 
 export default BusinessOwnerEditForm;
