@@ -12,20 +12,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "RESEND_API_KEY not configured" }),
-        { status: 500, headers: corsHeaders }
-      );
+      return new Response(JSON.stringify({ error: "RESEND_API_KEY not configured" }), {
+        status: 500,
+        headers: corsHeaders,
+      });
     }
 
-    // Get all active enrollments
     const { data: enrollments, error: enrollError } = await adminClient
       .from("email_cadence_enrollments")
       .select("*, email_cadences!inner(is_active)")
@@ -42,7 +38,6 @@ Deno.serve(async (req) => {
     for (const enrollment of enrollments || []) {
       processed++;
 
-      // Check if reply received and pause_on_reply
       if (enrollment.pause_on_reply) {
         const { data: replied } = await adminClient
           .from("email_logs")
@@ -52,15 +47,11 @@ Deno.serve(async (req) => {
           .limit(1);
 
         if (replied && replied.length > 0) {
-          await adminClient
-            .from("email_cadence_enrollments")
-            .update({ status: "paused" })
-            .eq("id", enrollment.id);
+          await adminClient.from("email_cadence_enrollments").update({ status: "paused" }).eq("id", enrollment.id);
           continue;
         }
       }
 
-      // Get current step
       const { data: steps } = await adminClient
         .from("email_cadence_steps")
         .select("*, email_templates(*)")
@@ -73,7 +64,6 @@ Deno.serve(async (req) => {
       const step = steps[currentStepIndex];
 
       if (!step) {
-        // All steps completed
         await adminClient
           .from("email_cadence_enrollments")
           .update({
@@ -84,24 +74,16 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Check delay
       const enrolledAt = new Date(enrollment.enrolled_at);
-      const delayMs =
-        (step.delay_days * 24 * 60 + (step.delay_hours || 0) * 60) * 60 * 1000;
 
-      // For subsequent steps, calculate from enrollment + cumulative delays
       let cumulativeDelay = 0;
       for (let i = 0; i <= currentStepIndex; i++) {
-        cumulativeDelay +=
-          (steps[i].delay_days * 24 * 60 + (steps[i].delay_hours || 0) * 60) *
-          60 *
-          1000;
+        cumulativeDelay += (steps[i].delay_days * 24 * 60 + (steps[i].delay_hours || 0) * 60) * 60 * 1000;
       }
 
       const sendAt = new Date(enrolledAt.getTime() + cumulativeDelay);
       if (new Date() < sendAt) continue;
 
-      // Check idempotency - don't send same step twice
       const { data: existing } = await adminClient
         .from("email_logs")
         .select("id")
@@ -111,7 +93,6 @@ Deno.serve(async (req) => {
         .limit(1);
 
       if (existing && existing.length > 0) {
-        // Already sent, advance step
         await adminClient
           .from("email_cadence_enrollments")
           .update({ current_step: currentStepIndex + 1 })
@@ -122,7 +103,7 @@ Deno.serve(async (req) => {
       const template = step.email_templates;
       if (!template) continue;
 
-      // Send email
+      // ✅ ENVIO COM GERAL@PEDDIRETO.PT
       const resendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -130,7 +111,8 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Pede Direto <noreply@pededireto.pt>",
+          from: "Pede Direto <geral@pededireto.pt>",
+          reply_to: "geral@pededireto.pt",
           to: [enrollment.recipient_email],
           subject: template.subject,
           html: template.html_content,
@@ -159,8 +141,8 @@ Deno.serve(async (req) => {
           },
         });
 
-        // Advance step
         const nextStep = currentStepIndex + 1;
+
         if (nextStep >= steps.length) {
           await adminClient
             .from("email_cadence_enrollments")
@@ -181,15 +163,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({ ok: true, processed, sent }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ ok: true, processed, sent }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Process cadences error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: corsHeaders }
-    );
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });
   }
 });
