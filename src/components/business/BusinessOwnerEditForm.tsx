@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronRight, Building2, Globe, Clock, Share2, Loader2, Save } from "lucide-react";
+import { ChevronDown, ChevronRight, Building2, Globe, Clock, Share2, Loader2, Save, AlertTriangle } from "lucide-react";
 
 interface BusinessOwnerEditFormProps {
   business: any;
@@ -48,6 +48,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   const { data: categories = [] } = useCategories();
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: editSubcategoryIds } = useBusinessSubcategoryIds(business?.id);
+
+  const [errors, setErrors] = useState<{ category_id?: string; subcategory_ids?: string }>({});
 
   const [form, setForm] = useState({
     // Identidade
@@ -117,12 +119,34 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         ? prev.subcategory_ids.filter(id => id !== subId)
         : [...prev.subcategory_ids, subId],
     }));
+    // Limpa o erro de subcategoria ao selecionar
+    setErrors(prev => ({ ...prev, subcategory_ids: undefined }));
+  };
+
+  const validate = () => {
+    const newErrors: { category_id?: string; subcategory_ids?: string } = {};
+    if (!form.category_id) {
+      newErrors.category_id = "A categoria é obrigatória para aparecer nas pesquisas e no benchmarking.";
+    }
+    if (form.category_id && filteredSubcategories.length > 0 && form.subcategory_ids.length === 0) {
+      newErrors.subcategory_ids = "Seleciona pelo menos uma subcategoria.";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
       toast({ title: "Nome obrigatório", variant: "destructive" });
+      return;
+    }
+    if (!validate()) {
+      toast({
+        title: "Campos obrigatórios em falta",
+        description: "Preenche a categoria e subcategoria para o teu negócio aparecer corretamente.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -168,6 +192,16 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
 
+      {/* Aviso se categoria em falta */}
+      {!form.category_id && (
+        <div className="flex items-start gap-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-400">
+          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <span>
+            O teu negócio não tem categoria definida. Sem categoria não aparece nas pesquisas nem no benchmarking.
+          </span>
+        </div>
+      )}
+
       {/* 1. Identidade */}
       <Section title="Identidade do Negócio" icon={Building2}>
         <div className="space-y-4">
@@ -199,14 +233,30 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
       <Section title="Presença Pública" icon={Globe}>
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Categoria — obrigatória */}
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select value={form.category_id} onValueChange={v => setForm(prev => ({ ...prev, category_id: v, subcategory_ids: [] }))}>
-                <SelectTrigger><SelectValue placeholder="Selecionar categoria" /></SelectTrigger>
+              <Label>
+                Categoria <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={form.category_id}
+                onValueChange={v => {
+                  setForm(prev => ({ ...prev, category_id: v, subcategory_ids: [] }));
+                  setErrors(prev => ({ ...prev, category_id: undefined }));
+                }}
+              >
+                <SelectTrigger className={errors.category_id ? "border-destructive" : ""}>
+                  <SelectValue placeholder="Selecionar categoria" />
+                </SelectTrigger>
                 <SelectContent>
                   {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {errors.category_id && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> {errors.category_id}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Alcance</Label>
@@ -221,10 +271,13 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
             </div>
           </div>
 
+          {/* Subcategorias — obrigatórias se existirem */}
           {form.category_id && filteredSubcategories.length > 0 && (
             <div className="space-y-2">
-              <Label>Subcategorias</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto border border-border rounded-lg p-3">
+              <Label>
+                Subcategorias <span className="text-destructive">*</span>
+              </Label>
+              <div className={`grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto border rounded-lg p-3 ${errors.subcategory_ids ? "border-destructive" : "border-border"}`}>
                 {filteredSubcategories.map(sub => (
                   <label key={sub.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded p-1">
                     <Checkbox checked={form.subcategory_ids.includes(sub.id)} onCheckedChange={() => toggleSubcategory(sub.id)} />
@@ -232,6 +285,11 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
                   </label>
                 ))}
               </div>
+              {errors.subcategory_ids && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> {errors.subcategory_ids}
+                </p>
+              )}
             </div>
           )}
 
