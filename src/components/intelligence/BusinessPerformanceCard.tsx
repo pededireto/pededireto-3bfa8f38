@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
-import { Eye, MousePointerClick, Target, MapPin, Search, TrendingUp, TrendingDown, Clock, Calendar, Phone, MessageCircle, Globe, Mail } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar } from "recharts";
+import { Eye, MousePointerClick, Target, MapPin, Search, TrendingUp, TrendingDown, Clock, Calendar, Phone, MessageCircle, Globe, Mail, Download, ArrowDown } from "lucide-react";
 import { getVariation, getPeakHourLabel, getPeakDowLabel } from "@/hooks/useBusinessIntelligence";
 import type { BusinessIntelligenceData } from "@/hooks/useBusinessIntelligence";
 
@@ -23,52 +24,59 @@ const VariationBadge = ({ current, previous }: { current: number; previous: numb
 const CONTACT_COLORS = ["#22c55e", "#3b82f6", "#a855f7", "#f97316"];
 
 const BusinessPerformanceCard = ({ data }: BusinessPerformanceCardProps) => {
+  const totalContacts = data.contacts.click_phone + data.contacts.click_whatsapp + data.contacts.click_website + data.contacts.click_email;
+
   const kpis = [
-    {
-      label: "Visualizações",
-      value: data.impressions.toLocaleString("pt-PT"),
-      icon: Eye,
-      current: data.impressions,
-      previous: data.previous.impressions,
-    },
-    {
-      label: "Cliques",
-      value: data.clicks.toLocaleString("pt-PT"),
-      icon: MousePointerClick,
-      current: data.clicks,
-      previous: data.previous.clicks,
-    },
-    {
-      label: "CTR",
-      value: `${data.ctr}%`,
-      icon: Target,
-      current: null,
-      previous: null,
-    },
-    {
-      label: "Pesquisas Categoria",
-      value: data.searches_in_category.toLocaleString("pt-PT"),
-      icon: Search,
-      current: null,
-      previous: null,
-    },
-    {
-      label: "Pesquisas Cidade",
-      value: data.searches_in_city.toLocaleString("pt-PT"),
-      icon: MapPin,
-      current: null,
-      previous: null,
-    },
+    { label: "Visualizações", value: data.impressions.toLocaleString("pt-PT"), icon: Eye, current: data.impressions, previous: data.previous.impressions },
+    { label: "Cliques", value: data.clicks.toLocaleString("pt-PT"), icon: MousePointerClick, current: data.clicks, previous: data.previous.clicks },
+    { label: "CTR", value: `${data.ctr}%`, icon: Target, current: null, previous: null },
+    { label: "Pesquisas Categoria", value: data.searches_in_category.toLocaleString("pt-PT"), icon: Search, current: null, previous: null },
+    { label: "Pesquisas Cidade", value: data.searches_in_city.toLocaleString("pt-PT"), icon: MapPin, current: null, previous: null },
   ];
 
   const contactPieData = [
-    { name: "Telefone", value: data.contacts.click_phone, icon: Phone },
-    { name: "Website", value: data.contacts.click_website, icon: Globe },
-    { name: "WhatsApp", value: data.contacts.click_whatsapp, icon: MessageCircle },
-    { name: "Email", value: data.contacts.click_email, icon: Mail },
+    { name: "Telefone", value: data.contacts.click_phone },
+    { name: "Website", value: data.contacts.click_website },
+    { name: "WhatsApp", value: data.contacts.click_whatsapp },
+    { name: "Email", value: data.contacts.click_email },
   ].filter((c) => c.value > 0);
 
-  const totalContacts = data.contacts.click_phone + data.contacts.click_whatsapp + data.contacts.click_website + data.contacts.click_email;
+  // Funnel data
+  const viewToClickRate = data.impressions > 0 ? ((data.clicks / data.impressions) * 100).toFixed(1) : "0";
+  const clickToContactRate = data.clicks > 0 ? ((totalContacts / data.clicks) * 100).toFixed(1) : "0";
+
+  // Comparison bar chart data
+  const comparisonData = [
+    { name: "Visualizações", current: data.impressions, previous: data.previous.impressions },
+    { name: "Cliques", current: data.clicks, previous: data.previous.clicks },
+  ];
+
+  // Export CSV
+  const handleExport = () => {
+    const rows = [
+      ["Métrica", "Valor"],
+      ["Visualizações", String(data.impressions)],
+      ["Cliques", String(data.clicks)],
+      ["CTR", `${data.ctr}%`],
+      ["Contactos Telefone", String(data.contacts.click_phone)],
+      ["Contactos WhatsApp", String(data.contacts.click_whatsapp)],
+      ["Contactos Website", String(data.contacts.click_website)],
+      ["Contactos Email", String(data.contacts.click_email)],
+      ["Total Contactos", String(totalContacts)],
+      ["Hora de Pico", getPeakHourLabel(data.peak_hour)],
+      ["Dia Mais Ativo", getPeakDowLabel(data.peak_dow)],
+      ["Pesquisas Categoria", String(data.searches_in_category)],
+      ["Pesquisas Cidade", String(data.searches_in_city)],
+    ];
+    const csv = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorio-insights-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-4">
@@ -94,8 +102,75 @@ const BusinessPerformanceCard = ({ data }: BusinessPerformanceCardProps) => {
         ))}
       </div>
 
-      {/* Peak Hour + Peak Day + Contact Breakdown */}
+      {/* Conversion Funnel */}
+      <Card className="border-border/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Funil de Conversão</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center gap-2 py-4">
+            {/* Step 1: Views */}
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-full bg-primary/10 rounded-xl py-4 text-center">
+                <Eye className="h-5 w-5 text-primary mx-auto mb-1" />
+                <p className="text-2xl font-bold">{data.impressions}</p>
+                <p className="text-xs text-muted-foreground">Visualizações</p>
+              </div>
+            </div>
+
+            {/* Arrow 1 */}
+            <div className="flex flex-col items-center px-1">
+              <ArrowDown className="h-5 w-5 text-muted-foreground rotate-[-90deg]" />
+              <span className="text-xs font-semibold text-primary">{viewToClickRate}%</span>
+            </div>
+
+            {/* Step 2: Clicks */}
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-full bg-primary/10 rounded-xl py-4 text-center" style={{ width: `${Math.max(60, (data.clicks / Math.max(data.impressions, 1)) * 100)}%`, minWidth: "100%" }}>
+                <MousePointerClick className="h-5 w-5 text-primary mx-auto mb-1" />
+                <p className="text-2xl font-bold">{data.clicks}</p>
+                <p className="text-xs text-muted-foreground">Cliques</p>
+              </div>
+            </div>
+
+            {/* Arrow 2 */}
+            <div className="flex flex-col items-center px-1">
+              <ArrowDown className="h-5 w-5 text-muted-foreground rotate-[-90deg]" />
+              <span className="text-xs font-semibold text-primary">{clickToContactRate}%</span>
+            </div>
+
+            {/* Step 3: Contacts */}
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-full bg-green-500/10 rounded-xl py-4 text-center">
+                <Phone className="h-5 w-5 text-green-500 mx-auto mb-1" />
+                <p className="text-2xl font-bold">{totalContacts}</p>
+                <p className="text-xs text-muted-foreground">Contactos</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Period Comparison + Peak Hour + Peak Day */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        {/* Period Comparison */}
+        <Card className="border-border/50">
+          <CardContent className="p-5">
+            <p className="text-xs text-muted-foreground mb-3 text-center">Comparação com Período Anterior</p>
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={comparisonData}>
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                />
+                <Bar dataKey="previous" fill="hsl(var(--muted-foreground)/0.3)" name="Anterior" radius={[4,4,0,0]} />
+                <Bar dataKey="current" fill="hsl(var(--primary))" name="Atual" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
         {/* Hora de Pico */}
         <Card className="border-border/50">
@@ -116,46 +191,55 @@ const BusinessPerformanceCard = ({ data }: BusinessPerformanceCardProps) => {
             <p className="text-xs text-muted-foreground">Dia da semana com mais interações</p>
           </CardContent>
         </Card>
-
-        {/* Breakdown de Contactos */}
-        <Card className="border-border/50">
-          <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground mb-3 text-center">Contactos por Canal</p>
-            {totalContacts === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Sem contactos no período</p>
-            ) : contactPieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={120}>
-                <PieChart>
-                  <Pie data={contactPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={45} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
-                    {contactPieData.map((_, index) => (
-                      <Cell key={index} fill={CONTACT_COLORS[index % CONTACT_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value} cliques`, ""]} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : null}
-            <div className="grid grid-cols-2 gap-1 mt-2">
-              {[
-                { label: "📞 Telefone", value: data.contacts.click_phone },
-                { label: "💬 WhatsApp", value: data.contacts.click_whatsapp },
-                { label: "🌐 Website", value: data.contacts.click_website },
-                { label: "✉️ Email", value: data.contacts.click_email },
-              ].map((c) => (
-                <div key={c.label} className="flex justify-between text-xs px-1">
-                  <span className="text-muted-foreground">{c.label}</span>
-                  <span className="font-medium">{c.value}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* Breakdown de Contactos */}
+      <Card className="border-border/50">
+        <CardContent className="p-5">
+          <p className="text-xs text-muted-foreground mb-3 text-center">Contactos por Canal</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+            {totalContacts === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4 col-span-2">Sem contactos no período</p>
+            ) : (
+              <>
+                {contactPieData.length > 0 && (
+                  <ResponsiveContainer width="100%" height={140}>
+                    <PieChart>
+                      <Pie data={contactPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
+                        {contactPieData.map((_, index) => (
+                          <Cell key={index} fill={CONTACT_COLORS[index % CONTACT_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [`${value} cliques`, ""]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "📞 Telefone", value: data.contacts.click_phone },
+                    { label: "💬 WhatsApp", value: data.contacts.click_whatsapp },
+                    { label: "🌐 Website", value: data.contacts.click_website },
+                    { label: "✉️ Email", value: data.contacts.click_email },
+                  ].map((c) => (
+                    <div key={c.label} className="flex justify-between text-sm px-2 py-1 rounded bg-muted/30">
+                      <span className="text-muted-foreground">{c.label}</span>
+                      <span className="font-semibold">{c.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tendência */}
       <Card className="border-border/50">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">Tendência</CardTitle>
+          <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleExport}>
+            <Download className="h-3.5 w-3.5" /> Exportar CSV
+          </Button>
         </CardHeader>
         <CardContent>
           {data.trend.length === 0 ? (

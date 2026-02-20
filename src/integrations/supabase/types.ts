@@ -5453,6 +5453,21 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: Json
       }
+      get_business_profile_score: {
+        Args: { p_business_id: string }
+        Returns: Json
+      }
+      get_businesses_for_cadence: {
+        Args: {
+          p_category_id?: string
+          p_commercial_status?: string
+          p_has_email?: boolean
+          p_limit?: number
+          p_offset?: number
+          p_subcategory_id?: string
+        }
+        Returns: Json
+      }
       get_unlinked_businesses: {
         Args: { p_limit?: number; p_q?: string }
         Returns: {
