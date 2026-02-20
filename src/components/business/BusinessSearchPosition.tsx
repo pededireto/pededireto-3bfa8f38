@@ -2,9 +2,12 @@ import { Search, TrendingUp, Eye, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBusinessSearchPosition } from "@/hooks/useBusinessSearchPosition";
 
+// ID do único plano verdadeiramente gratuito
+const FREE_PLAN_ID = "543e0ec3-21ba-4223-bb7a-6375341349b4";
+
 interface BusinessSearchPositionProps {
   businessId: string;
-  canViewPro: boolean;
+  planId: string | null | undefined;
   onUpgradeClick?: () => void;
 }
 
@@ -22,8 +25,9 @@ const positionLabel = (pos: number | null) => {
   return `#${pos}`;
 };
 
-const BusinessSearchPosition = ({ businessId, canViewPro, onUpgradeClick }: BusinessSearchPositionProps) => {
-  const { data, isLoading } = useBusinessSearchPosition(canViewPro ? businessId : null);
+const BusinessSearchPosition = ({ businessId, planId, onUpgradeClick }: BusinessSearchPositionProps) => {
+  const isPaidPlan = !!planId && planId !== FREE_PLAN_ID;
+  const { data, isLoading } = useBusinessSearchPosition(isPaidPlan ? businessId : null);
 
   if (isLoading) return null;
 
@@ -35,8 +39,8 @@ const BusinessSearchPosition = ({ businessId, canViewPro, onUpgradeClick }: Busi
         <p className="text-sm font-semibold">Posição nas Pesquisas</p>
       </div>
 
-      {/* PRO: conteúdo real */}
-      {canViewPro && data && (
+      {/* PLANO PAGO: conteúdo real */}
+      {isPaidPlan && data && (
         <>
           {/* Resumo */}
           <div className="grid grid-cols-2 gap-3">
@@ -89,8 +93,8 @@ const BusinessSearchPosition = ({ businessId, canViewPro, onUpgradeClick }: Busi
         </>
       )}
 
-      {/* SEM PRO: blur + CTA */}
-      {!canViewPro && (
+      {/* PLANO GRATUITO: blur + CTA upgrade */}
+      {!isPaidPlan && (
         <div className="relative">
           {/* Preview em blur */}
           <div className="space-y-2 select-none pointer-events-none opacity-40 blur-sm">
@@ -113,7 +117,7 @@ const BusinessSearchPosition = ({ businessId, canViewPro, onUpgradeClick }: Busi
               Vê em que posição apareces quando alguém pesquisa o teu serviço
             </p>
             <Button size="sm" className="text-xs px-4" onClick={onUpgradeClick}>
-              Melhorar Plano
+              Subscrever Plano Pago
             </Button>
           </div>
         </div>
