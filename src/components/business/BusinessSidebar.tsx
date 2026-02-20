@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Inbox, Bell, CreditCard, ExternalLink, LogOut, TrendingUp, Users, Lock, Star } from "lucide-react";
+import { LayoutDashboard, Inbox, Bell, CreditCard, ExternalLink, LogOut, TrendingUp, Users, Lock, Star, Edit3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 import { Badge } from "@/components/ui/badge";
 
-export type BusinessTab = "overview" | "requests" | "notifications" | "plan" | "insights" | "team" | "reviews";
+export type BusinessTab = "overview" | "requests" | "notifications" | "plan" | "insights" | "team" | "reviews" | "edit";
 
 interface BusinessSidebarProps {
   businessName: string;
@@ -27,6 +27,7 @@ const allItems: { id: BusinessTab; label: string; icon: React.ElementType }[] = 
   { id: "reviews", label: "Avaliações", icon: Star },
   { id: "team", label: "Equipa", icon: Users },
   { id: "insights", label: "Insights", icon: TrendingUp },
+  { id: "edit", label: "Editar Negócio", icon: Edit3 },
   { id: "plan", label: "O Meu Plano", icon: CreditCard },
 ];
 
@@ -71,7 +72,9 @@ const BusinessSidebar = ({
             onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
             className={cn(
               "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-              activeTab === item.id ? "bg-sidebar-primary text-sidebar-primary-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent"
+              activeTab === item.id
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent"
             )}
           >
             <item.icon className="h-5 w-5" />
