@@ -5,6 +5,7 @@ import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
 import DateRangeFilter from "@/components/intelligence/DateRangeFilter";
 import BusinessPerformanceCard from "@/components/intelligence/BusinessPerformanceCard";
+import BusinessBenchmarkCard from "@/components/intelligence/BusinessBenchmarkCard";
 import UpgradeAnalyticsCard from "@/components/intelligence/UpgradeAnalyticsCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -89,7 +90,7 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" 
               <Lock className="h-8 w-8 text-primary mx-auto" />
               <h3 className="font-semibold text-lg">Desbloqueie o Analytics Pro</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Aceda a analytics avançados, leads detalhadas, heatmaps e receita estimada com um plano pago.
+                Aceda a analytics avançados, benchmarking com a concorrência e muito mais com um plano pago.
               </p>
             </div>
           </div>
@@ -119,7 +120,8 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
@@ -127,7 +129,15 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" 
         </div>
         <DateRangeFilter days={days} onChange={setDays} />
       </div>
+
+      {/* Performance do negócio */}
       <BusinessPerformanceCard data={data} />
+
+      {/* Divisor */}
+      <div className="border-t border-border/50" />
+
+      {/* Benchmarking */}
+      <BusinessBenchmarkCard businessId={businessId} days={days} />
     </div>
   );
 };
