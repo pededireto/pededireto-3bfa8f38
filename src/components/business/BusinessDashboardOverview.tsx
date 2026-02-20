@@ -168,7 +168,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         {/* Posição nas Pesquisas — PRO feature com blur para free */}
         <BusinessSearchPosition
           businessId={business.id}
-          canViewPro={permissions.canViewProAnalytics}
+          planId={business.plan_id}
           onUpgradeClick={() => onNavigate?.("plan")}
         />
 
