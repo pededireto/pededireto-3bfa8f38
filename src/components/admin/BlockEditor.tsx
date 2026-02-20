@@ -207,28 +207,56 @@ function BlockFields({ block, index, updateData }: { block: PageBlock; index: nu
         </div>
       );
 
-    case "cta-button":
+    case "cta-button": {
+      const CTA_URL_SUGGESTIONS = [
+        { label: "Registar Negócio", url: "/claim-business" },
+        { label: "Ver Planos e Preços", url: "/pagina/publicidade#planos" },
+        { label: "Entrar na Conta", url: "/auth" },
+        { label: "Dashboard Negócio", url: "/business-dashboard" },
+        { label: "Página Porquê", url: "/pagina/publicidade" },
+        { label: "WhatsApp Geral", url: "https://api.whatsapp.com/send/?phone=351210203862&text=Ol%C3%A1%2C+quero+saber+mais+sobre+o+Pede+Direto+Business.&type=phone_number&app_absent=0" },
+      ];
       return (
-        <div className="grid grid-cols-2 gap-2">
-          <Input value={d.label || ""} onChange={(e) => updateData(index, "label", e.target.value)} placeholder="Texto do botão" />
-          <Input value={d.url || ""} onChange={(e) => updateData(index, "url", e.target.value)} placeholder="URL (link)" />
-          <Select value={d.variant || "default"} onValueChange={(v) => updateData(index, "variant", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Primário</SelectItem>
-              <SelectItem value="outline">Outline</SelectItem>
-              <SelectItem value="secondary">Secundário</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={d.target || "_self"} onValueChange={(v) => updateData(index, "target", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_self">Mesma janela</SelectItem>
-              <SelectItem value="_blank">Nova janela</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Input value={d.label || ""} onChange={(e) => updateData(index, "label", e.target.value)} placeholder="Texto do botão" />
+            <Input value={d.url || ""} onChange={(e) => updateData(index, "url", e.target.value)} placeholder="URL (ex: /claim-business)" />
+            <Select value={d.variant || "default"} onValueChange={(v) => updateData(index, "variant", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Primário</SelectItem>
+                <SelectItem value="outline">Outline</SelectItem>
+                <SelectItem value="secondary">Secundário</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={d.target || "_self"} onValueChange={(v) => updateData(index, "target", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_self">Mesma janela</SelectItem>
+                <SelectItem value="_blank">Nova janela</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            <span className="text-xs text-muted-foreground mr-1">Links rápidos:</span>
+            {CTA_URL_SUGGESTIONS.map((s) => (
+              <button
+                key={s.url}
+                type="button"
+                className="text-xs px-2 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+                onClick={() => {
+                  updateData(index, "url", s.url);
+                  if (!d.label) updateData(index, "label", s.label);
+                  if (s.url.startsWith("http")) updateData(index, "target", "_blank");
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
       );
+    }
 
     case "contacts":
       return (
