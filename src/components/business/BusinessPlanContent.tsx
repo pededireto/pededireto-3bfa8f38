@@ -1,43 +1,42 @@
+import { useState } from "react";
 import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Check, X, MessageCircle, Star } from "lucide-react";
+import { CreditCard, Check, X, Star, Loader2, Smartphone, Building2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props { business: BusinessWithCategory; }
 
-const WHATSAPP_PLANS: Record<string, string> = {
-  "basico": "https://api.whatsapp.com/send/?phone=351210203862&text=Ol%C3%A1%2C+estou+interessado+no+plano+basico+negocio+1+mes.&type=phone_number&app_absent=0",
-  "oferta 2 meses": "https://api.whatsapp.com/send/?phone=351210203862&text=Ol%C3%A1%2C+estou+interessado+na+oferta+comercial+negocio+2+meses.&type=phone_number&app_absent=0",
-  "destaque": "https://api.whatsapp.com/send/?phone=351210203862&text=Ol%C3%A1%2C+estou+interessado+no+plano+destaque+negocio+3+meses.&type=phone_number&app_absent=0",
-  "pioneiro": "https://api.whatsapp.com/send/?phone=351210203862&text=Ol%C3%A1%2C+estou+interessado+no+plano+pioneiro+negocio+3+meses.&type=phone_number&app_absent=0",
-  "oferta 5 meses": "https://api.whatsapp.com/send/?phone=351210203862&text=Ol%C3%A1%2C+estou+interessado+na+oferta+comercial+negocio+5+meses.&type=phone_number&app_absent=0",
-  "premium": "https://api.whatsapp.com/send/?phone=351210203862&text=Ol%C3%A1%2C+estou+interessado+no+plano+premium+negocio+6+meses.&type=phone_number&app_absent=0",
-  "super premium": "https://api.whatsapp.com/send/?phone=351210203862&text=Ol%C3%A1%2C+estou+interessado+no+plano+super+premium+negocio+12+meses.&type=phone_number&app_absent=0",
-};
+const FREE_PLAN_ID = "543e0ec3-21ba-4223-bb7a-6375341349b4";
 
-function getWhatsAppLink(planName: string): string {
-  const normalized = planName.toLowerCase().trim();
-  // Try exact match first
-  if (WHATSAPP_PLANS[normalized]) return WHATSAPP_PLANS[normalized];
-  // Try partial match
-  for (const [key, url] of Object.entries(WHATSAPP_PLANS)) {
-    if (normalized.includes(key) || key.includes(normalized)) return url;
-  }
-  // Fallback generic
-  return `https://api.whatsapp.com/send/?phone=351210203862&text=Ol%C3%A1%2C+estou+interessado+no+plano+${encodeURIComponent(planName)}.&type=phone_number&app_absent=0`;
+// Planos SEPA têm correspondência com planos MB Way
+const SEPA_PLAN_NAMES = ["mensal sepa", "6 meses sepa", "anual sepa", "pioneiro"];
+
+function isSepa(name: string): boolean {
+  return SEPA_PLAN_NAMES.some(s => name.toLowerCase().includes(s));
 }
 
 function isSuperPremium(name: string): boolean {
-  return name.toLowerCase().includes("super premium");
+  return name.toLowerCase().includes("anual") || name.toLowerCase().includes("super premium");
+}
+
+function isPioneiro(name: string): boolean {
+  return name.toLowerCase().includes("pioneiro");
 }
 
 const BusinessPlanContent = ({ business }: Props) => {
+  const { toast } = useToast();
+  const { checkout } = useStripeCheckout();
+  const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
+
   const { data: plans = [] } = useCommercialPlans(true);
   const { data: rules } = usePlanRuleByPlanId(business.plan_id);
   const currentPlan = plans.find((p) => p.id === business.plan_id);
   const currentPrice = currentPlan?.price ?? 0;
+  const isFreePlan = !business.plan_id || business.plan_id === FREE_PLAN_ID;
 
   const ruleItems = rules ? [
     { label: "Vídeo", allowed: rules.allow_video },
@@ -48,6 +47,29 @@ const BusinessPlanContent = ({ business }: Props) => {
 
   const businessPlans = plans.filter((p) => p.plan_type === "business");
   const upgradePlans = businessPlans.filter((p) => p.id !== business.plan_id && (p.price ?? 0) > currentPrice);
+  const plansToShow = isFreePlan ? businessPlans.filter(p => p.id !== FREE_PLAN_ID) : upgradePlans;
+
+  const handleCheckout = async (plan: any, paymentMethod: "mbway" | "sepa") => {
+    const key = `${plan.id}-${paymentMethod}`;
+    setLoadingPlanId(key);
+    try {
+      await checkout({
+        planId: plan.id,
+        planName: plan.name,
+        price: plan.price,
+        businessId: business.id,
+        paymentMethod,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao iniciar pagamento",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingPlanId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -56,6 +78,7 @@ const BusinessPlanContent = ({ business }: Props) => {
         <p className="text-muted-foreground">Detalhes e benefícios do seu plano atual</p>
       </div>
 
+      {/* Plano atual */}
       <div className="bg-card rounded-xl p-6 shadow-card">
         <div className="flex items-center gap-3 mb-4">
           <CreditCard className="h-6 w-6 text-primary" />
@@ -89,51 +112,87 @@ const BusinessPlanContent = ({ business }: Props) => {
         )}
       </div>
 
-      {/* Upgrade Plans */}
+      {/* Planos disponíveis */}
       <div className="bg-card rounded-xl p-6 shadow-card">
-        <h2 className="text-lg font-semibold mb-4">
-          {currentPrice > 0 ? "Fazer Upgrade" : "Planos Disponíveis"}
-        </h2>
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold">
+            {isFreePlan ? "Planos Disponíveis" : "Fazer Upgrade"}
+          </h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Paga com <strong>MB Way</strong> (pagamento único) ou <strong>Débito SEPA</strong> (renovação automática — mais barato)
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(currentPrice > 0 ? upgradePlans : businessPlans).map((plan) => {
+          {plansToShow.map((plan) => {
             const isSuper = isSuperPremium(plan.name);
+            const isPio = isPioneiro(plan.name);
             const isCurrent = plan.id === business.plan_id;
+            const planIsSepa = isSepa(plan.name);
+            const paymentMethod = planIsSepa ? "sepa" : "mbway";
+            const loadingKey = `${plan.id}-${paymentMethod}`;
+            const isLoading = loadingPlanId === loadingKey;
+
             return (
               <div
                 key={plan.id}
                 className={`relative border rounded-xl p-5 transition-all ${
                   isCurrent
                     ? "border-primary bg-primary/5"
-                    : isSuper
+                    : isSuper || isPio
                     ? "border-primary/50 bg-primary/5 ring-2 ring-primary/20"
                     : "border-border hover:border-primary/30"
                 }`}
               >
-                {isSuper && (
+                {/* Badge destaque */}
+                {isPio && (
+                  <Badge className="absolute -top-2 right-3 bg-yellow-500 text-white text-xs">
+                    <Star className="h-3 w-3 mr-1" /> Pioneiro — 50 lugares
+                  </Badge>
+                )}
+                {isSuper && !isPio && (
                   <Badge className="absolute -top-2 right-3 bg-primary text-primary-foreground text-xs">
                     <Star className="h-3 w-3 mr-1" /> Mais Popular
                   </Badge>
                 )}
+
+                {/* Badge método de pagamento */}
+                <div className="flex items-center gap-1.5 mb-3">
+                  {planIsSepa
+                    ? <><Building2 className="h-3.5 w-3.5 text-blue-400" /><span className="text-xs text-blue-400 font-medium">Débito SEPA — renovação automática</span></>
+                    : <><Smartphone className="h-3.5 w-3.5 text-green-400" /><span className="text-xs text-green-400 font-medium">MB Way — pagamento único</span></>
+                  }
+                </div>
+
                 <h3 className="font-bold text-lg">{plan.name}</h3>
                 <p className="text-3xl font-bold text-primary mt-1">{plan.price}€</p>
                 <p className="text-sm text-muted-foreground">{plan.duration_months} meses</p>
-                {plan.description && <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>}
+
+                {planIsSepa && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Cancela quando quiseres
+                  </p>
+                )}
+
+                {plan.description && (
+                  <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
+                )}
+
                 {isCurrent ? (
                   <Badge className="mt-4">Plano Atual</Badge>
                 ) : (
                   <Button
                     className="mt-4 w-full gap-2"
-                    variant={isSuper ? "default" : "outline"}
-                    asChild
+                    variant={isSuper || isPio ? "default" : "outline"}
+                    disabled={isLoading}
+                    onClick={() => handleCheckout(plan, paymentMethod)}
                   >
-                    <a
-                      href={getWhatsAppLink(plan.name)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      {currentPrice > 0 ? "Fazer Upgrade" : "Aderir via WhatsApp"}
-                    </a>
+                    {isLoading
+                      ? <><Loader2 className="h-4 w-4 animate-spin" />A processar...</>
+                      : planIsSepa
+                      ? <><Building2 className="h-4 w-4" />Subscrever com SEPA</>
+                      : <><Smartphone className="h-4 w-4" />Pagar com MB Way</>
+                    }
                   </Button>
                 )}
               </div>
