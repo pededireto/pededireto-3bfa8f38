@@ -1,5 +1,4 @@
 // Hook especializado para o owner atualizar o seu negócio
-// Usa `as any` para contornar o tipo Business que não tem os campos de social
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,6 +22,11 @@ interface OwnerBusinessUpdate {
   instagram_url?: string | null;
   facebook_url?: string | null;
   other_social_url?: string | null;
+  // Visibilidade
+  show_whatsapp?: boolean;
+  show_schedule?: boolean;
+  show_social?: boolean;
+  show_gallery?: boolean;
 }
 
 export const useUpdateBusinessOwner = () => {
