@@ -35,14 +35,10 @@ const BusinessPage = () => {
   const { data: activeModules = [] } = useActiveBusinessModules();
   const { data: moduleValues = [] } = useBusinessModuleValues(business?.id);
   
-  // Estado para controlar se mostra o formulário de sugestão
   const [showSuggestionForm, setShowSuggestionForm] = useState(false);
 
-  // Detectar se há filtro de cidade (do negócio atual ou da URL)
-  // Quando o utilizador vem de uma página filtrada por cidade, usamos essa cidade
   const cityFilter = business?.city || null;
 
-  // Hook de navegação entre negócios da mesma categoria (com filtro de cidade)
   const {
     previousBusiness,
     nextBusiness,
@@ -52,7 +48,6 @@ const BusinessPage = () => {
     hasFilter,
   } = useBusinessNavigation(business?.category_id, slug, cityFilter);
 
-  // Track view on page load
   useEffect(() => {
     if (business) {
       trackEvent.mutate({
@@ -74,7 +69,6 @@ const BusinessPage = () => {
     });
   };
 
-  // GA4 generate_lead tracking
   const trackGA4Lead = (contactType: string) => {
     if (typeof window !== "undefined" && (window as any).gtag) {
       (window as any).gtag("event", "generate_lead", {
@@ -101,8 +95,6 @@ const BusinessPage = () => {
     }
   };
 
-  // Check if user is owner (usando owner_id)
-  // NOTA: Se TypeScript reclamar sobre owner_id, use (business as any).owner_id
   const userIsOwner = user?.id === (business as any)?.owner_id;
 
   if (isLoading) {
@@ -277,8 +269,8 @@ const BusinessPage = () => {
                     </p>
                   )}
 
-                  {/* Schedule */}
-                  {(business.schedule_weekdays || business.schedule_weekend) && (
+                  {/* Schedule — com guard de visibilidade */}
+                  {(business.schedule_weekdays || business.schedule_weekend) && (business as any).show_schedule !== false && (
                     <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                       <div className="flex items-center gap-2 font-medium">
                         <Clock className="w-5 h-5 text-primary" />
@@ -334,7 +326,7 @@ const BusinessPage = () => {
                                   <img src={v.value} alt={mod.label} className="rounded-lg max-w-full max-h-64 object-contain" />
                                 </div>
                               )}
-                              {mod.type === "gallery" && Array.isArray(v.value_json) && v.value_json.length > 0 && (
+                              {mod.type === "gallery" && (business as any).show_gallery !== false && Array.isArray(v.value_json) && v.value_json.length > 0 && (
                                 <div>
                                   <span className="text-sm font-medium block mb-2">{mod.label}</span>
                                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -379,7 +371,8 @@ const BusinessPage = () => {
                   </p>
 
                   <div className="space-y-3 pt-2">
-                    {business.cta_whatsapp && (
+                    {/* WhatsApp — com guard de visibilidade */}
+                    {business.cta_whatsapp && (business as any).show_whatsapp !== false && (
                       <Button
                         className="btn-cta-whatsapp w-full justify-center text-base"
                         onClick={() => {
