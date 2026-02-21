@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronRight, Building2, Globe, Clock, Share2, Loader2, Save, Wand2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Building2, Globe, Clock, Share2, Loader2, Save, Wand2, Eye, EyeOff } from "lucide-react";
 
 // ── Parser de horários do Google ──────────────────────────
 const DAY_MAP: Record<string, string> = {
@@ -28,66 +29,56 @@ const WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira
 const WEEKEND = ["sábado", "domingo"];
 
 function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string } {
-  // Normalizar: – → -, remover tabs
   let text = raw.replace(/–|—/g, "-").replace(/\t/g, " ").trim();
-
   const schedule: Record<string, string> = {};
-
-  // Chave: regex que identifica nomes de dias (com ou sem acento)
-  // Inserir newline antes de cada nome de dia para fragmentar string contínua do Google
   const dayPattern = /(segunda-feira|terca-feira|terça-feira|quarta-feira|quinta-feira|sexta-feira|sábado|sabado|domingo|segunda|terça|terca|quarta|quinta|sexta)/gi;
   const segmented = text.replace(dayPattern, "\n$1");
-
   const lines = segmented.split(/\n/).map(l => l.trim()).filter(Boolean);
-
   for (const line of lines) {
     const norm = line.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
     for (const [key, dayName] of Object.entries(DAY_MAP)) {
       const keyNorm = key.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       if (norm.startsWith(keyNorm)) {
         const rest = line.slice(key.length).trim();
         const isEncerrado = /encerrado|fechado/i.test(rest);
-        schedule[dayName] = isEncerrado || !rest ? (rest ? "Encerrado" : "Encerrado") : rest;
         if (rest) schedule[dayName] = isEncerrado ? "Encerrado" : rest;
         break;
       }
     }
   }
-
-  // Agrupar semana
   const weekdayHours = WEEKDAYS.map(d => schedule[d]).filter(Boolean);
   const allSame = weekdayHours.length > 0 && weekdayHours.every(h => h === weekdayHours[0]);
-
-  const weekdays = allSame
-    ? weekdayHours[0]
-    : WEEKDAYS.filter(d => schedule[d]).map(d => `${d} ${schedule[d]}`).join("  ");
-
+  const weekdays = allSame ? weekdayHours[0] : WEEKDAYS.filter(d => schedule[d]).map(d => `${d} ${schedule[d]}`).join("  ");
   const weekend = WEEKEND.filter(d => schedule[d]).map(d => `${d} ${schedule[d]}`).join("  ");
-
   return { weekdays, weekend };
 }
 
-// ── Componente de input de horário com botão formatar ─────
-function ScheduleInput({ label, value, onChange, placeholder, onPaste }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+function ScheduleInput({ label, value, onChange, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
 }) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <Textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        onPaste={onPaste}
-        placeholder={placeholder}
-        rows={2}
-        className="text-sm resize-none"
-      />
+      <Textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={2} className="text-sm resize-none" />
     </div>
+  );
+}
+
+// ── Toggle de visibilidade ──────────────────────────────────
+function VisibilityBadge({ visible, onChange }: { visible: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!visible)}
+      className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+        visible
+          ? "border-primary/40 text-primary bg-primary/5 hover:bg-primary/10"
+          : "border-dashed border-muted-foreground/40 text-muted-foreground bg-muted/30 hover:bg-muted/50"
+      }`}
+    >
+      {visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+      {visible ? "Público" : "Oculto"}
+    </button>
   );
 }
 
@@ -97,10 +88,7 @@ interface BusinessOwnerEditFormProps {
 }
 
 function Section({ title, icon: Icon, defaultOpen = true, children }: {
-  title: string;
-  icon: React.ElementType;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
+  title: string; icon: React.ElementType; defaultOpen?: boolean; children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -149,6 +137,11 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     instagram_url: "",
     facebook_url: "",
     other_social_url: "",
+    // Visibilidade
+    show_whatsapp: true,
+    show_schedule: true,
+    show_social: true,
+    show_gallery: true,
   });
 
   useEffect(() => {
@@ -172,6 +165,11 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         instagram_url: business.instagram_url || "",
         facebook_url: business.facebook_url || "",
         other_social_url: business.other_social_url || "",
+        // Visibilidade — default true se null (negócios antigos)
+        show_whatsapp: business.show_whatsapp ?? true,
+        show_schedule: business.show_schedule ?? true,
+        show_social: business.show_social ?? true,
+        show_gallery: business.show_gallery ?? true,
       });
     }
   }, [business]);
@@ -233,6 +231,11 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         instagram_url: form.instagram_url || null,
         facebook_url: form.facebook_url || null,
         other_social_url: form.other_social_url || null,
+        // Visibilidade
+        show_whatsapp: form.show_whatsapp,
+        show_schedule: form.show_schedule,
+        show_social: form.show_social,
+        show_gallery: form.show_gallery,
       });
 
       if (form.subcategory_ids.length > 0) {
@@ -349,10 +352,24 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
             </div>
           </div>
 
+          {/* WhatsApp com toggle de visibilidade */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>WhatsApp</Label>
-              <Input value={form.cta_whatsapp} onChange={e => set("cta_whatsapp", e.target.value)} placeholder="+351 900 000 000" />
+              <div className="flex items-center justify-between">
+                <Label>WhatsApp</Label>
+                <VisibilityBadge visible={form.show_whatsapp} onChange={v => set("show_whatsapp", v)} />
+              </div>
+              <Input
+                value={form.cta_whatsapp}
+                onChange={e => set("cta_whatsapp", e.target.value)}
+                placeholder="+351 900 000 000"
+                className={!form.show_whatsapp ? "opacity-50" : ""}
+              />
+              {!form.show_whatsapp && (
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                  <EyeOff className="h-3 w-3" /> Número guardado mas não visível ao público
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Website</Label>
@@ -362,24 +379,24 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         </div>
       </Section>
 
-      {/* 3. Horários */}
+      {/* 3. Horários com toggle de visibilidade */}
       <Section title="Horários" icon={Clock} defaultOpen={false}>
         <div className="space-y-4">
-
-          {/* Botão para colar do Google */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Podes copiar o horário diretamente do Google e colar aqui.</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPasteBox(v => !v)}
-              className="flex items-center gap-1.5 text-xs"
-            >
-              <Wand2 className="h-3.5 w-3.5" />
-              Colar do Google
-            </Button>
+            <div className="flex items-center gap-2">
+              <VisibilityBadge visible={form.show_schedule} onChange={v => set("show_schedule", v)} />
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowPasteBox(v => !v)} className="flex items-center gap-1.5 text-xs">
+                <Wand2 className="h-3.5 w-3.5" /> Colar do Google
+              </Button>
+            </div>
           </div>
+
+          {!form.show_schedule && (
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1 bg-muted/30 rounded px-3 py-2">
+              <EyeOff className="h-3 w-3" /> Horários guardados mas não visíveis ao público
+            </p>
+          )}
 
           {showPasteBox && (
             <div className="border border-primary/30 bg-primary/5 rounded-lg p-4 space-y-3">
@@ -387,15 +404,14 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
               <Textarea
                 value={rawSchedulePaste}
                 onChange={e => setRawSchedulePaste(e.target.value)}
-                placeholder={"sexta-feira\n09:00-22:00\nsábado\n12:00-18:00\ndomingo\nEncerrado\nsegunda-feira\n09:00-22:00\n..."}
+                placeholder={"sexta-feira\n09:00-22:00\nsábado\n12:00-18:00\ndomingo\nEncerrado\n..."}
                 rows={6}
                 className="text-sm font-mono"
                 autoFocus
               />
               <div className="flex gap-2">
                 <Button type="button" size="sm" onClick={handleFormatSchedule} disabled={!rawSchedulePaste.trim()}>
-                  <Wand2 className="h-3.5 w-3.5 mr-1.5" />
-                  Formatar automaticamente
+                  <Wand2 className="h-3.5 w-3.5 mr-1.5" /> Formatar automaticamente
                 </Button>
                 <Button type="button" size="sm" variant="ghost" onClick={() => { setShowPasteBox(false); setRawSchedulePaste(""); }}>
                   Cancelar
@@ -404,39 +420,42 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ScheduleInput
-              label="Horário dias úteis"
-              value={form.schedule_weekdays}
-              onChange={v => set("schedule_weekdays", v)}
-              placeholder="Ex: 09:00-18:00"
-            />
-            <ScheduleInput
-              label="Horário fim-de-semana"
-              value={form.schedule_weekend}
-              onChange={v => set("schedule_weekend", v)}
-              placeholder="Ex: sábado 10:00-14:00  domingo Encerrado"
-            />
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${!form.show_schedule ? "opacity-50" : ""}`}>
+            <ScheduleInput label="Horário dias úteis" value={form.schedule_weekdays} onChange={v => set("schedule_weekdays", v)} placeholder="Ex: 09:00-18:00" />
+            <ScheduleInput label="Horário fim-de-semana" value={form.schedule_weekend} onChange={v => set("schedule_weekend", v)} placeholder="Ex: sábado 10:00-14:00  domingo Encerrado" />
           </div>
         </div>
       </Section>
 
-      {/* 4. Redes Sociais */}
+      {/* 4. Redes Sociais com toggle de visibilidade */}
       <Section title="Redes Sociais" icon={Share2} defaultOpen={false}>
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Instagram</Label>
-              <Input value={form.instagram_url} onChange={e => set("instagram_url", e.target.value)} placeholder="https://instagram.com/..." />
-            </div>
-            <div className="space-y-2">
-              <Label>Facebook</Label>
-              <Input value={form.facebook_url} onChange={e => set("facebook_url", e.target.value)} placeholder="https://facebook.com/..." />
-            </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Links para as tuas redes sociais.</p>
+            <VisibilityBadge visible={form.show_social} onChange={v => set("show_social", v)} />
           </div>
-          <div className="space-y-2">
-            <Label>Outra rede social</Label>
-            <Input value={form.other_social_url} onChange={e => set("other_social_url", e.target.value)} placeholder="LinkedIn, TikTok, YouTube..." />
+
+          {!form.show_social && (
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1 bg-muted/30 rounded px-3 py-2">
+              <EyeOff className="h-3 w-3" /> Redes sociais guardadas mas não visíveis ao público
+            </p>
+          )}
+
+          <div className={`space-y-4 ${!form.show_social ? "opacity-50" : ""}`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Instagram</Label>
+                <Input value={form.instagram_url} onChange={e => set("instagram_url", e.target.value)} placeholder="https://instagram.com/..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Facebook</Label>
+                <Input value={form.facebook_url} onChange={e => set("facebook_url", e.target.value)} placeholder="https://facebook.com/..." />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Outra rede social</Label>
+              <Input value={form.other_social_url} onChange={e => set("other_social_url", e.target.value)} placeholder="LinkedIn, TikTok, YouTube..." />
+            </div>
           </div>
         </div>
       </Section>
@@ -453,5 +472,17 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     </form>
   );
 };
+
+// Componente auxiliar (definido fora para evitar re-render)
+function ScheduleInputStandalone({ label, value, onChange, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={2} className="text-sm resize-none" />
+    </div>
+  );
+}
 
 export default BusinessOwnerEditForm;
