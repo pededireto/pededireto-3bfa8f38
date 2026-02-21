@@ -120,7 +120,7 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
 
         {/* CTA Buttons */}
         <div className="flex flex-wrap gap-2">
-          {business.cta_whatsapp && (
+          {business.cta_whatsapp && (business as any).show_whatsapp !== false && (
             <Button
               size="sm"
               className="btn-cta-whatsapp flex-1"
