@@ -56,9 +56,11 @@ export const useBusinessRequests = (businessId: string | undefined) => {
         .select(`
           *,
           service_requests (
-            id, description, address, status, created_at,
+            id, description, address, status, created_at, urgency,
+            location_city, location_postal_code,
             categories (id, name),
-            subcategories (id, name)
+            subcategories (id, name),
+            profiles:user_id (full_name, email, phone)
           )
         `)
         .eq("business_id", businessId)

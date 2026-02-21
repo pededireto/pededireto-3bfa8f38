@@ -1760,6 +1760,10 @@ export type Database = {
           registration_source: string | null
           schedule_weekdays: string | null
           schedule_weekend: string | null
+          show_gallery: boolean | null
+          show_schedule: boolean | null
+          show_social: boolean | null
+          show_whatsapp: boolean | null
           slug: string
           subcategory_id: string | null
           subscription_end_date: string | null
@@ -1824,6 +1828,10 @@ export type Database = {
           registration_source?: string | null
           schedule_weekdays?: string | null
           schedule_weekend?: string | null
+          show_gallery?: boolean | null
+          show_schedule?: boolean | null
+          show_social?: boolean | null
+          show_whatsapp?: boolean | null
           slug: string
           subcategory_id?: string | null
           subscription_end_date?: string | null
@@ -1888,6 +1896,10 @@ export type Database = {
           registration_source?: string | null
           schedule_weekdays?: string | null
           schedule_weekend?: string | null
+          show_gallery?: boolean | null
+          show_schedule?: boolean | null
+          show_social?: boolean | null
+          show_whatsapp?: boolean | null
           slug?: string
           subcategory_id?: string | null
           subscription_end_date?: string | null
@@ -4872,7 +4884,10 @@ export type Database = {
           created_at: string | null
           full_name: string | null
           id: string
+          last_request_at: string | null
           phone: string | null
+          requests_count: number
+          score: number
           updated_at: string | null
           user_id: string
         }
@@ -4882,7 +4897,10 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: string
+          last_request_at?: string | null
           phone?: string | null
+          requests_count?: number
+          score?: number
           updated_at?: string | null
           user_id: string
         }
@@ -4892,7 +4910,10 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: string
+          last_request_at?: string | null
           phone?: string | null
+          requests_count?: number
+          score?: number
           updated_at?: string | null
           user_id?: string
         }
