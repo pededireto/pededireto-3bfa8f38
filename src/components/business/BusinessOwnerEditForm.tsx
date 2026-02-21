@@ -454,25 +454,4 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   );
 };
 
-// Componente auxiliar (definido fora para evitar re-render)
-function ScheduleInput({ label, value, onChange, placeholder }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
-      <Textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={2}
-        className="text-sm resize-none"
-      />
-    </div>
-  );
-}
-
 export default BusinessOwnerEditForm;

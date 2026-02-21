@@ -162,13 +162,13 @@ const BusinessBenchmarkCard = ({ businessId, days }: BusinessBenchmarkCardProps)
       {/* Rankings */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <RankBadge
-          rank={data.ranking.subcat_rank}
-          total={data.ranking.subcat_total}
+          rank={null}
+          total={data.subcategory_stats.total_businesses}
           label={`Ranking em ${data.subcategory_stats.name}`}
         />
         <RankBadge
-          rank={data.ranking.city_rank}
-          total={data.ranking.city_total}
+          rank={null}
+          total={data.city_stats.total_businesses}
           label={`Ranking em ${data.city_stats.city}`}
         />
       </div>

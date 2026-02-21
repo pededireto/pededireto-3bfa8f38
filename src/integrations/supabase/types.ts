@@ -5435,8 +5435,13 @@ export type Database = {
           urgency_level: number
         }[]
       }
+      force_cadence_ready: { Args: { p_cadence_id: string }; Returns: number }
       get_admin_intelligence: { Args: { p_days?: number }; Returns: Json }
       get_all_users_for_onboarding: { Args: never; Returns: Json }
+      get_business_benchmark: {
+        Args: { p_business_id: string; p_days?: number }
+        Returns: Json
+      }
       get_business_favorites_count: {
         Args: { business_uuid: string }
         Returns: number
