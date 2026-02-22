@@ -8,6 +8,9 @@ export interface ServiceRequest {
   subcategory_id: string | null;
   description: string | null;
   address: string | null;
+  urgency: string | null;
+  location_city: string | null;
+  location_postal_code: string | null;
   status: string;
   assigned_to_admin: string | null;
   created_at: string;
@@ -131,6 +134,28 @@ export const useUpdateMatchStatus = () => {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["request-matches", vars.requestId] });
+    },
+  });
+};
+
+export const useConsumerRequests = () => {
+  return useQuery({
+    queryKey: ["consumer-requests"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("service_requests" as any)
+        .select(`
+          id, description, status, urgency, created_at,
+          location_city, location_postal_code,
+          categories:category_id (name),
+          subcategories:subcategory_id (name)
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as any[];
     },
   });
 };
