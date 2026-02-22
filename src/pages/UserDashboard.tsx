@@ -4,13 +4,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { useSavedSearches, useDeleteSavedSearch } from "@/hooks/useSavedSearches";
 import { useUserFavorites, useToggleFavorite } from "@/hooks/useUserFavorites";
+import { useConsumerRequests } from "@/hooks/useServiceRequests";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Search, Heart, Trash2, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Search, Heart, Trash2, ExternalLink, ClipboardList } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  novo: { label: "Novo", variant: "secondary" },
+  em_contacto: { label: "Em Contacto", variant: "outline" },
+  encaminhado: { label: "Encaminhado", variant: "default" },
+  concluido: { label: "Concluído", variant: "default" },
+  cancelado: { label: "Cancelado", variant: "destructive" },
+};
 
 const UserDashboard = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
@@ -20,6 +30,7 @@ const UserDashboard = () => {
 
   const { data: savedSearches = [], isLoading: searchesLoading } = useSavedSearches();
   const { data: favorites = [], isLoading: favoritesLoading } = useUserFavorites();
+  const { data: myRequests = [], isLoading: requestsLoading } = useConsumerRequests();
   const deleteSearch = useDeleteSavedSearch();
   const toggleFavorite = useToggleFavorite();
 
@@ -71,8 +82,28 @@ const UserDashboard = () => {
           <p className="text-muted-foreground mt-1">{user.email}</p>
         </div>
 
-        <Tabs defaultValue="searches" className="w-full">
+        {/* CTA Card */}
+        <Link to="/pedir-servico" className="block mb-8">
+          <Card className="bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer">
+            <CardContent className="flex items-center gap-4 py-5 px-6">
+              <div className="bg-primary-foreground/20 rounded-full p-3">
+                <ClipboardList className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold">Pedir Serviço</h3>
+                <p className="text-sm opacity-90">Descreva o que precisa e receba respostas de profissionais.</p>
+              </div>
+              <ExternalLink className="h-5 w-5 opacity-70" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Tabs defaultValue="requests" className="w-full">
           <TabsList className="mb-6">
+            <TabsTrigger value="requests" className="gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Os Meus Pedidos
+            </TabsTrigger>
             <TabsTrigger value="searches" className="gap-2">
               <Search className="h-4 w-4" />
               Pesquisas Guardadas
@@ -82,6 +113,58 @@ const UserDashboard = () => {
               Meus Favoritos
             </TabsTrigger>
           </TabsList>
+
+          {/* My Requests Tab */}
+          <TabsContent value="requests">
+            {requestsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : myRequests.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <ClipboardList className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+                  <p className="text-muted-foreground">Ainda não fizeste nenhum pedido de serviço.</p>
+                  <Button asChild className="mt-4" variant="outline">
+                    <Link to="/pedir-servico">Fazer o primeiro pedido</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {myRequests.map((req: any) => {
+                  const cfg = statusConfig[req.status] || { label: req.status, variant: "secondary" as const };
+                  return (
+                    <Card key={req.id}>
+                      <CardContent className="py-4 px-6 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-primary uppercase tracking-wide">
+                              {req.categories?.name || "Sem categoria"}
+                              {req.subcategories?.name ? ` • ${req.subcategories.name}` : ""}
+                            </p>
+                            <p className="font-medium text-foreground mt-1 line-clamp-2">
+                              {req.description
+                                ? req.description.length > 120
+                                  ? req.description.slice(0, 120) + "…"
+                                  : req.description
+                                : "Sem descrição"}
+                            </p>
+                          </div>
+                          <Badge variant={cfg.variant}>{cfg.label}</Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          {req.location_city && <span>📍 {req.location_city}</span>}
+                          {req.urgency === "urgent" && <span className="text-destructive font-semibold">⚠ Urgente</span>}
+                          <span>{new Date(req.created_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="searches">
             {searchesLoading ? (

@@ -6,14 +6,15 @@ import {
   useCreateMatch,
   useUpdateMatchStatus,
 } from "@/hooks/useServiceRequests";
-import { useAllBusinesses } from "@/hooks/useBusinesses";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Eye, Plus, Building2 } from "lucide-react";
+import { Loader2, Search, Eye, Building2, AlertTriangle, MapPin, User, Mail, Phone, Send } from "lucide-react";
 
 const statusLabels: Record<string, string> = {
   novo: "Novo",
@@ -21,14 +22,6 @@ const statusLabels: Record<string, string> = {
   encaminhado: "Encaminhado",
   concluido: "Concluído",
   cancelado: "Cancelado",
-};
-
-const statusColors: Record<string, string> = {
-  novo: "default",
-  em_contacto: "secondary",
-  encaminhado: "outline",
-  concluido: "default",
-  cancelado: "destructive",
 };
 
 const matchStatusLabels: Record<string, string> = {
@@ -40,7 +33,6 @@ const matchStatusLabels: Record<string, string> = {
 
 const ServiceRequestsContent = () => {
   const { data: requests = [], isLoading } = useAllServiceRequests();
-  const { data: businesses = [] } = useAllBusinesses();
   const updateStatus = useUpdateRequestStatus();
   const createMatch = useCreateMatch();
   const updateMatchStatus = useUpdateMatchStatus();
@@ -54,9 +46,37 @@ const ServiceRequestsContent = () => {
 
   const { data: matches = [] } = useRequestMatches(selectedRequestId);
 
+  const selectedRequest = useMemo(
+    () => requests.find((r) => r.id === selectedRequestId),
+    [requests, selectedRequestId]
+  );
+
+  // Suggested businesses based on selected request's category/city
+  const { data: suggestedBusinesses = [], isLoading: suggestionsLoading } = useQuery({
+    queryKey: ["suggested-businesses", selectedRequest?.category_id, selectedRequest?.subcategories, selectedRequestId],
+    enabled: !!selectedRequest?.category_id && matchDialogOpen,
+    queryFn: async () => {
+      if (!selectedRequest?.category_id) return [];
+      let query = supabase
+        .from("businesses")
+        .select("id, name, city, slug, is_active, subscription_status")
+        .eq("is_active", true)
+        .eq("category_id", selectedRequest.category_id);
+
+      if (selectedRequest.subcategory_id) {
+        query = query.eq("subcategory_id", selectedRequest.subcategory_id);
+      }
+
+      const { data, error } = await query.limit(5);
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+  });
+
   const filtered = useMemo(() => {
-    return requests.filter(r => {
-      const matchesSearch = !search ||
+    return requests.filter((r) => {
+      const matchesSearch =
+        !search ||
         (r.profiles?.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
         (r.profiles?.email || "").toLowerCase().includes(search.toLowerCase()) ||
         (r.description || "").toLowerCase().includes(search.toLowerCase());
@@ -78,7 +98,7 @@ const ServiceRequestsContent = () => {
     if (!selectedRequestId) return;
     try {
       await createMatch.mutateAsync({ requestId: selectedRequestId, businessId });
-      toast({ title: "Negócio associado ao pedido" });
+      toast({ title: "Negócio encaminhado com sucesso" });
     } catch {
       toast({ title: "Erro ao associar negócio", variant: "destructive" });
     }
@@ -93,10 +113,6 @@ const ServiceRequestsContent = () => {
       toast({ title: "Erro", variant: "destructive" });
     }
   };
-
-  const filteredBusinesses = businesses.filter(b =>
-    b.name.toLowerCase().includes(businessSearch.toLowerCase())
-  ).slice(0, 10);
 
   if (isLoading) {
     return (
@@ -144,15 +160,15 @@ const ServiceRequestsContent = () => {
           <p className="text-sm text-muted-foreground">Total</p>
         </div>
         <div className="bg-card rounded-xl p-4 shadow-card text-center">
-          <p className="text-2xl font-bold">{requests.filter(r => r.status === "novo").length}</p>
+          <p className="text-2xl font-bold">{requests.filter((r) => r.status === "novo").length}</p>
           <p className="text-sm text-muted-foreground">Novos</p>
         </div>
         <div className="bg-card rounded-xl p-4 shadow-card text-center">
-          <p className="text-2xl font-bold">{requests.filter(r => r.status === "encaminhado").length}</p>
+          <p className="text-2xl font-bold">{requests.filter((r) => r.status === "encaminhado").length}</p>
           <p className="text-sm text-muted-foreground">Encaminhados</p>
         </div>
         <div className="bg-card rounded-xl p-4 shadow-card text-center">
-          <p className="text-2xl font-bold">{requests.filter(r => r.status === "concluido").length}</p>
+          <p className="text-2xl font-bold">{requests.filter((r) => r.status === "concluido").length}</p>
           <p className="text-sm text-muted-foreground">Concluídos</p>
         </div>
       </div>
@@ -206,6 +222,7 @@ const ServiceRequestsContent = () => {
                     onClick={() => {
                       setSelectedRequestId(req.id);
                       setMatchDialogOpen(true);
+                      setBusinessSearch("");
                     }}
                   >
                     <Eye className="h-4 w-4 mr-1" /> Ver
@@ -220,71 +237,190 @@ const ServiceRequestsContent = () => {
         )}
       </div>
 
-      {/* Match Dialog */}
+      {/* Detail + Match Dialog */}
       <Dialog open={matchDialogOpen} onOpenChange={setMatchDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Negócios Associados</DialogTitle>
+            <DialogTitle>Detalhes do Pedido</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            {/* Existing matches */}
-            {matches.length > 0 ? (
-              <div className="space-y-2">
-                {matches.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
-                    <div>
-                      <p className="font-medium">{m.businesses?.name || "—"}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Enviado: {new Date(m.sent_at).toLocaleDateString("pt-PT")}
-                        {m.price_quote && ` • Orçamento: ${m.price_quote}`}
-                      </p>
-                    </div>
-                    <Select value={m.status} onValueChange={(v) => handleMatchStatusChange(m.id, v)}>
-                      <SelectTrigger className="w-[130px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(matchStatusLabels).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Nenhum negócio associado ainda.</p>
-            )}
 
-            {/* Add business */}
-            <div className="border-t pt-4 space-y-2">
-              <p className="text-sm font-medium">Associar Negócio</p>
-              <Input
-                placeholder="Pesquisar negócio..."
-                value={businessSearch}
-                onChange={(e) => setBusinessSearch(e.target.value)}
-              />
-              {businessSearch && (
-                <div className="max-h-40 overflow-y-auto space-y-1">
-                  {filteredBusinesses.map((b) => (
-                    <button
-                      key={b.id}
-                      className="w-full text-left p-2 rounded hover:bg-secondary/50 text-sm flex items-center gap-2"
-                      onClick={() => handleAddMatch(b.id)}
-                    >
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      {b.name}
-                    </button>
-                  ))}
-                  {filteredBusinesses.length === 0 && (
-                    <p className="text-xs text-muted-foreground p-2">Nenhum resultado.</p>
-                  )}
+          {selectedRequest && (
+            <div className="space-y-5">
+              {/* Request details */}
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1 flex-1">
+                    {selectedRequest.urgency === "urgent" && (
+                      <div className="flex items-center gap-1 text-destructive text-xs font-bold">
+                        <AlertTriangle className="h-3.5 w-3.5" /> URGENTE
+                      </div>
+                    )}
+                    <p className="text-sm font-medium text-primary">
+                      {selectedRequest.categories?.name || "Sem categoria"}
+                      {selectedRequest.subcategories?.name ? ` → ${selectedRequest.subcategories.name}` : ""}
+                    </p>
+                    <p className="text-foreground">{selectedRequest.description || "Sem descrição"}</p>
+                  </div>
+                  <Badge variant="secondary">{statusLabels[selectedRequest.status] || selectedRequest.status}</Badge>
                 </div>
-              )}
+
+                {/* Location */}
+                {(selectedRequest as any).location_city && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {[(selectedRequest as any).location_city, (selectedRequest as any).location_postal_code].filter(Boolean).join(", ")}
+                  </div>
+                )}
+
+                {/* Consumer */}
+                {selectedRequest.profiles && (
+                  <div className="border-t border-border pt-3 space-y-1 text-sm">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Consumidor</p>
+                    {selectedRequest.profiles.full_name && (
+                      <div className="flex items-center gap-2"><User className="h-3.5 w-3.5 text-muted-foreground" />{selectedRequest.profiles.full_name}</div>
+                    )}
+                    {selectedRequest.profiles.email && (
+                      <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-muted-foreground" /><a href={`mailto:${selectedRequest.profiles.email}`} className="text-primary hover:underline">{selectedRequest.profiles.email}</a></div>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Criado: {new Date(selectedRequest.created_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+
+              {/* Suggested businesses */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  Negócios Sugeridos
+                </h3>
+                {suggestionsLoading ? (
+                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+                ) : suggestedBusinesses.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum negócio encontrado nesta categoria.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {suggestedBusinesses.map((b: any) => {
+                      const alreadyMatched = matches.some((m: any) => m.business_id === b.id);
+                      return (
+                        <div key={b.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                          <div>
+                            <p className="font-medium text-sm">{b.name}</p>
+                            <p className="text-xs text-muted-foreground">{b.city || "—"}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant={alreadyMatched ? "outline" : "default"}
+                            disabled={alreadyMatched}
+                            onClick={() => handleAddMatch(b.id)}
+                          >
+                            <Send className="h-3.5 w-3.5 mr-1" />
+                            {alreadyMatched ? "Já enviado" : "Encaminhar"}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Existing matches */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold">Negócios Associados ({matches.length})</h3>
+                {matches.length > 0 ? (
+                  <div className="space-y-2">
+                    {matches.map((m: any) => (
+                      <div key={m.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                        <div>
+                          <p className="font-medium text-sm">{m.businesses?.name || "—"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Enviado: {new Date(m.sent_at).toLocaleDateString("pt-PT")}
+                            {m.price_quote && ` • Orçamento: ${m.price_quote}`}
+                          </p>
+                        </div>
+                        <Select value={m.status} onValueChange={(v) => handleMatchStatusChange(m.id, v)}>
+                          <SelectTrigger className="w-[130px] h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(matchStatusLabels).map(([k, v]) => (
+                              <SelectItem key={k} value={k}>{v}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nenhum negócio associado ainda.</p>
+                )}
+              </div>
+
+              {/* Manual add */}
+              <div className="border-t pt-4 space-y-2">
+                <p className="text-sm font-medium">Associar Manualmente</p>
+                <Input
+                  placeholder="Pesquisar negócio..."
+                  value={businessSearch}
+                  onChange={(e) => setBusinessSearch(e.target.value)}
+                />
+                {businessSearch && (
+                  <ManualBusinessSearch
+                    search={businessSearch}
+                    onSelect={handleAddMatch}
+                    existingMatchIds={matches.map((m: any) => m.business_id)}
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+};
+
+// Sub-component for manual search to avoid loading all businesses at once
+const ManualBusinessSearch = ({ search, onSelect, existingMatchIds }: { search: string; onSelect: (id: string) => void; existingMatchIds: string[] }) => {
+  const { data: results = [], isLoading } = useQuery({
+    queryKey: ["admin-business-search", search],
+    enabled: search.length >= 2,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("id, name, city")
+        .ilike("name", `%${search}%`)
+        .eq("is_active", true)
+        .limit(10);
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  if (isLoading) return <Loader2 className="h-4 w-4 animate-spin mx-auto" />;
+
+  return (
+    <div className="max-h-40 overflow-y-auto space-y-1">
+      {results.map((b) => {
+        const already = existingMatchIds.includes(b.id);
+        return (
+          <button
+            key={b.id}
+            disabled={already}
+            className="w-full text-left p-2 rounded hover:bg-secondary/50 text-sm flex items-center gap-2 disabled:opacity-50"
+            onClick={() => onSelect(b.id)}
+          >
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            {b.name} {b.city && <span className="text-xs text-muted-foreground">({b.city})</span>}
+            {already && <span className="text-xs text-muted-foreground ml-auto">Já associado</span>}
+          </button>
+        );
+      })}
+      {results.length === 0 && search.length >= 2 && (
+        <p className="text-xs text-muted-foreground p-2">Nenhum resultado.</p>
+      )}
     </div>
   );
 };

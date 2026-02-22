@@ -10,6 +10,7 @@ import FeaturedSection from "@/components/FeaturedSection";
 import SuperHighlightsSection from "@/components/SuperHighlightsSection";
 import FeaturedCategoriesSection from "@/components/FeaturedCategoriesSection";
 import HomepageBlockRenderer from "@/components/HomepageBlockRenderer";
+import CategoryAccordion from "@/components/home/CategoryAccordion";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,6 +42,7 @@ const Index = () => {
             <HeroSection searchTerm={searchTerm} onSearchChange={setSearchTerm} />
             <SuperHighlightsSection />
             <FeaturedCategoriesSection />
+            <CategoryAccordion />
             <CategoriesGrid categories={categories} isLoading={categoriesLoading} />
             <FeaturedSection businesses={featuredBusinesses} isLoading={featuredLoading} />
           </>
