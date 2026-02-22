@@ -1,5 +1,14 @@
 import { useState, useRef } from "react";
-import { BusinessWithCategory, useCreateBusiness, useDeleteBusiness, useUpdateBusiness, SUBSCRIPTION_PLANS, SubscriptionPlan, SubscriptionStatus, CommercialStatus } from "@/hooks/useBusinesses";
+import {
+  BusinessWithCategory,
+  useCreateBusiness,
+  useDeleteBusiness,
+  useUpdateBusiness,
+  SUBSCRIPTION_PLANS,
+  SubscriptionPlan,
+  SubscriptionStatus,
+  CommercialStatus,
+} from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
@@ -11,7 +20,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Loader2, Search, Building2, Upload, FileSpreadsheet, Download, Pencil, Power, CheckSquare } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Loader2,
+  Search,
+  Building2,
+  Upload,
+  FileSpreadsheet,
+  Download,
+  Pencil,
+  Power,
+  CheckSquare,
+} from "lucide-react";
 import ContactLogsDialog from "@/components/admin/ContactLogsDialog";
 import BusinessFileCard from "@/components/admin/BusinessFileCard";
 import ImportBySourceDialog from "@/components/admin/ImportBySourceDialog";
@@ -36,7 +57,7 @@ const generateSlug = (name: string) => {
 const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) => {
   const { toast } = useToast();
   const createBusiness = useCreateBusiness();
-  
+
   const deleteBusiness = useDeleteBusiness();
   const updateBusiness = useUpdateBusiness();
   const syncSubcategories = useSyncBusinessSubcategories();
@@ -52,7 +73,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const [importResults, setImportResults] = useState<{ success: number; errors: string[] } | null>(null);
   const [importing, setImporting] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<BusinessWithCategory | null>(null);
-  
+
   // BULK ACTIONS STATE
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
@@ -93,7 +114,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     if (selectedIds.size === filteredBusinesses.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredBusinesses.map(b => b.id)));
+      setSelectedIds(new Set(filteredBusinesses.map((b) => b.id)));
     }
   };
 
@@ -110,14 +131,14 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const handleBulkActivate = async () => {
     if (selectedIds.size === 0) return;
     if (!confirm(`Ativar ${selectedIds.size} negócios selecionados?`)) return;
-    
+
     setIsBulkProcessing(true);
     let success = 0;
     let errors = 0;
 
     for (const id of selectedIds) {
       try {
-        await supabase.from('businesses').update({ is_active: true }).eq('id', id);
+        await supabase.from("businesses").update({ is_active: true }).eq("id", id);
         success++;
       } catch {
         errors++;
@@ -126,11 +147,11 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
 
     setIsBulkProcessing(false);
     setSelectedIds(new Set());
-    toast({ 
-      title: `${success} negócios ativados`, 
-      description: errors > 0 ? `${errors} erros` : undefined 
+    toast({
+      title: `${success} negócios ativados`,
+      description: errors > 0 ? `${errors} erros` : undefined,
     });
-    
+
     // Force refresh
     window.location.reload();
   };
@@ -138,14 +159,14 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const handleBulkDeactivate = async () => {
     if (selectedIds.size === 0) return;
     if (!confirm(`Desativar ${selectedIds.size} negócios selecionados?`)) return;
-    
+
     setIsBulkProcessing(true);
     let success = 0;
     let errors = 0;
 
     for (const id of selectedIds) {
       try {
-        await supabase.from('businesses').update({ is_active: false }).eq('id', id);
+        await supabase.from("businesses").update({ is_active: false }).eq("id", id);
         success++;
       } catch {
         errors++;
@@ -154,11 +175,11 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
 
     setIsBulkProcessing(false);
     setSelectedIds(new Set());
-    toast({ 
+    toast({
       title: `${success} negócios desativados`,
-      description: errors > 0 ? `${errors} erros` : undefined 
+      description: errors > 0 ? `${errors} erros` : undefined,
     });
-    
+
     window.location.reload();
   };
 
@@ -183,25 +204,32 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
         const rowNum = i + 2;
 
         try {
-          if (!row.name) { errors.push(`Linha ${rowNum}: Nome em falta`); continue; }
+          if (!row.name) {
+            errors.push(`Linha ${rowNum}: Nome em falta`);
+            continue;
+          }
 
           let categoryId: string | null = null;
           if (row.category) {
-            const cat = categories.find(c => c.name.toLowerCase() === row.category.toLowerCase());
-            if (cat) { categoryId = cat.id; }
-            else { errors.push(`Linha ${rowNum}: Categoria "${row.category}" não encontrada`); continue; }
+            const cat = categories.find((c) => c.name.toLowerCase() === row.category.toLowerCase());
+            if (cat) {
+              categoryId = cat.id;
+            } else {
+              errors.push(`Linha ${rowNum}: Categoria "${row.category}" não encontrada`);
+              continue;
+            }
           }
 
           const subcategoryIds: string[] = [];
           let primarySubcategoryId: string | null = null;
           const subcatNames = (row.subcategory || row.subcategories || "")
             .split("|")
-            .map(s => s.trim())
+            .map((s) => s.trim())
             .filter(Boolean);
 
           for (const subName of subcatNames) {
             const sub = allSubcategories.find(
-              s => s.name.toLowerCase() === subName.toLowerCase() && (!categoryId || s.category_id === categoryId)
+              (s) => s.name.toLowerCase() === subName.toLowerCase() && (!categoryId || s.category_id === categoryId),
             );
             if (sub) {
               subcategoryIds.push(sub.id);
@@ -225,22 +253,29 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             subcategory_id: primarySubcategoryId,
             description: row.description?.trim() || null,
             city: row.city?.trim() || null,
-            zone: null, alcance,
+            zone: null,
+            alcance,
             logo_url: row.logo_url?.trim() || null,
             cta_whatsapp: row.whatsapp?.trim() || null,
             cta_phone: row.telefone?.trim() || null,
             cta_email: row.email?.trim() || null,
             cta_website: row.website?.trim() || null,
-            cta_app: null, images: [], coordinates: null,
-            schedule_weekdays: null, schedule_weekend: null,
-            is_active: false, is_featured: false, is_premium: false,
+            cta_app: null,
+            images: [],
+            coordinates: null,
+            schedule_weekdays: null,
+            schedule_weekend: null,
+            is_active: false,
+            is_featured: false,
+            is_premium: false,
             premium_level: null,
             commercial_status: "nao_contactado" as CommercialStatus,
             display_order: 0,
             plan_id: null,
             subscription_plan: "free" as SubscriptionPlan,
             subscription_price: 0,
-            subscription_start_date: null, subscription_end_date: null,
+            subscription_start_date: null,
+            subscription_end_date: null,
             subscription_status: "inactive" as SubscriptionStatus,
             public_address: null,
           };
@@ -260,7 +295,11 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       setImportResults({ success, errors });
       toast({ title: "Importação concluída", description: `${success} importados, ${errors.length} erros` });
     } catch {
-      toast({ title: "Erro na importação", description: "Ficheiro inválido ou formato incorreto", variant: "destructive" });
+      toast({
+        title: "Erro na importação",
+        description: "Ficheiro inválido ou formato incorreto",
+        variant: "destructive",
+      });
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -268,7 +307,12 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   };
 
   const handleExcelExport = () => {
-    const commercialLabels: Record<string, string> = { nao_contactado: "Não Contactado", contactado: "Contactado", interessado: "Interessado", cliente: "Cliente" };
+    const commercialLabels: Record<string, string> = {
+      nao_contactado: "Não Contactado",
+      contactado: "Contactado",
+      interessado: "Interessado",
+      cliente: "Cliente",
+    };
     const exportData = filteredBusinesses.map((b) => ({
       Nome: b.name,
       Categoria: b.categories?.name || "-",
@@ -295,13 +339,19 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     toast({ title: "Exportação concluída", description: `${exportData.length} negócios exportados` });
   };
 
-  const filteredBusinesses = businesses.filter(b => {
-    const matchesSearch = !searchTerm || 
+  // ✅ ALTERAÇÃO 1: Pesquisa agora inclui cta_email e owner_email
+  const filteredBusinesses = businesses.filter((b) => {
+    const matchesSearch =
+      !searchTerm ||
       b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.categories?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      b.categories?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.cta_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.owner_email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !filterCategory || filterCategory === "all" || b.category_id === filterCategory;
-    const matchesStatus = !filterStatus || filterStatus === "all" ||
+    const matchesStatus =
+      !filterStatus ||
+      filterStatus === "all" ||
       (filterStatus === "active" && b.is_active) ||
       (filterStatus === "inactive" && !b.is_active) ||
       (filterStatus === "featured" && b.is_featured) ||
@@ -341,21 +391,38 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                 <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2">
                   <p className="font-medium">Formato esperado (.xlsx):</p>
                   <p className="text-muted-foreground">
-                    Colunas: <code>name</code>, <code>category</code>, <code>subcategories</code>, <code>description</code>,
-                    <code>city</code>, <code>alcance</code>, <code>whatsapp</code>, <code>telefone</code>,
-                    <code>email</code>, <code>website</code>, <code>logo_url</code>
+                    Colunas: <code>name</code>, <code>category</code>, <code>subcategories</code>,{" "}
+                    <code>description</code>,<code>city</code>, <code>alcance</code>, <code>whatsapp</code>,{" "}
+                    <code>telefone</code>,<code>email</code>, <code>website</code>, <code>logo_url</code>
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    • Subcategorias separadas por <code>|</code> (ex: Canalizadores|Eletricidade)<br />
-                    • Negócios importados ficam inativos por defeito<br />
-                    • Categoria e subcategorias devem existir no sistema
+                    • Subcategorias separadas por <code>|</code> (ex: Canalizadores|Eletricidade)
+                    <br />
+                    • Negócios importados ficam inativos por defeito
+                    <br />• Categoria e subcategorias devem existir no sistema
                   </p>
                 </div>
 
                 <div>
-                  <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelImport} className="hidden" id="excel-import" />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleExcelImport}
+                    className="hidden"
+                    id="excel-import"
+                  />
                   <Button onClick={() => fileInputRef.current?.click()} disabled={importing} className="w-full">
-                    {importing ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />A importar...</>) : (<><Upload className="h-4 w-4 mr-2" />Selecionar ficheiro</>)}
+                    {importing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />A importar...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Selecionar ficheiro
+                      </>
+                    )}
                   </Button>
                 </div>
 
@@ -366,7 +433,9 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                       <div>
                         <p className="text-sm font-medium text-destructive">❌ {importResults.errors.length} erros:</p>
                         <ul className="text-xs text-muted-foreground mt-1 space-y-1 max-h-40 overflow-y-auto">
-                          {importResults.errors.map((err, i) => (<li key={i}>{err}</li>))}
+                          {importResults.errors.map((err, i) => (
+                            <li key={i}>{err}</li>
+                          ))}
                         </ul>
                       </div>
                     )}
@@ -376,7 +445,13 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             </DialogContent>
           </Dialog>
 
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+          <Dialog
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="btn-cta-primary">
                 <Plus className="h-4 w-4 mr-2" />
@@ -385,14 +460,22 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingBusiness ? `Ficha — ${editingBusiness.name}` : "Nova Ficha de Cliente"}</DialogTitle>
+                <DialogTitle>
+                  {editingBusiness ? `Ficha — ${editingBusiness.name}` : "Nova Ficha de Cliente"}
+                </DialogTitle>
               </DialogHeader>
               <BusinessFileCard
                 business={editingBusiness}
                 categories={categories}
                 isAdmin={true}
-                onSaved={() => { setDialogOpen(false); resetForm(); }}
-                onCancel={() => { setDialogOpen(false); resetForm(); }}
+                onSaved={() => {
+                  setDialogOpen(false);
+                  resetForm();
+                }}
+                onCancel={() => {
+                  setDialogOpen(false);
+                  resetForm();
+                }}
               />
             </DialogContent>
           </Dialog>
@@ -403,17 +486,31 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Pesquisar negócios..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+          {/* ✅ ALTERAÇÃO 2: Placeholder actualizado para indicar pesquisa por email */}
+          <Input
+            placeholder="Pesquisar por nome, cidade ou email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="Todas categorias" /></SelectTrigger>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Todas categorias" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas categorias</SelectItem>
-            {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Todos estados" /></SelectTrigger>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Todos estados" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos estados</SelectItem>
             <SelectItem value="active">Ativos</SelectItem>
@@ -432,8 +529,8 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             <span className="font-medium">{selectedIds.size} negócios selecionados</span>
           </div>
           <div className="flex gap-2">
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               onClick={handleBulkActivate}
               disabled={isBulkProcessing}
               className="bg-success hover:bg-success/90"
@@ -441,20 +538,11 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
               {isBulkProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Ativar Selecionados
             </Button>
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={handleBulkDeactivate}
-              disabled={isBulkProcessing}
-            >
+            <Button size="sm" variant="outline" onClick={handleBulkDeactivate} disabled={isBulkProcessing}>
               {isBulkProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Desativar Selecionados
             </Button>
-            <Button 
-              size="sm" 
-              variant="ghost"
-              onClick={() => setSelectedIds(new Set())}
-            >
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
               Limpar
             </Button>
           </div>
@@ -468,7 +556,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             <thead className="bg-muted/50">
               <tr>
                 <th className="p-4 w-12">
-                  <Checkbox 
+                  <Checkbox
                     checked={selectedIds.size === filteredBusinesses.length && filteredBusinesses.length > 0}
                     onCheckedChange={toggleSelectAll}
                   />
@@ -485,7 +573,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
               {filteredBusinesses.map((business) => (
                 <tr key={business.id} className="border-t border-border">
                   <td className="p-4">
-                    <Checkbox 
+                    <Checkbox
                       checked={selectedIds.has(business.id)}
                       onCheckedChange={() => toggleSelect(business.id)}
                     />
@@ -493,7 +581,11 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       {business.logo_url ? (
-                        <img src={business.logo_url} alt={business.name} className="w-10 h-10 rounded-lg object-cover" />
+                        <img
+                          src={business.logo_url}
+                          alt={business.name}
+                          className="w-10 h-10 rounded-lg object-cover"
+                        />
                       ) : (
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                           <Building2 className="w-5 h-5 text-primary/50" />
@@ -508,21 +600,42 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                   <td className="p-4">
                     <div className="flex gap-1 flex-wrap">
                       {business.is_active ? (
-                        <Badge variant="secondary" className="bg-success/10 text-success">Ativo</Badge>
+                        <Badge variant="secondary" className="bg-success/10 text-success">
+                          Ativo
+                        </Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-muted text-muted-foreground">Inativo</Badge>
+                        <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                          Inativo
+                        </Badge>
                       )}
-                      {business.is_featured && <Badge variant="secondary" className="bg-primary/10 text-primary">Destaque</Badge>}
-                      {business.is_premium && <Badge variant="secondary" className="bg-accent/10 text-accent">Premium</Badge>}
+                      {business.is_featured && (
+                        <Badge variant="secondary" className="bg-primary/10 text-primary">
+                          Destaque
+                        </Badge>
+                      )}
+                      {business.is_premium && (
+                        <Badge variant="secondary" className="bg-accent/10 text-accent">
+                          Premium
+                        </Badge>
+                      )}
                       {business.commercial_status && business.commercial_status !== "nao_contactado" && (
-                        <Badge variant="secondary" className={
-                          business.commercial_status === "cliente" ? "bg-success/10 text-success" :
-                          business.commercial_status === "interessado" ? "bg-warning/10 text-warning" :
-                          "bg-muted text-muted-foreground"
-                        }>
-                          {business.commercial_status === "contactado" ? "Contactado" :
-                           business.commercial_status === "interessado" ? "Interessado" :
-                           business.commercial_status === "cliente" ? "Cliente" : ""}
+                        <Badge
+                          variant="secondary"
+                          className={
+                            business.commercial_status === "cliente"
+                              ? "bg-success/10 text-success"
+                              : business.commercial_status === "interessado"
+                                ? "bg-warning/10 text-warning"
+                                : "bg-muted text-muted-foreground"
+                          }
+                        >
+                          {business.commercial_status === "contactado"
+                            ? "Contactado"
+                            : business.commercial_status === "interessado"
+                              ? "Interessado"
+                              : business.commercial_status === "cliente"
+                                ? "Cliente"
+                                : ""}
                         </Badge>
                       )}
                     </div>
@@ -530,22 +643,48 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                   <td className="p-4">
                     <div className="flex justify-end gap-2">
                       <ContactLogsDialog businessId={business.id} businessName={business.name} />
-                      <Button size="sm" variant="ghost" onClick={() => openEditDialog(business)} title="Editar"><Pencil className="h-4 w-4" /></Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleToggleActive(business)} title={business.is_active ? "Inativar" : "Ativar"} className={business.is_active ? "text-warning hover:text-warning" : "text-success hover:text-success"}><Power className="h-4 w-4" /></Button>
-                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(business.id)} title="Apagar permanentemente"><Trash2 className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEditDialog(business)} title="Editar">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleToggleActive(business)}
+                        title={business.is_active ? "Inativar" : "Ativar"}
+                        className={
+                          business.is_active ? "text-warning hover:text-warning" : "text-success hover:text-success"
+                        }
+                      >
+                        <Power className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleDelete(business.id)}
+                        title="Apagar permanentemente"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </td>
                 </tr>
               ))}
               {filteredBusinesses.length === 0 && (
-                <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">Nenhum negócio encontrado.</td></tr>
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                    Nenhum negócio encontrado.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground text-right">{filteredBusinesses.length} de {businesses.length} negócios</p>
+      <p className="text-sm text-muted-foreground text-right">
+        {filteredBusinesses.length} de {businesses.length} negócios
+      </p>
     </div>
   );
 };
