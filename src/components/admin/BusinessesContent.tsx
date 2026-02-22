@@ -346,8 +346,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.categories?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.cta_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.owner_email?.toLowerCase().includes(searchTerm.toLowerCase());
+      b.cta_email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !filterCategory || filterCategory === "all" || b.category_id === filterCategory;
     const matchesStatus =
       !filterStatus ||
