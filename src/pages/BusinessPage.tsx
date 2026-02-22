@@ -95,6 +95,11 @@ const BusinessPage = () => {
     }
   };
 
+  const getYouTubeEmbedUrl = (url: string): string => {
+    const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? `https://www.youtube.com/embed/${match[1]}` : url;
+  };
+
   const userIsOwner = user?.id === (business as any)?.owner_id;
 
   if (isLoading) {
@@ -269,7 +274,7 @@ const BusinessPage = () => {
                     </p>
                   )}
 
-                  {/* Schedule — com guard de visibilidade */}
+                  {/* Schedule */}
                   {(business.schedule_weekdays || business.schedule_weekend) && (business as any).show_schedule !== false && (
                     <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                       <div className="flex items-center gap-2 font-medium">
@@ -340,7 +345,12 @@ const BusinessPage = () => {
                                 <div>
                                   <span className="text-sm font-medium block mb-1">{mod.label}</span>
                                   <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                                    <iframe src={v.value.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")} className="w-full h-full" allowFullScreen title={mod.label} />
+                                    <iframe
+                                      src={getYouTubeEmbedUrl(v.value)}
+                                      className="w-full h-full"
+                                      allowFullScreen
+                                      title={mod.label}
+                                    />
                                   </div>
                                 </div>
                               )}
@@ -371,7 +381,6 @@ const BusinessPage = () => {
                   </p>
 
                   <div className="space-y-3 pt-2">
-                    {/* WhatsApp — com guard de visibilidade */}
                     {business.cta_whatsapp && (business as any).show_whatsapp !== false && (
                       <Button
                         className="btn-cta-whatsapp w-full justify-center text-base"
@@ -449,7 +458,6 @@ const BusinessPage = () => {
         onShowSuggestionForm={() => setShowSuggestionForm(true)}
       />
 
-      {/* Formulário de sugestão (quando chega ao fim) */}
       {showSuggestionForm && (
         <div className="border-t bg-muted/10">
           <div className="container py-8">
