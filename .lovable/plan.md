@@ -1,154 +1,131 @@
 
-# Plano de Implementacao - 5 Areas
+# Diagnostico e Plano de Correcao - Perfil do Consumidor e Pedidos
 
-## Resumo das Descobertas
+## Diagnostico Tecnico
 
-**Tabelas relevantes:**
-- `profiles` - tabela principal de perfis (sem campos de scoring)
-- `user_profiles` - tabela secundaria com `score`, `requests_count`, `last_request_at`
-- `service_requests` - campos: `description`, `urgency`, `location_city`, `location_postal_code`, `address`, `category_id`, `subcategory_id`, `user_id`
-- `request_business_matches` - liga pedidos a negocios
+### O que foi encontrado
 
-**Problemas encontrados:**
-- O trigger `trg_update_consumer_score` NAO EXISTE na base de dados (a funcao existe mas o trigger nunca foi criado)
-- O `BusinessRequestsContent.tsx` ja faz join a `profiles` mas o join usa `profiles:user_id` que pode nao resolver corretamente
-- O dashboard do consumidor nao tem aba de pedidos nem CTA para pedir servico
-- O Admin dialog de pedidos nao mostra detalhes do pedido nem negocios sugeridos
+**1. Tabelas de perfil (duplicacao)**
+- `profiles` - tabela principal, ligada a `auth.users` via `user_id`. Campos: `id`, `user_id`, `email`, `full_name`, `phone`, `address`, `status`. **NAO tem campo `city`.**
+- `user_profiles` - tabela secundaria com `score`, `requests_count`, `last_request_at`, `avatar_url`, `bio`. Usada apenas para scoring.
 
----
+**2. Foreign Key confirmada**
+- `service_requests.user_id` -> `profiles.user_id` (FK existe e funciona)
+- O join `profiles:user_id (full_name, email, phone)` no hook `useBusinessRequests` esta sintaticamente correto
 
-## AREA 1 - Dashboard do Consumidor (`UserDashboard.tsx`)
+**3. Dados reais na base de dados - O PROBLEMA REAL**
+Os utilizadores que fizeram pedidos tem os campos de perfil VAZIOS:
+```
+user_id: 83d5faa9... -> full_name: "", phone: null, email: tresgate@gmail.com
+user_id: 9c24017b... -> full_name: null, phone: null, email: null
+```
+O negocio ve os dados corretos do pedido (descricao, categoria, cidade) mas NAO ve dados de contacto porque o perfil nunca foi preenchido.
 
-### O que sera feito:
-1. Adicionar card de destaque no topo com botao "Pedir Servico" que leva a `/pedir-servico`
-2. Criar nova aba "Os Meus Pedidos" com listagem dos pedidos do utilizador
-3. Criar hook `useConsumerRequests` para buscar pedidos do utilizador autenticado na tabela `service_requests`
+**4. Dashboard do consumidor**
+- NAO tem link para editar perfil
+- NAO valida perfil antes de permitir criar pedidos
+- A pagina `/perfil` (ProfilePage.tsx) EXISTE e funciona, mas nao esta acessivel a partir do dashboard
 
-### Ficheiros a alterar:
-- `src/pages/UserDashboard.tsx` - adicionar CTA + nova tab
-- `src/hooks/useServiceRequests.ts` - adicionar hook `useConsumerRequests`
+**5. Formulario de pedido (`/pedir-servico`)**
+- Nenhuma validacao de perfil completo antes de submeter
+- Aceita pedidos de utilizadores sem nome nem telefone
 
-### Detalhes tecnicos:
-- Query: `service_requests` filtrada por `user_id = auth.uid()` com join a `categories` e `subcategories`
-- Cada pedido mostra: categoria, descricao truncada (120 chars), badge de estado (novo/encaminhado/concluido), data pt-PT
-- Card CTA com icone `ClipboardList`, fundo primario, link para `/pedir-servico`
-
----
-
-## AREA 2 - BusinessRequestsContent.tsx
-
-### O que foi encontrado:
-O componente ja foi corrigido na sessao anterior e faz join correto. Porem, o join `profiles:user_id` pode falhar se nao houver FK direta. Vou verificar e garantir que funciona.
-
-### O que sera feito:
-- Verificar que a query no hook `useBusinessRequests` resolve corretamente os dados do consumidor
-- Se necessario, ajustar a query para usar o formato correto de join
-- Garantir que `description` mostra texto completo (nao truncado)
-
-### Ficheiros a verificar/alterar:
-- `src/hooks/useBusinessDashboard.ts` - query do `useBusinessRequests`
-- `src/components/business/BusinessRequestsContent.tsx` - ja esta correto, pequenos ajustes se necessario
+**6. Trigger de scoring**
+- `trg_update_consumer_score` EXISTE e esta ativo na tabela `service_requests`
+- Funcao `update_consumer_score_on_request()` atualiza `user_profiles` (tabela secundaria)
+- Trigger funcional - nenhuma correcao necessaria
 
 ---
 
-## AREA 3 - Sugestao Automatica no Admin
+## Lista de Falhas Estruturais
 
-### O que sera feito:
-No dialog de "Ver" pedido no `ServiceRequestsContent.tsx`:
-1. Mostrar detalhes completos do pedido selecionado (descricao, urgencia, cidade, consumidor)
-2. Adicionar seccao "Negocios Sugeridos" que busca negocios da mesma categoria + subcategoria + cidade
-3. Ordenar por score usando a funcao `get_business_profile_score` existente
-4. Botao "Encaminhar Pedido" que cria um match via `useCreateMatch`
-
-### Ficheiros a alterar:
-- `src/components/admin/ServiceRequestsContent.tsx` - expandir dialog
-- Usar `useBusinessProfileScore` existente para scoring
-- Criar query inline para buscar negocios por categoria/subcategoria/cidade
-
-### Detalhes tecnicos:
-- Query de negocios: `businesses` filtrada por `category_id`, `subcategory_id` (opcional), `city` (opcional), `is_active = true`
-- Limitar a 5 resultados
-- Cada sugestao mostra: nome, cidade, botao "Encaminhar"
+| # | Falha | Impacto |
+|---|-------|---------|
+| 1 | Perfil do consumidor sem campo `city` na tabela `profiles` | Impossivel associar cidade ao consumidor |
+| 2 | Nenhuma validacao de perfil antes de criar pedido | Negocios recebem pedidos sem contacto |
+| 3 | Dashboard do consumidor sem acesso a edicao de perfil | Utilizador nao sabe onde preencher dados |
+| 4 | Formulario de pedido nao exige nome e telefone | Dados criticos em falta |
 
 ---
 
-## AREA 4 - Trigger de Scoring
+## Plano de Implementacao
 
-### ANTES:
+### PASSO 1 - Adicionar campo `city` a tabela `profiles`
+
+Migracao SQL para adicionar coluna `city` (texto, nullable):
 ```sql
--- Funcao existe mas aponta para user_profiles
--- Trigger NAO EXISTE (nao foi criado)
+ALTER TABLE profiles ADD COLUMN city text;
 ```
 
-### DEPOIS:
-```sql
--- Criar o trigger que falta na tabela service_requests
-CREATE TRIGGER trg_update_consumer_score
-  AFTER INSERT ON service_requests
-  FOR EACH ROW
-  EXECUTE FUNCTION update_consumer_score_on_request();
+Sem impacto em dados existentes. Todas as queries continuam a funcionar.
+
+### PASSO 2 - Card de Perfil no Dashboard do Consumidor
+
+Modificar `src/pages/UserDashboard.tsx`:
+- Adicionar card de perfil entre o CTA "Pedir Servico" e as tabs
+- Mostrar: nome, email, telefone, cidade
+- Botao "Editar Perfil" que leva a `/perfil`
+- Alerta visual se perfil incompleto (nome ou telefone em falta)
+
+O card vai buscar dados via query a `profiles` com `user_id = auth.uid()`.
+
+### PASSO 3 - Adicionar campo `city` ao ProfilePage
+
+Modificar `src/pages/ProfilePage.tsx`:
+- Adicionar campo "Cidade" ao formulario (entre Telefone e Morada)
+- Guardar na nova coluna `city` da tabela `profiles`
+- Manter todos os campos existentes intactos
+
+### PASSO 4 - Validacao de perfil antes de criar pedido
+
+Modificar `src/pages/RequestServicePage.tsx`:
+- Antes de mostrar o formulario, verificar se `profiles` tem `full_name` e `phone` preenchidos
+- Se perfil incompleto: mostrar alerta com link para `/perfil` e bloquear submissao
+- Se perfil completo: mostrar formulario normalmente
+
+### PASSO 5 - Verificar e ajustar query do BusinessRequestsContent
+
+A query no `useBusinessRequests` (em `useBusinessDashboard.ts`) ja faz o join correto:
+```
+profiles:user_id (full_name, email, phone)
+```
+O problema nao e a query - e que os dados estao vazios no perfil. Apos os passos 2-4, os novos pedidos terao sempre dados de contacto.
+
+Adicionalmente, vou incluir `city` no join para o negocio ver a cidade do consumidor.
+
+---
+
+## Fluxo Ideal Resultante
+
+```text
+1. Login
+2. Dashboard -> Ve card de perfil
+3. Se incompleto -> Alerta "Complete o seu perfil"
+4. Clica "Editar Perfil" -> /perfil
+5. Preenche nome, telefone, cidade
+6. Volta ao dashboard -> Perfil completo
+7. Clica "Pedir Servico" -> /pedir-servico
+8. Formulario valida perfil -> Permite submissao
+9. Negocio recebe pedido COM dados de contacto
+10. Negocio contacta consumidor diretamente
 ```
 
-O trigger vai usar a funcao existente `update_consumer_score_on_request()` que ja atualiza `user_profiles`. Como a tabela `user_profiles` ja tem os campos corretos (`score`, `requests_count`, `last_request_at`), nao e necessario alterar a funcao -- apenas criar o trigger em falta.
-
-### Migracao SQL:
-- Criar trigger `trg_update_consumer_score` na tabela `service_requests`
-
 ---
 
-## AREA 5 - CategoryAccordion Homepage
+## Ficheiros a alterar
 
-### O que sera feito:
-Criar componente `src/components/home/CategoryAccordion.tsx`:
-- Layout horizontal flex com paineis que expandem no hover
-- Altura: 350px desktop, 220px mobile
-- Cada painel: `flex: 1`, no hover `flex: 4`, transicao 0.4s
-- Fora do hover: inicial da categoria centrada
-- No hover: nome, nr negocios, botao "Ver todos"
-- Top 8 categorias por numero de negocios ativos
-- Imagens de fundo (ja existem nos dados) com fallback gradiente
-- Mobile: scroll horizontal
+| Ficheiro | Acao | Descricao |
+|----------|------|-----------|
+| Migracao SQL | Criar | Adicionar coluna `city` a `profiles` |
+| `src/pages/UserDashboard.tsx` | Alterar | Adicionar card de perfil com alerta |
+| `src/pages/ProfilePage.tsx` | Alterar | Adicionar campo cidade |
+| `src/pages/RequestServicePage.tsx` | Alterar | Validacao de perfil completo |
+| `src/hooks/useBusinessDashboard.ts` | Alterar | Incluir `city` no join de profiles |
 
-### Integracao:
-- Adicionar ao `HomepageBlockRenderer.tsx` como novo tipo de bloco `categorias_accordion`
-- OU usar diretamente no fallback do `Index.tsx` como complemento/substituicao do `CategoriesGrid`
-
-### Dados disponiveis:
-As categorias ja tem `image_url` preenchido (confirmado na base de dados). Top 8:
-1. Saude (431 negocios)
-2. Beleza e Bem-Estar (134)
-3. Restaurantes (100)
-4. Materiais de Construcao (90)
-5. Servicos de Reparacoes (83)
-6. Servicos Automovel (30)
-7. Educacao (30)
-8. Formacao (24)
-
-### Ficheiros a criar/alterar:
-- `src/components/home/CategoryAccordion.tsx` (novo)
-- `src/hooks/useCategories.ts` - adicionar hook `useCategoriesWithCount` que retorna categorias com contagem de negocios
-- `src/components/HomepageBlockRenderer.tsx` - adicionar case para novo tipo
-- `src/pages/Index.tsx` - integrar no fallback
-
----
-
-## Resumo de Ficheiros
-
-| Ficheiro | Acao |
-|----------|------|
-| `src/pages/UserDashboard.tsx` | Alterar - CTA + aba pedidos |
-| `src/hooks/useServiceRequests.ts` | Alterar - novo hook consumidor |
-| `src/components/business/BusinessRequestsContent.tsx` | Verificar/ajustar |
-| `src/hooks/useBusinessDashboard.ts` | Verificar query |
-| `src/components/admin/ServiceRequestsContent.tsx` | Alterar - detalhes + sugestoes |
-| `src/components/home/CategoryAccordion.tsx` | Criar novo |
-| `src/hooks/useCategories.ts` | Alterar - hook com contagem |
-| `src/components/HomepageBlockRenderer.tsx` | Alterar - novo tipo bloco |
-| `src/pages/Index.tsx` | Alterar - integrar accordion |
-| Migracao SQL | Criar trigger scoring |
-
-## O que NAO sera alterado:
-- Estrutura de tabelas existentes
+## O que NAO sera alterado
+- Estrutura da tabela `service_requests`
+- Tabela `user_profiles` (scoring)
+- Trigger `trg_update_consumer_score`
+- `BusinessRequestsContent.tsx` (ja funcional)
 - Estilos globais
-- Logica funcional existente
-- Ficheiros de configuracao Supabase
+- Logica existente de matching
