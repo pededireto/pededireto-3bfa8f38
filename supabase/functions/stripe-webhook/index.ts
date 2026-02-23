@@ -21,16 +21,31 @@ Deno.serve(async (req) => {
 
   let event: Stripe.Event;
 
+  // Fail closed - always require webhook secret and signature
+  if (!webhookSecret) {
+    console.error("STRIPE_WEBHOOK_SECRET not configured");
+    return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (!signature) {
+    console.error("Missing stripe-signature header");
+    return new Response(JSON.stringify({ error: "Missing signature" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
-    if (webhookSecret && signature) {
-      event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
-    } else {
-      // Dev mode sem secret
-      event = JSON.parse(body);
-    }
+    event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
   } catch (err: any) {
-    console.error("Webhook signature error:", err.message);
-    return new Response(JSON.stringify({ error: err.message }), { status: 400 });
+    console.error("Webhook signature verification failed:", err.message);
+    return new Response(JSON.stringify({ error: "Invalid signature" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const adminClient = createClient(
