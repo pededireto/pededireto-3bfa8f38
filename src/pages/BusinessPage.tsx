@@ -5,6 +5,8 @@ import { useActiveBusinessModules, useBusinessModuleValues } from "@/hooks/useBu
 import { useBusinessNavigation } from "@/hooks/useCategoryBusinesses";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { Helmet } from "react-helmet-async";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FavoriteButton from "@/components/FavoriteButton";
@@ -13,18 +15,21 @@ import BusinessNavigation from "@/components/BusinessNavigation";
 import BusinessSuggestionForm from "@/components/BusinessSuggestionForm";
 import { GoogleMapsLink } from "@/components/business/GoogleMapsLink";
 import { Button } from "@/components/ui/button";
-import { 
-  ArrowLeft, 
-  MapPin, 
-  Globe, 
-  Phone, 
-  MessageCircle, 
+
+import {
+  ArrowLeft,
+  MapPin,
+  Globe,
+  Phone,
+  MessageCircle,
   ExternalLink,
   Mail,
   Clock,
   Star,
-  Settings
+  Settings,
 } from "lucide-react";
+
+const BASE_URL = "https://pededireto.pt";
 
 const BusinessPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -34,19 +39,13 @@ const BusinessPage = () => {
   const trackEvent = useTrackEvent();
   const { data: activeModules = [] } = useActiveBusinessModules();
   const { data: moduleValues = [] } = useBusinessModuleValues(business?.id);
-  
+
   const [showSuggestionForm, setShowSuggestionForm] = useState(false);
 
   const cityFilter = business?.city || null;
 
-  const {
-    previousBusiness,
-    nextBusiness,
-    isLastBusiness,
-    currentPosition,
-    totalBusinesses,
-    hasFilter,
-  } = useBusinessNavigation(business?.category_id, slug, cityFilter);
+  const { previousBusiness, nextBusiness, isLastBusiness, currentPosition, totalBusinesses, hasFilter } =
+    useBusinessNavigation(business?.category_id, slug, cityFilter);
 
   useEffect(() => {
     if (business) {
@@ -102,6 +101,42 @@ const BusinessPage = () => {
 
   const userIsOwner = user?.id === (business as any)?.owner_id;
 
+  /* ===========================
+     SEO DINÂMICO
+  =========================== */
+
+  const pageTitle = business
+    ? `${business.name} em ${business.city || "Portugal"} | ${business.categories?.name || "Negócio"}`
+    : "Negócio | Pede Direto";
+
+  const pageDescription = business?.description
+    ? business.description.slice(0, 155)
+    : "Encontre serviços e profissionais diretamente no Pede Direto.";
+
+  const pageUrl = `${BASE_URL}/negocio/${business?.slug}`;
+
+  const pageImage = business?.logo_url || `${BASE_URL}/og-default.jpg`;
+
+  const schemaData = business
+    ? {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        name: business.name,
+        image: pageImage,
+        description: pageDescription,
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: business.public_address || "",
+          addressLocality: business.city || "",
+          addressCountry: "PT",
+        },
+        telephone: business.cta_phone || "",
+        url: pageUrl,
+      }
+    : null;
+
+  /* =========================== */
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -136,8 +171,27 @@ const BusinessPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={pageUrl} />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:image" content={pageImage} />
+        <meta property="og:url" content={pageUrl} />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={pageImage} />
+
+        {schemaData && <script type="application/ld+json">{JSON.stringify(schemaData)}</script>}
+      </Helmet>
+
       <Header />
-      
+
       {/* Banner para utilizador já associado (verified + owner) */}
       {userIsOwner && business.claim_status === "verified" && (
         <div className="bg-primary/10 border-b border-primary/20">
@@ -146,12 +200,8 @@ const BusinessPage = () => {
               <div className="flex items-center gap-3">
                 <Settings className="w-5 h-5 text-primary" />
                 <div>
-                  <p className="font-medium text-primary">
-                    Você já está associado a este negócio.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Clique para gerir.
-                  </p>
+                  <p className="font-medium text-primary">Você já está associado a este negócio.</p>
+                  <p className="text-sm text-muted-foreground">Clique para gerir.</p>
                 </div>
               </div>
               <Link to={`/dashboard/negocio/${business.id}`}>
@@ -167,19 +217,16 @@ const BusinessPage = () => {
 
       {/* Banner para negócios não reclamados ou pending */}
       {!(business.claim_status === "verified" && userIsOwner) && (
-        <UnclaimedBusinessBanner
-          businessId={business.id}
-          claimStatus={business.claim_status}
-        />
+        <UnclaimedBusinessBanner businessId={business.id} claimStatus={business.claim_status} />
       )}
-      
+
       <main className="flex-1">
         {/* Hero Section */}
         <section className="section-hero py-8">
           <div className="container">
             {business.categories && (
-              <Link 
-                to={`/categoria/${business.categories.slug}`} 
+              <Link
+                to={`/categoria/${business.categories.slug}`}
                 className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -198,19 +245,13 @@ const BusinessPage = () => {
                 {/* Image */}
                 <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
                   {business.logo_url ? (
-                    <img
-                      src={business.logo_url}
-                      alt={business.name}
-                      className="max-w-full max-h-full object-contain"
-                    />
+                    <img src={business.logo_url} alt={business.name} className="max-w-full max-h-full object-contain" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                      <span className="text-8xl font-bold text-primary/30">
-                        {business.name.charAt(0)}
-                      </span>
+                      <span className="text-8xl font-bold text-primary/30">{business.name.charAt(0)}</span>
                     </div>
                   )}
-                  
+
                   {/* Badges */}
                   <div className="absolute top-4 right-4 flex gap-2 items-center">
                     {business.is_featured && (
@@ -219,9 +260,7 @@ const BusinessPage = () => {
                         Destaque
                       </span>
                     )}
-                    {business.is_premium && !business.is_featured && (
-                      <span className="badge-premium">Premium</span>
-                    )}
+                    {business.is_premium && !business.is_featured && <span className="badge-premium">Premium</span>}
                     <FavoriteButton
                       businessId={business.id}
                       className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"
@@ -236,16 +275,12 @@ const BusinessPage = () => {
                       {business.categories.name}
                     </span>
                   )}
-                  
+
                   <h1 className="text-3xl md:text-4xl font-bold">{business.name}</h1>
-                  
+
                   {/* Location */}
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    {business.alcance === "nacional" ? (
-                      <Globe className="w-5 h-5" />
-                    ) : (
-                      <MapPin className="w-5 h-5" />
-                    )}
+                    {business.alcance === "nacional" ? <Globe className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
                     <span>{getAlcanceLabel()}</span>
                   </div>
 
@@ -269,35 +304,34 @@ const BusinessPage = () => {
 
                   {/* Description */}
                   {business.description && (
-                    <p className="text-lg text-muted-foreground leading-relaxed">
-                      {business.description}
-                    </p>
+                    <p className="text-lg text-muted-foreground leading-relaxed">{business.description}</p>
                   )}
 
                   {/* Schedule */}
-                  {(business.schedule_weekdays || business.schedule_weekend) && (business as any).show_schedule !== false && (
-                    <div className="bg-muted/50 rounded-xl p-4 space-y-2">
-                      <div className="flex items-center gap-2 font-medium">
-                        <Clock className="w-5 h-5 text-primary" />
-                        Horário
+                  {(business.schedule_weekdays || business.schedule_weekend) &&
+                    (business as any).show_schedule !== false && (
+                      <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+                        <div className="flex items-center gap-2 font-medium">
+                          <Clock className="w-5 h-5 text-primary" />
+                          Horário
+                        </div>
+                        {business.schedule_weekdays && (
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-medium">Dias úteis:</span> {business.schedule_weekdays}
+                          </p>
+                        )}
+                        {business.schedule_weekend && (
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-medium">Fim de semana:</span> {business.schedule_weekend}
+                          </p>
+                        )}
                       </div>
-                      {business.schedule_weekdays && (
-                        <p className="text-sm text-muted-foreground">
-                          <span className="font-medium">Dias úteis:</span> {business.schedule_weekdays}
-                        </p>
-                      )}
-                      {business.schedule_weekend && (
-                        <p className="text-sm text-muted-foreground">
-                          <span className="font-medium">Fim de semana:</span> {business.schedule_weekend}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                    )}
 
                   {/* Dynamic Module Values */}
                   {(() => {
                     const publicModules = activeModules.filter(
-                      (m) => m.is_public_default && m.section === "presenca_publica"
+                      (m) => m.is_public_default && m.section === "presenca_publica",
                     );
                     const valuesMap = new Map(moduleValues.map((v) => [v.module_id, v]));
                     const filledModules = publicModules.filter((m) => {
@@ -314,7 +348,12 @@ const BusinessPage = () => {
                           return (
                             <div key={mod.id}>
                               {mod.type === "url" && v.value && (
-                                <a href={v.value} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-primary hover:underline">
+                                <a
+                                  href={v.value}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 text-primary hover:underline"
+                                >
                                   <ExternalLink className="w-4 h-4" />
                                   {mod.label}
                                 </a>
@@ -328,19 +367,31 @@ const BusinessPage = () => {
                               {mod.type === "image" && v.value && (
                                 <div>
                                   <span className="text-sm font-medium block mb-1">{mod.label}</span>
-                                  <img src={v.value} alt={mod.label} className="rounded-lg max-w-full max-h-64 object-contain" />
+                                  <img
+                                    src={v.value}
+                                    alt={mod.label}
+                                    className="rounded-lg max-w-full max-h-64 object-contain"
+                                  />
                                 </div>
                               )}
-                              {mod.type === "gallery" && (business as any).show_gallery !== false && Array.isArray(v.value_json) && v.value_json.length > 0 && (
-                                <div>
-                                  <span className="text-sm font-medium block mb-2">{mod.label}</span>
-                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                    {v.value_json.map((url: string, i: number) => (
-                                      <img key={i} src={url} alt={`${mod.label} ${i + 1}`} className="rounded-lg w-full aspect-square object-cover" />
-                                    ))}
+                              {mod.type === "gallery" &&
+                                (business as any).show_gallery !== false &&
+                                Array.isArray(v.value_json) &&
+                                v.value_json.length > 0 && (
+                                  <div>
+                                    <span className="text-sm font-medium block mb-2">{mod.label}</span>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                      {v.value_json.map((url: string, i: number) => (
+                                        <img
+                                          key={i}
+                                          src={url}
+                                          alt={`${mod.label} ${i + 1}`}
+                                          className="rounded-lg w-full aspect-square object-cover"
+                                        />
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
                               {mod.type === "video" && v.value && (
                                 <div>
                                   <span className="text-sm font-medium block mb-1">{mod.label}</span>
@@ -355,7 +406,9 @@ const BusinessPage = () => {
                                 </div>
                               )}
                               {mod.type === "boolean" && v.value === "true" && (
-                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm">{mod.label}</span>
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                                  {mod.label}
+                                </span>
                               )}
                               {mod.type === "select" && v.value && (
                                 <div>
@@ -376,9 +429,7 @@ const BusinessPage = () => {
               <div className="lg:col-span-1">
                 <div className="sticky top-24 bg-card rounded-2xl p-6 shadow-card space-y-4">
                   <h3 className="text-xl font-bold">Resolva hoje o seu problema</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Contacte diretamente — sem intermediários!
-                  </p>
+                  <p className="text-sm text-muted-foreground">Contacte diretamente — sem intermediários!</p>
 
                   <div className="space-y-3 pt-2">
                     {business.cta_whatsapp && (business as any).show_whatsapp !== false && (
@@ -394,7 +445,7 @@ const BusinessPage = () => {
                         WhatsApp
                       </Button>
                     )}
-                    
+
                     {business.cta_phone && (
                       <Button
                         className="btn-cta-phone w-full justify-center text-base"
@@ -408,7 +459,7 @@ const BusinessPage = () => {
                         Ligar Agora
                       </Button>
                     )}
-                    
+
                     {business.cta_email && (
                       <Button
                         variant="outline"
@@ -423,7 +474,7 @@ const BusinessPage = () => {
                         Enviar Email
                       </Button>
                     )}
-                    
+
                     {business.cta_website && (
                       <Button
                         variant="outline"
@@ -461,10 +512,7 @@ const BusinessPage = () => {
       {showSuggestionForm && (
         <div className="border-t bg-muted/10">
           <div className="container py-8">
-            <BusinessSuggestionForm 
-              categoryName={business?.categories?.name}
-              cityName={cityFilter}
-            />
+            <BusinessSuggestionForm categoryName={business?.categories?.name} cityName={cityFilter} />
           </div>
         </div>
       )}
