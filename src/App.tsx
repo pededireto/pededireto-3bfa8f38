@@ -26,7 +26,6 @@ import RegisterChoice from "./pages/RegisterChoice";
 import RegisterBusiness from "./pages/RegisterBusiness";
 import ClaimBusiness from "./pages/ClaimBusiness";
 
-// NOVOS IMPORTS - Sistema de Password Recovery e Perfil
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import UserProfile from "./pages/UserProfile";
@@ -48,6 +47,9 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+/* =========================
+   ROUTE TRACKING (Analytics)
+========================= */
 const RouteTracker = () => {
   const location = useLocation();
 
@@ -63,7 +65,22 @@ const RouteTracker = () => {
   return null;
 };
 
-// SmartRedirectGlobal removed — redirect logic only runs on auth pages via useSmartRedirect hook
+/* =========================
+   ACCESSIBILITY:
+   Move focus to <main> when route changes
+========================= */
+const RouteFocusHandler = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const main = document.getElementById("main-content");
+    if (main) {
+      main.focus();
+    }
+  }, [location.pathname]);
+
+  return null;
+};
 
 const App = () => {
   useEffect(() => {
@@ -74,8 +91,7 @@ const App = () => {
 
     window.addEventListener("unhandledrejection", handleRejection);
 
-    return () =>
-      window.removeEventListener("unhandledrejection", handleRejection);
+    return () => window.removeEventListener("unhandledrejection", handleRejection);
   }, []);
 
   return (
@@ -91,6 +107,7 @@ const App = () => {
 
               <BrowserRouter>
                 <RouteTracker />
+                <RouteFocusHandler />
                 <ScrollToTop />
                 <SessionExpiredModal />
 
@@ -98,10 +115,7 @@ const App = () => {
                   {/* PUBLIC */}
                   <Route path="/" element={<Index />} />
                   <Route path="/categoria/:slug" element={<CategoryPage />} />
-                  <Route
-                    path="/categoria/:categorySlug/:subcategorySlug"
-                    element={<SubcategoryPage />}
-                  />
+                  <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
                   <Route path="/negocio/:slug" element={<BusinessPage />} />
                   <Route path="/pagina/:slug" element={<InstitutionalPage />} />
 
@@ -113,7 +127,7 @@ const App = () => {
                   <Route path="/registar/consumidor" element={<UserRegister />} />
                   <Route path="/register/business" element={<RegisterBusiness />} />
 
-                  {/* PASSWORD RECOVERY - NOVO */}
+                  {/* PASSWORD RECOVERY */}
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -124,8 +138,6 @@ const App = () => {
                   <Route path="/dashboard" element={<UserDashboard />} />
                   <Route path="/business-dashboard" element={<BusinessDashboard />} />
                   <Route path="/perfil" element={<ProfilePage />} />
-
-                  {/* USER PROFILE - NOVO */}
                   <Route path="/profile" element={<UserProfile />} />
 
                   {/* ADMIN */}
