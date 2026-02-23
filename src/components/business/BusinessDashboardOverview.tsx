@@ -45,15 +45,17 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
     ? Math.ceil((new Date(business.subscription_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
+  const contactsPerVisit = analytics && analytics.views > 0
+    ? (analytics.totalContacts / analytics.views).toFixed(1)
+    : null;
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">Bem-vindo, <span className="font-medium text-foreground">{business.name}</span></p>
       </div>
 
-      {/* Alertas Proativos PRO — aparece só se tiver alertas */}
       {permissions.canViewProAnalytics && (
         <BusinessProAlerts
           businessId={business.id}
@@ -67,7 +69,6 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         />
       )}
 
-      {/* Profile Score + Subscription */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2">
           <BusinessProfileScore
@@ -78,7 +79,6 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
           />
         </div>
 
-        {/* Subscription Card */}
         <div className="bg-card rounded-xl p-5 shadow-card flex flex-col justify-between">
           <div className="flex items-center gap-3 mb-3">
             <CreditCard className="h-5 w-5 text-primary" />
@@ -117,7 +117,6 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         </div>
       </div>
 
-      {/* Analytics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-card rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-2 mb-2">
@@ -163,9 +162,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         </div>
       </div>
 
-      {/* Posição nas Pesquisas + Conversão */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Posição nas Pesquisas — PRO feature com blur para free */}
         <BusinessSearchPosition
           businessId={business.id}
           planId={business.plan_id}
@@ -173,7 +170,6 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         />
 
         <div className="space-y-4">
-          {/* Estado do Negócio */}
           <div className="bg-card rounded-xl p-5 shadow-card">
             <div className="flex items-center gap-3 mb-3">
               <Building2 className="h-5 w-5 text-primary" />
@@ -189,20 +185,18 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
             )}
           </div>
 
-          {/* Taxa de Conversão */}
-          {analytics && analytics.views > 0 && (
+          {contactsPerVisit !== null && (
             <div className="bg-card rounded-xl p-5 shadow-card">
               <div className="flex items-center gap-3 mb-3">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                <span className="text-sm text-muted-foreground">Taxa de Conversão</span>
+                <span className="text-sm text-muted-foreground">Contactos por Visita</span>
               </div>
-              <p className="text-2xl font-bold">
-                {analytics.totalContacts > 0
-                  ? `${Math.round((analytics.totalContacts / analytics.views) * 100)}%`
-                  : "0%"}
-              </p>
+              <p className="text-2xl font-bold">{contactsPerVisit}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {analytics.totalContacts} contactos em {analytics.views} visualizações
+                {analytics!.totalContacts} contactos em {analytics!.views} visualizações
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Cada visitante clica em média {contactsPerVisit}× para te contactar
               </p>
               {permissions.canViewProAnalytics && (
                 <Button
