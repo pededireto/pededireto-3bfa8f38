@@ -37,9 +37,9 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
   const [extendingDays, setExtendingDays] = useState(false);
 
   const plan = plans.find((p: any) => p.id === business.plan_id);
-  const conversionRate = analytics && analytics.views > 0
-    ? Math.round((analytics.totalContacts / analytics.views) * 100)
-    : 0;
+  const contactsPerVisit = analytics && analytics.views > 0
+    ? (analytics.totalContacts / analytics.views).toFixed(1)
+    : "—";
 
   const handleToggleActive = async () => {
     setTogglingActive(true);
@@ -212,10 +212,10 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
               <div className="bg-muted/40 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs text-muted-foreground">Conversão</span>
+                  <span className="text-xs text-muted-foreground">Contactos/Visita</span>
                 </div>
-                <p className="text-2xl font-bold">{conversionRate}%</p>
-                <p className="text-[10px] text-muted-foreground mt-1">média plataforma ~15%</p>
+                <p className="text-2xl font-bold">{contactsPerVisit}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">média plataforma ~0.3</p>
               </div>
             </div>
           </div>
