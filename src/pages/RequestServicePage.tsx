@@ -1,23 +1,41 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { useAllCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 const RequestServicePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: categories = [] } = useAllCategories();
+
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ["profile-check", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name, phone")
+        .eq("user_id", user!.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const profileIncomplete = profile && (!profile.full_name?.trim() || !profile.phone?.trim());
   
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
@@ -82,6 +100,24 @@ const RequestServicePage = () => {
         <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Pedir Serviço</h1>
         <p className="text-muted-foreground mb-6">Descreva o que precisa e enviaremos o seu pedido aos melhores profissionais.</p>
 
+        {profileLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : profileIncomplete ? (
+          <Card className="border-amber-400 dark:border-amber-500">
+            <CardContent className="py-8 text-center space-y-4">
+              <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
+              <h2 className="text-lg font-bold text-foreground">Complete o seu perfil primeiro</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Para garantir que os profissionais consigam contactá-lo, precisa de preencher o seu <strong>nome</strong> e <strong>telefone</strong> no perfil.
+              </p>
+              <Button asChild>
+                <Link to="/perfil">Completar Perfil</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-5 bg-card rounded-xl p-6 shadow-card">
           <div>
             <label className="block text-sm font-medium mb-1">Categoria *</label>
@@ -147,6 +183,7 @@ const RequestServicePage = () => {
             Enviar Pedido
           </Button>
         </form>
+        )}
       </main>
       <Footer />
     </div>

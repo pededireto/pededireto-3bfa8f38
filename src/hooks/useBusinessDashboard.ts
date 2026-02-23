@@ -60,7 +60,7 @@ export const useBusinessRequests = (businessId: string | undefined) => {
             location_city, location_postal_code,
             categories (id, name),
             subcategories (id, name),
-            profiles:user_id (full_name, email, phone)
+            profiles:user_id (full_name, email, phone, city)
           )
         `)
         .eq("business_id", businessId)

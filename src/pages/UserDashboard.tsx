@@ -5,13 +5,15 @@ import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { useSavedSearches, useDeleteSavedSearch } from "@/hooks/useSavedSearches";
 import { useUserFavorites, useToggleFavorite } from "@/hooks/useUserFavorites";
 import { useConsumerRequests } from "@/hooks/useServiceRequests";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, Heart, Trash2, ExternalLink, ClipboardList } from "lucide-react";
+import { Loader2, Search, Heart, Trash2, ExternalLink, ClipboardList, User, AlertTriangle, Phone, Mail, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -33,6 +35,22 @@ const UserDashboard = () => {
   const { data: myRequests = [], isLoading: requestsLoading } = useConsumerRequests();
   const deleteSearch = useDeleteSavedSearch();
   const toggleFavorite = useToggleFavorite();
+
+  const { data: profile } = useQuery({
+    queryKey: ["my-profile-summary", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name, email, phone, city")
+        .eq("user_id", user!.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const profileIncomplete = profile && (!profile.full_name?.trim() || !profile.phone?.trim());
 
   useEffect(() => {
     if (authLoading || membershipLoading) return;
@@ -81,6 +99,46 @@ const UserDashboard = () => {
           <h1 className="text-3xl font-bold text-foreground">A Minha Conta</h1>
           <p className="text-muted-foreground mt-1">{user.email}</p>
         </div>
+
+        {/* Profile Card */}
+        {profile && (
+          <Card className={`mb-6 ${profileIncomplete ? 'border-amber-400 dark:border-amber-500' : ''}`}>
+            <CardContent className="py-5 px-6">
+              {profileIncomplete && (
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <p className="text-sm font-medium">Complete o seu perfil para poder criar pedidos de serviço.</p>
+                </div>
+              )}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4 min-w-0">
+                  <div className="bg-primary/10 rounded-full p-3">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="space-y-1 min-w-0">
+                    <p className="font-semibold text-foreground">{profile.full_name?.trim() || "Nome não preenchido"}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                      {profile.email && (
+                        <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{profile.email}</span>
+                      )}
+                      {profile.phone?.trim() ? (
+                        <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{profile.phone}</span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400"><Phone className="h-3.5 w-3.5" />Telefone em falta</span>
+                      )}
+                      {profile.city?.trim() && (
+                        <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{profile.city}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/perfil">Editar Perfil</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* CTA Card */}
         <Link to="/pedir-servico" className="block mb-8">

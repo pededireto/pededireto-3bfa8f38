@@ -43,12 +43,14 @@ const ProfilePage = () => {
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [initialized, setInitialized] = useState(false);
 
   if (profile && !initialized) {
     setFullName(profile.full_name || "");
     setPhone(profile.phone || "");
+    setCity((profile as any).city || "");
     setAddress(profile.address || "");
     setInitialized(true);
   }
@@ -57,7 +59,7 @@ const ProfilePage = () => {
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName, phone, address })
+        .update({ full_name: fullName, phone, city, address } as any)
         .eq("user_id", user!.id);
       if (error) throw error;
     },
@@ -104,6 +106,11 @@ const ProfilePage = () => {
             <div>
               <label className="text-sm font-medium text-muted-foreground">Telefone</label>
               <Input value={phone} onChange={e => setPhone(e.target.value)} className="mt-1" />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Cidade</label>
+              <Input value={city} onChange={e => setCity(e.target.value)} placeholder="Ex: Lisboa" className="mt-1" />
             </div>
 
             <div>
