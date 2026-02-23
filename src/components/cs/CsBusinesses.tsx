@@ -16,8 +16,7 @@ import {
   Search, Building2, Eye, MousePointerClick, TrendingUp,
   ChevronRight, X, ExternalLink, ToggleLeft, ToggleRight,
   CalendarPlus, StickyNote, AlertTriangle, Star, MapPin,
-  CreditCard, Loader2, TrendingDown, Lightbulb, MessageSquare,
-  BarChart3
+  CreditCard, Loader2, Lightbulb, MessageSquare, BarChart3
 } from "lucide-react";
 
 // ─── Ficha de cliente ────────────────────────────────────────────────────────
@@ -50,7 +49,6 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
         .eq("id", business.id);
       if (error) throw error;
 
-      // Log acção CS
       await (supabase as any).from("cs_actions").insert({
         business_id: business.id,
         action_type: business.is_active ? "deactivate" : "activate",
@@ -227,20 +225,22 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
                 <Star className="h-3 w-3" /> Benchmarking
               </p>
               <div className="grid grid-cols-2 gap-3">
-                {benchmark.ranking?.subcat_rank && (
+                {benchmark.subcategory_stats?.name && (
                   <div className="bg-muted/40 rounded-xl p-4">
-                    <p className="text-xs text-muted-foreground">{benchmark.subcategory_stats?.name}</p>
+                    <p className="text-xs text-muted-foreground">{benchmark.subcategory_stats.name}</p>
                     <p className="text-xl font-bold text-primary mt-1">
-                      #{benchmark.ranking.subcat_rank} <span className="text-sm text-muted-foreground font-normal">de {benchmark.ranking.subcat_total}</span>
+                      {benchmark.subcategory_stats.avg_views ?? "—"}
                     </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">média de views na subcategoria</p>
                   </div>
                 )}
-                {benchmark.ranking?.city_rank && (
+                {benchmark.city_stats?.city && (
                   <div className="bg-muted/40 rounded-xl p-4">
-                    <p className="text-xs text-muted-foreground">{benchmark.city_stats?.city}</p>
+                    <p className="text-xs text-muted-foreground">{benchmark.city_stats.city}</p>
                     <p className="text-xl font-bold text-primary mt-1">
-                      #{benchmark.ranking.city_rank} <span className="text-sm text-muted-foreground font-normal">de {benchmark.ranking.city_total}</span>
+                      {benchmark.city_stats.avg_views ?? "—"}
                     </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">média de views na cidade</p>
                   </div>
                 )}
               </div>
