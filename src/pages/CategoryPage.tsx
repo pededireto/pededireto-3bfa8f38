@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 
 const CategoryPage = () => {
   const { slug } = useParams<{ slug: string }>();
-
   const { data: category, isLoading: categoryLoading } = useCategory(slug);
   const { data: subcategories = [], isLoading: subcategoriesLoading } = useSubcategories(category?.id);
 
@@ -59,7 +58,6 @@ const CategoryPage = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-
       <main className="flex-1">
         {/* Category Header */}
         <section className="section-hero py-8 md:py-12">
@@ -71,15 +69,12 @@ const CategoryPage = () => {
               <ArrowLeft className="w-4 h-4" />
               Voltar às categorias
             </Link>
-
             <h1 className="text-3xl md:text-4xl font-bold mb-3">
               {category.name}
             </h1>
-
             <p className="text-lg text-muted-foreground mb-2 max-w-2xl">
-              Precisa de {category.name.toLowerCase()}? Escolha a área específica.
+              {category.description || `Precisa de ${category.name.toLowerCase()}? Escolha a área específica.`}
             </p>
-
             <p className="text-sm text-primary font-medium mb-8">
               {getContextualMessage()}
             </p>
@@ -97,7 +92,6 @@ const CategoryPage = () => {
           </div>
         </section>
       </main>
-
       <Footer />
     </div>
   );
