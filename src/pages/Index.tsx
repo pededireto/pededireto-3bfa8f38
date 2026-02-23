@@ -25,9 +25,13 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      <main className="flex-1">
+      {/* 
+        MAIN LANDMARK
+        - id necessário para skip link
+        - tabIndex=-1 necessário para foco programático em SPA
+      */}
+      <main id="main-content" className="flex-1" tabIndex={-1}>
         {useBlocks ? (
-          // Dynamic rendering from homepage_blocks
           blocks.map((block) => (
             <HomepageBlockRenderer
               key={block.id}
@@ -37,13 +41,17 @@ const Index = () => {
             />
           ))
         ) : (
-          // Fallback: hardcoded layout
           <>
             <HeroSection searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+
             <SuperHighlightsSection />
+
             <FeaturedCategoriesSection />
+
             <CategoryAccordion />
+
             <CategoriesGrid categories={categories} isLoading={categoriesLoading} />
+
             <FeaturedSection businesses={featuredBusinesses} isLoading={featuredLoading} />
           </>
         )}
