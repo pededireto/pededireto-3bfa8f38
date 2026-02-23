@@ -15,10 +15,12 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionProps) => {
   const [showResults, setShowResults] = useState(false);
+  const [activeDescendant, setActiveDescendant] = useState<string | undefined>();
   const { data: searchResults = [], isLoading: searchLoading } = useSearch(searchTerm);
   const { data: settings } = useSiteSettings();
   const autoSaveSearch = useAutoSaveSearch();
   const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const heroTitle = settings?.hero_title || "Tem um problema? Nós mostramos quem resolve.";
   const heroSubtitle = settings?.hero_subtitle || "Restaurantes, serviços, lojas e profissionais — tudo num só sítio.";
@@ -29,10 +31,12 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
     e.preventDefault();
     if (searchTerm.trim().length >= 2) {
       autoSaveSearch.mutate({ searchQuery: searchTerm.trim() });
+      onSearch?.(searchTerm);
+      setShowResults(false);
     }
-    onSearch?.(searchTerm);
   };
 
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -86,39 +90,45 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                 />
 
                 <input
+                  ref={inputRef}
                   id="hero-search"
                   type="text"
                   value={searchTerm}
-                  onChange={(e) => {
-                    onSearchChange?.(e.target.value);
-                    setShowResults(true);
-                  }}
-                  onFocus={() => setShowResults(true)}
                   placeholder="O que procura? (ex: canalizador, pizza, barbearia...)"
                   className="search-input-hero pl-12 pr-4"
                   aria-autocomplete="list"
                   aria-expanded={showResults}
                   aria-controls="search-results"
+                  aria-activedescendant={activeDescendant}
+                  autoComplete="off"
+                  onChange={(e) => {
+                    onSearchChange?.(e.target.value);
+                    setShowResults(true);
+                  }}
+                  onFocus={() => {
+                    if (searchTerm.length >= 2) {
+                      setShowResults(true);
+                    }
+                  }}
                 />
 
                 {showResults && searchTerm.length >= 2 && (
-                  <div id="search-results" aria-live="polite">
+                  <div id="search-results">
                     <SearchResults
                       results={searchResults}
                       isLoading={searchLoading}
                       searchTerm={searchTerm}
                       onSelect={(result) => {
                         setShowResults(false);
+
                         if (result?.result_name) {
                           autoSaveSearch.mutate({
                             searchQuery: result.result_name,
                           });
-                        } else if (searchTerm.trim().length >= 2) {
-                          autoSaveSearch.mutate({
-                            searchQuery: searchTerm.trim(),
-                          });
                         }
+
                         onSearchChange?.("");
+                        inputRef.current?.focus();
                       }}
                     />
                   </div>
@@ -149,9 +159,6 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
             <div className="hidden md:flex justify-center items-center relative" aria-hidden="true">
               <div className="relative animate-float">
                 <img src={mascotUrl} alt="Mascote do Pede Direto" className="w-72 lg:w-96 drop-shadow-2xl" />
-                <div className="absolute -top-4 -right-4 bg-card rounded-2xl p-4 shadow-lg border border-border max-w-[200px]">
-                  <p className="text-sm font-medium text-foreground">Eu ajudo-te a encontrar quem resolve!</p>
-                </div>
               </div>
             </div>
           )}
