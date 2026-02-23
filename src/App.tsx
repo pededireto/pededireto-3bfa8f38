@@ -111,82 +111,93 @@ const App = () => {
                 <ScrollToTop />
                 <SessionExpiredModal />
 
-                <Routes>
-                  {/* PUBLIC */}
-                  <Route path="/" element={<Index />} />
-                  <Route path="/categoria/:slug" element={<CategoryPage />} />
-                  <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
-                  <Route path="/negocio/:slug" element={<BusinessPage />} />
-                  <Route path="/pagina/:slug" element={<InstitutionalPage />} />
+                {/* ✅ SKIP LINK (primeiro elemento focável real da página) */}
+                <a
+                  href="#main-content"
+                  className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[999] focus:bg-primary focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:shadow-lg"
+                >
+                  Saltar para o conteúdo principal
+                </a>
 
-                  {/* AUTH */}
-                  <Route path="/login" element={<UserLogin />} />
+                {/* ✅ MAIN LANDMARK */}
+                <main id="main-content" tabIndex={-1}>
+                  <Routes>
+                    {/* PUBLIC */}
+                    <Route path="/" element={<Index />} />
+                    <Route path="/categoria/:slug" element={<CategoryPage />} />
+                    <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
+                    <Route path="/negocio/:slug" element={<BusinessPage />} />
+                    <Route path="/pagina/:slug" element={<InstitutionalPage />} />
 
-                  {/* REGISTER STRUCTURE */}
-                  <Route path="/register" element={<RegisterChoice />} />
-                  <Route path="/registar/consumidor" element={<UserRegister />} />
-                  <Route path="/register/business" element={<RegisterBusiness />} />
+                    {/* AUTH */}
+                    <Route path="/login" element={<UserLogin />} />
 
-                  {/* PASSWORD RECOVERY */}
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
+                    {/* REGISTER STRUCTURE */}
+                    <Route path="/register" element={<RegisterChoice />} />
+                    <Route path="/registar/consumidor" element={<UserRegister />} />
+                    <Route path="/register/business" element={<RegisterBusiness />} />
 
-                  {/* CLAIM FLOW */}
-                  <Route path="/claim-business" element={<ClaimBusiness />} />
+                    {/* PASSWORD RECOVERY */}
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
 
-                  {/* DASHBOARDS */}
-                  <Route path="/dashboard" element={<UserDashboard />} />
-                  <Route path="/business-dashboard" element={<BusinessDashboard />} />
-                  <Route path="/perfil" element={<ProfilePage />} />
-                  <Route path="/profile" element={<UserProfile />} />
+                    {/* CLAIM FLOW */}
+                    <Route path="/claim-business" element={<ClaimBusiness />} />
 
-                  {/* ADMIN */}
-                  <Route path="/admin/login" element={<AdminLogin />} />
-                  <Route path="/admin/register" element={<AdminRegister />} />
+                    {/* DASHBOARDS */}
+                    <Route path="/dashboard" element={<UserDashboard />} />
+                    <Route path="/business-dashboard" element={<BusinessDashboard />} />
+                    <Route path="/perfil" element={<ProfilePage />} />
+                    <Route path="/profile" element={<UserProfile />} />
 
-                  <Route
-                    path="/admin"
-                    element={
-                      <ProtectedRoute requireAdmin>
-                        <AdminPage />
-                      </ProtectedRoute>
-                    }
-                  />
+                    {/* ADMIN */}
+                    <Route path="/admin/login" element={<AdminLogin />} />
+                    <Route path="/admin/register" element={<AdminRegister />} />
 
-                  <Route
-                    path="/comercial"
-                    element={
-                      <ProtectedRoute requireCommercial>
-                        <CommercialPage />
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/admin"
+                      element={
+                        <ProtectedRoute requireAdmin>
+                          <AdminPage />
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/onboarding"
-                    element={
-                      <ProtectedRoute requireOnboarding>
-                        <OnboardingPage />
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/comercial"
+                      element={
+                        <ProtectedRoute requireCommercial>
+                          <CommercialPage />
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/cs"
-                    element={
-                      <ProtectedRoute requireCs>
-                        <CustomerSuccessPage />
-                      </ProtectedRoute>
-                    }
-                  />
+                    <Route
+                      path="/onboarding"
+                      element={
+                        <ProtectedRoute requireOnboarding>
+                          <OnboardingPage />
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  {/* SERVICES */}
-                  <Route path="/pedir-servico" element={<RequestServicePage />} />
-                  <Route path="/upgrade" element={<UpgradePage />} />
+                    <Route
+                      path="/cs"
+                      element={
+                        <ProtectedRoute requireCs>
+                          <CustomerSuccessPage />
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  {/* 404 */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                    {/* SERVICES */}
+                    <Route path="/pedir-servico" element={<RequestServicePage />} />
+                    <Route path="/upgrade" element={<UpgradePage />} />
+
+                    {/* 404 */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
 
                 <CookieConsent />
               </BrowserRouter>
