@@ -20,18 +20,22 @@ const useCategoriesWithCount = () => {
         .from("categories")
         .select("id, name, slug, image_url")
         .eq("is_active", true);
+
       if (error) throw error;
 
-      // Count active businesses per category
       const { data: counts, error: countErr } = await supabase
         .from("businesses")
         .select("category_id")
         .eq("is_active", true);
+
       if (countErr) throw countErr;
 
       const countMap: Record<string, number> = {};
+
       (counts || []).forEach((b: any) => {
-        if (b.category_id) countMap[b.category_id] = (countMap[b.category_id] || 0) + 1;
+        if (b.category_id) {
+          countMap[b.category_id] = (countMap[b.category_id] || 0) + 1;
+        }
       });
 
       const result: CategoryWithCount[] = (data || [])
@@ -66,8 +70,9 @@ const CategoryAccordion = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <div className="flex justify-center py-12" role="status" aria-live="polite">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
+        <span className="sr-only">A carregar categorias...</span>
       </div>
     );
   }
@@ -75,25 +80,32 @@ const CategoryAccordion = () => {
   if (categories.length === 0) return null;
 
   return (
-    <section className="py-8 md:py-12">
+    <section className="py-8 md:py-12" aria-labelledby="categories-heading">
       <div className="container px-4">
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">
+        <h2 id="categories-heading" className="text-2xl md:text-3xl font-bold text-foreground mb-6">
           Explorar Categorias
         </h2>
 
-        {/* Desktop accordion */}
-        <div className="hidden md:flex gap-2 h-[350px] rounded-2xl overflow-hidden">
+        {/* Desktop */}
+        <div
+          className="hidden md:flex gap-2 h-[350px] rounded-2xl overflow-hidden"
+          role="list"
+          aria-label="Lista de categorias"
+        >
           {categories.map((cat, i) => {
             const isHovered = hoveredIndex === i;
-            const bgImage = cat.image_url
-              ? `url(${cat.image_url})`
-              : gradientFallbacks[i % gradientFallbacks.length];
+
+            const bgImage = cat.image_url ? `url(${cat.image_url})` : gradientFallbacks[i % gradientFallbacks.length];
 
             return (
               <Link
                 key={cat.id}
                 to={`/categoria/${cat.slug}`}
-                className="relative overflow-hidden rounded-xl cursor-pointer group"
+                role="listitem"
+                aria-label={`Ver categoria ${cat.name} com ${cat.business_count} negócio${
+                  cat.business_count !== 1 ? "s" : ""
+                }`}
+                className="relative overflow-hidden rounded-xl cursor-pointer group focus:outline-none focus:ring-2 focus:ring-primary"
                 style={{
                   flex: isHovered ? 4 : 1,
                   transition: "flex 0.4s ease",
@@ -104,33 +116,36 @@ const CategoryAccordion = () => {
                 }}
                 onMouseEnter={() => setHoveredIndex(i)}
                 onMouseLeave={() => setHoveredIndex(null)}
+                onFocus={() => setHoveredIndex(i)}
+                onBlur={() => setHoveredIndex(null)}
               >
-                {/* Overlay */}
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors" />
 
-                {/* Collapsed: initial */}
+                {/* Collapsed */}
                 <div
                   className="absolute inset-0 flex items-center justify-center transition-opacity duration-300"
-                  style={{ opacity: isHovered ? 0 : 1 }}
+                  style={{
+                    opacity: isHovered ? 0 : 1,
+                  }}
                 >
-                  <span className="text-white text-3xl font-bold drop-shadow-lg">
-                    {cat.name.charAt(0)}
-                  </span>
+                  <span className="text-white text-3xl font-bold drop-shadow-lg">{cat.name.charAt(0)}</span>
                 </div>
 
-                {/* Expanded: details */}
+                {/* Expanded */}
                 <div
                   className="absolute inset-0 flex flex-col items-start justify-end p-6 transition-opacity duration-300"
-                  style={{ opacity: isHovered ? 1 : 0 }}
+                  style={{
+                    opacity: isHovered ? 1 : 0,
+                  }}
                 >
-                  <h3 className="text-white text-xl font-bold mb-1 drop-shadow-lg">
-                    {cat.name}
-                  </h3>
+                  <h3 className="text-white text-xl font-bold mb-1 drop-shadow-lg">{cat.name}</h3>
                   <p className="text-white/80 text-sm mb-3">
-                    {cat.business_count} negócio{cat.business_count !== 1 ? "s" : ""}
+                    {cat.business_count} negócio
+                    {cat.business_count !== 1 ? "s" : ""}
                   </p>
                   <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white text-sm font-medium px-4 py-2 rounded-full">
-                    Ver todos <ArrowRight className="h-4 w-4" />
+                    Ver todos
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </span>
                 </div>
               </Link>
@@ -138,18 +153,24 @@ const CategoryAccordion = () => {
           })}
         </div>
 
-        {/* Mobile horizontal scroll */}
-        <div className="flex md:hidden gap-3 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory">
+        {/* Mobile */}
+        <div
+          className="flex md:hidden gap-3 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory"
+          role="list"
+          aria-label="Lista de categorias"
+        >
           {categories.map((cat, i) => {
-            const bgImage = cat.image_url
-              ? `url(${cat.image_url})`
-              : gradientFallbacks[i % gradientFallbacks.length];
+            const bgImage = cat.image_url ? `url(${cat.image_url})` : gradientFallbacks[i % gradientFallbacks.length];
 
             return (
               <Link
                 key={cat.id}
                 to={`/categoria/${cat.slug}`}
-                className="relative flex-shrink-0 w-[200px] h-[220px] rounded-xl overflow-hidden snap-start"
+                role="listitem"
+                aria-label={`Ver categoria ${cat.name} com ${cat.business_count} negócio${
+                  cat.business_count !== 1 ? "s" : ""
+                }`}
+                className="relative flex-shrink-0 w-[200px] h-[220px] rounded-xl overflow-hidden snap-start focus:outline-none focus:ring-2 focus:ring-primary"
                 style={{
                   backgroundImage: cat.image_url ? bgImage : undefined,
                   background: !cat.image_url ? bgImage : undefined,
@@ -159,14 +180,14 @@ const CategoryAccordion = () => {
               >
                 <div className="absolute inset-0 bg-black/40" />
                 <div className="absolute inset-0 flex flex-col items-start justify-end p-4">
-                  <h3 className="text-white text-base font-bold drop-shadow-lg">
-                    {cat.name}
-                  </h3>
+                  <h3 className="text-white text-base font-bold drop-shadow-lg">{cat.name}</h3>
                   <p className="text-white/80 text-xs mb-2">
-                    {cat.business_count} negócio{cat.business_count !== 1 ? "s" : ""}
+                    {cat.business_count} negócio
+                    {cat.business_count !== 1 ? "s" : ""}
                   </p>
                   <span className="inline-flex items-center gap-1 text-white/90 text-xs font-medium">
-                    Ver todos <ArrowRight className="h-3 w-3" />
+                    Ver todos
+                    <ArrowRight className="h-3 w-3" aria-hidden="true" />
                   </span>
                 </div>
               </Link>
