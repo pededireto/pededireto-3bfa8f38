@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import CsDashboard from "@/components/cs/CsDashboard";
 import CsMetrics from "@/components/cs/CsMetrics";
+import CsBusinesses from "@/components/cs/CsBusinesses";
 import TicketsTable from "@/components/tickets/TicketsTable";
 import AdminReviewsPanel from "@/components/admin/AdminReviewsPanel";
 
@@ -119,13 +120,7 @@ const CustomerSuccessPage = () => {
             <TicketsTable department="cs" creatorRole="cs" />
           </TabsContent>
           <TabsContent value="reviews"><AdminReviewsPanel /></TabsContent>
-          <TabsContent value="businesses">
-            <div className="bg-card rounded-xl border p-8 text-center">
-              <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold mb-2">Negócios</h3>
-              <p className="text-muted-foreground">Vista de negócios para CS com filtros de tickets — em desenvolvimento.</p>
-            </div>
-          </TabsContent>
+          <TabsContent value="businesses"><CsBusinesses /></TabsContent>
           <TabsContent value="metrics"><CsMetrics /></TabsContent>
         </Tabs>
       </div>
