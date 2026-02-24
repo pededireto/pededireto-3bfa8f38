@@ -3,10 +3,28 @@ import { Loader2, TrendingUp, Lock } from "lucide-react";
 import { useBusinessIntelligence } from "@/hooks/useBusinessIntelligence";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
+import {
+  useBusinessFavorites,
+  useBusinessProfileScore,
+  useBusinessServiceRequests,
+  useBusinessReviewsData,
+  useBusinessBadges,
+  useBusinessMonthlyHistory,
+  useBusinessBenchmarkingPro,
+} from "@/hooks/useBusinessDashboardPro";
 import DateRangeFilter from "@/components/intelligence/DateRangeFilter";
 import BusinessPerformanceCard from "@/components/intelligence/BusinessPerformanceCard";
 import BusinessBenchmarkCard from "@/components/intelligence/BusinessBenchmarkCard";
 import UpgradeAnalyticsCard from "@/components/intelligence/UpgradeAnalyticsCard";
+import {
+  FavoritesCard,
+  ProfileScoreCard,
+  ServiceRequestsCard,
+  ReviewsCard,
+  BadgesCard,
+  MonthlyHistoryCard,
+  BenchmarkingProCard,
+} from "@/components/business/BusinessProWidgets";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface BusinessInsightsContentProps {
@@ -24,12 +42,21 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" 
   const hasProAccess = !!(planRule as any)?.allow_analytics_pro;
   const hasBasicAccess = (planRule as any)?.allow_analytics_basic !== false;
 
+  // Hooks PRO — só carregam se tiver acesso
+  const { data: favorites } = useBusinessFavorites(isVerified && hasProAccess ? businessId : null);
+  const { data: profileScore } = useBusinessProfileScore(isVerified && hasProAccess ? businessId : null);
+  const { data: serviceRequests } = useBusinessServiceRequests(isVerified && hasProAccess ? businessId : null);
+  const { data: reviewsData } = useBusinessReviewsData(isVerified && hasProAccess ? businessId : null);
+  const { data: badges } = useBusinessBadges(isVerified && hasProAccess ? businessId : null);
+  const { data: monthlyHistory } = useBusinessMonthlyHistory(isVerified && hasProAccess ? businessId : null);
+  const { data: benchmarkingPro } = useBusinessBenchmarkingPro(isVerified && hasProAccess ? businessId : null);
+
   const { data, isLoading, error } = useBusinessIntelligence(
     isVerified && hasProAccess ? businessId : null,
     days
   );
 
-  // Block completely if not verified
+  // Bloqueado se não verificado
   if (!isVerified) {
     return (
       <div className="space-y-4">
@@ -55,7 +82,7 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" 
     );
   }
 
-  // Verified + Free: show basic analytics + upsell
+  // Plano Free: básico + upsell
   if (!hasProAccess) {
     return (
       <div className="space-y-4">
@@ -102,7 +129,7 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" 
     );
   }
 
-  // Verified + Paid: full access
+  // Plano PRO: acesso completo
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -121,23 +148,55 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" 
 
   return (
     <div className="space-y-8">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-semibold">Insights</h1>
+          <h1 className="text-xl font-semibold">Insights PRO</h1>
         </div>
         <DateRangeFilter days={days} onChange={setDays} />
       </div>
 
-      {/* Performance do negócio */}
+      {/* Performance existente (sem alterações) */}
       <BusinessPerformanceCard data={data} />
 
-      {/* Divisor */}
+      {/* Favoritos + Score do Perfil — lado a lado */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-1">
+          <FavoritesCard count={favorites ?? 0} />
+        </div>
+        <div className="md:col-span-2">
+          {profileScore && <ProfileScoreCard data={profileScore} />}
+        </div>
+      </div>
+
       <div className="border-t border-border/50" />
 
-      {/* Benchmarking */}
-      <BusinessBenchmarkCard businessId={businessId} days={days} />
+      {/* Pedidos de Serviço */}
+      {serviceRequests && <ServiceRequestsCard data={serviceRequests} />}
+
+      <div className="border-t border-border/50" />
+
+      {/* Avaliações + Badges — lado a lado */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {reviewsData && <ReviewsCard data={reviewsData} />}
+        {badges !== undefined && <BadgesCard badges={badges} />}
+      </div>
+
+      <div className="border-t border-border/50" />
+
+      {/* Histórico Mensal */}
+      {monthlyHistory && <MonthlyHistoryCard data={monthlyHistory} />}
+
+      <div className="border-t border-border/50" />
+
+      {/* Benchmarking original + novo PRO */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <BusinessBenchmarkCard businessId={businessId} days={days} />
+        {benchmarkingPro && <BenchmarkingProCard data={benchmarkingPro} />}
+      </div>
+
     </div>
   );
 };
