@@ -28,7 +28,7 @@ export const FavoritesCard = ({ count }: { count: number }) => (
 
 // ─── 2. SCORE DO PERFIL ──────────────────────────────────────────────────────
 export const ProfileScoreCard = ({ data }: { data: ProfileScoreData }) => {
-  const unfilledFields = data.fields.filter((f) => !f.filled);
+  const unfilledFields = (data.fields ?? []).filter((f) => !f.filled);
   const color = data.score >= 80 ? "text-green-500" : data.score >= 50 ? "text-amber-500" : "text-red-500";
   const bgColor = data.score >= 80 ? "bg-green-500" : data.score >= 50 ? "bg-amber-500" : "bg-red-500";
 
@@ -86,7 +86,7 @@ export const ProfileScoreCard = ({ data }: { data: ProfileScoreData }) => {
 
         {/* Campos preenchidos */}
         <div className="grid grid-cols-2 gap-1.5">
-          {data.fields.map((f) => (
+          {(data.fields ?? []).map((f) => (
             <div key={f.label} className="flex items-center gap-1.5 text-xs">
               <CheckCircle className={`h-3 w-3 flex-shrink-0 ${f.filled ? "text-green-500" : "text-muted-foreground/30"}`} />
               <span className={f.filled ? "text-foreground" : "text-muted-foreground/50"}>{f.label}</span>

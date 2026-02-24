@@ -167,7 +167,7 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" 
           <FavoritesCard count={favorites ?? 0} />
         </div>
         <div className="md:col-span-2">
-          {profileScore && <ProfileScoreCard data={profileScore} />}
+          {profileScore?.fields && <ProfileScoreCard data={profileScore} />}
         </div>
       </div>
 
