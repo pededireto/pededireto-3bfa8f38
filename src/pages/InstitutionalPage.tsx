@@ -1,10 +1,13 @@
 import { useParams } from "react-router-dom";
 import { useInstitutionalPage } from "@/hooks/useInstitutionalPages";
+import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BlockRenderer from "@/components/BlockRenderer";
 import { Loader2 } from "lucide-react";
 import DOMPurify from "dompurify";
+
+const BASE_URL = "https://pededireto.pt";
 
 const InstitutionalPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -37,9 +40,55 @@ const InstitutionalPage = () => {
     );
   }
 
+  /* ===========================
+     SEO DINÂMICO
+  =========================== */
+
+  const pageTitle = (page as any).meta_title || `${page.title} | Pede Direto`;
+
+  const pageDescription = (page as any).meta_description
+    ? (page as any).meta_description.slice(0, 155)
+    : page.content
+    ? DOMPurify.sanitize(page.content).replace(/<[^>]*>/g, "").slice(0, 155)
+    : "Pede Direto — A plataforma onde encontra o que precisa, sem intermediários.";
+
+  const pageUrl = `${BASE_URL}/p/${slug}`;
+
+  const pageImage = (page as any).og_image || (page as any).image_url || `${BASE_URL}/og-default.jpg`;
+
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: pageTitle,
+    description: pageDescription,
+    url: pageUrl,
+  };
+
+  /* =========================== */
+
   return (
     <div className="min-h-screen flex flex-col">
-      {page.meta_title && <title>{page.meta_title}</title>}
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={pageUrl} />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:image" content={pageImage} />
+        <meta property="og:url" content={pageUrl} />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={pageImage} />
+
+        <script type="application/ld+json">
+          {JSON.stringify(schemaData)}
+        </script>
+      </Helmet>
+
       <Header />
       <main className="flex-1">
         <section className="section-hero py-12">
