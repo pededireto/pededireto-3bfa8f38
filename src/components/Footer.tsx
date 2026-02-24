@@ -166,10 +166,10 @@ const Footer = () => {
                 rel="noopener noreferrer"
                 className="hover:text-primary transition-colors"
               >
-                {settings?.footer_credits || "Desenvolvido por Delivery Masters"}
+                {settings?.footer_credits || "Desenvolvido por Pede Direto"}
               </a>
             ) : (
-              settings?.footer_credits || "Desenvolvido por Delivery Masters"
+              settings?.footer_credits || "Desenvolvido por Pede Direto"
             )}
           </p>
         </div>
