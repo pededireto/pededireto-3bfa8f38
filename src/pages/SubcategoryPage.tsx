@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useSubcategory, useSubcategories } from "@/hooks/useSubcategories";
 import { useCategory } from "@/hooks/useCategories";
 import { useBusinesses } from "@/hooks/useBusinesses";
+import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BusinessGrid from "@/components/BusinessGrid";
@@ -11,6 +12,8 @@ import SuggestionForm from "@/components/SuggestionForm";
 import { ArrowLeft, ArrowRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+const BASE_URL = "https://pededireto.pt";
 
 const SubcategoryPage = () => {
   const { categorySlug, subcategorySlug } = useParams<{ categorySlug: string; subcategorySlug: string }>();
@@ -67,8 +70,64 @@ const SubcategoryPage = () => {
     );
   }
 
+  /* ===========================
+     SEO DINÂMICO
+  =========================== */
+
+  const locationLabel = cityFilter.trim()
+    ? `em ${cityFilter.trim()}`
+    : "em Portugal";
+
+  const pageTitle = `${subcategory.name} ${locationLabel} | ${category?.name || "Pede Direto"}`;
+
+  const pageDescription = subcategory.description
+    ? subcategory.description.slice(0, 155)
+    : `Encontre profissionais de ${subcategory.name.toLowerCase()} ${locationLabel}. Contacte diretamente, sem intermediários — só no Pede Direto.`;
+
+  const pageUrl = `${BASE_URL}/categoria/${categorySlug}/${subcategorySlug}`;
+
+  const pageImage = subcategory.image_url || `${BASE_URL}/og-default.jpg`;
+
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${subcategory.name} ${locationLabel}`,
+    description: pageDescription,
+    url: pageUrl,
+    numberOfItems: allBusinesses.length,
+    itemListElement: allBusinesses.slice(0, 10).map((b: any, index: number) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: b.name,
+      url: `${BASE_URL}/negocio/${b.slug}`,
+    })),
+  };
+
+  /* =========================== */
+
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={pageUrl} />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:image" content={pageImage} />
+        <meta property="og:url" content={pageUrl} />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={pageImage} />
+
+        <script type="application/ld+json">
+          {JSON.stringify(schemaData)}
+        </script>
+      </Helmet>
+
       <Header />
 
       <main className="flex-1">
