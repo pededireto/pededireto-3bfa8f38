@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { useSavedSearches, useDeleteSavedSearch } from "@/hooks/useSavedSearches";
 import { useUserFavorites, useToggleFavorite } from "@/hooks/useUserFavorites";
-import { useConsumerRequests } from "@/hooks/useServiceRequests";
+import { useConsumerRequests, useConsumerRequestsMeta } from "@/hooks/useServiceRequests";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
@@ -13,7 +13,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, Heart, Trash2, ExternalLink, ClipboardList, User, AlertTriangle, Phone, Mail, MapPin } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  Heart,
+  Trash2,
+  ExternalLink,
+  ClipboardList,
+  User,
+  AlertTriangle,
+  Phone,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Bell,
+  ArrowRight,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -35,6 +50,13 @@ const UserDashboard = () => {
   const { data: myRequests = [], isLoading: requestsLoading } = useConsumerRequests();
   const deleteSearch = useDeleteSavedSearch();
   const toggleFavorite = useToggleFavorite();
+
+  // Buscar meta-dados (respostas + não lidas) para todos os pedidos de uma vez
+  const requestIds = myRequests.map((r: any) => r.id);
+  const { data: requestMeta = {} } = useConsumerRequestsMeta(requestIds);
+
+  // Contar total de não lidas para o badge do separador
+  const totalUnread = Object.values(requestMeta).filter((m: any) => m.hasUnread).length;
 
   const { data: profile } = useQuery({
     queryKey: ["my-profile-summary", user?.id],
@@ -86,7 +108,7 @@ const UserDashboard = () => {
       {
         onSuccess: () => toast({ title: "Favorito removido" }),
         onError: () => toast({ title: "Erro ao remover", variant: "destructive" }),
-      }
+      },
     );
   };
 
@@ -102,7 +124,7 @@ const UserDashboard = () => {
 
         {/* Profile Card */}
         {profile && (
-          <Card className={`mb-6 ${profileIncomplete ? 'border-amber-400 dark:border-amber-500' : ''}`}>
+          <Card className={`mb-6 ${profileIncomplete ? "border-amber-400 dark:border-amber-500" : ""}`}>
             <CardContent className="py-5 px-6">
               {profileIncomplete && (
                 <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2">
@@ -116,18 +138,32 @@ const UserDashboard = () => {
                     <User className="h-5 w-5 text-primary" />
                   </div>
                   <div className="space-y-1 min-w-0">
-                    <p className="font-semibold text-foreground">{profile.full_name?.trim() || "Nome não preenchido"}</p>
+                    <p className="font-semibold text-foreground">
+                      {profile.full_name?.trim() || "Nome não preenchido"}
+                    </p>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       {profile.email && (
-                        <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{profile.email}</span>
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3.5 w-3.5" />
+                          {profile.email}
+                        </span>
                       )}
                       {profile.phone?.trim() ? (
-                        <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{profile.phone}</span>
+                        <span className="flex items-center gap-1">
+                          <Phone className="h-3.5 w-3.5" />
+                          {profile.phone}
+                        </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400"><Phone className="h-3.5 w-3.5" />Telefone em falta</span>
+                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                          <Phone className="h-3.5 w-3.5" />
+                          Telefone em falta
+                        </span>
                       )}
                       {profile.city?.trim() && (
-                        <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{profile.city}</span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {profile.city}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -158,9 +194,15 @@ const UserDashboard = () => {
 
         <Tabs defaultValue="requests" className="w-full">
           <TabsList className="mb-6">
+            {/* Badge de não lidas no separador */}
             <TabsTrigger value="requests" className="gap-2">
               <ClipboardList className="h-4 w-4" />
               Os Meus Pedidos
+              {totalUnread > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5">
+                  {totalUnread}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="searches" className="gap-2">
               <Search className="h-4 w-4" />
@@ -172,7 +214,7 @@ const UserDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* My Requests Tab */}
+          {/* ── My Requests Tab ─────────────────────────────────────────── */}
           <TabsContent value="requests">
             {requestsLoading ? (
               <div className="flex justify-center py-12">
@@ -192,9 +234,17 @@ const UserDashboard = () => {
               <div className="space-y-3">
                 {myRequests.map((req: any) => {
                   const cfg = statusConfig[req.status] || { label: req.status, variant: "secondary" as const };
+                  const meta = (requestMeta as any)[req.id] as
+                    | { responses: number; hasUnread: boolean; hasPending: boolean }
+                    | undefined;
+
                   return (
-                    <Card key={req.id}>
-                      <CardContent className="py-4 px-6 space-y-2">
+                    <Card
+                      key={req.id}
+                      className={`transition-colors ${meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : ""}`}
+                    >
+                      <CardContent className="py-4 px-6 space-y-3">
+                        {/* Linha 1 — categoria + badge de estado */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-primary uppercase tracking-wide">
@@ -211,10 +261,51 @@ const UserDashboard = () => {
                           </div>
                           <Badge variant={cfg.variant}>{cfg.label}</Badge>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          {req.location_city && <span>📍 {req.location_city}</span>}
-                          {req.urgency === "urgent" && <span className="text-destructive font-semibold">⚠ Urgente</span>}
-                          <span>{new Date(req.created_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })}</span>
+
+                        {/* Linha 2 — localização + data + indicadores */}
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          {req.location_city && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {req.location_city}
+                            </span>
+                          )}
+                          {req.urgency === "urgent" && (
+                            <span className="text-destructive font-semibold">⚠ Urgente</span>
+                          )}
+                          <span>
+                            {new Date(req.created_at).toLocaleDateString("pt-PT", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+
+                          {/* Contador de respostas */}
+                          {meta && meta.responses > 0 && (
+                            <span className="flex items-center gap-1 text-foreground font-medium">
+                              <MessageCircle className="h-3.5 w-3.5 text-primary" />
+                              {meta.responses} {meta.responses === 1 ? "resposta" : "respostas"}
+                            </span>
+                          )}
+
+                          {/* Indicador de mensagem não lida */}
+                          {meta?.hasUnread && (
+                            <span className="flex items-center gap-1 text-primary font-semibold animate-pulse">
+                              <Bell className="h-3.5 w-3.5" />
+                              Nova mensagem
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Linha 3 — botão Ver Conversa */}
+                        <div className="flex justify-end pt-1">
+                          <Button asChild size="sm" variant={meta?.hasUnread ? "default" : "outline"}>
+                            <Link to={`/pedido/${req.id}`} className="flex items-center gap-1.5">
+                              Ver Conversa
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -224,6 +315,7 @@ const UserDashboard = () => {
             )}
           </TabsContent>
 
+          {/* ── Saved Searches Tab ──────────────────────────────────────── */}
           <TabsContent value="searches">
             {searchesLoading ? (
               <div className="flex justify-center py-12">
@@ -268,6 +360,7 @@ const UserDashboard = () => {
             )}
           </TabsContent>
 
+          {/* ── Favorites Tab ───────────────────────────────────────────── */}
           <TabsContent value="favorites">
             {favoritesLoading ? (
               <div className="flex justify-center py-12">
