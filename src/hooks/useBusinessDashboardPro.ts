@@ -35,22 +35,55 @@ export const useBusinessProfileScore = (businessId: string | null) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("businesses")
-        .select("name, description, logo_url, cta_whatsapp, cta_phone, cta_email, cta_website, schedule_weekdays, public_address, city, facebook_url, instagram_url")
+        .select(
+          "name, description, logo_url, cta_whatsapp, cta_phone, cta_email, cta_website, schedule_weekdays, public_address, city, facebook_url, instagram_url",
+        )
         .eq("id", businessId!)
         .single();
       if (error) throw error;
+      if (!data) return { score: 0, fields: [] } as ProfileScoreData;
 
       const fields = [
         { label: "Nome do negócio", filled: !!data.name, points: 10, tip: "Certifica-te que o nome está correto" },
-        { label: "Descrição", filled: !!data.description, points: 15, tip: "Adiciona uma descrição detalhada para atrair mais clientes" },
+        {
+          label: "Descrição",
+          filled: !!data.description,
+          points: 15,
+          tip: "Adiciona uma descrição detalhada para atrair mais clientes",
+        },
         { label: "Logo / Imagem", filled: !!data.logo_url, points: 15, tip: "Negócios com logo têm 2x mais cliques" },
-        { label: "WhatsApp ou Telefone", filled: !!(data.cta_whatsapp || data.cta_phone), points: 15, tip: "Adiciona pelo menos um contacto direto" },
-        { label: "Email de contacto", filled: !!data.cta_email, points: 5, tip: "Permite que clientes te contactem por email" },
+        {
+          label: "WhatsApp ou Telefone",
+          filled: !!(data.cta_whatsapp || data.cta_phone),
+          points: 15,
+          tip: "Adiciona pelo menos um contacto direto",
+        },
+        {
+          label: "Email de contacto",
+          filled: !!data.cta_email,
+          points: 5,
+          tip: "Permite que clientes te contactem por email",
+        },
         { label: "Website", filled: !!data.cta_website, points: 5, tip: "Liga o teu website para mais credibilidade" },
-        { label: "Horário de funcionamento", filled: !!data.schedule_weekdays, points: 10, tip: "Clientes querem saber quando podes atender" },
-        { label: "Morada pública", filled: !!data.public_address, points: 10, tip: "Ajuda clientes a encontrarem-te no mapa" },
+        {
+          label: "Horário de funcionamento",
+          filled: !!data.schedule_weekdays,
+          points: 10,
+          tip: "Clientes querem saber quando podes atender",
+        },
+        {
+          label: "Morada pública",
+          filled: !!data.public_address,
+          points: 10,
+          tip: "Ajuda clientes a encontrarem-te no mapa",
+        },
         { label: "Cidade", filled: !!data.city, points: 5, tip: "Essencial para aparecer em pesquisas locais" },
-        { label: "Redes sociais", filled: !!(data.facebook_url || data.instagram_url), points: 10, tip: "Aumenta a confiança dos potenciais clientes" },
+        {
+          label: "Redes sociais",
+          filled: !!(data.facebook_url || data.instagram_url),
+          points: 10,
+          tip: "Aumenta a confiança dos potenciais clientes",
+        },
       ];
 
       const score = fields.reduce((acc, f) => acc + (f.filled ? f.points : 0), 0);
@@ -88,44 +121,63 @@ export const useBusinessServiceRequests = (businessId: string | null) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("request_business_matches" as any)
-        .select(`
-          id,
-          status,
-          sent_at,
-          viewed_at,
-          first_response_at,
-          service_requests!inner(description, urgency, location_city, consumer_name)
-        `)
+        .select("id, status, sent_at, viewed_at, first_response_at, request_id")
         .eq("business_id", businessId!)
         .order("sent_at", { ascending: false });
 
       if (error) throw error;
-      const rows = (data as any[]) ?? [];
+      const rows = Array.isArray(data) ? data : [];
+
+      if (rows.length === 0) {
+        return {
+          total: 0,
+          pending: 0,
+          accepted: 0,
+          rejected: 0,
+          viewed: 0,
+          acceptance_rate: 0,
+          avg_response_hours: null,
+          recent: [],
+        } as ServiceRequestsData;
+      }
+
+      // Buscar os service_requests separadamente para evitar problemas com joins
+      const requestIds = rows.map((r: any) => r.request_id).filter(Boolean);
+      const { data: srData } = await supabase
+        .from("service_requests" as any)
+        .select("id, description, urgency, location_city, consumer_name")
+        .in("id", requestIds);
+
+      const srMap = new Map((Array.isArray(srData) ? srData : []).map((s: any) => [s.id, s]));
 
       const total = rows.length;
-      const accepted = rows.filter((r) => r.status === "accepted").length;
-      const pending = rows.filter((r) => r.status === "pending" || r.status === "enviado").length;
-      const rejected = rows.filter((r) => r.status === "rejected").length;
-      const viewed = rows.filter((r) => r.viewed_at).length;
+      const accepted = rows.filter((r: any) => r.status === "accepted").length;
+      const pending = rows.filter((r: any) => r.status === "pending" || r.status === "enviado").length;
+      const rejected = rows.filter((r: any) => r.status === "rejected").length;
+      const viewed = rows.filter((r: any) => r.viewed_at).length;
 
       const responseTimes = rows
-        .filter((r) => r.first_response_at && r.sent_at)
-        .map((r) => (new Date(r.first_response_at).getTime() - new Date(r.sent_at).getTime()) / 3600000);
+        .filter((r: any) => r.first_response_at && r.sent_at)
+        .map((r: any) => (new Date(r.first_response_at).getTime() - new Date(r.sent_at).getTime()) / 3600000);
 
-      const avg_response_hours = responseTimes.length
-        ? Math.round((responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) * 10) / 10
-        : null;
+      const avg_response_hours =
+        responseTimes.length > 0
+          ? Math.round((responseTimes.reduce((a: number, b: number) => a + b, 0) / responseTimes.length) * 10) / 10
+          : null;
 
-      const recent = rows.slice(0, 5).map((r) => ({
-        id: r.id,
-        description: r.service_requests?.description ?? "",
-        urgency: r.service_requests?.urgency ?? "normal",
-        location_city: r.service_requests?.location_city ?? null,
-        status: r.status,
-        sent_at: r.sent_at,
-        viewed_at: r.viewed_at,
-        consumer_name: r.service_requests?.consumer_name ?? null,
-      }));
+      const recent = rows.slice(0, 5).map((r: any) => {
+        const sr = srMap.get(r.request_id) as any;
+        return {
+          id: r.id,
+          description: sr?.description ?? "Sem descrição",
+          urgency: sr?.urgency ?? "normal",
+          location_city: sr?.location_city ?? null,
+          status: r.status,
+          sent_at: r.sent_at,
+          viewed_at: r.viewed_at ?? null,
+          consumer_name: sr?.consumer_name ?? null,
+        };
+      });
 
       return {
         total,
@@ -170,30 +222,30 @@ export const useBusinessReviewsData = (businessId: string | null) => {
   return useQuery({
     queryKey: ["business-reviews-data", businessId],
     queryFn: async () => {
-      const { data: stats, error: statsError } = await supabase
-        .from("business_review_stats")
-        .select("*")
-        .eq("business_id", businessId!)
-        .single();
+      const [statsResult, reviewsResult] = await Promise.all([
+        supabase.from("business_review_stats").select("*").eq("business_id", businessId!).maybeSingle(),
+        supabase
+          .from("business_reviews")
+          .select("id, rating, title, comment, is_verified, business_response, created_at")
+          .eq("business_id", businessId!)
+          .eq("moderation_status", "approved")
+          .order("created_at", { ascending: false })
+          .limit(5),
+      ]);
 
-      const { data: reviews, error: reviewsError } = await supabase
-        .from("business_reviews")
-        .select("id, rating, title, comment, is_verified, business_response, created_at")
-        .eq("business_id", businessId!)
-        .eq("moderation_status", "approved")
-        .order("created_at", { ascending: false })
-        .limit(5);
+      if (reviewsResult.error) throw reviewsResult.error;
 
-      if (reviewsError) throw reviewsError;
+      const stats = statsResult.data;
+      const reviews = Array.isArray(reviewsResult.data) ? reviewsResult.data : [];
 
-      const recentMapped = (reviews ?? []).map((r) => ({
+      const recentMapped = reviews.map((r) => ({
         ...r,
         pending_response: !r.business_response,
       }));
 
       return {
         total: stats?.total_reviews ?? 0,
-        average_rating: stats?.average_rating ?? 0,
+        average_rating: Number(stats?.average_rating ?? 0),
         verified_count: stats?.verified_reviews_count ?? 0,
         pending_response: recentMapped.filter((r) => r.pending_response).length,
         rating_5: stats?.rating_5_count ?? 0,
@@ -225,25 +277,37 @@ export const useBusinessBadges = (businessId: string | null) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("business_earned_badges")
-        .select(`
-          earned_at,
-          earned_automatically,
-          business_badges!inner(name, description, icon_url, color, is_active)
-        `)
+        .select("earned_at, earned_automatically, badge_id")
         .eq("business_id", businessId!)
-        .eq("business_badges.is_active", true)
         .order("earned_at", { ascending: false });
 
       if (error) throw error;
+      const rows = Array.isArray(data) ? data : [];
+      if (rows.length === 0) return [] as BadgeData[];
 
-      return ((data as any[]) ?? []).map((b) => ({
-        name: b.business_badges?.name,
-        description: b.business_badges?.description,
-        icon_url: b.business_badges?.icon_url,
-        color: b.business_badges?.color,
-        earned_at: b.earned_at,
-        earned_automatically: b.earned_automatically,
-      })) as BadgeData[];
+      const badgeIds = rows.map((r: any) => r.badge_id).filter(Boolean);
+      const { data: badgesData } = await supabase
+        .from("business_badges")
+        .select("id, name, description, icon_url, color")
+        .in("id", badgeIds)
+        .eq("is_active", true);
+
+      const badgeMap = new Map((Array.isArray(badgesData) ? badgesData : []).map((b: any) => [b.id, b]));
+
+      return rows
+        .map((r: any) => {
+          const b = badgeMap.get(r.badge_id) as any;
+          if (!b) return null;
+          return {
+            name: b.name,
+            description: b.description ?? null,
+            icon_url: b.icon_url ?? null,
+            color: b.color ?? null,
+            earned_at: r.earned_at,
+            earned_automatically: r.earned_automatically ?? false,
+          };
+        })
+        .filter(Boolean) as BadgeData[];
     },
     enabled: !!businessId,
     staleTime: 10 * 60 * 1000,
@@ -272,11 +336,11 @@ export const useBusinessMonthlyHistory = (businessId: string | null) => {
         .gte("created_at", since.toISOString());
 
       if (error) throw error;
+      const rows = Array.isArray(data) ? data : [];
 
-      // Agrupar por mês no cliente
       const monthMap: Record<string, { views: number; clicks: number }> = {};
-      (data ?? []).forEach((row) => {
-        const mes = row.created_at.slice(0, 7); // "2026-02"
+      rows.forEach((row: any) => {
+        const mes = (row.created_at as string).slice(0, 7);
         if (!monthMap[mes]) monthMap[mes] = { views: 0, clicks: 0 };
         if (row.event_type === "view") monthMap[mes].views++;
         if (["click_whatsapp", "click_phone", "click_email", "click_website"].includes(row.event_type)) {
@@ -303,6 +367,7 @@ export interface BenchmarkingData {
   posicao_geral: number;
   posicao_cidade: number;
   views_this_month: number;
+  leads_this_month: number;
   media_views_categoria: number;
   media_leads_categoria: number;
   media_ctr_categoria: number;
@@ -313,53 +378,92 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
   return useQuery({
     queryKey: ["business-benchmarking-pro", businessId],
     queryFn: async () => {
-      // Buscar category_id do negócio
+      // 1. Buscar category_id e city do negócio
       const { data: biz, error: bizError } = await supabase
         .from("businesses")
         .select("category_id, city")
         .eq("id", businessId!)
         .single();
       if (bizError) throw bizError;
+      if (!biz?.category_id) {
+        return {
+          posicao_geral: 0,
+          posicao_cidade: 0,
+          views_this_month: 0,
+          leads_this_month: 0,
+          media_views_categoria: 0,
+          media_leads_categoria: 0,
+          media_ctr_categoria: 0,
+          total_negocios_categoria: 0,
+        } as BenchmarkingData;
+      }
 
-      // Buscar métricas de todos os negócios da mesma categoria
+      // 2. Buscar IDs dos negócios da mesma categoria
+      const { data: categoryBusinesses, error: catError } = await supabase
+        .from("businesses")
+        .select("id, city")
+        .eq("category_id", biz.category_id)
+        .eq("is_active", true);
+      if (catError) throw catError;
+
+      const categoryBizList = Array.isArray(categoryBusinesses) ? categoryBusinesses : [];
+      if (categoryBizList.length === 0) {
+        return {
+          posicao_geral: 0,
+          posicao_cidade: 0,
+          views_this_month: 0,
+          leads_this_month: 0,
+          media_views_categoria: 0,
+          media_leads_categoria: 0,
+          media_ctr_categoria: 0,
+          total_negocios_categoria: 0,
+        } as BenchmarkingData;
+      }
+
+      const categoryIds = categoryBizList.map((b: any) => b.id);
+
+      // 3. Buscar métricas só dos negócios desta categoria
       const { data: metrics, error: metricsError } = await supabase
         .from("business_analytics_metrics")
         .select("business_id, views_this_month, leads_this_month, conversion_rate_this_month")
-        .order("views_this_month", { ascending: false });
+        .in("business_id", categoryIds);
       if (metricsError) throw metricsError;
 
-      const { data: businesses, error: bizListError } = await supabase
-        .from("businesses")
-        .select("id, city")
-        .eq("category_id", biz.category_id!)
-        .eq("is_active", true);
-      if (bizListError) throw bizListError;
+      const metricsList = Array.isArray(metrics) ? metrics : [];
 
-      const categoryIds = new Set(businesses.map((b) => b.id));
-      const categoryMetrics = (metrics ?? []).filter((m) => categoryIds.has(m.business_id));
+      // 4. Rankings
+      const sortedGeral = [...metricsList].sort(
+        (a: any, b: any) => (b.views_this_month ?? 0) - (a.views_this_month ?? 0),
+      );
+      const posicao_geral = sortedGeral.findIndex((m: any) => m.business_id === businessId) + 1;
 
-      // Ranking geral na categoria
-      const sortedGeral = [...categoryMetrics].sort((a, b) => (b.views_this_month ?? 0) - (a.views_this_month ?? 0));
-      const posicao_geral = sortedGeral.findIndex((m) => m.business_id === businessId) + 1;
+      const cityIds = new Set(categoryBizList.filter((b: any) => b.city === biz.city).map((b: any) => b.id));
+      const cityMetrics = metricsList.filter((m: any) => cityIds.has(m.business_id));
+      const sortedCity = [...cityMetrics].sort(
+        (a: any, b: any) => (b.views_this_month ?? 0) - (a.views_this_month ?? 0),
+      );
+      const posicao_cidade = sortedCity.findIndex((m: any) => m.business_id === businessId) + 1;
 
-      // Ranking na cidade
-      const cityIds = new Set(businesses.filter((b) => b.city === biz.city).map((b) => b.id));
-      const cityMetrics = categoryMetrics.filter((m) => cityIds.has(m.business_id));
-      const sortedCity = [...cityMetrics].sort((a, b) => (b.views_this_month ?? 0) - (a.views_this_month ?? 0));
-      const posicao_cidade = sortedCity.findIndex((m) => m.business_id === businessId) + 1;
+      // 5. Médias
+      const total = metricsList.length;
+      const media_views =
+        total > 0 ? Math.round(metricsList.reduce((s: number, m: any) => s + (m.views_this_month ?? 0), 0) / total) : 0;
+      const media_leads =
+        total > 0 ? Math.round(metricsList.reduce((s: number, m: any) => s + (m.leads_this_month ?? 0), 0) / total) : 0;
+      const media_ctr =
+        total > 0
+          ? Math.round(
+              (metricsList.reduce((s: number, m: any) => s + (m.conversion_rate_this_month ?? 0), 0) / total) * 10,
+            ) / 10
+          : 0;
 
-      // Médias
-      const total = categoryMetrics.length;
-      const media_views = total > 0 ? Math.round(categoryMetrics.reduce((s, m) => s + (m.views_this_month ?? 0), 0) / total) : 0;
-      const media_leads = total > 0 ? Math.round(categoryMetrics.reduce((s, m) => s + (m.leads_this_month ?? 0), 0) / total) : 0;
-      const media_ctr = total > 0 ? Math.round((categoryMetrics.reduce((s, m) => s + (m.conversion_rate_this_month ?? 0), 0) / total) * 10) / 10 : 0;
-
-      const myMetrics = categoryMetrics.find((m) => m.business_id === businessId);
+      const myMetrics = metricsList.find((m: any) => m.business_id === businessId) as any;
 
       return {
         posicao_geral: posicao_geral || 0,
         posicao_cidade: posicao_cidade || 0,
         views_this_month: myMetrics?.views_this_month ?? 0,
+        leads_this_month: myMetrics?.leads_this_month ?? 0,
         media_views_categoria: media_views,
         media_leads_categoria: media_leads,
         media_ctr_categoria: media_ctr,
