@@ -391,5 +391,3 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
 };
 
 export default BusinessRequestsContent;
-
-export default BusinessRequestsContent;
