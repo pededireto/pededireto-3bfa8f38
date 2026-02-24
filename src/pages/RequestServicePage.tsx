@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { useAllCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Loader2, AlertTriangle } from "lucide-react";
+
+const BASE_URL = "https://pededireto.pt";
 
 const RequestServicePage = () => {
   const { user } = useAuth();
@@ -95,6 +98,13 @@ const RequestServicePage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Helmet>
+        <title>Pedir Serviço | Pede Direto</title>
+        <meta name="description" content="Descreva o que precisa e receba respostas dos melhores profissionais perto de si. Rápido, direto e sem intermediários." />
+        <link rel="canonical" href={`${BASE_URL}/pedir-servico`} />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Pedir Serviço</h1>
