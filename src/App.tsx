@@ -42,6 +42,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import CustomerSuccessPage from "./pages/CustomerSuccessPage";
 
 import RequestServicePage from "./pages/RequestServicePage";
+import RequestDetailPage from "./pages/RequestDetailPage";
 import UpgradePage from "./pages/UpgradePage";
 import NotFound from "./pages/NotFound";
 
@@ -149,6 +150,9 @@ const App = () => {
                     <Route path="/business-dashboard" element={<BusinessDashboard />} />
                     <Route path="/perfil" element={<ProfilePage />} />
                     <Route path="/profile" element={<UserProfile />} />
+
+                    {/* PEDIDOS */}
+                    <Route path="/pedido/:id" element={<RequestDetailPage />} />
 
                     {/* ADMIN */}
                     <Route path="/admin/login" element={<AdminLogin />} />
