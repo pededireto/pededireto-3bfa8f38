@@ -3,6 +3,7 @@ import { LayoutDashboard, Inbox, Bell, CreditCard, ExternalLink, LogOut, Trendin
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
+import { useBusinessUnreadRequestsCount } from "@/hooks/useBusinessDashboard";
 import { Badge } from "@/components/ui/badge";
 
 export type BusinessTab = "overview" | "requests" | "notifications" | "plan" | "insights" | "team" | "reviews" | "edit";
@@ -21,14 +22,14 @@ interface BusinessSidebarProps {
 }
 
 const allItems: { id: BusinessTab; label: string; icon: React.ElementType }[] = [
-  { id: "overview", label: "Dashboard", icon: LayoutDashboard },
-  { id: "requests", label: "Pedidos", icon: Inbox },
-  { id: "notifications", label: "Notificações", icon: Bell },
-  { id: "reviews", label: "Avaliações", icon: Star },
-  { id: "team", label: "Equipa", icon: Users },
-  { id: "insights", label: "Insights", icon: TrendingUp },
-  { id: "edit", label: "Editar Negócio", icon: Edit3 },
-  { id: "plan", label: "O Meu Plano", icon: CreditCard },
+  { id: "overview",      label: "Dashboard",      icon: LayoutDashboard },
+  { id: "requests",      label: "Pedidos",         icon: Inbox },
+  { id: "notifications", label: "Notificações",    icon: Bell },
+  { id: "reviews",       label: "Avaliações",      icon: Star },
+  { id: "team",          label: "Equipa",          icon: Users },
+  { id: "insights",      label: "Insights",        icon: TrendingUp },
+  { id: "edit",          label: "Editar Negócio",  icon: Edit3 },
+  { id: "plan",          label: "O Meu Plano",     icon: CreditCard },
 ];
 
 const BusinessSidebar = ({
@@ -44,7 +45,8 @@ const BusinessSidebar = ({
   isFreePlan = false,
 }: BusinessSidebarProps) => {
   const { signOut } = useAuth();
-  const { data: unreadCount = 0 } = useUnreadNotificationsCount(businessId);
+  const { data: unreadNotifications = 0 } = useUnreadNotificationsCount(businessId);
+  const { data: unreadRequests = 0 }      = useBusinessUnreadRequestsCount(businessId);
 
   const isPending = claimStatus === "pending";
 
@@ -53,7 +55,7 @@ const BusinessSidebar = ({
       return item.id === "overview" || item.id === "notifications";
     }
     if (item.id === "requests" && !canViewRequests) return false;
-    if (item.id === "team" && !canViewTeam) return false;
+    if (item.id === "team"     && !canViewTeam)     return false;
     return true;
   });
 
@@ -65,6 +67,7 @@ const BusinessSidebar = ({
           <p className="text-xs text-sidebar-foreground/70 truncate">{businessName}</p>
         </Link>
       </div>
+
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {visibleItems.map((item) => (
           <button
@@ -79,11 +82,22 @@ const BusinessSidebar = ({
           >
             <item.icon className="h-5 w-5" />
             {item.label}
-            {item.id === "notifications" && unreadCount > 0 && (
+
+            {/* Badge — Notificações */}
+            {item.id === "notifications" && unreadNotifications > 0 && (
               <span className="ml-auto bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
-                {unreadCount}
+                {unreadNotifications}
               </span>
             )}
+
+            {/* Badge — Pedidos com mensagens não lidas */}
+            {item.id === "requests" && unreadRequests > 0 && (
+              <span className="ml-auto bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
+                {unreadRequests}
+              </span>
+            )}
+
+            {/* Badge — Insights bloqueado */}
             {item.id === "insights" && isFreePlan && (
               <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0">
                 <Lock className="h-3 w-3 mr-0.5" /> Pro
@@ -92,11 +106,18 @@ const BusinessSidebar = ({
           </button>
         ))}
       </nav>
+
       <div className="p-4 border-t border-sidebar-border space-y-2">
-        <Link to="/" className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors">
+        <Link
+          to="/"
+          className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors"
+        >
           <ExternalLink className="h-4 w-4" /> Ver site público
         </Link>
-        <button onClick={() => signOut()} className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-destructive transition-colors w-full">
+        <button
+          onClick={() => signOut()}
+          className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-destructive transition-colors w-full"
+        >
           <LogOut className="h-4 w-4" /> Sair
         </button>
       </div>
