@@ -8,7 +8,7 @@ import { Star, Heart, CheckCircle, Clock, AlertCircle, Trophy, TrendingUp, Trend
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
-import type { ProfileScoreData, ServiceRequestsData, ReviewsData, BadgeData, MonthlyHistoryItem, BenchmarkingData } from "./useBusinessDashboardPro";
+import type { ProfileScoreData, ServiceRequestsData, ReviewsData, BadgeData, MonthlyHistoryItem, BenchmarkingData } from "@/hooks/useBusinessDashboardPro";
 
 
 // ─── 1. CARD DE FAVORITOS ────────────────────────────────────────────────────
@@ -471,5 +471,7 @@ export const BenchmarkingProCard = ({ data }: { data: BenchmarkingData }) => {
         )}
       </CardContent>
     </Card>
+  );
+};
   );
 };
