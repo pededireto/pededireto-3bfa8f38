@@ -31,15 +31,16 @@ interface BusinessInsightsContentProps {
   businessId: string;
   planId: string | null;
   claimStatus?: string;
+  forceProAccess?: boolean;
 }
 
-const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" }: BusinessInsightsContentProps) => {
+const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified", forceProAccess = false }: BusinessInsightsContentProps) => {
   const [days, setDays] = useState(30);
   const { data: planRule, isLoading: ruleLoading } = usePlanRuleByPlanId(planId);
-  const { data: analytics } = useBusinessAnalytics(claimStatus === "verified" ? businessId : null, days);
+  const { data: analytics } = useBusinessAnalytics(claimStatus === "verified" || forceProAccess ? businessId : null, days);
 
-  const isVerified = claimStatus === "verified";
-  const hasProAccess = !!(planRule as any)?.allow_analytics_pro;
+  const isVerified = claimStatus === "verified" || forceProAccess;
+  const hasProAccess = forceProAccess || !!(planRule as any)?.allow_analytics_pro;
   const hasBasicAccess = (planRule as any)?.allow_analytics_basic !== false;
 
   // Hooks PRO — só carregam se tiver acesso

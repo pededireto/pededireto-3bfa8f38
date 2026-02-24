@@ -1,7 +1,5 @@
 import { useState, useRef } from "react";
 import { useAllBusinesses } from "@/hooks/useBusinesses";
-import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
-import { useBusinessBenchmark } from "@/hooks/useBusinessBenchmark";
 import { useBusinessAlerts } from "@/hooks/useBusinessAlerts";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
+import BusinessInsightsContent from "@/components/business/BusinessInsightsContent";
 import {
   Search, Building2, Eye, MousePointerClick, TrendingUp,
   ChevronRight, X, ExternalLink, ToggleLeft, ToggleRight,
@@ -25,8 +24,6 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
   const { toast } = useToast();
   const metricsRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
-  const { data: analytics } = useBusinessAnalytics(business.id, 30);
-  const { data: benchmark } = useBusinessBenchmark(business.id, 30);
   const { data: alerts = [] } = useBusinessAlerts(business.id, business);
   const { data: plans = [] } = useCommercialPlans(true);
 
@@ -37,9 +34,6 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
   const [extendingDays, setExtendingDays] = useState(false);
 
   const plan = plans.find((p: any) => p.id === business.plan_id);
-  const contactsPerVisit = analytics && analytics.views > 0
-    ? (analytics.totalContacts / analytics.views).toFixed(1)
-    : "—";
 
   const handleToggleActive = async () => {
     setTogglingActive(true);
@@ -180,73 +174,15 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
             onUpgradeClick={() => {}}
           />
 
-          {/* Métricas PRO */}
+          {/* Insights PRO completo (CS tem acesso total) */}
           <div ref={metricsRef}>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1">
-              <BarChart3 className="h-3 w-3" /> Métricas (30 dias)
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-muted/40 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Eye className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs text-muted-foreground">Visualizações</span>
-                </div>
-                <p className="text-2xl font-bold">{analytics?.views ?? "—"}</p>
-              </div>
-              <div className="bg-muted/40 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <MousePointerClick className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs text-muted-foreground">Contactos</span>
-                </div>
-                <p className="text-2xl font-bold">{analytics?.totalContacts ?? "—"}</p>
-                {analytics && analytics.totalContacts > 0 && (
-                  <div className="flex gap-1 mt-1 flex-wrap">
-                    {analytics.breakdown.phone > 0 && <span className="text-[10px] text-muted-foreground">📞{analytics.breakdown.phone}</span>}
-                    {analytics.breakdown.whatsapp > 0 && <span className="text-[10px] text-muted-foreground">💬{analytics.breakdown.whatsapp}</span>}
-                    {analytics.breakdown.website > 0 && <span className="text-[10px] text-muted-foreground">🌐{analytics.breakdown.website}</span>}
-                    {analytics.breakdown.email > 0 && <span className="text-[10px] text-muted-foreground">✉️{analytics.breakdown.email}</span>}
-                  </div>
-                )}
-              </div>
-              <div className="bg-muted/40 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs text-muted-foreground">Contactos/Visita</span>
-                </div>
-                <p className="text-2xl font-bold">{contactsPerVisit}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">média plataforma ~0.3</p>
-              </div>
-            </div>
+            <BusinessInsightsContent
+              businessId={business.id}
+              planId={business.plan_id}
+              claimStatus="verified"
+              forceProAccess={true}
+            />
           </div>
-
-          {/* Benchmarking */}
-          {benchmark && benchmark.category_stats?.name && (
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1">
-                <Star className="h-3 w-3" /> Benchmarking
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {benchmark.subcategory_stats?.name && (
-                  <div className="bg-muted/40 rounded-xl p-4">
-                    <p className="text-xs text-muted-foreground">{benchmark.subcategory_stats.name}</p>
-                    <p className="text-xl font-bold text-primary mt-1">
-                      {benchmark.subcategory_stats.avg_views ?? "—"}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground mt-1">média de views na subcategoria</p>
-                  </div>
-                )}
-                {benchmark.city_stats?.city && (
-                  <div className="bg-muted/40 rounded-xl p-4">
-                    <p className="text-xs text-muted-foreground">{benchmark.city_stats.city}</p>
-                    <p className="text-xl font-bold text-primary mt-1">
-                      {benchmark.city_stats.avg_views ?? "—"}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground mt-1">média de views na cidade</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Subscrição */}
           <div>
