@@ -24,37 +24,25 @@ const SubcategoryCard = ({ sub, categorySlug }: { sub: Subcategory; categorySlug
             src={sub.image_url!}
             alt={sub.name}
             onError={() => setImgError(true)}
-            className="absolute inset-0 w-full h-full object-cover rounded-xl grayscale group-hover:grayscale-0 transition-all duration-300"
+            className="absolute inset-0 w-full h-full object-cover rounded-xl group-hover:grayscale transition-all duration-300"
             loading="lazy"
           />
           <div className="absolute inset-0 bg-black/50 rounded-xl" />
           <div className="relative z-10 p-6">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-lg text-white">
-                {sub.name}
-              </h3>
+              <h3 className="font-semibold text-lg text-white">{sub.name}</h3>
               <ArrowRight className="w-5 h-5 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all" />
             </div>
-            {sub.description && (
-              <p className="text-sm text-white/80 line-clamp-2">
-                {sub.description}
-              </p>
-            )}
+            {sub.description && <p className="text-sm text-white/80 line-clamp-2">{sub.description}</p>}
           </div>
         </>
       ) : (
         <div className="p-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
-              {sub.name}
-            </h3>
+            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{sub.name}</h3>
             <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
           </div>
-          {sub.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {sub.description}
-            </p>
-          )}
+          {sub.description && <p className="text-sm text-muted-foreground line-clamp-2">{sub.description}</p>}
         </div>
       )}
     </Link>
@@ -77,9 +65,7 @@ const SubcategoriesGrid = ({ subcategories, categorySlug, isLoading }: Subcatego
 
   if (subcategories.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        Nenhuma subcategoria disponível nesta categoria.
-      </div>
+      <div className="text-center py-12 text-muted-foreground">Nenhuma subcategoria disponível nesta categoria.</div>
     );
   }
 
