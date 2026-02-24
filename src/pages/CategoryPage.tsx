@@ -1,11 +1,14 @@
 import { useParams, Link } from "react-router-dom";
 import { useCategory, useCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
+import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SubcategoriesGrid from "@/components/SubcategoriesGrid";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const BASE_URL = "https://pededireto.pt";
 
 const CategoryPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -61,8 +64,60 @@ const CategoryPage = () => {
     }
   };
 
+  /* ===========================
+     SEO DINÂMICO
+  =========================== */
+
+  const pageTitle = `${category.name} em Portugal | Pede Direto`;
+
+  const pageDescription = category.description
+    ? category.description.slice(0, 155)
+    : `Encontre profissionais e serviços de ${category.name.toLowerCase()} perto de si. Contacte diretamente, sem intermediários.`;
+
+  const pageUrl = `${BASE_URL}/categoria/${slug}`;
+
+  const pageImage = category.image_url || `${BASE_URL}/og-default.jpg`;
+
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: category.name,
+    description: pageDescription,
+    url: pageUrl,
+    numberOfItems: subcategories.length,
+    itemListElement: subcategories.map((sub: any, index: number) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: sub.name,
+      url: `${BASE_URL}/categoria/${slug}/${sub.slug}`,
+    })),
+  };
+
+  /* =========================== */
+
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={pageUrl} />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:image" content={pageImage} />
+        <meta property="og:url" content={pageUrl} />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={pageImage} />
+
+        <script type="application/ld+json">
+          {JSON.stringify(schemaData)}
+        </script>
+      </Helmet>
+
       <Header />
       <main className="flex-1">
         {/* Category Header */}
