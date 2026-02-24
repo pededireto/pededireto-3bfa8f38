@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Mail, MailOpen, Reply, AlertCircle, Search, Eye, User } from "lucide-react";
+import DOMPurify from "dompurify";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -121,7 +122,16 @@ const EmailInboxContent = () => {
               </div>
               <div className="border rounded-lg p-4 bg-background">
                 {selectedEmail.body_html ? (
-                  <div dangerouslySetInnerHTML={{ __html: selectedEmail.body_html }} />
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedEmail.body_html, {
+                    ALLOWED_TAGS: [
+                      "p", "br", "strong", "em", "b", "i", "u", "s",
+                      "ul", "ol", "li", "blockquote", "a", "span", "div",
+                      "h1", "h2", "h3", "h4", "h5", "h6", "hr",
+                      "table", "thead", "tbody", "tr", "td", "th"
+                    ],
+                    ALLOWED_ATTR: ["href", "target", "rel", "class", "style"],
+                    ALLOW_DATA_ATTR: false,
+                  }) }} />
                 ) : (
                   <pre className="whitespace-pre-wrap text-sm">{selectedEmail.body_text || "Sem conteúdo"}</pre>
                 )}
