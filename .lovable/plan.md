@@ -1,51 +1,70 @@
 
+# Correcao do Painel Customer Success (/cs) - 2 Problemas
 
-# Correcao do Erro "Cannot read properties of undefined (reading 'filter')" - Insights Pro
+## Problema 1: Apenas 1000 negocios visíveis (de 1703)
 
-## Problema
+**Causa:** O componente `CsBusinesses` (linha 335) usa o hook `useBusinesses()` que aplica `.eq("is_active", true)` e nao tem paginacao -- fica limitado ao maximo de 1000 linhas por query do Supabase.
 
-O componente `ProfileScoreCard` em `BusinessProWidgets.tsx` (linha 31) chama `data.fields.filter()` sem verificar se `data.fields` existe. Quando a query `useBusinessProfileScore` retorna dados sem o campo `fields` (ou com `fields` undefined), o componente crasheia.
+**Solucao:** Ja existe um hook `useAllBusinesses()` (linhas 170-197 de `useBusinesses.ts`) que faz paginacao em lotes de 1000 e NAO filtra por `is_active`. Este hook resolve exactamente este problema.
 
-## Causa Raiz
+**Alteracao:**
+- Em `CsBusinesses.tsx` linha 335, substituir `useBusinesses()` por `useAllBusinesses()`
+- Importar `useAllBusinesses` em vez de `useBusinesses`
 
-No hook `useBusinessProfileScore` (em `useBusinessDashboardPro.ts`), se a query a `businesses` falhar parcialmente ou devolver dados inesperados, o campo `fields` pode ser `undefined`. O componente `BusinessInsightsContent.tsx` na linha 170 faz `{profileScore && <ProfileScoreCard data={profileScore} />}` - isto verifica que `profileScore` existe, mas nao garante que `profileScore.fields` e um array.
+---
 
-## Correcao
+## Problema 2: Botao "Ver analise detalhada nos Insights" nao funciona
 
-Adicionar validacao defensiva em dois pontos:
+**Causa:** Na `BusinessFicha` (linha 178), o callback `onInsightsClick` esta definido como `() => {}` (funcao vazia). Quando o utilizador clica no botao do `BusinessProfileScore`, nada acontece.
 
-### 1. `BusinessProWidgets.tsx` - ProfileScoreCard (linha 31)
+**Solucao:** Como a ficha do CS nao tem uma tab de Insights interna, a melhor opcao e abrir a pagina do business dashboard numa nova aba, directamente na seccao de insights. Alternativa: mostrar o componente `BusinessInsightsContent` dentro da propria ficha.
 
-Adicionar fallback para `data.fields`:
+A abordagem mais simples e segura: abrir o dashboard do negocio em nova aba via `/negocio/{slug}` (ja existe botao "Ver pagina"), e substituir o `onInsightsClick` por navegacao para o dashboard com insights. Como o CS nao tem acesso directo ao `/business-dashboard` do negocio, vou remover o botao de insights e manter apenas o score visível com sugestoes (ja que `canViewPro=true`).
 
-```typescript
-const unfilledFields = (data.fields ?? []).filter((f) => !f.filled);
-```
+**Alteracao:**
+- Em `BusinessFicha`, passar um `onInsightsClick` funcional que faz scroll para a seccao de metricas ja visível na ficha, ou simplesmente remover a dependencia do botao de insights que nao tem destino util no contexto CS.
+- A melhor opcao: como o CS ja ve metricas na ficha, mudar o texto do botao para indicar que as metricas estao logo abaixo na ficha, fazendo scroll automatico.
 
-E na linha 89 (iteracao dos campos):
-
-```typescript
-{(data.fields ?? []).map((f) => (
-```
-
-### 2. `BusinessInsightsContent.tsx` - Renderizacao condicional (linha 170)
-
-Reforcar a condicao:
-
-```typescript
-{profileScore?.fields && <ProfileScoreCard data={profileScore} />}
-```
+---
 
 ## Ficheiros a alterar
 
 | Ficheiro | Alteracao |
 |----------|-----------|
-| `src/components/business/BusinessProWidgets.tsx` | Fallback `?? []` no `.filter()` (linha 31) e `.map()` (linha 89) |
-| `src/components/business/BusinessInsightsContent.tsx` | Verificacao `profileScore?.fields` na linha 170 |
+| `src/components/cs/CsBusinesses.tsx` | Trocar `useBusinesses()` por `useAllBusinesses()` e implementar `onInsightsClick` funcional |
+
+## Detalhes tecnicos
+
+### Alteracao 1 - Import e hook
+```typescript
+// ANTES
+import { useBusinesses } from "@/hooks/useBusinesses";
+// ...
+const { data: businesses = [], isLoading } = useBusinesses();
+
+// DEPOIS
+import { useAllBusinesses } from "@/hooks/useBusinesses";
+// ...
+const { data: businesses = [], isLoading } = useAllBusinesses();
+```
+
+### Alteracao 2 - onInsightsClick
+Adicionar um `useRef` para a seccao de metricas na `BusinessFicha` e fazer scroll quando o utilizador clica "Ver analise detalhada nos Insights":
+
+```typescript
+const metricsRef = useRef<HTMLDivElement>(null);
+// ...
+<BusinessProfileScore
+  businessId={business.id}
+  canViewPro={true}
+  onInsightsClick={() => metricsRef.current?.scrollIntoView({ behavior: "smooth" })}
+  onUpgradeClick={() => {}}
+/>
+// ...
+<div ref={metricsRef}> {/* Seccao de metricas */}
+```
 
 ## Impacto
-
-- Zero alteracoes visuais quando os dados estao corretos
-- Previne crash quando `fields` e `undefined`
-- Corrige o erro que impede o acesso a aba Insights Pro
-
+- Todos os 1703 negocios ficam visíveis no painel CS
+- O botao de insights passa a fazer scroll para as metricas na ficha
+- Sem alteracoes em outros ficheiros ou tabelas
