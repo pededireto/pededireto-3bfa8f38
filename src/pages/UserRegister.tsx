@@ -2,11 +2,14 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
+
+const BASE_URL = "https://pededireto.pt";
 
 const registerSchema = z
   .object({
@@ -79,6 +82,13 @@ const UserRegister = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Helmet>
+        <title>Criar Conta | Pede Direto</title>
+        <meta name="description" content="Cria a tua conta no Pede Direto para guardar pesquisas, favoritos e gerir os teus pedidos de serviço." />
+        <link rel="canonical" href={`${BASE_URL}/registar`} />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+
       <div className="w-full max-w-md">
         <div className="bg-card rounded-2xl shadow-card p-8">
           <div className="text-center mb-8">
