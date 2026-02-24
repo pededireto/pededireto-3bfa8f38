@@ -38,12 +38,14 @@ export const useAllServiceRequests = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_requests" as any)
-        .select(`
+        .select(
+          `
           *,
           profiles:user_id (full_name, email),
           categories:category_id (name),
           subcategories:subcategory_id (name)
-        `)
+        `,
+        )
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as ServiceRequest[];
@@ -58,10 +60,12 @@ export const useRequestMatches = (requestId: string | null) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("request_business_matches" as any)
-        .select(`
+        .select(
+          `
           *,
           businesses:business_id (name)
-        `)
+        `,
+        )
         .eq("request_id", requestId!)
         .order("sent_at", { ascending: false });
       if (error) throw error;
@@ -142,16 +146,20 @@ export const useConsumerRequests = () => {
   return useQuery({
     queryKey: ["consumer-requests"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return [];
       const { data, error } = await supabase
         .from("service_requests" as any)
-        .select(`
+        .select(
+          `
           id, description, status, urgency, created_at,
           location_city, location_postal_code,
           categories:category_id (name),
           subcategories:subcategory_id (name)
-        `)
+        `,
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -174,13 +182,13 @@ export const useServiceRequestStats = () => {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
       const total = requests.length;
-      const thisMonth = requests.filter(r => r.created_at >= startOfMonth).length;
-      const concluded = requests.filter(r => r.status === "concluido").length;
-      const forwarded = requests.filter(r => r.status === "encaminhado" || r.status === "concluido").length;
+      const thisMonth = requests.filter((r) => r.created_at >= startOfMonth).length;
+      const concluded = requests.filter((r) => r.status === "concluido").length;
+      const forwarded = requests.filter((r) => r.status === "encaminhado" || r.status === "concluido").length;
 
       // By category
       const byCat: Record<string, number> = {};
-      requests.forEach(r => {
+      requests.forEach((r) => {
         if (r.category_id) byCat[r.category_id] = (byCat[r.category_id] || 0) + 1;
       });
 
@@ -192,6 +200,58 @@ export const useServiceRequestStats = () => {
         conclusionRate: total > 0 ? ((concluded / total) * 100).toFixed(1) : "0",
         byCategory: byCat,
       };
+    },
+  });
+};
+
+// ─── Meta-dados por pedido (respostas + não lidas) ────────────────────────────
+export interface RequestMeta {
+  responses: number;
+  hasUnread: boolean;
+  hasPending: boolean;
+}
+
+export const useConsumerRequestsMeta = (requestIds: string[]) => {
+  return useQuery({
+    queryKey: ["consumer-requests-meta", requestIds],
+    enabled: requestIds.length > 0,
+    queryFn: async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return {} as Record<string, RequestMeta>;
+
+      // Buscar matches (respostas dos negócios)
+      const { data: matches, error: matchError } = await supabase
+        .from("request_business_matches" as any)
+        .select("request_id, status")
+        .in("request_id", requestIds);
+      if (matchError) throw matchError;
+
+      // Buscar mensagens não lidas (enviadas por negócio, não lidas pelo consumidor)
+      const { data: unread, error: msgError } = await supabase
+        .from("request_messages" as any)
+        .select("request_id")
+        .in("request_id", requestIds)
+        .eq("sender_role", "business")
+        .is("read_at", null);
+      if (msgError) throw msgError;
+
+      // Agregar por request_id
+      const meta: Record<string, RequestMeta> = {};
+
+      requestIds.forEach((id) => {
+        const reqMatches = (matches || []).filter((m: any) => m.request_id === id);
+        const reqUnread = (unread || []).filter((m: any) => m.request_id === id);
+
+        meta[id] = {
+          responses: reqMatches.length,
+          hasUnread: reqUnread.length > 0,
+          hasPending: reqMatches.some((m: any) => m.status === "enviado"),
+        };
+      });
+
+      return meta;
     },
   });
 };
