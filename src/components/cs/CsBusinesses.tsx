@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useBusinesses } from "@/hooks/useBusinesses";
+import { useState, useRef } from "react";
+import { useAllBusinesses } from "@/hooks/useBusinesses";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { useBusinessBenchmark } from "@/hooks/useBusinessBenchmark";
 import { useBusinessAlerts } from "@/hooks/useBusinessAlerts";
@@ -23,6 +23,7 @@ import {
 
 const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => void }) => {
   const { toast } = useToast();
+  const metricsRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { data: analytics } = useBusinessAnalytics(business.id, 30);
   const { data: benchmark } = useBusinessBenchmark(business.id, 30);
@@ -175,12 +176,12 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
           <BusinessProfileScore
             businessId={business.id}
             canViewPro={true}
-            onInsightsClick={() => {}}
+            onInsightsClick={() => metricsRef.current?.scrollIntoView({ behavior: "smooth" })}
             onUpgradeClick={() => {}}
           />
 
           {/* Métricas PRO */}
-          <div>
+          <div ref={metricsRef}>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1">
               <BarChart3 className="h-3 w-3" /> Métricas (30 dias)
             </p>
@@ -332,7 +333,7 @@ const CsBusinesses = () => {
   const [search, setSearch] = useState("");
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive" | "expired">("all");
-  const { data: businesses = [], isLoading } = useBusinesses();
+  const { data: businesses = [], isLoading } = useAllBusinesses();
   const { data: plans = [] } = useCommercialPlans(true);
 
   const planMap = new Map(plans.map((p: any) => [p.id, p]));
