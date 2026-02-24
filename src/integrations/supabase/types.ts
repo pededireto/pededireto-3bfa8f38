@@ -2451,6 +2451,69 @@ export type Database = {
           },
         ]
       }
+      cs_actions: {
+        Row: {
+          action_type: string
+          business_id: string | null
+          created_at: string | null
+          cs_user_id: string | null
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          action_type: string
+          business_id?: string | null
+          created_at?: string | null
+          cs_user_id?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          action_type?: string
+          business_id?: string | null
+          created_at?: string | null
+          cs_user_id?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_actions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cs_actions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cs_actions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cs_actions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cs_actions_cs_user_id_fkey"
+            columns: ["cs_user_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_cadence_enrollments: {
         Row: {
           business_id: string | null
@@ -3283,6 +3346,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string | null
+          read: boolean | null
+          reference_id: string | null
+          request_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          read?: boolean | null
+          reference_id?: string | null
+          request_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          read?: boolean | null
+          reference_id?: string | null
+          request_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       partner_organizations: {
         Row: {
           active_businesses_count: number | null
@@ -3804,32 +3900,38 @@ export type Database = {
       request_business_matches: {
         Row: {
           business_id: string
+          contact_unlocked: boolean | null
+          first_response_at: string | null
           id: string
           price_quote: string | null
           request_id: string
           responded_at: string | null
           sent_at: string
-          status: string
+          status: Database["public"]["Enums"]["match_status"]
           viewed_at: string | null
         }
         Insert: {
           business_id: string
+          contact_unlocked?: boolean | null
+          first_response_at?: string | null
           id?: string
           price_quote?: string | null
           request_id: string
           responded_at?: string | null
           sent_at?: string
-          status?: string
+          status?: Database["public"]["Enums"]["match_status"]
           viewed_at?: string | null
         }
         Update: {
           business_id?: string
+          contact_unlocked?: boolean | null
+          first_response_at?: string | null
           id?: string
           price_quote?: string | null
           request_id?: string
           responded_at?: string | null
           sent_at?: string
-          status?: string
+          status?: Database["public"]["Enums"]["match_status"]
           viewed_at?: string | null
         }
         Relationships: [
@@ -3867,6 +3969,51 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "service_requests"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      request_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          read_at: string | null
+          request_id: string | null
+          sender_id: string | null
+          sender_role: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          read_at?: string | null
+          request_id?: string | null
+          sender_id?: string | null
+          sender_role?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          read_at?: string | null
+          request_id?: string | null
+          sender_id?: string | null
+          sender_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_messages_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -4274,12 +4421,17 @@ export type Database = {
           assigned_to_admin: string | null
           category_id: string | null
           closed_at: string | null
+          consumer_city: string | null
+          consumer_email: string | null
+          consumer_name: string | null
+          consumer_phone: string | null
+          contact_unlocked: boolean | null
           created_at: string
           description: string | null
           id: string
           location_city: string | null
           location_postal_code: string | null
-          status: string
+          status: Database["public"]["Enums"]["request_status"]
           subcategory_id: string | null
           updated_at: string
           urgency: string
@@ -4290,12 +4442,17 @@ export type Database = {
           assigned_to_admin?: string | null
           category_id?: string | null
           closed_at?: string | null
+          consumer_city?: string | null
+          consumer_email?: string | null
+          consumer_name?: string | null
+          consumer_phone?: string | null
+          contact_unlocked?: boolean | null
           created_at?: string
           description?: string | null
           id?: string
           location_city?: string | null
           location_postal_code?: string | null
-          status?: string
+          status?: Database["public"]["Enums"]["request_status"]
           subcategory_id?: string | null
           updated_at?: string
           urgency?: string
@@ -4306,12 +4463,17 @@ export type Database = {
           assigned_to_admin?: string | null
           category_id?: string | null
           closed_at?: string | null
+          consumer_city?: string | null
+          consumer_email?: string | null
+          consumer_name?: string | null
+          consumer_phone?: string | null
+          contact_unlocked?: boolean | null
           created_at?: string
           description?: string | null
           id?: string
           location_city?: string | null
           location_postal_code?: string | null
-          status?: string
+          status?: Database["public"]["Enums"]["request_status"]
           subcategory_id?: string | null
           updated_at?: string
           urgency?: string
@@ -5083,6 +5245,46 @@ export type Database = {
         }
         Relationships: []
       }
+      business_performance: {
+        Row: {
+          accepted: number | null
+          business_id: string | null
+          ignored: number | null
+          responded: number | null
+          response_rate: number | null
+          total_requests: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_business_matches_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_business_matches_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_business_matches_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_business_matches_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cadence_enrollment_summary: {
         Row: {
           active_count: number | null
@@ -5667,7 +5869,24 @@ export type Database = {
         | "interessado"
         | "cliente"
         | "perdido"
+      match_status:
+        | "enviado"
+        | "visualizado"
+        | "em_conversa"
+        | "orcamento_enviado"
+        | "aceite"
+        | "recusado"
+        | "expirado"
+        | "sem_resposta"
       premium_level_tipo: "SUPER" | "CATEGORIA" | "SUBCATEGORIA"
+      request_status:
+        | "aberto"
+        | "em_conversa"
+        | "propostas_recebidas"
+        | "em_negociacao"
+        | "fechado"
+        | "cancelado"
+        | "expirado"
       revenue_event_type:
         | "sale"
         | "upsell"
@@ -5828,7 +6047,26 @@ export const Constants = {
         "cliente",
         "perdido",
       ],
+      match_status: [
+        "enviado",
+        "visualizado",
+        "em_conversa",
+        "orcamento_enviado",
+        "aceite",
+        "recusado",
+        "expirado",
+        "sem_resposta",
+      ],
       premium_level_tipo: ["SUPER", "CATEGORIA", "SUBCATEGORIA"],
+      request_status: [
+        "aberto",
+        "em_conversa",
+        "propostas_recebidas",
+        "em_negociacao",
+        "fechado",
+        "cancelado",
+        "expirado",
+      ],
       revenue_event_type: [
         "sale",
         "upsell",

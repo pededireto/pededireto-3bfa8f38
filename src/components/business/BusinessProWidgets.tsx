@@ -473,5 +473,3 @@ export const BenchmarkingProCard = ({ data }: { data: BenchmarkingData }) => {
     </Card>
   );
 };
-  );
-};

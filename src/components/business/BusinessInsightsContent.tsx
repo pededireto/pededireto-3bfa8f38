@@ -202,4 +202,3 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified" 
 };
 
 export default BusinessInsightsContent;
-export default BusinessInsightsContent;
