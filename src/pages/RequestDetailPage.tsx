@@ -20,6 +20,8 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  Star,
+  ThumbsUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,14 +57,25 @@ interface Message {
   read_at: string | null;
 }
 
+interface RatingState {
+  matchId: string;
+  businessId: string;
+  businessName: string;
+  rating: number;
+  comment: string;
+}
+
 // ─── Configs visuais ──────────────────────────────────────────────────────────
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   novo: { label: "Novo", variant: "secondary" },
   em_contacto: { label: "Em Contacto", variant: "outline" },
   encaminhado: { label: "Encaminhado", variant: "default" },
-  concluido: { label: "Concluído", variant: "default" },
+  aberto: { label: "Aberto", variant: "secondary" },
+  em_conversa: { label: "Em Conversa", variant: "outline" },
+  fechado: { label: "Resolvido", variant: "default" },
   cancelado: { label: "Cancelado", variant: "destructive" },
+  concluido: { label: "Concluído", variant: "default" },
 };
 
 const matchStatusConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -83,6 +96,32 @@ const matchStatusConfig: Record<string, { label: string; icon: React.ReactNode; 
   },
 };
 
+// ─── Componente de Estrelas ───────────────────────────────────────────────────
+
+const StarRating = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => onChange(star)}
+          onMouseEnter={() => setHovered(star)}
+          onMouseLeave={() => setHovered(0)}
+          className="transition-transform hover:scale-110"
+        >
+          <Star
+            className={`h-8 w-8 transition-colors ${
+              star <= (hovered || value) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
+            }`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+};
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 const RequestDetailPage = () => {
@@ -94,6 +133,10 @@ const RequestDetailPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratings, setRatings] = useState<RatingState[]>([]);
+  const [submittingRating, setSubmittingRating] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
@@ -106,12 +149,14 @@ const RequestDetailPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_requests" as any)
-        .select(`
+        .select(
+          `
           id, description, status, urgency,
           location_city, location_postal_code, created_at,
           categories:category_id (name),
           subcategories:subcategory_id (name)
-        `)
+        `,
+        )
         .eq("id", id!)
         .eq("user_id", user!.id)
         .single();
@@ -127,10 +172,12 @@ const RequestDetailPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("request_business_matches" as any)
-        .select(`
+        .select(
+          `
           id, status, sent_at, responded_at, price_quote,
           businesses:business_id (id, name, slug)
-        `)
+        `,
+        )
         .eq("request_id", id!)
         .order("sent_at", { ascending: false });
       if (error) throw error;
@@ -138,11 +185,25 @@ const RequestDetailPage = () => {
     },
   });
 
+  // ── Query: avaliações já feitas para este pedido ───────────────────────────
+  const { data: existingRatings = [] } = useQuery({
+    queryKey: ["request-ratings", id],
+    enabled: !!id && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("request_ratings" as any)
+        .select("match_id, business_id, rating")
+        .eq("request_id", id!);
+      if (error) throw error;
+      return (data || []) as { match_id: string; business_id: string; rating: number }[];
+    },
+  });
+
   // ── Query: mensagens ────────────────────────────────────────────────────────
   const { data: messages = [], isLoading: messagesLoading } = useQuery({
     queryKey: ["request-messages", id],
     enabled: !!id && !!user,
-    refetchInterval: 60000, // fallback (realtime é o principal)
+    refetchInterval: 60000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("request_messages" as any)
@@ -169,16 +230,15 @@ const RequestDetailPage = () => {
         },
         () => {
           qc.invalidateQueries({ queryKey: ["request-messages", id] });
-        }
+        },
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
   }, [id, qc]);
 
-  // ── Supabase Realtime para matches (status updates) ─────────────────────────
+  // ── Supabase Realtime para matches ──────────────────────────────────────────
   useEffect(() => {
     if (!id) return;
     const channel = supabase
@@ -193,10 +253,9 @@ const RequestDetailPage = () => {
         },
         () => {
           qc.invalidateQueries({ queryKey: ["request-matches-detail", id] });
-        }
+        },
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
@@ -205,21 +264,21 @@ const RequestDetailPage = () => {
   // ── Marcar mensagens como lidas ─────────────────────────────────────────────
   useEffect(() => {
     if (!id || !user || messages.length === 0) return;
-    const unread = messages.filter(
-      (m) => m.sender_role === "business" && !m.read_at
-    );
+    const unread = messages.filter((m) => m.sender_role === "business" && !m.read_at);
     if (unread.length === 0) return;
-
     supabase
       .from("request_messages" as any)
       .update({ read_at: new Date().toISOString() } as any)
-      .in("id", unread.map((m) => m.id))
+      .in(
+        "id",
+        unread.map((m) => m.id),
+      )
       .then(() => {
         qc.invalidateQueries({ queryKey: ["consumer-requests-meta"] });
       });
   }, [messages, id, user, qc]);
 
-  // ── Auto-scroll ────────────────────────────────────────────────────────────
+  // ── Auto-scroll ─────────────────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -229,14 +288,12 @@ const RequestDetailPage = () => {
     if (!newMessage.trim() || !id || !user) return;
     setSending(true);
     try {
-      const { error } = await supabase
-        .from("request_messages" as any)
-        .insert({
-          request_id: id,
-          sender_id: user.id,
-          sender_role: "consumer",
-          message: newMessage.trim(),
-        } as any);
+      const { error } = await supabase.from("request_messages" as any).insert({
+        request_id: id,
+        sender_id: user.id,
+        sender_role: "consumer",
+        message: newMessage.trim(),
+      } as any);
       if (error) throw error;
       setNewMessage("");
       qc.invalidateQueries({ queryKey: ["request-messages", id] });
@@ -252,6 +309,90 @@ const RequestDetailPage = () => {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  // ── Marcar como Resolvido ───────────────────────────────────────────────────
+  const handleResolve = async () => {
+    if (!id || !user) return;
+
+    // Preparar avaliações para os negócios que aceitaram
+    const acceptedMatches = matches.filter((m) => m.status === "aceite");
+    const alreadyRated = existingRatings.map((r) => r.match_id);
+    const toRate = acceptedMatches.filter((m) => !alreadyRated.includes(m.id));
+
+    if (toRate.length > 0) {
+      // Inicializar estado de avaliações
+      setRatings(
+        toRate.map((m) => ({
+          matchId: m.id,
+          businessId: m.businesses?.id || "",
+          businessName: m.businesses?.name || "Negócio",
+          rating: 0,
+          comment: "",
+        })),
+      );
+      setShowRatingModal(true);
+    } else {
+      // Não há negócios para avaliar — marcar directamente como resolvido
+      await markResolved();
+    }
+  };
+
+  const markResolved = async () => {
+    if (!id) return;
+    setResolving(true);
+    try {
+      const { error } = await supabase
+        .from("service_requests" as any)
+        .update({ status: "fechado" } as any)
+        .eq("id", id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["request-detail", id] });
+      qc.invalidateQueries({ queryKey: ["consumer-requests"] });
+      toast({
+        title: "Pedido resolvido! ✅",
+        description: "Obrigado por utilizar o Pede Direto.",
+      });
+    } catch {
+      toast({ title: "Erro ao marcar como resolvido", variant: "destructive" });
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  // ── Submeter avaliações ─────────────────────────────────────────────────────
+  const handleSubmitRatings = async () => {
+    if (!id || !user) return;
+    setSubmittingRating(true);
+    try {
+      const toInsert = ratings
+        .filter((r) => r.rating > 0)
+        .map((r) => ({
+          request_id: id,
+          match_id: r.matchId,
+          business_id: r.businessId,
+          consumer_id: user.id,
+          rating: r.rating,
+          comment: r.comment.trim() || null,
+        }));
+
+      if (toInsert.length > 0) {
+        const { error } = await supabase.from("request_ratings" as any).insert(toInsert as any);
+        if (error) throw error;
+      }
+
+      setShowRatingModal(false);
+      await markResolved();
+      qc.invalidateQueries({ queryKey: ["request-ratings", id] });
+    } catch {
+      toast({ title: "Erro ao guardar avaliação", variant: "destructive" });
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
+  const updateRating = (matchId: string, field: "rating" | "comment", value: number | string) => {
+    setRatings((prev) => prev.map((r) => (r.matchId === matchId ? { ...r, [field]: value } : r)));
   };
 
   // ── Loading / erro ──────────────────────────────────────────────────────────
@@ -279,13 +420,63 @@ const RequestDetailPage = () => {
   }
 
   const cfg = statusConfig[request.status] || { label: request.status, variant: "secondary" as const };
+  const isResolved = request.status === "fechado" || request.status === "concluido";
+  const hasAcceptedMatch = matches.some((m) => m.status === "aceite");
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      <main className="flex-1 container py-8 max-w-4xl">
+      {/* ── Modal de Avaliação ── */}
+      {showRatingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-background rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="text-center">
+              <ThumbsUp className="h-10 w-10 text-primary mx-auto mb-2" />
+              <h2 className="text-xl font-bold">Como correu?</h2>
+              <p className="text-sm text-muted-foreground mt-1">Avalia os profissionais que aceitaram o teu pedido</p>
+            </div>
 
+            <div className="space-y-5 max-h-[50vh] overflow-y-auto pr-1">
+              {ratings.map((r) => (
+                <div key={r.matchId} className="space-y-2 border rounded-xl p-4">
+                  <p className="font-semibold text-sm">{r.businessName}</p>
+                  <StarRating value={r.rating} onChange={(v) => updateRating(r.matchId, "rating", v)} />
+                  <Textarea
+                    placeholder="Deixa um comentário (opcional)…"
+                    className="resize-none min-h-[70px] text-sm"
+                    value={r.comment}
+                    onChange={(e) => updateRating(r.matchId, "comment", e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowRatingModal(false);
+                  markResolved();
+                }}
+                disabled={submittingRating}
+              >
+                Saltar avaliação
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleSubmitRatings}
+                disabled={submittingRating || ratings.every((r) => r.rating === 0)}
+              >
+                {submittingRating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar avaliação"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className="flex-1 container py-8 max-w-4xl">
         {/* ── Navegação ── */}
         <div className="mb-6">
           <Button asChild variant="ghost" size="sm" className="-ml-2 text-muted-foreground">
@@ -326,18 +517,32 @@ const RequestDetailPage = () => {
                   year: "numeric",
                 })}
               </span>
-              {request.urgency === "urgent" && (
-                <span className="text-destructive font-semibold">⚠ Urgente</span>
-              )}
+              {request.urgency === "urgent" && <span className="text-destructive font-semibold">⚠ Urgente</span>}
             </div>
           </div>
-          <Badge variant={cfg.variant} className="flex-shrink-0">
-            {cfg.label}
-          </Badge>
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <Badge variant={cfg.variant}>{cfg.label}</Badge>
+            {/* Botão Marcar como Resolvido */}
+            {!isResolved && hasAcceptedMatch && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleResolve}
+                disabled={resolving}
+                className="flex items-center gap-1.5 text-green-600 border-green-600 hover:bg-green-50 dark:hover:bg-green-950/20"
+              >
+                {resolving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                )}
+                Marcar como Resolvido
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
           {/* ── Coluna principal: Chat ── */}
           <div className="lg:col-span-2 space-y-4">
             <Card>
@@ -348,7 +553,6 @@ const RequestDetailPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-
                 {/* Área de mensagens */}
                 <div className="min-h-[240px] max-h-[420px] overflow-y-auto space-y-3 pr-1">
                   {messagesLoading ? (
@@ -358,9 +562,7 @@ const RequestDetailPage = () => {
                   ) : messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <MessageCircle className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                      <p className="text-sm text-muted-foreground">
-                        Ainda não há mensagens neste pedido.
-                      </p>
+                      <p className="text-sm text-muted-foreground">Ainda não há mensagens neste pedido.</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Quando um profissional responder, a conversa aparece aqui.
                       </p>
@@ -369,10 +571,7 @@ const RequestDetailPage = () => {
                     messages.map((msg) => {
                       const isConsumer = msg.sender_role === "consumer";
                       return (
-                        <div
-                          key={msg.id}
-                          className={`flex ${isConsumer ? "justify-end" : "justify-start"}`}
-                        >
+                        <div key={msg.id} className={`flex ${isConsumer ? "justify-end" : "justify-start"}`}>
                           <div
                             className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
                               isConsumer
@@ -380,9 +579,7 @@ const RequestDetailPage = () => {
                                 : "bg-muted text-foreground rounded-bl-sm"
                             }`}
                           >
-                            {!isConsumer && (
-                              <p className="text-xs font-semibold mb-1 opacity-70">Profissional</p>
-                            )}
+                            {!isConsumer && <p className="text-xs font-semibold mb-1 opacity-70">Profissional</p>}
                             <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                             <p className={`text-xs mt-1 ${isConsumer ? "opacity-70 text-right" : "opacity-50"}`}>
                               {new Date(msg.created_at).toLocaleTimeString("pt-PT", {
@@ -403,29 +600,34 @@ const RequestDetailPage = () => {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input de mensagem */}
-                <div className="flex gap-2 pt-2 border-t">
-                  <Textarea
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Escreve uma mensagem… (Enter para enviar)"
-                    className="resize-none min-h-[60px] max-h-[120px]"
-                    disabled={sending}
-                  />
-                  <Button
-                    onClick={handleSend}
-                    disabled={!newMessage.trim() || sending}
-                    size="icon"
-                    className="flex-shrink-0 self-end h-10 w-10"
-                  >
-                    {sending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+                {/* Input de mensagem — escondido se resolvido */}
+                {!isResolved ? (
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Escreve uma mensagem… (Enter para enviar)"
+                      className="resize-none min-h-[60px] max-h-[120px]"
+                      disabled={sending}
+                    />
+                    <Button
+                      onClick={handleSend}
+                      disabled={!newMessage.trim() || sending}
+                      size="icon"
+                      className="flex-shrink-0 self-end h-10 w-10"
+                    >
+                      {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="pt-2 border-t text-center">
+                    <p className="text-sm text-muted-foreground flex items-center justify-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      Este pedido foi marcado como resolvido
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -438,17 +640,13 @@ const RequestDetailPage = () => {
                   <Building2 className="h-4 w-4 text-primary" />
                   Negócios Contactados
                   {matches.length > 0 && (
-                    <span className="ml-auto text-xs font-normal text-muted-foreground">
-                      {matches.length}
-                    </span>
+                    <span className="ml-auto text-xs font-normal text-muted-foreground">{matches.length}</span>
                   )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {matches.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Ainda nenhum negócio foi contactado.
-                  </p>
+                  <p className="text-sm text-muted-foreground text-center py-4">Ainda nenhum negócio foi contactado.</p>
                 ) : (
                   <div className="space-y-3">
                     {matches.map((match) => {
@@ -458,6 +656,7 @@ const RequestDetailPage = () => {
                         color: "text-muted-foreground",
                       };
                       const isAccepted = match.status === "aceite";
+                      const alreadyRated = existingRatings.some((r) => r.match_id === match.id);
                       return (
                         <div
                           key={match.id}
@@ -465,7 +664,7 @@ const RequestDetailPage = () => {
                             isAccepted ? "bg-green-50/50 dark:bg-green-950/10 -mx-2 px-2 rounded-lg" : ""
                           }`}
                         >
-                          <div className="min-w-0">
+                          <div className="min-w-0 w-full">
                             {match.businesses?.slug ? (
                               <Link
                                 to={`/negocio/${match.businesses.slug}`}
@@ -476,9 +675,7 @@ const RequestDetailPage = () => {
                                 {match.businesses?.name || "Negócio"}
                               </Link>
                             ) : (
-                              <p className="text-sm font-medium truncate">
-                                {match.businesses?.name || "Negócio"}
-                              </p>
+                              <p className="text-sm font-medium truncate">{match.businesses?.name || "Negócio"}</p>
                             )}
                             <span className={`flex items-center gap-1 text-xs mt-0.5 ${ms.color}`}>
                               {ms.icon}
@@ -489,6 +686,13 @@ const RequestDetailPage = () => {
                                 Orçamento: <span className="font-medium text-foreground">{match.price_quote}</span>
                               </p>
                             )}
+                            {/* Indicador de avaliação já feita */}
+                            {isAccepted && isResolved && alreadyRated && (
+                              <span className="flex items-center gap-1 text-xs text-yellow-600 mt-1">
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                Avaliado
+                              </span>
+                            )}
                           </div>
                         </div>
                       );
@@ -498,7 +702,6 @@ const RequestDetailPage = () => {
               </CardContent>
             </Card>
           </div>
-
         </div>
       </main>
 
