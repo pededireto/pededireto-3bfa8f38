@@ -22,8 +22,11 @@ import {
   XCircle,
   Star,
   ThumbsUp,
+  LifeBuoy,
+  AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCreateTicket } from "@/hooks/useTickets";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -137,6 +140,10 @@ const RequestDetailPage = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratings, setRatings] = useState<RatingState[]>([]);
   const [submittingRating, setSubmittingRating] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [helpMessage, setHelpMessage] = useState("");
+  const [submittingHelp, setSubmittingHelp] = useState(false);
+  const createTicket = useCreateTicket();
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
@@ -398,6 +405,35 @@ const RequestDetailPage = () => {
     setRatings((prev) => prev.map((r) => (r.matchId === matchId ? { ...r, [field]: value } : r)));
   };
 
+  // ── Pedir ajuda à equipa ───────────────────────────────────────────────────
+  const handleSubmitHelp = async () => {
+    if (!helpMessage.trim() || !id || !user) return;
+    setSubmittingHelp(true);
+    try {
+      await createTicket.mutateAsync({
+        title: `Pedido sem resposta: ${request?.description?.slice(0, 60) || "Sem descrição"}`,
+        description: `**Pedido ID:** ${id}
+**Categoria:** ${request?.categories?.name || "N/A"}${request?.subcategories?.name ? ` > ${request.subcategories.name}` : ""}
+**Localização:** ${request?.location_city || "N/A"}
+**Mensagem do consumidor:** ${helpMessage.trim()}`,
+        assigned_to_department: "onboarding",
+        priority: "medium",
+        category: "request_reassignment",
+        created_by_role: "consumer",
+      });
+      setShowHelpModal(false);
+      setHelpMessage("");
+      toast({
+        title: "Pedido de ajuda enviado! 📨",
+        description: "A equipa Pede Direto vai analisar e responder em breve.",
+      });
+    } catch {
+      toast({ title: "Erro ao enviar pedido de ajuda", variant: "destructive" });
+    } finally {
+      setSubmittingHelp(false);
+    }
+  };
+
   // ── Loading / erro ──────────────────────────────────────────────────────────
   if (authLoading || requestLoading) {
     return (
@@ -425,10 +461,60 @@ const RequestDetailPage = () => {
   const cfg = statusConfig[request.status] || { label: request.status, variant: "secondary" as const };
   const isResolved = request.status === "fechado" || request.status === "concluido";
   const hasAcceptedMatch = matches.some((m) => m.status === "aceite");
+  const allRefused = matches.length > 0 && matches.every((m) => m.status === "recusado" || m.status === "expirado");
+  const hasNoResponse =
+    matches.length > 0 && matches.every((m) => m.status === "sem_resposta" || m.status === "enviado");
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+
+      {/* ── Modal de Pedido de Ajuda ── */}
+      {showHelpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-background rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="text-center">
+              <LifeBuoy className="h-10 w-10 text-primary mx-auto mb-2" />
+              <h2 className="text-xl font-bold">Pedir Ajuda à Equipa</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Explica o problema e a nossa equipa vai analisar e encontrar a melhor solução para ti.
+              </p>
+            </div>
+            <div className="bg-muted/50 rounded-xl p-3 text-sm space-y-1">
+              <p className="font-medium">
+                {request.description?.slice(0, 80)}
+                {(request.description?.length || 0) > 80 ? "…" : ""}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {request.categories?.name}
+                {request.subcategories?.name ? ` • ${request.subcategories.name}` : ""} · {request.location_city}
+              </p>
+            </div>
+            <Textarea
+              placeholder="Descreve o problema... Ex: O negócio contactado não faz este tipo de serviço. Preciso de encontrar alguém que faça websites."
+              className="resize-none min-h-[100px]"
+              value={helpMessage}
+              onChange={(e) => setHelpMessage(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowHelpModal(false);
+                  setHelpMessage("");
+                }}
+                disabled={submittingHelp}
+              >
+                Cancelar
+              </Button>
+              <Button className="flex-1" onClick={handleSubmitHelp} disabled={submittingHelp || !helpMessage.trim()}>
+                {submittingHelp ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar Pedido de Ajuda"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal de Avaliação ── */}
       {showRatingModal && (
@@ -544,6 +630,29 @@ const RequestDetailPage = () => {
             )}
           </div>
         </div>
+
+        {/* ── Banner: Todos recusaram / sem resposta ── */}
+        {!isResolved && allRefused && (
+          <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-destructive">Nenhum profissional aceitou este pedido</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Os negócios contactados recusaram ou não responderam. A nossa equipa pode ajudar-te a encontrar a
+                solução certa.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowHelpModal(true)}
+              className="shrink-0 flex items-center gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
+            >
+              <LifeBuoy className="h-3.5 w-3.5" />
+              Pedir Ajuda
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── Coluna principal: Chat ── */}
