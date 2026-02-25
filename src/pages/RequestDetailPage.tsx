@@ -339,16 +339,19 @@ const RequestDetailPage = () => {
   };
 
   const markResolved = async () => {
-    if (!id) return;
+    if (!id || !user) return;
     setResolving(true);
     try {
       const { error } = await supabase
         .from("service_requests" as any)
         .update({ status: "fechado" } as any)
-        .eq("id", id);
+        .eq("id", id)
+        .eq("user_id", user.id);
       if (error) throw error;
-      qc.invalidateQueries({ queryKey: ["request-detail", id] });
-      qc.invalidateQueries({ queryKey: ["consumer-requests"] });
+      await qc.invalidateQueries({ queryKey: ["request-detail", id] });
+      await qc.refetchQueries({ queryKey: ["request-detail", id] });
+      await qc.invalidateQueries({ queryKey: ["consumer-requests"] });
+      await qc.invalidateQueries({ queryKey: ["request-matches-detail", id] });
       toast({
         title: "Pedido resolvido! ✅",
         description: "Obrigado por utilizar o Pede Direto.",
