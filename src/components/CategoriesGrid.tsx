@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Category } from "@/hooks/useCategories";
 import {
@@ -61,7 +61,6 @@ const CategoryModal = ({
     if (hasNext) setCurrentIndex((i) => i + 1);
   }, [hasNext]);
 
-  // Navegação por teclado
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -81,10 +80,8 @@ const CategoryModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8" onClick={onClose}>
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
 
-      {/* Seta esquerda */}
       {hasPrev && (
         <button
           onClick={(e) => {
@@ -97,7 +94,6 @@ const CategoryModal = ({
         </button>
       )}
 
-      {/* Seta direita */}
       {hasNext && (
         <button
           onClick={(e) => {
@@ -110,19 +106,17 @@ const CategoryModal = ({
         </button>
       )}
 
-      {/* Modal */}
       <div
         className="relative z-10 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Imagem */}
         <div className="relative h-72 md:h-96">
           {category.image_url ? (
             <img
               key={category.id}
               src={category.image_url}
               alt={category.name}
-              className="w-full h-full object-cover transition-opacity duration-300"
+              className="w-full h-full object-cover"
             />
           ) : (
             <div className="w-full h-full bg-primary/10 flex items-center justify-center">
@@ -130,10 +124,8 @@ const CategoryModal = ({
             </div>
           )}
 
-          {/* Gradiente */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
-          {/* Botão fechar */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/50 hover:bg-black/90 flex items-center justify-center text-white transition-colors"
@@ -141,7 +133,6 @@ const CategoryModal = ({
             <X className="w-4 h-4" />
           </button>
 
-          {/* Indicador de posição */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5">
             {categories.map((_, i) => (
               <button
@@ -157,7 +148,6 @@ const CategoryModal = ({
             ))}
           </div>
 
-          {/* Nome sobre a imagem */}
           <div className="absolute bottom-0 left-0 right-0 p-6">
             <h2
               className="text-2xl md:text-3xl font-bold text-white"
@@ -168,13 +158,11 @@ const CategoryModal = ({
           </div>
         </div>
 
-        {/* Conteúdo inferior */}
         <div className="bg-card p-6 space-y-5">
           {category.description && (
             <p className="text-foreground text-base md:text-lg leading-relaxed">{category.description}</p>
           )}
 
-          {/* Navegação inferior + botão */}
           <div className="flex items-center gap-3">
             <button
               onClick={goPrev}
@@ -201,7 +189,6 @@ const CategoryModal = ({
             </button>
           </div>
 
-          {/* Contador */}
           <p className="text-center text-xs text-muted-foreground">
             {currentIndex + 1} de {categories.length} categorias · usa ← → para navegar
           </p>
@@ -211,14 +198,31 @@ const CategoryModal = ({
   );
 };
 
-// ─── Card de categoria ────────────────────────────────────────────────────────
+// ─── Card com delay no hover ──────────────────────────────────────────────────
 const CategoryCard = ({ category, onOpen }: { category: Category; onOpen: () => void }) => {
   const [imgError, setImgError] = useState(false);
   const IconComponent = iconMap[category.icon || "Briefcase"] || Briefcase;
   const hasImage = category.image_url && !imgError;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    timerRef.current = setTimeout(() => onOpen(), 500);
+  };
+
+  const handleMouseLeave = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
 
   return (
-    <div className="card-category group relative overflow-hidden cursor-pointer" onMouseEnter={onOpen} onClick={onOpen}>
+    <div
+      className="card-category group relative overflow-hidden cursor-pointer"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={onOpen}
+    >
       {hasImage ? (
         <>
           <img
@@ -302,7 +306,6 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
         </div>
       </section>
 
-      {/* Modal com navegação */}
       {modalIndex !== null && (
         <CategoryModal categories={categories} initialIndex={modalIndex} onClose={() => setModalIndex(null)} />
       )}
