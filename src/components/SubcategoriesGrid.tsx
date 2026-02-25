@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Subcategory } from "@/hooks/useSubcategories";
 import { ArrowRight, ArrowLeft, X } from "lucide-react";
@@ -36,7 +36,6 @@ const SubcategoryModal = ({
     if (hasNext) setCurrentIndex((i) => i + 1);
   }, [hasNext]);
 
-  // Navegação por teclado
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -54,10 +53,8 @@ const SubcategoryModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8" onClick={onClose}>
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
 
-      {/* Seta esquerda */}
       {hasPrev && (
         <button
           onClick={(e) => {
@@ -70,7 +67,6 @@ const SubcategoryModal = ({
         </button>
       )}
 
-      {/* Seta direita */}
       {hasNext && (
         <button
           onClick={(e) => {
@@ -83,12 +79,10 @@ const SubcategoryModal = ({
         </button>
       )}
 
-      {/* Modal */}
       <div
         className="relative z-10 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Imagem */}
         <div className="relative h-72 md:h-96">
           {sub.image_url ? (
             <img key={sub.id} src={sub.image_url} alt={sub.name} className="w-full h-full object-cover" />
@@ -98,10 +92,8 @@ const SubcategoryModal = ({
             </div>
           )}
 
-          {/* Gradiente */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
-          {/* Botão fechar */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/50 hover:bg-black/90 flex items-center justify-center text-white transition-colors"
@@ -109,7 +101,6 @@ const SubcategoryModal = ({
             <X className="w-4 h-4" />
           </button>
 
-          {/* Indicadores de posição */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5">
             {subcategories.map((_, i) => (
               <button
@@ -125,7 +116,6 @@ const SubcategoryModal = ({
             ))}
           </div>
 
-          {/* Nome sobre a imagem */}
           <div className="absolute bottom-0 left-0 right-0 p-6">
             <h2
               className="text-2xl md:text-3xl font-bold text-white"
@@ -136,11 +126,9 @@ const SubcategoryModal = ({
           </div>
         </div>
 
-        {/* Conteúdo inferior */}
         <div className="bg-card p-6 space-y-5">
           {sub.description && <p className="text-foreground text-base md:text-lg leading-relaxed">{sub.description}</p>}
 
-          {/* Navegação inferior + botão */}
           <div className="flex items-center gap-3">
             <button
               onClick={goPrev}
@@ -167,7 +155,6 @@ const SubcategoryModal = ({
             </button>
           </div>
 
-          {/* Contador */}
           <p className="text-center text-xs text-muted-foreground">
             {currentIndex + 1} de {subcategories.length} subcategorias · usa ← → para navegar
           </p>
@@ -177,15 +164,28 @@ const SubcategoryModal = ({
   );
 };
 
-// ─── Card de subcategoria ─────────────────────────────────────────────────────
+// ─── Card com delay no hover ──────────────────────────────────────────────────
 const SubcategoryCard = ({ sub, onOpen }: { sub: Subcategory; onOpen: () => void }) => {
   const [imgError, setImgError] = useState(false);
   const hasImage = sub.image_url && !imgError;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    timerRef.current = setTimeout(() => onOpen(), 500);
+  };
+
+  const handleMouseLeave = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
 
   return (
     <div
       className="group relative overflow-hidden bg-card rounded-xl shadow-card hover:shadow-lg transition-all hover:-translate-y-1 border border-border cursor-pointer"
-      onMouseEnter={onOpen}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onClick={onOpen}
     >
       {hasImage ? (
@@ -262,7 +262,6 @@ const SubcategoriesGrid = ({ subcategories, categorySlug, isLoading }: Subcatego
         ))}
       </div>
 
-      {/* Modal com navegação */}
       {modalIndex !== null && (
         <SubcategoryModal
           subcategories={subcategories}
