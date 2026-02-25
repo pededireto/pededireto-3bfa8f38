@@ -195,7 +195,7 @@ const RequestDetailPage = () => {
         .select("match_id, business_id, rating")
         .eq("request_id", id!);
       if (error) throw error;
-      return (data || []) as { match_id: string; business_id: string; rating: number }[];
+      return (data || []) as unknown as { match_id: string; business_id: string; rating: number }[];
     },
   });
 
