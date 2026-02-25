@@ -49,11 +49,22 @@ const CategoryCard = ({ category }: { category: Category }) => {
             className="absolute inset-0 w-full h-full object-cover rounded-xl group-hover:grayscale transition-all duration-300"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-black/50 rounded-xl" />
-          <div className="relative z-10 flex flex-col items-center justify-center h-full min-h-[140px]">
-            <h3 className="font-semibold text-lg mb-2 text-white text-center">{category.name}</h3>
+          {/* Gradiente de baixo para cima */}
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+          <div className="relative z-10 flex flex-col justify-end h-full min-h-[180px] md:min-h-[200px] p-4">
+            <h3
+              className="font-semibold text-base md:text-lg text-white text-center"
+              style={{ textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}
+            >
+              {category.name}
+            </h3>
             {category.description && (
-              <p className="text-sm text-white/80 line-clamp-2 text-center">{category.description}</p>
+              <p
+                className="text-xs md:text-sm text-white/80 line-clamp-2 text-center mt-1"
+                style={{ textShadow: "0 1px 4px rgba(0,0,0,0.7)" }}
+              >
+                {category.description}
+              </p>
             )}
           </div>
         </>
@@ -81,7 +92,7 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="card-category animate-pulse">
+              <div key={i} className="card-category animate-pulse min-h-[180px]">
                 <div className="w-14 h-14 rounded-2xl bg-muted mb-4" />
                 <div className="h-5 bg-muted rounded w-24 mb-2" />
                 <div className="h-4 bg-muted rounded w-full" />
