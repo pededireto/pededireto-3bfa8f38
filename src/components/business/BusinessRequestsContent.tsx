@@ -40,24 +40,19 @@ interface Message {
 
 // ─── Config de estados do match ───────────────────────────────────────────────
 
-const matchStatusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  enviado:    { label: "Novo",        variant: "secondary"    },
-  aceite:     { label: "Aceite",      variant: "default"      },
-  recusado:   { label: "Recusado",    variant: "destructive"  },
-  respondido: { label: "Respondido",  variant: "outline"      },
+const matchStatusConfig: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+> = {
+  enviado: { label: "Novo", variant: "secondary" },
+  aceite: { label: "Aceite", variant: "default" },
+  recusado: { label: "Recusado", variant: "destructive" },
+  respondido: { label: "Respondido", variant: "outline" },
 };
 
 // ─── Sub-componente: Chat de um pedido (com Realtime) ─────────────────────────
 
-const RequestChat = ({
-  requestId,
-  businessUserId,
-  onRead,
-}: {
-  requestId: string;
-  businessUserId: string;
-  onRead: () => void;
-}) => {
+const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => void }) => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -94,7 +89,7 @@ const RequestChat = ({
         () => {
           qc.invalidateQueries({ queryKey: ["business-request-messages", requestId] });
           qc.invalidateQueries({ queryKey: ["business-requests-meta"] });
-        }
+        },
       )
       .subscribe();
 
@@ -112,7 +107,10 @@ const RequestChat = ({
     supabase
       .from("request_messages" as any)
       .update({ read_at: new Date().toISOString() } as any)
-      .in("id", unread.map((m) => m.id))
+      .in(
+        "id",
+        unread.map((m) => m.id),
+      )
       .then(() => {
         qc.invalidateQueries({ queryKey: ["business-unread-requests-count"] });
         qc.invalidateQueries({ queryKey: ["business-requests-meta"] });
@@ -129,18 +127,34 @@ const RequestChat = ({
     if (!newMessage.trim()) return;
     setSending(true);
     try {
-      const { error } = await supabase
-        .from("request_messages" as any)
-        .insert({
-          request_id: requestId,
-          sender_id: businessUserId,
-          sender_role: "business",
-          message: newMessage.trim(),
-        } as any);
-      if (error) throw error;
+      // Garantir sessão activa antes do insert
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão expirada. Por favor, volta a iniciar sessão.");
+
+      console.log("Sending message:", {
+        request_id: requestId,
+        sender_id: session.user.id,
+        sender_role: "business",
+      });
+
+      const { error } = await supabase.from("request_messages" as any).insert({
+        request_id: requestId,
+        sender_id: session.user.id, // usar session.user.id para garantir que bate com auth.uid()
+        sender_role: "business",
+        message: newMessage.trim(),
+      } as any);
+
+      if (error) {
+        console.error("Insert error:", error);
+        throw error;
+      }
+
       setNewMessage("");
       qc.invalidateQueries({ queryKey: ["business-request-messages", requestId] });
-    } catch {
+    } catch (err) {
+      console.error("Send error:", err);
       toast({ title: "Erro ao enviar mensagem", variant: "destructive" });
     } finally {
       setSending(false);
@@ -165,9 +179,7 @@ const RequestChat = ({
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <MessageCircle className="h-8 w-8 text-muted-foreground/30 mb-2" />
             <p className="text-sm text-muted-foreground">Sem mensagens ainda.</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Inicia a conversa com o consumidor abaixo.
-            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">Inicia a conversa com o consumidor abaixo.</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -181,9 +193,7 @@ const RequestChat = ({
                       : "bg-muted text-foreground rounded-bl-sm"
                   }`}
                 >
-                  {!isBusiness && (
-                    <p className="text-xs font-semibold mb-1 opacity-70">Consumidor</p>
-                  )}
+                  {!isBusiness && <p className="text-xs font-semibold mb-1 opacity-70">Consumidor</p>}
                   <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                   <p className={`text-xs mt-1 ${isBusiness ? "opacity-70 text-right" : "opacity-50"}`}>
                     {new Date(msg.created_at).toLocaleTimeString("pt-PT", {
@@ -219,11 +229,7 @@ const RequestChat = ({
           size="icon"
           className="flex-shrink-0 self-end h-10 w-10"
         >
-          {sending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </div>
     </div>
@@ -232,7 +238,9 @@ const RequestChat = ({
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-interface Props { businessId: string; }
+interface Props {
+  businessId: string;
+}
 
 const BusinessRequestsContent = ({ businessId }: Props) => {
   const { user } = useAuth();
@@ -242,9 +250,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
   const [openChats, setOpenChats] = useState<Record<string, boolean>>({});
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
-  const requestIds = requests
-    .map((m: any) => m.service_requests?.id)
-    .filter(Boolean) as string[];
+  const requestIds = requests.map((m: any) => m.service_requests?.id).filter(Boolean) as string[];
 
   const { data: requestMeta = {} } = useBusinessRequestsMeta(businessId, requestIds);
 
@@ -265,9 +271,10 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
       if (error) throw error;
       toast({
         title: newStatus === "aceite" ? "Pedido aceite!" : "Pedido recusado",
-        description: newStatus === "aceite"
-          ? "Agora podes ver os dados de contacto e iniciar a conversa."
-          : "O pedido foi recusado.",
+        description:
+          newStatus === "aceite"
+            ? "Agora podes ver os dados de contacto e iniciar a conversa."
+            : "O pedido foi recusado.",
       });
       qc.invalidateQueries({ queryKey: ["business-requests"] });
     } catch {
@@ -300,14 +307,14 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
       ) : (
         <div className="space-y-4">
           {requests.map((match: any) => {
-            const sr        = match.service_requests;
-            const profile   = sr?.profiles;
-            const isUrgent  = sr?.urgency === "urgent";
+            const sr = match.service_requests;
+            const profile = sr?.profiles;
+            const isUrgent = sr?.urgency === "urgent";
             const requestId = sr?.id as string | undefined;
-            const meta      = requestId ? (requestMeta as any)[requestId] : undefined;
-            const chatOpen  = requestId ? !!openChats[requestId] : false;
+            const meta = requestId ? (requestMeta as any)[requestId] : undefined;
+            const chatOpen = requestId ? !!openChats[requestId] : false;
             const isAccepted = match.status === "aceite" || match.contact_unlocked === true;
-            const isPending  = match.status === "enviado" || match.status === "visualizado";
+            const isPending = match.status === "enviado" || match.status === "visualizado";
 
             const statusCfg = matchStatusConfig[match.status] || {
               label: match.status,
@@ -329,9 +336,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
                         <AlertTriangle className="h-3.5 w-3.5" /> URGENTE
                       </div>
                     )}
-                    <p className="font-medium text-foreground">
-                      {sr?.description || "Pedido sem descrição"}
-                    </p>
+                    <p className="font-medium text-foreground">{sr?.description || "Pedido sem descrição"}</p>
                     <p className="text-sm text-muted-foreground">
                       {sr?.categories?.name}
                       {sr?.subcategories?.name ? ` • ${sr.subcategories.name}` : ""}
@@ -377,54 +382,67 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
                 )}
 
                 {/* ── Info do consumidor (condicional ao status) ── */}
-                {profile && (
+                {isAccepted ? (
                   <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
-                    <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                      Consumidor
-                    </p>
-                    {/* Nome sempre visível */}
-                    {profile.full_name && (
+                    <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">Consumidor</p>
+                    {/* Nome do snapshot ou do profile */}
+                    {(sr?.consumer_name || profile?.full_name) && (
                       <div className="flex items-center gap-2 text-foreground">
                         <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        {profile.full_name}
+                        {sr?.consumer_name || profile?.full_name}
                       </div>
                     )}
-                    {/* Email e telefone só após aceitação */}
-                    {isAccepted ? (
-                      <>
-                        {profile.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                            <a href={`mailto:${profile.email}`} className="text-primary hover:underline">
-                              {profile.email}
-                            </a>
-                          </div>
-                        )}
-                        {profile.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                            <a href={`tel:${profile.phone}`} className="text-primary hover:underline">
-                              {profile.phone}
-                            </a>
-                          </div>
-                        )}
-                      </>
-                    ) : (
+                    {/* Email */}
+                    {(sr?.consumer_email || profile?.email) && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                        <a
+                          href={`mailto:${sr?.consumer_email || profile?.email}`}
+                          className="text-primary hover:underline"
+                        >
+                          {sr?.consumer_email || profile?.email}
+                        </a>
+                      </div>
+                    )}
+                    {/* Telefone */}
+                    {(sr?.consumer_phone || profile?.phone) && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        <a
+                          href={`tel:${sr?.consumer_phone || profile?.phone}`}
+                          className="text-primary hover:underline"
+                        >
+                          {sr?.consumer_phone || profile?.phone}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  profile && (
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+                      <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                        Consumidor
+                      </p>
+                      {/* Antes da aceitação: apenas nome e cidade */}
+                      {(sr?.consumer_name || profile?.full_name) && (
+                        <div className="flex items-center gap-2 text-foreground">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          {sr?.consumer_name || profile?.full_name}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-muted-foreground text-xs mt-1">
                         <Lock className="h-3 w-3" />
                         Aceita o pedido para ver o contacto do consumidor
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )
                 )}
 
                 {/* ── Localização ── */}
                 {(sr?.location_city || sr?.location_postal_code || sr?.address) && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" />
-                    {[sr?.address, sr?.location_city, sr?.location_postal_code]
-                      .filter(Boolean)
-                      .join(", ")}
+                    {[sr?.address, sr?.location_city, sr?.location_postal_code].filter(Boolean).join(", ")}
                   </div>
                 )}
 
@@ -440,7 +458,8 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
                     })}
                   </p>
 
-                  {requestId && (
+                  {/* Botão de conversa apenas se o pedido foi aceite */}
+                  {requestId && isAccepted && (
                     <Button
                       size="sm"
                       variant={meta?.hasUnread ? "default" : "outline"}
@@ -449,22 +468,13 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
                       {chatOpen ? "Fechar" : meta?.hasUnread ? "Responder" : "Conversa"}
-                      {chatOpen
-                        ? <ChevronUp className="h-3.5 w-3.5" />
-                        : <ChevronDown className="h-3.5 w-3.5" />
-                      }
+                      {chatOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                     </Button>
                   )}
                 </div>
 
-                {/* ── Chat inline ── */}
-                {requestId && chatOpen && user && (
-                  <RequestChat
-                    requestId={requestId}
-                    businessUserId={user.id}
-                    onRead={handleRead}
-                  />
-                )}
+                {/* ── Chat inline (apenas após aceitação) ── */}
+                {requestId && chatOpen && isAccepted && <RequestChat requestId={requestId} onRead={handleRead} />}
               </div>
             );
           })}
