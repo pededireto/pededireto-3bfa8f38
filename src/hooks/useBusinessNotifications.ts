@@ -22,11 +22,11 @@ export const useBusinessNotifications = (businessId: string | undefined) => {
         .eq("business_id", businessId)
         .order("created_at", { ascending: false })
         .limit(50);
-
       if (error) throw error;
       return data as unknown as BusinessNotification[];
     },
     enabled: !!businessId,
+    refetchInterval: 30000, // 30s — lista completa
   });
 };
 
@@ -40,11 +40,12 @@ export const useUnreadNotificationsCount = (businessId: string | undefined) => {
         .select("*", { count: "exact", head: true })
         .eq("business_id", businessId)
         .eq("is_read", false);
-
       if (error) throw error;
       return count || 0;
     },
     enabled: !!businessId,
+    refetchInterval: 15000, // 15s — badge actualiza rápido
+    refetchIntervalInBackground: true, // actualiza mesmo com tab em background
   });
 };
 
@@ -56,6 +57,21 @@ export const useMarkNotificationAsRead = () => {
         .from("business_notifications" as any)
         .update({ is_read: true } as any)
         .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
+  });
+};
+
+export const useMarkAllNotificationsAsRead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (businessId: string) => {
+      const { error } = await supabase
+        .from("business_notifications" as any)
+        .update({ is_read: true } as any)
+        .eq("business_id", businessId)
+        .eq("is_read", false);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
