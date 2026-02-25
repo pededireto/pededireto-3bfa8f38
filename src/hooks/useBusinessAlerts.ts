@@ -150,7 +150,7 @@ export const useBusinessAlerts = (
     cta_whatsapp?: string | null;
     schedule_weekdays?: string | null;
     description?: string | null;
-  }
+  },
 ) => {
   return useQuery({
     queryKey: ["business-alerts", businessId],
@@ -178,22 +178,20 @@ export const useBusinessAlerts = (
         .gte("created_at", since28.toISOString())
         .lt("created_at", since14.toISOString());
 
-      // Pedidos pendentes
+      // Pedidos pendentes — usando 'enviado' que é o valor correcto do enum
       const { count: pendingRequests } = await (supabase as any)
-        .from("business_requests")
+        .from("request_business_matches")
         .select("*", { count: "exact", head: true })
         .eq("business_id", businessId)
-        .eq("status", "pending");
+        .eq("status", "enviado"); // ← corrigido de "pending" para "enviado"
 
       const current = (currentEvents || []) as Array<{ event_type: string }>;
       const previous = (previousEvents || []) as Array<{ event_type: string }>;
 
-      const currentViews = current.filter(e => e.event_type === "view").length;
-      const previousViews = previous.filter(e => e.event_type === "view").length;
-      const currentContacts = current.filter(e => e.event_type.startsWith("click_")).length;
-      const conversionRate = currentViews > 0
-        ? Math.round((currentContacts / currentViews) * 100)
-        : 0;
+      const currentViews = current.filter((e) => e.event_type === "view").length;
+      const previousViews = previous.filter((e) => e.event_type === "view").length;
+      const currentContacts = current.filter((e) => e.event_type.startsWith("click_")).length;
+      const conversionRate = currentViews > 0 ? Math.round((currentContacts / currentViews) * 100) : 0;
 
       return generateAlerts(
         currentViews,
