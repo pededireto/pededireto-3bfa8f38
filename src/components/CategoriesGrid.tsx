@@ -206,7 +206,7 @@ const CategoryCard = ({ category, onOpen }: { category: Category; onOpen: () => 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMouseEnter = () => {
-    timerRef.current = setTimeout(() => onOpen(), 500);
+    timerRef.current = setTimeout(() => onOpen(), 1500);
   };
 
   const handleMouseLeave = () => {
