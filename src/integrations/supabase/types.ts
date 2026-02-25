@@ -5728,6 +5728,7 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
+      process_followups: { Args: never; Returns: undefined }
       register_business_with_owner: {
         Args: {
           p_address?: string

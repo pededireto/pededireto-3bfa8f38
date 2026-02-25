@@ -1,6 +1,6 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useBusinessRequests, useBusinessRequestsMeta } from "@/hooks/useBusinessDashboard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,7 +23,7 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  ExternalLink,
+  Lock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,7 +47,7 @@ const matchStatusConfig: Record<string, { label: string; variant: "default" | "s
   respondido: { label: "Respondido",  variant: "outline"      },
 };
 
-// ─── Sub-componente: Chat de um pedido ────────────────────────────────────────
+// ─── Sub-componente: Chat de um pedido (com Realtime) ─────────────────────────
 
 const RequestChat = ({
   requestId,
@@ -67,7 +67,7 @@ const RequestChat = ({
   // Buscar mensagens
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["business-request-messages", requestId],
-    refetchInterval: 15000,
+    refetchInterval: 60000, // fallback polling reduzido (realtime é o principal)
     queryFn: async () => {
       const { data, error } = await supabase
         .from("request_messages" as any)
@@ -78,6 +78,30 @@ const RequestChat = ({
       return (data || []) as unknown as Message[];
     },
   });
+
+  // Supabase Realtime subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel(`request-messages-${requestId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "request_messages",
+          filter: `request_id=eq.${requestId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["business-request-messages", requestId] });
+          qc.invalidateQueries({ queryKey: ["business-requests-meta"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [requestId, qc]);
 
   // Marcar mensagens do consumidor como lidas
   useEffect(() => {
@@ -116,8 +140,6 @@ const RequestChat = ({
       if (error) throw error;
       setNewMessage("");
       qc.invalidateQueries({ queryKey: ["business-request-messages", requestId] });
-      // Invalidar meta do consumidor para ele ver a notificação
-      qc.invalidateQueries({ queryKey: ["consumer-requests-meta"] });
     } catch {
       toast({ title: "Erro ao enviar mensagem", variant: "destructive" });
     } finally {
@@ -134,7 +156,6 @@ const RequestChat = ({
 
   return (
     <div className="border-t pt-4 mt-2 space-y-3">
-      {/* Área de mensagens */}
       <div className="min-h-[160px] max-h-[320px] overflow-y-auto space-y-2 pr-1">
         {isLoading ? (
           <div className="flex justify-center py-6">
@@ -183,7 +204,6 @@ const RequestChat = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <div className="flex gap-2">
         <Textarea
           value={newMessage}
@@ -216,10 +236,12 @@ interface Props { businessId: string; }
 
 const BusinessRequestsContent = ({ businessId }: Props) => {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const qc = useQueryClient();
   const { data: requests = [], isLoading } = useBusinessRequests(businessId);
   const [openChats, setOpenChats] = useState<Record<string, boolean>>({});
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
-  // IDs dos service_requests associados a este business
   const requestIds = requests
     .map((m: any) => m.service_requests?.id)
     .filter(Boolean) as string[];
@@ -230,9 +252,29 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
     setOpenChats((prev) => ({ ...prev, [requestId]: !prev[requestId] }));
   };
 
-  const handleRead = () => {
-    // Callback quando mensagens são marcadas como lidas — não precisamos fazer nada aqui
-    // os invalidates já são feitos dentro do RequestChat
+  const handleRead = useCallback(() => {}, []);
+
+  // ── Aceitar / Recusar pedido ──────────────────────────────────────────────
+  const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado") => {
+    setUpdatingStatus(matchId);
+    try {
+      const { error } = await supabase
+        .from("request_business_matches" as any)
+        .update({ status: newStatus } as any)
+        .eq("id", matchId);
+      if (error) throw error;
+      toast({
+        title: newStatus === "aceite" ? "Pedido aceite!" : "Pedido recusado",
+        description: newStatus === "aceite"
+          ? "Agora podes ver os dados de contacto e iniciar a conversa."
+          : "O pedido foi recusado.",
+      });
+      qc.invalidateQueries({ queryKey: ["business-requests"] });
+    } catch {
+      toast({ title: "Erro ao atualizar pedido", variant: "destructive" });
+    } finally {
+      setUpdatingStatus(null);
+    }
   };
 
   if (isLoading) {
@@ -264,6 +306,8 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             const requestId = sr?.id as string | undefined;
             const meta      = requestId ? (requestMeta as any)[requestId] : undefined;
             const chatOpen  = requestId ? !!openChats[requestId] : false;
+            const isAccepted = match.status === "aceite" || match.contact_unlocked === true;
+            const isPending  = match.status === "enviado" || match.status === "visualizado";
 
             const statusCfg = matchStatusConfig[match.status] || {
               label: match.status,
@@ -303,32 +347,72 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
                   </div>
                 </div>
 
-                {/* ── Info do consumidor ── */}
+                {/* ── Botões Aceitar / Recusar (só se ainda pendente) ── */}
+                {isPending && (
+                  <div className="flex items-center gap-2 py-1">
+                    <Button
+                      size="sm"
+                      onClick={() => handleStatusChange(match.id, "aceite")}
+                      disabled={updatingStatus === match.id}
+                      className="flex items-center gap-1.5"
+                    >
+                      {updatingStatus === match.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      )}
+                      Aceitar Pedido
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleStatusChange(match.id, "recusado")}
+                      disabled={updatingStatus === match.id}
+                      className="flex items-center gap-1.5 text-destructive hover:text-destructive"
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                      Recusar
+                    </Button>
+                  </div>
+                )}
+
+                {/* ── Info do consumidor (condicional ao status) ── */}
                 {profile && (
                   <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
                     <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">
                       Consumidor
                     </p>
+                    {/* Nome sempre visível */}
                     {profile.full_name && (
                       <div className="flex items-center gap-2 text-foreground">
                         <User className="h-3.5 w-3.5 text-muted-foreground" />
                         {profile.full_name}
                       </div>
                     )}
-                    {profile.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                        <a href={`mailto:${profile.email}`} className="text-primary hover:underline">
-                          {profile.email}
-                        </a>
-                      </div>
-                    )}
-                    {profile.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        <a href={`tel:${profile.phone}`} className="text-primary hover:underline">
-                          {profile.phone}
-                        </a>
+                    {/* Email e telefone só após aceitação */}
+                    {isAccepted ? (
+                      <>
+                        {profile.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                            <a href={`mailto:${profile.email}`} className="text-primary hover:underline">
+                              {profile.email}
+                            </a>
+                          </div>
+                        )}
+                        {profile.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                            <a href={`tel:${profile.phone}`} className="text-primary hover:underline">
+                              {profile.phone}
+                            </a>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs mt-1">
+                        <Lock className="h-3 w-3" />
+                        Aceita o pedido para ver o contacto do consumidor
                       </div>
                     )}
                   </div>

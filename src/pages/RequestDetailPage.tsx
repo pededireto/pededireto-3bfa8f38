@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
@@ -72,7 +72,7 @@ const matchStatusConfig: Record<string, { label: string; icon: React.ReactNode; 
     color: "text-muted-foreground",
   },
   aceite: {
-    label: "Aceitou",
+    label: "Aceitou o pedido",
     icon: <CheckCircle2 className="h-3.5 w-3.5" />,
     color: "text-green-600 dark:text-green-400",
   },
@@ -95,7 +95,6 @@ const RequestDetailPage = () => {
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Redirecionar se não autenticado
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
   }, [user, authLoading, navigate]);
@@ -114,7 +113,7 @@ const RequestDetailPage = () => {
           subcategories:subcategory_id (name)
         `)
         .eq("id", id!)
-        .eq("user_id", user!.id) // segurança: só o próprio consumidor vê
+        .eq("user_id", user!.id)
         .single();
       if (error) throw error;
       return data as unknown as RequestDetail;
@@ -143,7 +142,7 @@ const RequestDetailPage = () => {
   const { data: messages = [], isLoading: messagesLoading } = useQuery({
     queryKey: ["request-messages", id],
     enabled: !!id && !!user,
-    refetchInterval: 15000, // polling a cada 15s
+    refetchInterval: 60000, // fallback (realtime é o principal)
     queryFn: async () => {
       const { data, error } = await supabase
         .from("request_messages" as any)
@@ -155,28 +154,72 @@ const RequestDetailPage = () => {
     },
   });
 
+  // ── Supabase Realtime para mensagens ────────────────────────────────────────
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`consumer-request-messages-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "request_messages",
+          filter: `request_id=eq.${id}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["request-messages", id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, qc]);
+
+  // ── Supabase Realtime para matches (status updates) ─────────────────────────
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`consumer-request-matches-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "request_business_matches",
+          filter: `request_id=eq.${id}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["request-matches-detail", id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, qc]);
+
   // ── Marcar mensagens como lidas ─────────────────────────────────────────────
   useEffect(() => {
     if (!id || !user || messages.length === 0) return;
-
     const unread = messages.filter(
       (m) => m.sender_role === "business" && !m.read_at
     );
     if (unread.length === 0) return;
 
-    const ids = unread.map((m) => m.id);
-
     supabase
       .from("request_messages" as any)
       .update({ read_at: new Date().toISOString() } as any)
-      .in("id", ids)
+      .in("id", unread.map((m) => m.id))
       .then(() => {
-        // Invalidar meta-dados no dashboard para limpar badge
         qc.invalidateQueries({ queryKey: ["consumer-requests-meta"] });
       });
   }, [messages, id, user, qc]);
 
-  // ── Auto-scroll para última mensagem ───────────────────────────────────────
+  // ── Auto-scroll ────────────────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -414,16 +457,21 @@ const RequestDetailPage = () => {
                         icon: <Clock className="h-3.5 w-3.5" />,
                         color: "text-muted-foreground",
                       };
+                      const isAccepted = match.status === "aceite";
                       return (
                         <div
                           key={match.id}
-                          className="flex items-start justify-between gap-2 py-2 border-b last:border-0"
+                          className={`flex items-start justify-between gap-2 py-2 border-b last:border-0 ${
+                            isAccepted ? "bg-green-50/50 dark:bg-green-950/10 -mx-2 px-2 rounded-lg" : ""
+                          }`}
                         >
                           <div className="min-w-0">
                             {match.businesses?.slug ? (
                               <Link
                                 to={`/negocio/${match.businesses.slug}`}
-                                className="text-sm font-medium hover:text-primary transition-colors truncate block"
+                                className={`text-sm font-medium hover:text-primary transition-colors truncate block ${
+                                  isAccepted ? "text-green-700 dark:text-green-400" : ""
+                                }`}
                               >
                                 {match.businesses?.name || "Negócio"}
                               </Link>
