@@ -416,7 +416,7 @@ const RequestDetailPage = () => {
 **Categoria:** ${request?.categories?.name || "N/A"}${request?.subcategories?.name ? ` > ${request.subcategories.name}` : ""}
 **Localização:** ${request?.location_city || "N/A"}
 **Mensagem do consumidor:** ${helpMessage.trim()}`,
-        assigned_to_department: "cs",
+        assigned_to_department: "it_admin",
         priority: "medium",
         category: "request_reassignment",
         created_by_role: "consumer",
