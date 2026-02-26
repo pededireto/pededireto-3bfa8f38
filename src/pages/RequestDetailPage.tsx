@@ -26,9 +26,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useCreateTicket } from "@/hooks/useTickets";
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
+// --- Tipos ---
 
 interface RequestDetail {
   id: string;
@@ -68,7 +67,7 @@ interface RatingState {
   comment: string;
 }
 
-// ─── Configs visuais ──────────────────────────────────────────────────────────
+// --- Configs visuais ---
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   novo: { label: "Novo", variant: "secondary" },
@@ -78,7 +77,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   em_conversa: { label: "Em Conversa", variant: "outline" },
   fechado: { label: "Resolvido", variant: "default" },
   cancelado: { label: "Cancelado", variant: "destructive" },
-  concluido: { label: "Concluído", variant: "default" },
+  concluido: { label: "Concluido", variant: "default" },
 };
 
 const matchStatusConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -97,9 +96,14 @@ const matchStatusConfig: Record<string, { label: string; icon: React.ReactNode; 
     icon: <XCircle className="h-3.5 w-3.5" />,
     color: "text-destructive",
   },
+  expirado: {
+    label: "Expirado",
+    icon: <Clock className="h-3.5 w-3.5" />,
+    color: "text-muted-foreground",
+  },
 };
 
-// ─── Componente de Estrelas ───────────────────────────────────────────────────
+// --- Componente de Estrelas ---
 
 const StarRating = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => {
   const [hovered, setHovered] = useState(0);
@@ -125,7 +129,7 @@ const StarRating = ({ value, onChange }: { value: number; onChange: (v: number) 
   );
 };
 
-// ─── Componente principal ─────────────────────────────────────────────────────
+// --- Componente principal ---
 
 const RequestDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -143,13 +147,12 @@ const RequestDetailPage = () => {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [helpMessage, setHelpMessage] = useState("");
   const [submittingHelp, setSubmittingHelp] = useState(false);
-  const createTicket = useCreateTicket();
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
   }, [user, authLoading, navigate]);
 
-  // ── Query: detalhe do pedido ────────────────────────────────────────────────
+  // Query: detalhe do pedido
   const { data: request, isLoading: requestLoading } = useQuery({
     queryKey: ["request-detail", id],
     enabled: !!id && !!user,
@@ -172,7 +175,7 @@ const RequestDetailPage = () => {
     },
   });
 
-  // ── Query: matches (negócios contactados) ──────────────────────────────────
+  // Query: matches
   const { data: matches = [] } = useQuery({
     queryKey: ["request-matches-detail", id],
     enabled: !!id && !!user,
@@ -192,7 +195,7 @@ const RequestDetailPage = () => {
     },
   });
 
-  // ── Query: avaliações já feitas para este pedido ───────────────────────────
+  // Query: avaliacoes ja feitas
   const { data: existingRatings = [] } = useQuery({
     queryKey: ["request-ratings", id],
     enabled: !!id && !!user,
@@ -206,7 +209,7 @@ const RequestDetailPage = () => {
     },
   });
 
-  // ── Query: mensagens ────────────────────────────────────────────────────────
+  // Query: mensagens
   const { data: messages = [], isLoading: messagesLoading } = useQuery({
     queryKey: ["request-messages", id],
     enabled: !!id && !!user,
@@ -222,19 +225,14 @@ const RequestDetailPage = () => {
     },
   });
 
-  // ── Supabase Realtime para mensagens ────────────────────────────────────────
+  // Realtime: mensagens
   useEffect(() => {
     if (!id) return;
     const channel = supabase
       .channel(`consumer-request-messages-${id}`)
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "request_messages",
-          filter: `request_id=eq.${id}`,
-        },
+        { event: "INSERT", schema: "public", table: "request_messages", filter: `request_id=eq.${id}` },
         () => {
           qc.invalidateQueries({ queryKey: ["request-messages", id] });
         },
@@ -245,19 +243,14 @@ const RequestDetailPage = () => {
     };
   }, [id, qc]);
 
-  // ── Supabase Realtime para matches ──────────────────────────────────────────
+  // Realtime: matches
   useEffect(() => {
     if (!id) return;
     const channel = supabase
       .channel(`consumer-request-matches-${id}`)
       .on(
         "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "request_business_matches",
-          filter: `request_id=eq.${id}`,
-        },
+        { event: "UPDATE", schema: "public", table: "request_business_matches", filter: `request_id=eq.${id}` },
         () => {
           qc.invalidateQueries({ queryKey: ["request-matches-detail", id] });
         },
@@ -268,7 +261,7 @@ const RequestDetailPage = () => {
     };
   }, [id, qc]);
 
-  // ── Marcar mensagens como lidas ─────────────────────────────────────────────
+  // Marcar mensagens como lidas
   useEffect(() => {
     if (!id || !user || messages.length === 0) return;
     const unread = messages.filter((m) => m.sender_role === "business" && !m.read_at);
@@ -285,12 +278,12 @@ const RequestDetailPage = () => {
       });
   }, [messages, id, user, qc]);
 
-  // ── Auto-scroll ─────────────────────────────────────────────────────────────
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Enviar mensagem ─────────────────────────────────────────────────────────
+  // Enviar mensagem
   const handleSend = async () => {
     if (!newMessage.trim() || !id || !user) return;
     setSending(true);
@@ -318,29 +311,24 @@ const RequestDetailPage = () => {
     }
   };
 
-  // ── Marcar como Resolvido ───────────────────────────────────────────────────
+  // Marcar como Resolvido
   const handleResolve = async () => {
     if (!id || !user) return;
-
-    // Preparar avaliações para os negócios que aceitaram
     const acceptedMatches = matches.filter((m) => m.status === "aceite");
     const alreadyRated = existingRatings.map((r) => r.match_id);
     const toRate = acceptedMatches.filter((m) => !alreadyRated.includes(m.id));
-
     if (toRate.length > 0) {
-      // Inicializar estado de avaliações
       setRatings(
         toRate.map((m) => ({
           matchId: m.id,
           businessId: m.businesses?.id || "",
-          businessName: m.businesses?.name || "Negócio",
+          businessName: m.businesses?.name || "Negocio",
           rating: 0,
           comment: "",
         })),
       );
       setShowRatingModal(true);
     } else {
-      // Não há negócios para avaliar — marcar directamente como resolvido
       await markResolved();
     }
   };
@@ -359,10 +347,7 @@ const RequestDetailPage = () => {
       await qc.refetchQueries({ queryKey: ["request-detail", id] });
       await qc.invalidateQueries({ queryKey: ["consumer-requests"] });
       await qc.invalidateQueries({ queryKey: ["request-matches-detail", id] });
-      toast({
-        title: "Pedido resolvido! ✅",
-        description: "Obrigado por utilizar o Pede Direto.",
-      });
+      toast({ title: "Pedido resolvido!", description: "Obrigado por utilizar o Pede Direto." });
     } catch {
       toast({ title: "Erro ao marcar como resolvido", variant: "destructive" });
     } finally {
@@ -370,7 +355,7 @@ const RequestDetailPage = () => {
     }
   };
 
-  // ── Submeter avaliações ─────────────────────────────────────────────────────
+  // Submeter avaliacoes
   const handleSubmitRatings = async () => {
     if (!id || !user) return;
     setSubmittingRating(true);
@@ -385,17 +370,15 @@ const RequestDetailPage = () => {
           rating: r.rating,
           comment: r.comment.trim() || null,
         }));
-
       if (toInsert.length > 0) {
         const { error } = await supabase.from("request_ratings" as any).insert(toInsert as any);
         if (error) throw error;
       }
-
       setShowRatingModal(false);
       await markResolved();
       qc.invalidateQueries({ queryKey: ["request-ratings", id] });
     } catch {
-      toast({ title: "Erro ao guardar avaliação", variant: "destructive" });
+      toast({ title: "Erro ao guardar avaliacao", variant: "destructive" });
     } finally {
       setSubmittingRating(false);
     }
@@ -405,26 +388,21 @@ const RequestDetailPage = () => {
     setRatings((prev) => prev.map((r) => (r.matchId === matchId ? { ...r, [field]: value } : r)));
   };
 
-  // ── Pedir ajuda à equipa ───────────────────────────────────────────────────
+  // Pedir ajuda a equipa - usa RPC com SECURITY DEFINER para contornar RLS
   const handleSubmitHelp = async () => {
     if (!helpMessage.trim() || !id || !user) return;
     setSubmittingHelp(true);
     try {
-      await createTicket.mutateAsync({
-        title: `Pedido sem resposta: ${request?.description?.slice(0, 60) || "Sem descrição"}`,
-        description: `**Pedido ID:** ${id}
-**Categoria:** ${request?.categories?.name || "N/A"}${request?.subcategories?.name ? ` > ${request.subcategories.name}` : ""}
-**Localização:** ${request?.location_city || "N/A"}
-**Mensagem do consumidor:** ${helpMessage.trim()}`,
-        assigned_to_department: "it_admin",
-        priority: "medium",
-        category: "request_reassignment",
-        created_by_role: "consumer",
+      const { error: rpcError } = await supabase.rpc("create_consumer_support_ticket" as any, {
+        p_title: `Pedido sem resposta: ${request?.description?.slice(0, 60) || "Sem descricao"}`,
+        p_description: `Pedido ID: ${id} | Categoria: ${request?.categories?.name || "N/A"}${request?.subcategories?.name ? ` > ${request.subcategories.name}` : ""} | Localizacao: ${request?.location_city || "N/A"} | Mensagem: ${helpMessage.trim()}`,
+        p_category: "request_reassignment",
       });
+      if (rpcError) throw rpcError;
       setShowHelpModal(false);
       setHelpMessage("");
       toast({
-        title: "Pedido de ajuda enviado! 📨",
+        title: "Pedido de ajuda enviado!",
         description: "A equipa Pede Direto vai analisar e responder em breve.",
       });
     } catch {
@@ -434,7 +412,7 @@ const RequestDetailPage = () => {
     }
   };
 
-  // ── Loading / erro ──────────────────────────────────────────────────────────
+  // Loading / erro
   if (authLoading || requestLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -448,7 +426,7 @@ const RequestDetailPage = () => {
       <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 container py-16 text-center">
-          <p className="text-muted-foreground mb-4">Pedido não encontrado ou sem permissão de acesso.</p>
+          <p className="text-muted-foreground mb-4">Pedido nao encontrado ou sem permissao de acesso.</p>
           <Button asChild variant="outline">
             <Link to="/dashboard">Voltar ao Dashboard</Link>
           </Button>
@@ -462,36 +440,34 @@ const RequestDetailPage = () => {
   const isResolved = request.status === "fechado" || request.status === "concluido";
   const hasAcceptedMatch = matches.some((m) => m.status === "aceite");
   const allRefused = matches.length > 0 && matches.every((m) => m.status === "recusado" || m.status === "expirado");
-  const hasNoResponse =
-    matches.length > 0 && matches.every((m) => m.status === "sem_resposta" || m.status === "enviado");
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* ── Modal de Pedido de Ajuda ── */}
+      {/* Modal de Pedido de Ajuda */}
       {showHelpModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
             <div className="text-center">
               <LifeBuoy className="h-10 w-10 text-primary mx-auto mb-2" />
-              <h2 className="text-xl font-bold">Pedir Ajuda à Equipa</h2>
+              <h2 className="text-xl font-bold">Pedir Ajuda a Equipa</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Explica o problema e a nossa equipa vai analisar e encontrar a melhor solução para ti.
+                Explica o problema e a nossa equipa vai analisar e encontrar a melhor solucao para ti.
               </p>
             </div>
             <div className="bg-muted/50 rounded-xl p-3 text-sm space-y-1">
               <p className="font-medium">
                 {request.description?.slice(0, 80)}
-                {(request.description?.length || 0) > 80 ? "…" : ""}
+                {(request.description?.length || 0) > 80 ? "..." : ""}
               </p>
               <p className="text-muted-foreground text-xs">
                 {request.categories?.name}
-                {request.subcategories?.name ? ` • ${request.subcategories.name}` : ""} · {request.location_city}
+                {request.subcategories?.name ? ` - ${request.subcategories.name}` : ""} / {request.location_city}
               </p>
             </div>
             <Textarea
-              placeholder="Descreve o problema... Ex: O negócio contactado não faz este tipo de serviço. Preciso de encontrar alguém que faça websites."
+              placeholder="Descreve o problema... Ex: O negocio contactado nao faz este tipo de servico. Preciso de encontrar alguem que faca websites."
               className="resize-none min-h-[100px]"
               value={helpMessage}
               onChange={(e) => setHelpMessage(e.target.value)}
@@ -516,7 +492,7 @@ const RequestDetailPage = () => {
         </div>
       )}
 
-      {/* ── Modal de Avaliação ── */}
+      {/* Modal de Avaliacao */}
       {showRatingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
@@ -525,14 +501,13 @@ const RequestDetailPage = () => {
               <h2 className="text-xl font-bold">Como correu?</h2>
               <p className="text-sm text-muted-foreground mt-1">Avalia os profissionais que aceitaram o teu pedido</p>
             </div>
-
             <div className="space-y-5 max-h-[50vh] overflow-y-auto pr-1">
               {ratings.map((r) => (
                 <div key={r.matchId} className="space-y-2 border rounded-xl p-4">
                   <p className="font-semibold text-sm">{r.businessName}</p>
                   <StarRating value={r.rating} onChange={(v) => updateRating(r.matchId, "rating", v)} />
                   <Textarea
-                    placeholder="Deixa um comentário (opcional)…"
+                    placeholder="Deixa um comentario (opcional)..."
                     className="resize-none min-h-[70px] text-sm"
                     value={r.comment}
                     onChange={(e) => updateRating(r.matchId, "comment", e.target.value)}
@@ -540,7 +515,6 @@ const RequestDetailPage = () => {
                 </div>
               ))}
             </div>
-
             <div className="flex gap-2 pt-1">
               <Button
                 variant="outline"
@@ -551,14 +525,14 @@ const RequestDetailPage = () => {
                 }}
                 disabled={submittingRating}
               >
-                Saltar avaliação
+                Saltar avaliacao
               </Button>
               <Button
                 className="flex-1"
                 onClick={handleSubmitRatings}
                 disabled={submittingRating || ratings.every((r) => r.rating === 0)}
               >
-                {submittingRating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar avaliação"}
+                {submittingRating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar avaliacao"}
               </Button>
             </div>
           </div>
@@ -566,7 +540,7 @@ const RequestDetailPage = () => {
       )}
 
       <main className="flex-1 container py-8 max-w-4xl">
-        {/* ── Navegação ── */}
+        {/* Navegacao */}
         <div className="mb-6">
           <Button asChild variant="ghost" size="sm" className="-ml-2 text-muted-foreground">
             <Link to="/dashboard">
@@ -576,26 +550,26 @@ const RequestDetailPage = () => {
           </Button>
         </div>
 
-        {/* ── Cabeçalho do pedido ── */}
+        {/* Cabecalho do pedido */}
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-primary uppercase tracking-wide mb-1">
               {request.categories?.name || "Sem categoria"}
-              {request.subcategories?.name ? ` • ${request.subcategories.name}` : ""}
+              {request.subcategories?.name ? ` - ${request.subcategories.name}` : ""}
             </p>
             <h1 className="text-2xl font-bold text-foreground leading-snug">
               {request.description
                 ? request.description.length > 150
-                  ? request.description.slice(0, 150) + "…"
+                  ? request.description.slice(0, 150) + "..."
                   : request.description
-                : "Sem descrição"}
+                : "Sem descricao"}
             </h1>
             <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-muted-foreground">
               {request.location_city && (
                 <span className="flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
                   {request.location_city}
-                  {request.location_postal_code ? ` · ${request.location_postal_code}` : ""}
+                  {request.location_postal_code ? ` / ${request.location_postal_code}` : ""}
                 </span>
               )}
               <span className="flex items-center gap-1">
@@ -606,12 +580,11 @@ const RequestDetailPage = () => {
                   year: "numeric",
                 })}
               </span>
-              {request.urgency === "urgent" && <span className="text-destructive font-semibold">⚠ Urgente</span>}
+              {request.urgency === "urgent" && <span className="text-destructive font-semibold">Urgente</span>}
             </div>
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
             <Badge variant={cfg.variant}>{cfg.label}</Badge>
-            {/* Botão Marcar como Resolvido */}
             {!isResolved && hasAcceptedMatch && (
               <Button
                 size="sm"
@@ -631,15 +604,15 @@ const RequestDetailPage = () => {
           </div>
         </div>
 
-        {/* ── Banner: Todos recusaram / sem resposta ── */}
+        {/* Banner: Todos recusaram */}
         {!isResolved && allRefused && (
           <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm text-destructive">Nenhum profissional aceitou este pedido</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Os negócios contactados recusaram ou não responderam. A nossa equipa pode ajudar-te a encontrar a
-                solução certa.
+                Os negocios contactados recusaram ou nao responderam. A nossa equipa pode ajudar-te a encontrar a
+                solucao certa.
               </p>
             </div>
             <Button
@@ -655,7 +628,7 @@ const RequestDetailPage = () => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* ── Coluna principal: Chat ── */}
+          {/* Coluna principal: Chat */}
           <div className="lg:col-span-2 space-y-4">
             <Card>
               <CardHeader className="pb-3">
@@ -665,7 +638,6 @@ const RequestDetailPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* Área de mensagens */}
                 <div className="min-h-[240px] max-h-[420px] overflow-y-auto space-y-3 pr-1">
                   {messagesLoading ? (
                     <div className="flex justify-center py-8">
@@ -674,7 +646,7 @@ const RequestDetailPage = () => {
                   ) : messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <MessageCircle className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                      <p className="text-sm text-muted-foreground">Ainda não há mensagens neste pedido.</p>
+                      <p className="text-sm text-muted-foreground">Ainda nao ha mensagens neste pedido.</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Quando um profissional responder, a conversa aparece aqui.
                       </p>
@@ -698,7 +670,7 @@ const RequestDetailPage = () => {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}
-                              {" · "}
+                              {" / "}
                               {new Date(msg.created_at).toLocaleDateString("pt-PT", {
                                 day: "2-digit",
                                 month: "short",
@@ -712,14 +684,13 @@ const RequestDetailPage = () => {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input de mensagem — escondido se resolvido */}
                 {!isResolved ? (
                   <div className="flex gap-2 pt-2 border-t">
                     <Textarea
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      placeholder="Escreve uma mensagem… (Enter para enviar)"
+                      placeholder="Escreve uma mensagem... (Enter para enviar)"
                       className="resize-none min-h-[60px] max-h-[120px]"
                       disabled={sending}
                     />
@@ -744,13 +715,13 @@ const RequestDetailPage = () => {
             </Card>
           </div>
 
-          {/* ── Coluna lateral: Negócios contactados ── */}
+          {/* Coluna lateral: Negocios contactados */}
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-primary" />
-                  Negócios Contactados
+                  Negocios Contactados
                   {matches.length > 0 && (
                     <span className="ml-auto text-xs font-normal text-muted-foreground">{matches.length}</span>
                   )}
@@ -758,7 +729,7 @@ const RequestDetailPage = () => {
               </CardHeader>
               <CardContent>
                 {matches.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">Ainda nenhum negócio foi contactado.</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">Ainda nenhum negocio foi contactado.</p>
                 ) : (
                   <div className="space-y-3">
                     {matches.map((match) => {
@@ -784,10 +755,10 @@ const RequestDetailPage = () => {
                                   isAccepted ? "text-green-700 dark:text-green-400" : ""
                                 }`}
                               >
-                                {match.businesses?.name || "Negócio"}
+                                {match.businesses?.name || "Negocio"}
                               </Link>
                             ) : (
-                              <p className="text-sm font-medium truncate">{match.businesses?.name || "Negócio"}</p>
+                              <p className="text-sm font-medium truncate">{match.businesses?.name || "Negocio"}</p>
                             )}
                             <span className={`flex items-center gap-1 text-xs mt-0.5 ${ms.color}`}>
                               {ms.icon}
@@ -795,10 +766,9 @@ const RequestDetailPage = () => {
                             </span>
                             {match.price_quote && (
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                Orçamento: <span className="font-medium text-foreground">{match.price_quote}</span>
+                                Orcamento: <span className="font-medium text-foreground">{match.price_quote}</span>
                               </p>
                             )}
-                            {/* Indicador de avaliação já feita */}
                             {isAccepted && isResolved && alreadyRated && (
                               <span className="flex items-center gap-1 text-xs text-yellow-600 mt-1">
                                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
