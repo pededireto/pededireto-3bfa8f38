@@ -11,6 +11,9 @@ export interface CommercialPlan {
   description: string | null;
   display_order: number;
   plan_type: "business" | "consumer";
+  payment_method: "sepa" | "mbway" | "free" | null; // ← NOVO
+  stripe_price_id: string | null; // ← NOVO
+  stripe_product_id: string | null; // ← NOVO
   created_at: string;
   updated_at: string;
 }
@@ -23,11 +26,9 @@ export const useCommercialPlans = (activeOnly = false) => {
         .from("commercial_plans" as any)
         .select("*")
         .order("display_order", { ascending: true });
-
       if (activeOnly) {
         query = query.eq("is_active", true);
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return data as unknown as CommercialPlan[];
