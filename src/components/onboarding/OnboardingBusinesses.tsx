@@ -33,15 +33,21 @@ const OnboardingBusinesses = () => {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const { data, isPending, isFetchingNextPage, fetchNextPage, hasNextPage } = useOnboardingBusinesses({
+  const {
+    data: infiniteData,
+    isPending,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useOnboardingBusinesses({
     claimStatus,
     isActive: isActive === "all" ? undefined : isActive,
     search,
   });
 
-  // Flatten all pages into one list
-  const businesses = data?.pages.flatMap((p) => p.data) ?? [];
-  const totalCount = data?.pages[0]?.count ?? 0;
+  // Flatten all pages into one typed array
+  const businesses: any[] = infiniteData?.pages?.flatMap((p: any) => p.data as any[]) ?? [];
+  const totalCount: number = (infiniteData?.pages?.[0] as any)?.count ?? 0;
 
   const bulkUpdate = useBulkUpdateBusinessStatus();
 
