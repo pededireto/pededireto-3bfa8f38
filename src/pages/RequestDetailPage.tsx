@@ -397,6 +397,7 @@ const RequestDetailPage = () => {
         p_title: `Pedido sem resposta: ${request?.description?.slice(0, 60) || "Sem descricao"}`,
         p_description: `Pedido ID: ${id} | Categoria: ${request?.categories?.name || "N/A"}${request?.subcategories?.name ? ` > ${request.subcategories.name}` : ""} | Localizacao: ${request?.location_city || "N/A"} | Mensagem: ${helpMessage.trim()}`,
         p_category: "request_reassignment",
+        p_request_id: id,
       });
       if (rpcError) throw rpcError;
       setShowHelpModal(false);
