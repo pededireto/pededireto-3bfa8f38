@@ -77,13 +77,13 @@ const PlansContent = () => {
       price: plan.price,
       duration_months: plan.duration_months,
       is_active: plan.is_active,
-      premium_level: plan.premium_level,
+      premium_level: plan.premium_level ?? null,
       description: plan.description || "",
       display_order: plan.display_order,
       plan_type: plan.plan_type || "business",
-      payment_method: plan.payment_method || "sepa",
-      stripe_price_id: plan.stripe_price_id || "",
-      stripe_product_id: plan.stripe_product_id || "",
+      payment_method: plan.payment_method ?? "sepa",
+      stripe_price_id: plan.stripe_price_id ?? "",
+      stripe_product_id: plan.stripe_product_id ?? "",
     });
     const existingRule = allRules.find((r) => r.plan_id === plan.id);
     setRules(
