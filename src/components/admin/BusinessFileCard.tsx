@@ -181,7 +181,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
     name: "", slug: "", description: "", logo_url: "",
     // Public presence
     city: "", zone: "", alcance: "local" as "local" | "nacional" | "hibrido",
-    public_address: "", // NOVO - morada comercial pública
+    public_address: "",
     category_id: "", subcategory_ids: [] as string[],
     cta_phone: "", cta_email: "", cta_whatsapp: "", cta_website: "",
     schedule_weekdays: "", schedule_weekend: "",
@@ -192,6 +192,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
     is_active: false,
     // Subscription
     plan_id: "", subscription_start_date: "",
+    subscription_status: "inactive" as SubscriptionStatus, // ← NOVO: editável manualmente
     is_featured: false, is_premium: false, premium_level: "" as string,
     display_order: 0,
   });
@@ -207,7 +208,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
         description: business.description || "", logo_url: business.logo_url || "",
         city: business.city || "", zone: business.zone || "",
         alcance: business.alcance || "local",
-        public_address: (business as any).public_address || "", // NOVO
+        public_address: (business as any).public_address || "",
         category_id: business.category_id || "", subcategory_ids: [],
         cta_phone: business.cta_phone || "", cta_email: business.cta_email || "",
         cta_whatsapp: business.cta_whatsapp || "", cta_website: business.cta_website || "",
@@ -218,6 +219,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
         commercial_status: business.commercial_status || "nao_contactado",
         is_active: business.is_active,
         plan_id: business.plan_id || "", subscription_start_date: business.subscription_start_date || "",
+        subscription_status: business.subscription_status || "inactive", // ← NOVO: carrega da BD
         is_featured: business.is_featured, is_premium: business.is_premium,
         premium_level: business.premium_level || "", display_order: business.display_order,
       });
@@ -252,13 +254,26 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
     }));
   };
 
+  // ← CORRIGIDO: respeita subscription_status do form em vez de forçar "inactive"
   const getSubscriptionDates = (planId: string, startDate: string) => {
     if (!planId || !startDate) {
-      return { subscription_price: 0, subscription_start_date: null, subscription_end_date: null, subscription_status: "inactive" as SubscriptionStatus, subscription_plan: "free" as SubscriptionPlan };
+      return {
+        subscription_price: 0,
+        subscription_start_date: null,
+        subscription_end_date: null,
+        subscription_status: form.subscription_status, // ← usa o valor do form
+        subscription_plan: "free" as SubscriptionPlan,
+      };
     }
     const plan = commercialPlans.find(p => p.id === planId);
     if (!plan || plan.price === 0) {
-      return { subscription_price: 0, subscription_start_date: null, subscription_end_date: null, subscription_status: "inactive" as SubscriptionStatus, subscription_plan: "free" as SubscriptionPlan };
+      return {
+        subscription_price: 0,
+        subscription_start_date: null,
+        subscription_end_date: null,
+        subscription_status: form.subscription_status, // ← usa o valor do form
+        subscription_plan: "free" as SubscriptionPlan,
+      };
     }
     const start = new Date(startDate);
     const end = new Date(start);
@@ -314,7 +329,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
         city: form.city || null,
         zone: form.zone || null,
         alcance: form.alcance,
-        public_address: form.public_address || null, // NOVO
+        public_address: form.public_address || null,
         schedule_weekdays: form.schedule_weekdays || null,
         schedule_weekend: form.schedule_weekend || null,
         cta_website: form.cta_website || null,
@@ -329,7 +344,10 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
         is_featured: form.is_featured,
         is_premium: form.is_premium,
         premium_level: form.premium_level ? (form.premium_level as PremiumLevel) : null,
-        is_active: form.plan_id ? true : form.is_active,
+        // ← CORRIGIDO: is_active respeita subscription_status em vez de forçar true
+        is_active: form.plan_id
+          ? form.subscription_status === "active"
+          : form.is_active,
         display_order: form.display_order,
         commercial_status: form.commercial_status,
         ...subscriptionData,
@@ -348,7 +366,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
           target_name: business.name,
           changes: {
             commercial_status: { old: business.commercial_status, new: form.commercial_status },
-            is_active: { old: business.is_active, new: form.is_active },
+            is_active: { old: business.is_active, new: data.is_active },
+            subscription_status: { old: business.subscription_status, new: form.subscription_status },
           },
         });
 
@@ -467,12 +486,11 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
             </div>
           </div>
 
-          {/* Morada Comercial (Pública) - NOVO */}
           <div className="space-y-2 mt-4">
             <Label>Morada Comercial</Label>
-            <Input 
-              value={form.public_address} 
-              onChange={(e) => set("public_address", e.target.value)} 
+            <Input
+              value={form.public_address}
+              onChange={(e) => set("public_address", e.target.value)}
               placeholder="Ex: Rua do Comércio, 123, Porto"
             />
             <p className="text-xs text-muted-foreground">
@@ -593,18 +611,44 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
               </SelectContent>
             </Select>
           </div>
-          {form.plan_id && (
+
+          {/* ← NOVO: Estado da Subscrição editável */}
+          <div className="space-y-2">
+            <Label>Estado da Subscrição</Label>
+            <Select
+              value={form.subscription_status}
+              onValueChange={(v: SubscriptionStatus) => set("subscription_status", v)}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">✅ Ativa</SelectItem>
+                <SelectItem value="inactive">⏸ Inativa</SelectItem>
+                <SelectItem value="expired">❌ Expirada</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Alterar este campo atualiza também a visibilidade pública do negócio.
+            </p>
+          </div>
+        </div>
+
+        {form.plan_id && (
+          <div className="mt-4">
             <div className="space-y-2">
               <Label>Data de início</Label>
-              <Input type="date" value={form.subscription_start_date} onChange={(e) => set("subscription_start_date", e.target.value)} />
+              <Input
+                type="date"
+                value={form.subscription_start_date}
+                onChange={(e) => set("subscription_start_date", e.target.value)}
+              />
               {form.subscription_start_date && (() => {
                 const dates = getSubscriptionDates(form.plan_id, form.subscription_start_date);
                 const plan = commercialPlans.find(p => p.id === form.plan_id);
                 return <p className="text-xs text-muted-foreground">Fim: {dates.subscription_end_date || "-"}{plan ? ` • ${plan.price}€` : ""}</p>;
               })()}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {isAdmin && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -647,12 +691,12 @@ const BusinessFileCard = ({ business, categories, isAdmin, onSaved, onCancel }: 
                 <div>
                   <span className="text-muted-foreground block text-xs">Estado subscrição</span>
                   <Badge variant="secondary" className={
-                    business.subscription_status === "active" ? "bg-success/10 text-success" :
-                    business.subscription_status === "expired" ? "bg-destructive/10 text-destructive" :
+                    form.subscription_status === "active" ? "bg-success/10 text-success" :
+                    form.subscription_status === "expired" ? "bg-destructive/10 text-destructive" :
                     "bg-muted text-muted-foreground"
                   }>
-                    {business.subscription_status === "active" ? "Ativa" :
-                     business.subscription_status === "expired" ? "Expirada" : "Inativa"}
+                    {form.subscription_status === "active" ? "Ativa" :
+                     form.subscription_status === "expired" ? "Expirada" : "Inativa"}
                   </Badge>
                 </div>
                 <div>
