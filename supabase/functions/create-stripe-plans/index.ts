@@ -55,7 +55,6 @@ Deno.serve(async (req) => {
         // Create product
         const product = await stripePost("/products", {
           name: plan.name,
-          currency: "eur",
         });
 
         // Create price
