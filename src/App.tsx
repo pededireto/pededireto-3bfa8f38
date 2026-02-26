@@ -45,6 +45,7 @@ import RequestServicePage from "./pages/RequestServicePage";
 import RequestDetailPage from "./pages/RequestDetailPage";
 import UpgradePage from "./pages/UpgradePage";
 import NotFound from "./pages/NotFound";
+import StripeSetup from "./pages/admin/StripeSetup";
 
 const queryClient = new QueryClient();
 
@@ -166,6 +167,10 @@ const App = () => {
                         </ProtectedRoute>
                       }
                     />
+
+                    <Route path="/admin/stripe-setup" element={
+                      <ProtectedRoute requireAdmin><StripeSetup /></ProtectedRoute>
+                    } />
 
                     <Route
                       path="/comercial"

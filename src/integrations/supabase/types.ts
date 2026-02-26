@@ -1590,6 +1590,53 @@ export type Database = {
           },
         ]
       }
+      business_scores: {
+        Row: {
+          business_id: string
+          score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          business_id: string
+          score?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          score?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_scores_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_scores_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_scores_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_scores_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_subcategories: {
         Row: {
           business_id: string
@@ -2179,9 +2226,12 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          payment_method: string | null
           plan_type: string
           premium_level: string | null
           price: number
+          stripe_price_id: string | null
+          stripe_product_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2192,9 +2242,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          payment_method?: string | null
           plan_type?: string
           premium_level?: string | null
           price?: number
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2205,9 +2258,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          payment_method?: string | null
           plan_type?: string
           premium_level?: string | null
           price?: number
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -4017,6 +4073,89 @@ export type Database = {
           },
         ]
       }
+      request_ratings: {
+        Row: {
+          business_id: string | null
+          comment: string | null
+          consumer_id: string | null
+          created_at: string | null
+          id: string
+          match_id: string | null
+          rating: number | null
+          request_id: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          comment?: string | null
+          consumer_id?: string | null
+          created_at?: string | null
+          id?: string
+          match_id?: string | null
+          rating?: number | null
+          request_id?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          comment?: string | null
+          consumer_id?: string | null
+          created_at?: string | null
+          id?: string
+          match_id?: string | null
+          rating?: number | null
+          request_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_ratings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_ratings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_ratings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_ratings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_ratings_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_ratings_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "request_business_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_ratings_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           category: string
@@ -5628,6 +5767,14 @@ export type Database = {
         Args: { bid: string; period?: string }
         Returns: number
       }
+      calculate_business_score: {
+        Args: { p_business_id: string }
+        Returns: number
+      }
+      can_business_send_message: {
+        Args: { p_request_id: string; p_user_id: string }
+        Returns: boolean
+      }
       check_and_award_automatic_badges: {
         Args: { bid: string }
         Returns: number
@@ -5672,6 +5819,10 @@ export type Database = {
         Args: { business_uuid: string }
         Returns: number
       }
+      get_business_ids_for_user: {
+        Args: { p_user_id: string }
+        Returns: string[]
+      }
       get_business_intelligence: {
         Args: { p_business_id: string; p_days?: number }
         Returns: Json
@@ -5698,6 +5849,14 @@ export type Database = {
           p_subcategory_id?: string
         }
         Returns: Json
+      }
+      get_request_ids_for_business: {
+        Args: { p_user_id: string }
+        Returns: string[]
+      }
+      get_request_ids_for_consumer: {
+        Args: { p_user_id: string }
+        Returns: string[]
       }
       get_unlinked_businesses: {
         Args: { p_limit?: number; p_q?: string }
@@ -5729,6 +5888,7 @@ export type Database = {
         Returns: undefined
       }
       process_followups: { Args: never; Returns: undefined }
+      recalculate_all_scores: { Args: never; Returns: undefined }
       register_business_with_owner: {
         Args: {
           p_address?: string
