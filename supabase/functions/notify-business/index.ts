@@ -6,9 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ─── CallMeBot config (teu número pessoal para alertas) ──────────────────────
-const CALLMEBOT_PHONE  = "351210203862";
+const CALLMEBOT_PHONE = "351210203862";
 const CALLMEBOT_APIKEY = "3427290";
+
+async function sendWhatsApp(text: string) {
+  const waUrl = `https://api.callmebot.com/whatsapp.php?phone=${CALLMEBOT_PHONE}&text=${encodeURIComponent(text)}&apikey=${CALLMEBOT_APIKEY}`;
+  const res = await fetch(waUrl);
+  if (!res.ok) console.error("CallMeBot error:", await res.text());
+  else console.log("WhatsApp sent");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -16,15 +22,30 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json();
-    const { type, business_id, request_id } = body;
+    const { type, business_id, request_id, ticket_id, title, priority, category } = body;
 
-    // ── Buscar dados do negócio ───────────────────────────────────────────
+    // ── NOVO TICKET ───────────────────────────────────────────────────────
+    if (type === "novo_ticket") {
+      const priorityEmoji =
+        priority === "urgent" ? "🚨" : priority === "high" ? "🔴" : priority === "medium" ? "🟡" : "🟢";
+
+      await sendWhatsApp(
+        `${priorityEmoji} PEDE DIRETO — Novo Ticket\n` +
+          `📋 ${title || "Sem título"}\n` +
+          `🏷️ ${category || "Geral"} · ${priority || "medium"}\n` +
+          `👉 pededireto.pt/admin/tickets`,
+      );
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── NOVO MATCH / NOVA MENSAGEM ────────────────────────────────────────
     const { data: business, error: bizError } = await adminClient
       .from("businesses")
       .select(`id, name, owner_id, business_users (user_id)`)
@@ -39,11 +60,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const ownerUserId =
-      business.owner_id ||
-      (business.business_users as any[])?.[0]?.user_id;
+    const ownerUserId = business.owner_id || (business.business_users as any[])?.[0]?.user_id;
 
-    // ── Buscar dados do pedido ────────────────────────────────────────────
     let requestDescription = "Novo pedido recebido";
     let requestCity = "";
     let categoryName = "";
@@ -57,60 +75,50 @@ Deno.serve(async (req) => {
 
       if (sr) {
         requestDescription = sr.description || requestDescription;
-        requestCity        = sr.location_city || "";
-        categoryName       = (sr.categories as any)?.name || "";
+        requestCity = sr.location_city || "";
+        categoryName = (sr.categories as any)?.name || "";
       }
     }
 
-    // ── Textos da notificação ─────────────────────────────────────────────
     const notifTitle =
-      type === "novo_match"     ? "🆕 Novo pedido recebido!" :
-      type === "nova_mensagem"  ? "💬 Nova mensagem!" :
-      "🔔 Nova notificação";
+      type === "novo_match"
+        ? "🆕 Novo pedido recebido!"
+        : type === "nova_mensagem"
+          ? "💬 Nova mensagem!"
+          : "🔔 Nova notificação";
 
-    const shortDesc = requestDescription?.slice(0, 100) +
-      (requestDescription?.length > 100 ? "…" : "");
+    const shortDesc = requestDescription?.slice(0, 100) + (requestDescription?.length > 100 ? "…" : "");
 
     const notifMessage =
       type === "novo_match"
         ? `${categoryName ? `[${categoryName}] ` : ""}${shortDesc}${requestCity ? ` · ${requestCity}` : ""}`
         : type === "nova_mensagem"
-        ? "Tens uma nova mensagem num pedido."
-        : "Verifica o teu painel.";
+          ? "Tens uma nova mensagem num pedido."
+          : "Verifica o teu painel.";
 
-    // ── 1. Criar notificação interna ──────────────────────────────────────
+    // Notificação interna
     if (business_id) {
       await adminClient.from("business_notifications").insert({
         business_id,
         type: type === "novo_match" ? "request" : "system",
-        title: notifTitle.replace(/[\u{1F300}-\u{1FFFF}]/gu, "").trim(), // sem emoji no título interno
+        title: notifTitle.replace(/[\u{1F300}-\u{1FFFF}]/gu, "").trim(),
         message: notifMessage,
         is_read: false,
       });
     }
 
-    // ── 2. WhatsApp alert (para ti — admin/fundador) ──────────────────────
-    // Só para novo_match para não esgotar o rate limit
+    // WhatsApp — só para novo_match
     if (type === "novo_match") {
-      const waText = encodeURIComponent(
+      await sendWhatsApp(
         `🚨 PEDE DIRETO\n` +
-        `Novo pedido para: *${business.name}*\n` +
-        `📋 ${shortDesc}\n` +
-        `${requestCity ? `📍 ${requestCity}\n` : ""}` +
-        `👉 pededireto.pt/business-dashboard`
+          `Novo pedido para: *${business.name}*\n` +
+          `📋 ${shortDesc}\n` +
+          `${requestCity ? `📍 ${requestCity}\n` : ""}` +
+          `👉 pededireto.pt/business-dashboard`,
       );
-
-      const waUrl = `https://api.callmebot.com/whatsapp.php?phone=${CALLMEBOT_PHONE}&text=${waText}&apikey=${CALLMEBOT_APIKEY}`;
-
-      const waRes = await fetch(waUrl);
-      if (!waRes.ok) {
-        console.error("CallMeBot error:", await waRes.text());
-      } else {
-        console.log("WhatsApp alert sent");
-      }
     }
 
-    // ── 3. Email (só se tiver dono com email e for novo_match) ────────────
+    // Email — só novo_match com dono
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
     if (ownerUserId && RESEND_API_KEY && type === "novo_match") {
@@ -168,7 +176,6 @@ Deno.serve(async (req) => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
   } catch (error) {
     console.error("notify-business error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
