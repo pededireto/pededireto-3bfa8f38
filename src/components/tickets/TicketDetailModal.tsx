@@ -1,13 +1,20 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Send, FileText, UserCheck, X } from "lucide-react";
+import { Loader2, Send, FileText, UserCheck, ExternalLink, MapPin, Tag, AlertCircle } from "lucide-react";
 import { TicketStatusBadge, TicketPriorityBadge, CATEGORY_LABELS, DEPARTMENT_LABELS } from "./TicketStatusBadge";
-import { useTicketMessages, useSendMessage, useUpdateTicket, useTicketTemplates, useTicketHistory } from "@/hooks/useTickets";
+import {
+  useTicketMessages,
+  useSendMessage,
+  useUpdateTicket,
+  useTicketTemplates,
+  useTicketHistory,
+} from "@/hooks/useTickets";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -40,6 +47,13 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
   const publicMessages = messages.filter((m: any) => !m.is_internal_note);
   const internalMessages = messages.filter((m: any) => m.is_internal_note);
   const displayMessages = activeTab === "conversation" ? publicMessages : internalMessages;
+
+  // Contexto do pedido original (vem do JOIN na view support_tickets_with_context)
+  const hasRequestContext = !!ticket.request_id;
+  const requestDescription = ticket.request_description;
+  const requestCity = ticket.request_city;
+  const requestCategory = ticket.request_category;
+  const requestStatus = ticket.request_status;
 
   const handleSend = async () => {
     if (!messageText.trim()) return;
@@ -93,8 +107,12 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
             <div className="flex flex-wrap items-center gap-2 mt-1">
               <TicketStatusBadge status={ticket.status} />
               <TicketPriorityBadge priority={ticket.priority} />
-              <Badge variant="outline" className="text-xs">{CATEGORY_LABELS[ticket.category] || ticket.category}</Badge>
-              <Badge variant="outline" className="text-xs">{DEPARTMENT_LABELS[ticket.assigned_to_department] || ticket.assigned_to_department}</Badge>
+              <Badge variant="outline" className="text-xs">
+                {CATEGORY_LABELS[ticket.category] || ticket.category}
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                {DEPARTMENT_LABELS[ticket.assigned_to_department] || ticket.assigned_to_department}
+              </Badge>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -121,14 +139,16 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
         </div>
 
         <div className="flex flex-col md:flex-row h-[calc(90vh-140px)]">
-          {/* Main area */}
+          {/* ── Área principal ── */}
           <div className="flex-1 flex flex-col min-w-0">
             {/* Tabs */}
             <div className="flex border-b px-4">
               <button
                 onClick={() => setActiveTab("conversation")}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "conversation" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                  activeTab === "conversation"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Conversação ({publicMessages.length})
@@ -136,16 +156,18 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
               <button
                 onClick={() => setActiveTab("internal")}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "internal" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                  activeTab === "internal"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Notas Internas ({internalMessages.length})
               </button>
             </div>
 
-            {/* Messages */}
+            {/* Mensagens */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {/* Description as first message */}
+              {/* Descrição original */}
               <div className="flex justify-start">
                 <div className="max-w-[80%] rounded-lg p-3 bg-muted">
                   <p className="text-xs font-medium text-muted-foreground mb-1">Descrição original</p>
@@ -165,14 +187,14 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
                   const isOwn = msg.user_id === user?.id;
                   return (
                     <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[80%] rounded-lg p-3 ${
-                        isOwn
-                          ? "bg-primary/10 text-foreground"
-                          : "bg-muted text-foreground"
-                      }`}>
+                      <div
+                        className={`max-w-[80%] rounded-lg p-3 ${
+                          isOwn ? "bg-primary/10 text-foreground" : "bg-muted text-foreground"
+                        }`}
+                      >
                         <p className="text-xs font-medium text-muted-foreground mb-1">
                           {msg.user_role || "staff"}
-                          {msg.is_internal_note && " • 🔒 Nota interna"}
+                          {msg.is_internal_note && " · 🔒 Nota interna"}
                         </p>
                         <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -185,7 +207,7 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
               )}
             </div>
 
-            {/* Reply */}
+            {/* Resposta */}
             <div className="border-t p-3 space-y-2">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
@@ -232,22 +254,64 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
                     onCheckedChange={(v) => setIsInternalNote(!!v)}
                     disabled={activeTab === "internal"}
                   />
-                  <label htmlFor="internal-note" className="text-xs text-muted-foreground">Nota interna</label>
+                  <label htmlFor="internal-note" className="text-xs text-muted-foreground">
+                    Nota interna
+                  </label>
                 </div>
                 <Button onClick={handleSend} disabled={sendMessage.isPending || !messageText.trim()} size="sm">
-                  {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
+                  {sendMessage.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-1" />
+                  )}
                   Enviar
                 </Button>
               </div>
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* ── Painel lateral ── */}
           <div className="w-full md:w-72 border-t md:border-t-0 md:border-l overflow-y-auto p-4 space-y-4 bg-muted/30">
+            {/* Contexto do pedido original */}
+            {hasRequestContext && (
+              <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-destructive text-xs font-semibold">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  Pedido sem resposta
+                </div>
+                {requestDescription && <p className="text-xs text-foreground line-clamp-3">{requestDescription}</p>}
+                <div className="space-y-1">
+                  {requestCategory && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Tag className="h-3 w-3" /> {requestCategory}
+                    </div>
+                  )}
+                  {requestCity && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3" /> {requestCity}
+                    </div>
+                  )}
+                  {requestStatus && (
+                    <Badge variant="outline" className="text-xs">
+                      {requestStatus}
+                    </Badge>
+                  )}
+                </div>
+                <Link
+                  to={`/admin?tab=service-requests&request=${ticket.request_id}`}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Ver pedido completo
+                </Link>
+              </div>
+            )}
+
+            {/* Info do ticket */}
             <div className="space-y-3 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground">Negócio</p>
-                <p className="font-medium">{ticket.businesses?.name || "—"}</p>
+                <p className="font-medium">{ticket.businesses?.name || ticket.business_name || "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Criado em</p>
@@ -255,13 +319,17 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Primeira resposta</p>
-                <p>{ticket.first_response_at
-                  ? `${Math.round((new Date(ticket.first_response_at).getTime() - new Date(ticket.created_at).getTime()) / 60000)} min`
-                  : "Sem resposta"
-                }</p>
+                <p>
+                  {ticket.first_response_at
+                    ? `${Math.round(
+                        (new Date(ticket.first_response_at).getTime() - new Date(ticket.created_at).getTime()) / 60000,
+                      )} min`
+                    : "Sem resposta"}
+                </p>
               </div>
             </div>
 
+            {/* Histórico */}
             {history.length > 0 && (
               <Accordion type="single" collapsible>
                 <AccordionItem value="history">
@@ -272,7 +340,8 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
                         <div key={i} className="text-xs text-muted-foreground border-l-2 border-muted pl-2">
                           <p>{h.action_description || `${h.field_changed}: ${h.old_value} → ${h.new_value}`}</p>
                           <p className="text-[10px]">
-                            {h.changed_at && formatDistanceToNow(new Date(h.changed_at), { addSuffix: true, locale: pt })}
+                            {h.changed_at &&
+                              formatDistanceToNow(new Date(h.changed_at), { addSuffix: true, locale: pt })}
                           </p>
                         </div>
                       ))}
