@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.receive-email]
 verify_jwt = false
+
+[functions.notify-business]
+verify_jwt = false
