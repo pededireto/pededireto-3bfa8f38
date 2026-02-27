@@ -66,7 +66,7 @@ interface BusinessFileCardProps {
   business: BusinessWithCategory | null; // null = create mode (admin only)
   categories: Category[];
   isAdmin: boolean;
-  mode: "admin" | "owner";
+  mode?: "admin" | "owner";
   onSaved: () => void;
   onCancel: () => void;
 }
