@@ -15,20 +15,22 @@ interface OwnerBusinessUpdate {
   public_address?: string | null;
   cta_phone?: string | null;
   cta_email?: string | null;
-  cta_whatsapp?: string | null;
   cta_website?: string | null;
   schedule_weekdays?: string | null;
   schedule_weekend?: string | null;
+  // PRO
+  cta_whatsapp?: string | null;
   instagram_url?: string | null;
   facebook_url?: string | null;
   other_social_url?: string | null;
+  images?: string[] | null;
   // Visibilidade
   show_whatsapp?: boolean;
   show_schedule?: boolean;
   show_social?: boolean;
   show_gallery?: boolean;
   // Admin
-  is_visible?: boolean;
+  is_active?: boolean;
 }
 
 export const useUpdateBusinessOwner = () => {
