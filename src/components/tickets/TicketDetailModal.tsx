@@ -436,12 +436,15 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
                     {/* Filtro categoria */}
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Categoria</p>
-                      <Select value={filterCategory} onValueChange={setFilterCategory}>
+                      <Select
+                        value={filterCategory || "__all__"}
+                        onValueChange={(v) => setFilterCategory(v === "__all__" ? "" : v)}
+                      >
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue placeholder="Todas as categorias" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Todas</SelectItem>
+                          <SelectItem value="__all__">Todas as categorias</SelectItem>
                           {categories.map((c: any) => (
                             <SelectItem key={c.id} value={c.id}>
                               {c.name}
