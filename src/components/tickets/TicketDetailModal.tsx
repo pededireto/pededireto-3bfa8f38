@@ -64,18 +64,6 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
   const [forwardMessage, setForwardMessage] = useState("");
   const [forwarding, setForwarding] = useState(false);
 
-  if (!ticket) return null;
-
-  const publicMessages = messages.filter((m: any) => !m.is_internal_note);
-  const internalMessages = messages.filter((m: any) => m.is_internal_note);
-  const displayMessages = activeTab === "conversation" ? publicMessages : internalMessages;
-
-  const hasRequestContext = !!ticket.request_id;
-  const requestDescription = ticket.request_description;
-  const requestCity = ticket.request_city;
-  const requestCategory = ticket.request_category;
-  const requestStatus = ticket.request_status;
-
   // ── Query: categorias para o filtro ──
   const { data: categories = [] } = useQuery({
     queryKey: ["categories-list"],
@@ -98,6 +86,19 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
       return data || [];
     },
   });
+
+  // ── Guard após todos os hooks ──
+  if (!ticket) return null;
+
+  const publicMessages = messages.filter((m: any) => !m.is_internal_note);
+  const internalMessages = messages.filter((m: any) => m.is_internal_note);
+  const displayMessages = activeTab === "conversation" ? publicMessages : internalMessages;
+
+  const hasRequestContext = !!ticket.request_id;
+  const requestDescription = ticket.request_description;
+  const requestCity = ticket.request_city;
+  const requestCategory = ticket.request_category;
+  const requestStatus = ticket.request_status;
 
   // ── Enviar mensagem (tab Conversação → também vai para request_messages) ──
   const handleSend = async () => {
