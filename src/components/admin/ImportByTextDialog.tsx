@@ -12,6 +12,7 @@ import { FileText, Loader2, ArrowLeft, ArrowRight, Check, X } from "lucide-react
 
 interface ScrapedBusiness {
   name: string;
+  description: string | null;
   address: string | null;
   city: string | null;
   cta_phone: string | null;
@@ -19,7 +20,11 @@ interface ScrapedBusiness {
   cta_email: string | null;
   owner_email: string | null;
   owner_name: string | null;
+  owner_phone: string | null;
   cta_website: string | null;
+  nif: string | null;
+  instagram_url: string | null;
+  facebook_url: string | null;
   category_id: string | null;
   subcategory_id: string | null;
   category: string | null;
@@ -271,9 +276,13 @@ export default function ImportByTextDialog() {
                     <th className="text-left p-2 font-medium text-muted-foreground">Nome</th>
                     <th className="text-left p-2 font-medium text-muted-foreground">Cidade</th>
                     <th className="text-left p-2 font-medium text-muted-foreground">Telefone</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">WhatsApp</th>
                     <th className="text-left p-2 font-medium text-muted-foreground">Email</th>
                     <th className="text-left p-2 font-medium text-muted-foreground">Website</th>
                     <th className="text-left p-2 font-medium text-muted-foreground">Morada</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Responsável</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">Tel. Resp.</th>
+                    <th className="text-left p-2 font-medium text-muted-foreground">NIF</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -289,6 +298,7 @@ export default function ImportByTextDialog() {
                       <td className="p-2 font-medium">{b.name}</td>
                       <td className="p-2 text-muted-foreground">{b.city || "-"}</td>
                       <td className="p-2 text-muted-foreground">{b.cta_phone || "-"}</td>
+                      <td className="p-2 text-muted-foreground">{b.cta_whatsapp || "-"}</td>
                       <td className="p-2 text-muted-foreground">{b.cta_email || "-"}</td>
                       <td className="p-2 text-muted-foreground">
                         {b.cta_website ? (
@@ -304,6 +314,9 @@ export default function ImportByTextDialog() {
                         ) : "-"}
                       </td>
                       <td className="p-2 text-muted-foreground">{b.address || "-"}</td>
+                      <td className="p-2 text-muted-foreground">{b.owner_name || "-"}</td>
+                      <td className="p-2 text-muted-foreground">{b.owner_phone || "-"}</td>
+                      <td className="p-2 text-muted-foreground">{b.nif || "-"}</td>
                     </tr>
                   ))}
                 </tbody>
