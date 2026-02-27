@@ -231,15 +231,15 @@ const RequestDetailPage = () => {
     enabled: !!id && !!user,
     refetchInterval: 30000,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("support_tickets" as any)
+      const { data } = await (supabase as any)
+        .from("support_tickets")
         .select("id, status")
         .eq("request_id", id!)
         .not("status", "in", "(resolved,closed)")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      return data as { id: string; status: string } | null;
+      return (data || null) as { id: string; status: string } | null;
     },
   });
 
