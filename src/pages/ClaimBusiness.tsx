@@ -111,3 +111,4 @@ export const useBusinessClaimPermissions = (business: BusinessWithCategory | nul
     bannerVariant,
   };
 };
+export default ClaimBusiness;
