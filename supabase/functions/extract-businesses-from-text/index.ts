@@ -33,6 +33,8 @@ function clean(val: unknown): string | null {
 const COLUMN_MAP: Record<string, string> = {
   // name
   nome: "name", name: "name", negocio: "name", negócio: "name", business: "name", empresa: "name",
+  // description
+  descricao: "description", descrição: "description", description: "description", sobre: "description", about: "description",
   // city
   cidade: "city", city: "city", localidade: "city",
   // address
@@ -49,6 +51,11 @@ const COLUMN_MAP: Record<string, string> = {
   owner_name: "owner_name", responsavel: "owner_name", responsável: "owner_name", proprietario: "owner_name", proprietário: "owner_name", contact_name: "owner_name",
   owner_email: "owner_email", email_responsavel: "owner_email", email_responsável: "owner_email", "email responsavel": "owner_email", "email owner": "owner_email",
   owner_phone: "owner_phone", "telefone owner": "owner_phone", "telefone responsavel": "owner_phone",
+  // nif
+  nif: "nif", contribuinte: "nif", "n contribuinte": "nif",
+  // social
+  instagram: "instagram_url", instagram_url: "instagram_url",
+  facebook: "facebook_url", facebook_url: "facebook_url",
   // ids
   category_id: "category_id", subcategory_id: "subcategory_id",
   category: "category", categoria: "category",
@@ -57,9 +64,7 @@ const COLUMN_MAP: Record<string, string> = {
 
 function mapColumnName(raw: string): string | null {
   const key = raw.trim().toLowerCase().replace(/[_\s]+/g, " ").trim().replace(/ /g, "_");
-  // Try exact
   if (COLUMN_MAP[key]) return COLUMN_MAP[key];
-  // Try without underscores
   const noUnderscore = key.replace(/_/g, "");
   for (const [k, v] of Object.entries(COLUMN_MAP)) {
     if (k.replace(/[_\s]/g, "") === noUnderscore) return v;
@@ -74,7 +79,6 @@ function detectTabularFormat(text: string): { isTabular: boolean; delimiter: str
 
   const firstLine = lines[0];
 
-  // Detect delimiter: tab first, then semicolon, then multiple spaces
   let delimiter = "\t";
   let parts = firstLine.split(delimiter);
   if (parts.length < 3) {
@@ -82,25 +86,18 @@ function detectTabularFormat(text: string): { isTabular: boolean; delimiter: str
     parts = firstLine.split(delimiter);
   }
   if (parts.length < 3) {
-    // Try multiple spaces (4+)
     delimiter = "    ";
     parts = firstLine.split(/\s{4,}/);
   }
   if (parts.length < 3) return { isTabular: false, delimiter: "", headerLine: "", dataLines: [] };
 
-  // Check if header columns match known names
   let matches = 0;
   for (const part of parts) {
     if (mapColumnName(part) !== null) matches++;
   }
 
   if (matches >= 3) {
-    return {
-      isTabular: true,
-      delimiter,
-      headerLine: firstLine,
-      dataLines: lines.slice(1),
-    };
+    return { isTabular: true, delimiter, headerLine: firstLine, dataLines: lines.slice(1) };
   }
 
   return { isTabular: false, delimiter: "", headerLine: "", dataLines: [] };
@@ -114,12 +111,10 @@ function parseTabular(headerLine: string, dataLines: string[], delimiter: string
     : headerLine.split(delimiter).map(h => h.trim());
 
   const columnMapping: (string | null)[] = headers.map(h => mapColumnName(h));
-
   const businesses: any[] = [];
 
   for (const line of dataLines) {
     if (!line.trim()) continue;
-
     const values = isMultiSpace
       ? line.split(/\s{4,}/).map(v => v.trim())
       : line.split(delimiter).map(v => v.trim());
@@ -141,9 +136,26 @@ function parseTabular(headerLine: string, dataLines: string[], delimiter: string
   return businesses;
 }
 
+// ─── Social URL detection helpers ───
+function extractInstagram(val: string | null): string | null {
+  if (!val) return null;
+  // Full URL
+  if (val.includes("instagram.com/")) return val.startsWith("http") ? val : "https://" + val;
+  // Handle like @username
+  if (/^@?[a-zA-Z0-9._]{1,30}$/.test(val) && !val.includes(".")) {
+    return `https://instagram.com/${val.replace(/^@/, "")}`;
+  }
+  return null;
+}
+
+function extractFacebook(val: string | null): string | null {
+  if (!val) return null;
+  if (val.includes("facebook.com/") || val.includes("fb.com/")) return val.startsWith("http") ? val : "https://" + val;
+  return null;
+}
+
 // ─── Normalize a business object ───
 function normalizeBusiness(raw: any): any {
-  // Pick first non-invalid value from multiple possible field names
   function pickVal(...keys: string[]): string | null {
     for (const k of keys) {
       const v = raw[k];
@@ -152,14 +164,48 @@ function normalizeBusiness(raw: any): any {
     return null;
   }
 
+  // Collect all phone numbers
+  const allPhoneRaw = [raw.cta_phone, raw.phone, raw.telefone, raw.tel, raw.cta_whatsapp, raw.whatsapp, raw.wp, raw.owner_phone]
+    .map(v => (v && typeof v === "string" ? v.trim() : null))
+    .filter((v): v is string => !isInvalid(v));
+  const uniquePhones = [...new Set(allPhoneRaw)];
+
+  let cta_phone: string | null = null;
+  let cta_whatsapp: string | null = null;
+  let owner_phone: string | null = null;
+
+  if (uniquePhones.length === 1) {
+    // 1 phone → fill ALL phone fields
+    cta_phone = uniquePhones[0];
+    cta_whatsapp = uniquePhones[0];
+    owner_phone = uniquePhones[0];
+  } else if (uniquePhones.length === 2) {
+    cta_phone = uniquePhones[0];
+    owner_phone = uniquePhones[0];
+    cta_whatsapp = uniquePhones[1];
+  } else if (uniquePhones.length >= 3) {
+    cta_phone = uniquePhones[0];
+    cta_whatsapp = uniquePhones[1];
+    owner_phone = uniquePhones[2];
+  }
+
   // Collect all emails
   const allEmails = [raw.cta_email, raw.email, raw.owner_email, raw.email_negocio, raw.email_responsavel]
     .map(v => (v && typeof v === "string" ? v.trim().toLowerCase() : null))
     .filter((v): v is string => !isInvalid(v) && v!.includes("@"))
     .filter((v, i, arr) => arr.indexOf(v) === i);
 
-  const cta_email = allEmails[0] ?? null;
-  const owner_email = allEmails[1] ?? allEmails[0] ?? null;
+  let cta_email: string | null = null;
+  let owner_email: string | null = null;
+
+  if (allEmails.length === 1) {
+    // 1 email → fill BOTH email fields
+    cta_email = allEmails[0];
+    owner_email = allEmails[0];
+  } else if (allEmails.length >= 2) {
+    cta_email = allEmails[0];
+    owner_email = allEmails[1];
+  }
 
   // Website normalization
   const rawWebsite = pickVal("cta_website", "website", "site", "url", "web");
@@ -171,20 +217,25 @@ function normalizeBusiness(raw: any): any {
     }
   }
 
-  // Phone: keep format, just trim spaces
-  const phone = pickVal("cta_phone", "phone", "telefone", "tel");
-  const whatsapp = pickVal("cta_whatsapp", "whatsapp", "wp", "wpp");
+  // Social URLs
+  const instagram = pickVal("instagram_url", "instagram");
+  const facebook = pickVal("facebook_url", "facebook");
 
   return {
     name: pickVal("name", "nome", "negocio", "business"),
+    description: pickVal("description", "descricao", "descrição", "sobre", "about"),
     address: pickVal("address", "morada", "endereco", "endereço"),
     city: pickVal("city", "cidade", "localidade"),
-    cta_phone: phone,
-    cta_whatsapp: whatsapp,
+    cta_phone,
+    cta_whatsapp,
+    owner_phone,
     cta_email,
+    owner_email,
     cta_website: website,
     owner_name: pickVal("owner_name", "responsavel", "responsável", "proprietario", "contact_name"),
-    owner_email,
+    nif: pickVal("nif", "contribuinte"),
+    instagram_url: extractInstagram(instagram),
+    facebook_url: extractFacebook(facebook),
     category: pickVal("category", "categoria"),
     subcategory: pickVal("subcategory", "subcategoria"),
     category_id: raw.category_id ?? null,
@@ -211,8 +262,13 @@ REGRAS CRÍTICAS:
 - Se houver 2 telefones seguidos: primeiro = phone, segundo = whatsapp
 - Se houver 2 emails: primeiro = email (negócio), segundo = owner_email
 - Se só há 1 email, coloca em "email"
+- Se só há 1 telefone, coloca em "phone"
 - Telefones: mantém formato exato do texto
 - URLs com ".pt", ".com", ".eu" etc = website
+- URLs com "instagram.com" = instagram
+- URLs com "facebook.com" ou "fb.com" = facebook
+- Se encontrares NIF/contribuinte (9 dígitos PT), coloca em "nif"
+- Se encontrares descrição/sobre do negócio, coloca em "description"
 - Ignora palavras como "Ativo", "Inativo", "Gratuito", "Premium", "Não Contactado", datas
 ${categoryInstruction}
 - Máximo ${safeLimit} negócios
@@ -255,6 +311,7 @@ ${text.substring(0, 30000)}`;
                   type: "object",
                   properties: {
                     name: { type: "string", description: "Nome do negócio" },
+                    description: { type: "string", nullable: true, description: "Descrição/sobre do negócio" },
                     address: { type: "string", nullable: true },
                     city: { type: "string", nullable: true },
                     phone: { type: "string", nullable: true, description: "Telefone principal" },
@@ -262,7 +319,11 @@ ${text.substring(0, 30000)}`;
                     email: { type: "string", nullable: true, description: "Email do negócio" },
                     owner_email: { type: "string", nullable: true },
                     owner_name: { type: "string", nullable: true },
+                    owner_phone: { type: "string", nullable: true },
                     website: { type: "string", nullable: true },
+                    nif: { type: "string", nullable: true, description: "NIF/contribuinte (9 dígitos)" },
+                    instagram: { type: "string", nullable: true, description: "URL ou username Instagram" },
+                    facebook: { type: "string", nullable: true, description: "URL Facebook" },
                     category: { type: "string", nullable: true },
                     subcategory: { type: "string", nullable: true },
                   },
@@ -326,6 +387,11 @@ async function handleSaveMode(
         p_cta_whatsapp: safe.cta_whatsapp,
         p_cta_website: safe.cta_website,
         p_owner_name: safe.owner_name,
+        p_owner_phone: safe.owner_phone,
+        p_nif: safe.nif,
+        p_description: safe.description,
+        p_instagram_url: safe.instagram_url,
+        p_facebook_url: safe.facebook_url,
         p_category_id: categoryId ?? safe.category_id,
         p_subcategory_id: (subcategoryId && subcategoryId !== "none") ? subcategoryId : (safe.subcategory_id ?? null),
         p_registration_source: "import_text",
@@ -381,7 +447,7 @@ serve(async (req) => {
       businesses: preSelectedBusinesses,
     } = await req.json();
 
-    // ═══ SAVE MODE: No AI, no re-extraction ═══
+    // ═══ SAVE MODE ═══
     if (saveToDatabase && preSelectedBusinesses?.length > 0) {
       const results = await handleSaveMode(preSelectedBusinesses, categoryId, subcategoryId);
       return new Response(JSON.stringify({ businesses: preSelectedBusinesses, results }), {
@@ -400,13 +466,11 @@ serve(async (req) => {
     const safeLimit = Math.min(Math.max(1, Number(limit) || 100), 200);
     let rawBusinesses: any[];
 
-    // 1. Try tabular parsing first (deterministic, no AI)
     const tabular = detectTabularFormat(text);
     if (tabular.isTabular) {
       console.log("Detected tabular format — parsing without AI");
       rawBusinesses = parseTabular(tabular.headerLine, tabular.dataLines, tabular.delimiter);
     } else {
-      // 2. Fall back to AI extraction
       console.log(`AI extraction (${text.length} chars)`);
       try {
         rawBusinesses = await extractWithAI(text, safeLimit, categoryId, subcategoryId);
@@ -428,7 +492,6 @@ serve(async (req) => {
       }
     }
 
-    // 3. Normalize all businesses
     const businesses = rawBusinesses
       .slice(0, safeLimit)
       .map(b => normalizeBusiness(b))
