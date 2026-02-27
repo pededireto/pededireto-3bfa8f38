@@ -52,16 +52,12 @@ const WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira
 const WEEKEND = ["sábado", "domingo"];
 
 // Limite de imagens por plano
-const GALLERY_LIMITS: Record<string, number> = {
-  free: 0,
-  "1_month": 2, // START
-  "3_months": 2,
-  "6_months": 6, // PRO
-  "1_year": 6,
-};
-
-function getGalleryLimit(subscriptionPlan: string): number {
-  return GALLERY_LIMITS[subscriptionPlan] ?? 2;
+// is_premium = true  → PRO / PRO Pioneiro → 6 imagens
+// is_premium = false → START              → 2 imagens
+// free (sem plano)                        → 0 imagens
+function getGalleryLimit(subscriptionPlan: string, isPremium: boolean): number {
+  if (subscriptionPlan === "free" || !subscriptionPlan) return 0;
+  return isPremium ? 6 : 2;
 }
 
 function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string } {
@@ -201,7 +197,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   const [rawSchedulePaste, setRawSchedulePaste] = useState("");
   const [showPasteBox, setShowPasteBox] = useState(false);
 
-  const galleryLimit = getGalleryLimit(business?.subscription_plan ?? "free");
+  const galleryLimit = getGalleryLimit(business?.subscription_plan ?? "free", business?.is_premium ?? false);
 
   const [form, setForm] = useState({
     // Identidade
