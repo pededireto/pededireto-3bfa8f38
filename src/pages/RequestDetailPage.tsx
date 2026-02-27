@@ -225,6 +225,24 @@ const RequestDetailPage = () => {
     },
   });
 
+  // Query: ticket activo ligado a este pedido (para o banner dinâmico)
+  const { data: activeTicket } = useQuery({
+    queryKey: ["request-active-ticket", id],
+    enabled: !!id && !!user,
+    refetchInterval: 30000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("support_tickets" as any)
+        .select("id, status")
+        .eq("request_id", id!)
+        .not("status", "in", "(resolved,closed)")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data as { id: string; status: string } | null;
+    },
+  });
+
   // Realtime: mensagens
   useEffect(() => {
     if (!id) return;
@@ -232,7 +250,12 @@ const RequestDetailPage = () => {
       .channel(`consumer-request-messages-${id}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "request_messages", filter: `request_id=eq.${id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "request_messages",
+          filter: `request_id=eq.${id}`,
+        },
         () => {
           qc.invalidateQueries({ queryKey: ["request-messages", id] });
         },
@@ -250,9 +273,36 @@ const RequestDetailPage = () => {
       .channel(`consumer-request-matches-${id}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "request_business_matches", filter: `request_id=eq.${id}` },
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "request_business_matches",
+          filter: `request_id=eq.${id}`,
+        },
         () => {
           qc.invalidateQueries({ queryKey: ["request-matches-detail", id] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, qc]);
+
+  // Realtime: ticket (para o banner actualizar quando admin entra)
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`consumer-ticket-status-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "support_tickets",
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["request-active-ticket", id] });
         },
       )
       .subscribe();
@@ -378,7 +428,7 @@ const RequestDetailPage = () => {
       await markResolved();
       qc.invalidateQueries({ queryKey: ["request-ratings", id] });
     } catch {
-      toast({ title: "Erro ao guardar avaliacao", variant: "destructive" });
+      toast({ title: "Erro ao guardar avaliação", variant: "destructive" });
     } finally {
       setSubmittingRating(false);
     }
@@ -388,20 +438,21 @@ const RequestDetailPage = () => {
     setRatings((prev) => prev.map((r) => (r.matchId === matchId ? { ...r, [field]: value } : r)));
   };
 
-  // Pedir ajuda a equipa - usa RPC com SECURITY DEFINER para contornar RLS
+  // Pedir ajuda à equipa
   const handleSubmitHelp = async () => {
     if (!helpMessage.trim() || !id || !user) return;
     setSubmittingHelp(true);
     try {
       const { error: rpcError } = await supabase.rpc("create_consumer_support_ticket" as any, {
         p_title: `Pedido sem resposta: ${request?.description?.slice(0, 60) || "Sem descricao"}`,
-        p_description: `Pedido ID: ${id} | Categoria: ${request?.categories?.name || "N/A"}${request?.subcategories?.name ? ` > ${request.subcategories.name}` : ""} | Localizacao: ${request?.location_city || "N/A"} | Mensagem: ${helpMessage.trim()}`,
+        p_description: `Pedido ID: ${id} | Categoria: ${request?.categories?.name || "N/A"}${request?.subcategories?.name ? ` > ${request.subcategories.name}` : ""} | Localização: ${request?.location_city || "N/A"} | Mensagem: ${helpMessage.trim()}`,
         p_category: "request_reassignment",
         p_request_id: id,
       });
       if (rpcError) throw rpcError;
       setShowHelpModal(false);
       setHelpMessage("");
+      qc.invalidateQueries({ queryKey: ["request-active-ticket", id] });
       toast({
         title: "Pedido de ajuda enviado!",
         description: "A equipa Pede Direto vai analisar e responder em breve.",
@@ -427,7 +478,7 @@ const RequestDetailPage = () => {
       <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 container py-16 text-center">
-          <p className="text-muted-foreground mb-4">Pedido nao encontrado ou sem permissao de acesso.</p>
+          <p className="text-muted-foreground mb-4">Pedido não encontrado ou sem permissão de acesso.</p>
           <Button asChild variant="outline">
             <Link to="/dashboard">Voltar ao Dashboard</Link>
           </Button>
@@ -442,6 +493,18 @@ const RequestDetailPage = () => {
   const hasAcceptedMatch = matches.some((m) => m.status === "aceite");
   const allRefused = matches.length > 0 && matches.every((m) => m.status === "recusado" || m.status === "expirado");
 
+  // ── Estado do banner ──────────────────────────────────────────────────────
+  // "none"   → sem recusas ou pedido resolvido → não mostrar
+  // "red"    → todos recusaram, sem ticket activo → botão "Pedir Ajuda"
+  // "orange" → ticket aberto, aguarda resposta da equipa
+  // "green"  → admin entrou no caso (assigned / in_progress / waiting_response)
+  const bannerState = (() => {
+    if (isResolved || !allRefused) return "none";
+    if (!activeTicket) return "red";
+    if (["assigned", "in_progress", "waiting_response"].includes(activeTicket.status)) return "green";
+    return "orange";
+  })();
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -452,9 +515,9 @@ const RequestDetailPage = () => {
           <div className="bg-background rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
             <div className="text-center">
               <LifeBuoy className="h-10 w-10 text-primary mx-auto mb-2" />
-              <h2 className="text-xl font-bold">Pedir Ajuda a Equipa</h2>
+              <h2 className="text-xl font-bold">Pedir Ajuda à Equipa</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Explica o problema e a nossa equipa vai analisar e encontrar a melhor solucao para ti.
+                Explica o problema e a nossa equipa vai analisar e encontrar a melhor solução para ti.
               </p>
             </div>
             <div className="bg-muted/50 rounded-xl p-3 text-sm space-y-1">
@@ -468,7 +531,7 @@ const RequestDetailPage = () => {
               </p>
             </div>
             <Textarea
-              placeholder="Descreve o problema... Ex: O negocio contactado nao faz este tipo de servico. Preciso de encontrar alguem que faca websites."
+              placeholder="Descreve o problema... Ex: O negócio contactado não faz este tipo de serviço. Preciso de encontrar alguém que faça websites."
               className="resize-none min-h-[100px]"
               value={helpMessage}
               onChange={(e) => setHelpMessage(e.target.value)}
@@ -508,7 +571,7 @@ const RequestDetailPage = () => {
                   <p className="font-semibold text-sm">{r.businessName}</p>
                   <StarRating value={r.rating} onChange={(v) => updateRating(r.matchId, "rating", v)} />
                   <Textarea
-                    placeholder="Deixa um comentario (opcional)..."
+                    placeholder="Deixa um comentário (opcional)..."
                     className="resize-none min-h-[70px] text-sm"
                     value={r.comment}
                     onChange={(e) => updateRating(r.matchId, "comment", e.target.value)}
@@ -526,14 +589,14 @@ const RequestDetailPage = () => {
                 }}
                 disabled={submittingRating}
               >
-                Saltar avaliacao
+                Saltar avaliação
               </Button>
               <Button
                 className="flex-1"
                 onClick={handleSubmitRatings}
                 disabled={submittingRating || ratings.every((r) => r.rating === 0)}
               >
-                {submittingRating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar avaliacao"}
+                {submittingRating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar avaliação"}
               </Button>
             </div>
           </div>
@@ -563,7 +626,7 @@ const RequestDetailPage = () => {
                 ? request.description.length > 150
                   ? request.description.slice(0, 150) + "..."
                   : request.description
-                : "Sem descricao"}
+                : "Sem descrição"}
             </h1>
             <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-muted-foreground">
               {request.location_city && (
@@ -605,26 +668,60 @@ const RequestDetailPage = () => {
           </div>
         </div>
 
-        {/* Banner: Todos recusaram */}
-        {!isResolved && allRefused && (
-          <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+        {/* ── Banner dinâmico (🔴 vermelho / 🟠 laranja / 🟢 verde) ── */}
+        {bannerState !== "none" && (
+          <div
+            className={`mb-4 rounded-xl border p-4 flex items-start gap-3 transition-all ${
+              bannerState === "red"
+                ? "border-destructive/30 bg-destructive/5"
+                : bannerState === "orange"
+                  ? "border-orange-400/40 bg-orange-50/50 dark:bg-orange-950/20"
+                  : "border-green-500/40 bg-green-50/50 dark:bg-green-950/20"
+            }`}
+          >
+            <AlertCircle
+              className={`h-5 w-5 shrink-0 mt-0.5 ${
+                bannerState === "red"
+                  ? "text-destructive"
+                  : bannerState === "orange"
+                    ? "text-orange-500"
+                    : "text-green-600"
+              }`}
+            />
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-destructive">Nenhum profissional aceitou este pedido</p>
+              <p
+                className={`font-semibold text-sm ${
+                  bannerState === "red"
+                    ? "text-destructive"
+                    : bannerState === "orange"
+                      ? "text-orange-600 dark:text-orange-400"
+                      : "text-green-700 dark:text-green-400"
+                }`}
+              >
+                {bannerState === "red" && "Nenhum profissional aceitou este pedido"}
+                {bannerState === "orange" && "A equipa Pede Direto está a analisar o teu pedido"}
+                {bannerState === "green" && "A equipa Pede Direto está a tratar do teu pedido"}
+              </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Os negocios contactados recusaram ou nao responderam. A nossa equipa pode ajudar-te a encontrar a
-                solucao certa.
+                {bannerState === "red" &&
+                  "Os negócios contactados recusaram ou não responderam. A nossa equipa pode ajudar-te a encontrar a solução certa."}
+                {bannerState === "orange" && "Recebemos o teu pedido de ajuda e vamos responder em breve."}
+                {bannerState === "green" &&
+                  "Um membro da nossa equipa entrou no teu caso e está a trabalhar para encontrar a solução ideal."}
               </p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowHelpModal(true)}
-              className="shrink-0 flex items-center gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
-            >
-              <LifeBuoy className="h-3.5 w-3.5" />
-              Pedir Ajuda
-            </Button>
+            {/* Botão só aparece no estado vermelho */}
+            {bannerState === "red" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowHelpModal(true)}
+                className="shrink-0 flex items-center gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                <LifeBuoy className="h-3.5 w-3.5" />
+                Pedir Ajuda
+              </Button>
+            )}
           </div>
         )}
 
@@ -647,7 +744,7 @@ const RequestDetailPage = () => {
                   ) : messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <MessageCircle className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                      <p className="text-sm text-muted-foreground">Ainda nao ha mensagens neste pedido.</p>
+                      <p className="text-sm text-muted-foreground">Ainda não há mensagens neste pedido.</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Quando um profissional responder, a conversa aparece aqui.
                       </p>
@@ -664,7 +761,11 @@ const RequestDetailPage = () => {
                                 : "bg-muted text-foreground rounded-bl-sm"
                             }`}
                           >
-                            {!isConsumer && <p className="text-xs font-semibold mb-1 opacity-70">Profissional</p>}
+                            {!isConsumer && (
+                              <p className="text-xs font-semibold mb-1 opacity-70">
+                                {msg.sender_role === "admin" ? "Equipa Pede Direto" : "Profissional"}
+                              </p>
+                            )}
                             <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                             <p className={`text-xs mt-1 ${isConsumer ? "opacity-70 text-right" : "opacity-50"}`}>
                               {new Date(msg.created_at).toLocaleTimeString("pt-PT", {
@@ -672,10 +773,7 @@ const RequestDetailPage = () => {
                                 minute: "2-digit",
                               })}
                               {" / "}
-                              {new Date(msg.created_at).toLocaleDateString("pt-PT", {
-                                day: "2-digit",
-                                month: "short",
-                              })}
+                              {new Date(msg.created_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })}
                             </p>
                           </div>
                         </div>
@@ -722,7 +820,7 @@ const RequestDetailPage = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-primary" />
-                  Negocios Contactados
+                  Negócios Contactados
                   {matches.length > 0 && (
                     <span className="ml-auto text-xs font-normal text-muted-foreground">{matches.length}</span>
                   )}
@@ -730,7 +828,7 @@ const RequestDetailPage = () => {
               </CardHeader>
               <CardContent>
                 {matches.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">Ainda nenhum negocio foi contactado.</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">Ainda nenhum negócio foi contactado.</p>
                 ) : (
                   <div className="space-y-3">
                     {matches.map((match) => {
@@ -767,7 +865,7 @@ const RequestDetailPage = () => {
                             </span>
                             {match.price_quote && (
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                Orcamento: <span className="font-medium text-foreground">{match.price_quote}</span>
+                                Orçamento: <span className="font-medium text-foreground">{match.price_quote}</span>
                               </p>
                             )}
                             {isAccepted && isResolved && alreadyRated && (
