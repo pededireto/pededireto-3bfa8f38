@@ -2911,6 +2911,13 @@ export type Database = {
             foreignKeyName: "email_inbox_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
+            referencedRelation: "support_tickets_with_context"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
             referencedRelation: "tickets_sla_violations"
             referencedColumns: ["id"]
           },
@@ -4784,6 +4791,13 @@ export type Database = {
             foreignKeyName: "support_ticket_messages_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
+            referencedRelation: "support_tickets_with_context"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
             referencedRelation: "tickets_sla_violations"
             referencedColumns: ["id"]
           },
@@ -4810,6 +4824,7 @@ export type Database = {
           first_response_at: string | null
           id: string
           priority: string | null
+          request_id: string | null
           resolved_at: string | null
           status: string | null
           title: string
@@ -4828,6 +4843,7 @@ export type Database = {
           first_response_at?: string | null
           id?: string
           priority?: string | null
+          request_id?: string | null
           resolved_at?: string | null
           status?: string | null
           title: string
@@ -4846,6 +4862,7 @@ export type Database = {
           first_response_at?: string | null
           id?: string
           priority?: string | null
+          request_id?: string | null
           resolved_at?: string | null
           status?: string | null
           title?: string
@@ -4892,6 +4909,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -5010,6 +5034,13 @@ export type Database = {
             foreignKeyName: "ticket_audit_log_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
+            referencedRelation: "support_tickets_with_context"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_audit_log_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
             referencedRelation: "tickets_sla_violations"
             referencedColumns: ["id"]
           },
@@ -5021,6 +5052,7 @@ export type Database = {
           id: string
           is_read: boolean | null
           message: string | null
+          read_at: string | null
           ticket_id: string
           type: string | null
           user_id: string
@@ -5030,6 +5062,7 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message?: string | null
+          read_at?: string | null
           ticket_id: string
           type?: string | null
           user_id: string
@@ -5039,6 +5072,7 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message?: string | null
+          read_at?: string | null
           ticket_id?: string
           type?: string | null
           user_id?: string
@@ -5056,6 +5090,13 @@ export type Database = {
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_notifications_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets_with_context"
             referencedColumns: ["id"]
           },
           {
@@ -5356,6 +5397,13 @@ export type Database = {
       }
     }
     Views: {
+      admin_unread_alerts: {
+        Row: {
+          total_unread: number | null
+          unread_tickets: number | null
+        }
+        Relationships: []
+      }
       analytics_overview: {
         Row: {
           active_businesses: number | null
@@ -5608,6 +5656,83 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets_with_context: {
+        Row: {
+          assigned_to_department: string | null
+          assigned_to_user: string | null
+          business_id: string | null
+          business_name: string | null
+          category: string | null
+          closed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          created_by_role: string | null
+          description: string | null
+          first_response_at: string | null
+          id: string | null
+          priority: string | null
+          request_category: string | null
+          request_city: string | null
+          request_description: string | null
+          request_id: string | null
+          request_status: Database["public"]["Enums"]["request_status"] | null
+          resolved_at: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_assigned_to_user_fkey"
+            columns: ["assigned_to_user"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "onboarding_users_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_history_detailed: {
         Row: {
           change_type: string | null
@@ -5634,6 +5759,13 @@ export type Database = {
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_audit_log_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets_with_context"
             referencedColumns: ["id"]
           },
           {
@@ -5787,6 +5919,24 @@ export type Database = {
         Args: { days_to_keep?: number }
         Returns: number
       }
+      create_consumer_support_ticket:
+        | {
+            Args: {
+              p_category?: string
+              p_description: string
+              p_request_id?: string
+              p_title: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_category?: string
+              p_description: string
+              p_title: string
+            }
+            Returns: string
+          }
       create_revenue_event: {
         Args: {
           p_amount: number

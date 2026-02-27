@@ -29,6 +29,12 @@ interface OwnerBusinessUpdate {
   show_schedule?: boolean;
   show_social?: boolean;
   show_gallery?: boolean;
+  // Dados Legais
+  nif?: string | null;
+  address?: string | null;
+  owner_name?: string | null;
+  owner_phone?: string | null;
+  owner_email?: string | null;
   // Admin
   is_active?: boolean;
 }
