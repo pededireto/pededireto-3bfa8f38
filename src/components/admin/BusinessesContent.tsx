@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import {
   BusinessWithCategory,
   useCreateBusiness,
@@ -68,6 +68,8 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  // ✅ NOVO: estado para filtro de cidade
+  const [filterCity, setFilterCity] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importResults, setImportResults] = useState<{ success: number; errors: string[] } | null>(null);
@@ -77,6 +79,15 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   // BULK ACTIONS STATE
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
+  // ✅ NOVO: lista de cidades únicas extraída dos negócios (sem query extra à BD)
+  const availableCities = useMemo(() => {
+    const cities = businesses
+      .map((b) => b.city)
+      .filter((c): c is string => Boolean(c && c.trim()))
+      .map((c) => c.trim());
+    return [...new Set(cities)].sort((a, b) => a.localeCompare(b, "pt"));
+  }, [businesses]);
 
   const resetForm = () => {
     setEditingBusiness(null);
@@ -339,7 +350,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     toast({ title: "Exportação concluída", description: `${exportData.length} negócios exportados` });
   };
 
-  // ✅ ALTERAÇÃO 1: Pesquisa agora inclui cta_email e owner_email
+  // ✅ FILTRO: agora inclui filtro por cidade
   const filteredBusinesses = businesses.filter((b) => {
     const matchesSearch =
       !searchTerm ||
@@ -355,7 +366,9 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       (filterStatus === "inactive" && !b.is_active) ||
       (filterStatus === "featured" && b.is_featured) ||
       (filterStatus === "premium" && b.is_premium);
-    return matchesSearch && matchesCategory && matchesStatus;
+    // ✅ NOVO: filtro por cidade
+    const matchesCity = !filterCity || filterCity === "all" || b.city?.trim() === filterCity;
+    return matchesSearch && matchesCategory && matchesStatus && matchesCity;
   });
 
   return (
@@ -482,10 +495,9 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          {/* ✅ ALTERAÇÃO 2: Placeholder actualizado para indicar pesquisa por email */}
           <Input
             placeholder="Pesquisar por nome, cidade ou email..."
             value={searchTerm}
@@ -516,6 +528,20 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             <SelectItem value="inactive">Inativos</SelectItem>
             <SelectItem value="featured">Destaques</SelectItem>
             <SelectItem value="premium">Premium</SelectItem>
+          </SelectContent>
+        </Select>
+        {/* ✅ NOVO: Dropdown de filtro por cidade */}
+        <Select value={filterCity} onValueChange={setFilterCity}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Todas as cidades" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as cidades</SelectItem>
+            {availableCities.map((city) => (
+              <SelectItem key={city} value={city}>
+                {city}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
