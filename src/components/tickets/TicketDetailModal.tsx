@@ -1,12 +1,23 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Send, FileText, UserCheck, ExternalLink, MapPin, Tag, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  Send,
+  FileText,
+  UserCheck,
+  ExternalLink,
+  MapPin,
+  Tag,
+  AlertCircle,
+  Search,
+  Forward,
+} from "lucide-react";
 import { TicketStatusBadge, TicketPriorityBadge, CATEGORY_LABELS, DEPARTMENT_LABELS } from "./TicketStatusBadge";
 import {
   useTicketMessages,
@@ -17,6 +28,8 @@ import {
 } from "@/hooks/useTickets";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -31,6 +44,7 @@ interface TicketDetailModalProps {
 const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: TicketDetailModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const qc = useQueryClient();
   const { data: messages = [], isPending: loadingMessages } = useTicketMessages(ticket?.id || null);
   const { data: templates = [] } = useTicketTemplates();
   const { data: history = [] } = useTicketHistory(ticket?.id || null);
@@ -42,28 +56,73 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
   const [showTemplates, setShowTemplates] = useState(false);
   const [activeTab, setActiveTab] = useState<"conversation" | "internal">("conversation");
 
+  // ── Painel de reencaminhamento ──
+  const [showForward, setShowForward] = useState(false);
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterCity, setFilterCity] = useState("");
+  const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
+  const [forwardMessage, setForwardMessage] = useState("");
+  const [forwarding, setForwarding] = useState(false);
+
   if (!ticket) return null;
 
   const publicMessages = messages.filter((m: any) => !m.is_internal_note);
   const internalMessages = messages.filter((m: any) => m.is_internal_note);
   const displayMessages = activeTab === "conversation" ? publicMessages : internalMessages;
 
-  // Contexto do pedido original (vem do JOIN na view support_tickets_with_context)
   const hasRequestContext = !!ticket.request_id;
   const requestDescription = ticket.request_description;
   const requestCity = ticket.request_city;
   const requestCategory = ticket.request_category;
   const requestStatus = ticket.request_status;
 
+  // ── Query: categorias para o filtro ──
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("categories").select("id, name").order("name");
+      return data || [];
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
+  // ── Query: negócios filtrados para reencaminhamento ──
+  const { data: filteredBusinesses = [], isFetching: searchingBusinesses } = useQuery({
+    queryKey: ["forward-businesses", filterCategory, filterCity],
+    enabled: showForward && (!!filterCategory || !!filterCity),
+    queryFn: async () => {
+      let query = (supabase as any).from("businesses").select("id, name, city, slug").eq("is_active", true).limit(20);
+      if (filterCategory) query = query.eq("category_id", filterCategory);
+      if (filterCity) query = query.ilike("city", `%${filterCity}%`);
+      const { data } = await query;
+      return data || [];
+    },
+  });
+
+  // ── Enviar mensagem (tab Conversação → também vai para request_messages) ──
   const handleSend = async () => {
     if (!messageText.trim()) return;
+    const isInternal = activeTab === "internal" || isInternalNote;
     try {
+      // 1. Guardar no ticket
       await sendMessage.mutateAsync({
         ticketId: ticket.id,
         message: messageText.trim(),
-        isInternalNote: activeTab === "internal" || isInternalNote,
+        isInternalNote: isInternal,
         userRole,
       });
+
+      // 2. Se for mensagem pública E ticket ligado a pedido → também envia para request_messages
+      if (!isInternal && ticket.request_id) {
+        await (supabase as any).from("request_messages").insert({
+          request_id: ticket.request_id,
+          sender_id: user?.id,
+          sender_role: "admin",
+          message: messageText.trim(),
+        });
+        qc.invalidateQueries({ queryKey: ["request-messages", ticket.request_id] });
+      }
+
       setMessageText("");
       setIsInternalNote(false);
     } catch (err: any) {
@@ -92,9 +151,55 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
     }
   };
 
-  const handleSelectTemplate = (templateText: string) => {
-    setMessageText(templateText);
-    setShowTemplates(false);
+  // ── Reencaminhar pedido para novo negócio ──
+  const handleForward = async () => {
+    if (!selectedBusiness || !ticket.request_id) return;
+    setForwarding(true);
+    try {
+      // 1. Criar match para o novo negócio
+      const { error: matchError } = await (supabase as any).from("request_business_matches").insert({
+        request_id: ticket.request_id,
+        business_id: selectedBusiness.id,
+        status: "enviado",
+        sent_at: new Date().toISOString(),
+      });
+      if (matchError) throw matchError;
+
+      // 2. Enviar mensagem ao consumidor a informar
+      const msg =
+        forwardMessage.trim() ||
+        `A nossa equipa encontrou um novo profissional para o teu pedido: ${selectedBusiness.name}. Vais ser contactado em breve.`;
+
+      await (supabase as any).from("request_messages").insert({
+        request_id: ticket.request_id,
+        sender_id: user?.id,
+        sender_role: "admin",
+        message: msg,
+      });
+
+      // 3. Nota interna no ticket
+      await sendMessage.mutateAsync({
+        ticketId: ticket.id,
+        message: `✅ Pedido reencaminhado para: ${selectedBusiness.name} (${selectedBusiness.city || "—"})`,
+        isInternalNote: true,
+        userRole,
+      });
+
+      // 4. Atualizar status do ticket
+      await updateTicket.mutateAsync({ id: ticket.id, status: "in_progress" });
+
+      qc.invalidateQueries({ queryKey: ["request-matches-detail", ticket.request_id] });
+      qc.invalidateQueries({ queryKey: ["request-messages", ticket.request_id] });
+
+      setShowForward(false);
+      setSelectedBusiness(null);
+      setForwardMessage("");
+      toast({ title: `Pedido reencaminhado para ${selectedBusiness.name}!` });
+    } catch (err: any) {
+      toast({ title: "Erro ao reencaminhar", description: err.message, variant: "destructive" });
+    } finally {
+      setForwarding(false);
+    }
   };
 
   return (
@@ -141,7 +246,6 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
         <div className="flex flex-col md:flex-row h-[calc(90vh-140px)]">
           {/* ── Área principal ── */}
           <div className="flex-1 flex flex-col min-w-0">
-            {/* Tabs */}
             <div className="flex border-b px-4">
               <button
                 onClick={() => setActiveTab("conversation")}
@@ -165,9 +269,7 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
               </button>
             </div>
 
-            {/* Mensagens */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {/* Descrição original */}
               <div className="flex justify-start">
                 <div className="max-w-[80%] rounded-lg p-3 bg-muted">
                   <p className="text-xs font-medium text-muted-foreground mb-1">Descrição original</p>
@@ -188,9 +290,7 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
                   return (
                     <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
                       <div
-                        className={`max-w-[80%] rounded-lg p-3 ${
-                          isOwn ? "bg-primary/10 text-foreground" : "bg-muted text-foreground"
-                        }`}
+                        className={`max-w-[80%] rounded-lg p-3 ${isOwn ? "bg-primary/10 text-foreground" : "bg-muted text-foreground"}`}
                       >
                         <p className="text-xs font-medium text-muted-foreground mb-1">
                           {msg.user_role || "staff"}
@@ -209,43 +309,51 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
 
             {/* Resposta */}
             <div className="border-t p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-1 top-1"
-                    onClick={() => setShowTemplates(!showTemplates)}
-                  >
-                    <FileText className="h-4 w-4" /> Templates
-                  </Button>
-                  {showTemplates && (
-                    <div className="absolute bottom-full right-0 mb-1 w-72 bg-card border rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
-                      {templates.map((t: any) => (
-                        <button
-                          key={t.id}
-                          onClick={() => handleSelectTemplate(t.template_text)}
-                          className="w-full text-left p-2 hover:bg-muted text-sm border-b last:border-0"
-                        >
-                          <span className="font-medium">{t.title}</span>
-                          <p className="text-xs text-muted-foreground line-clamp-1">{t.template_text}</p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div className="relative">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-0"
+                  onClick={() => setShowTemplates(!showTemplates)}
+                >
+                  <FileText className="h-4 w-4" /> Templates
+                </Button>
+                {showTemplates && (
+                  <div className="absolute bottom-full right-0 mb-1 w-72 bg-card border rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
+                    {templates.map((t: any) => (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          setMessageText(t.template_text);
+                          setShowTemplates(false);
+                        }}
+                        className="w-full text-left p-2 hover:bg-muted text-sm border-b last:border-0"
+                      >
+                        <span className="font-medium">{t.title}</span>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{t.template_text}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <Textarea
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
-                placeholder={activeTab === "internal" ? "Escreve uma nota interna..." : "Escreve a resposta..."}
+                placeholder={
+                  activeTab === "internal" ? "Escreve uma nota interna..." : "Escreve a resposta para o cliente..."
+                }
                 rows={2}
                 className="resize-none"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSend();
                 }}
               />
+              {activeTab === "conversation" && ticket.request_id && (
+                <p className="text-xs text-primary/70">
+                  💬 Esta mensagem será também enviada ao consumidor no chat do pedido.
+                </p>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Checkbox
@@ -272,12 +380,11 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
 
           {/* ── Painel lateral ── */}
           <div className="w-full md:w-72 border-t md:border-t-0 md:border-l overflow-y-auto p-4 space-y-4 bg-muted/30">
-            {/* Contexto do pedido original */}
+            {/* Contexto do pedido */}
             {hasRequestContext && (
               <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 space-y-2">
                 <div className="flex items-center gap-1.5 text-destructive text-xs font-semibold">
-                  <AlertCircle className="h-3.5 w-3.5" />
-                  Pedido sem resposta
+                  <AlertCircle className="h-3.5 w-3.5" /> Pedido sem resposta
                 </div>
                 {requestDescription && <p className="text-xs text-foreground line-clamp-3">{requestDescription}</p>}
                 <div className="space-y-1">
@@ -297,13 +404,123 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
                     </Badge>
                   )}
                 </div>
-                <Link
-                  to={`/admin?tab=service-requests&request=${ticket.request_id}`}
+                {/* Ver pedido — abre em nova tab */}
+                <a
+                  href={`/admin?tab=service-requests&request=${ticket.request_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
                 >
-                  <ExternalLink className="h-3 w-3" />
-                  Ver pedido completo
-                </Link>
+                  <ExternalLink className="h-3 w-3" /> Ver pedido completo
+                </a>
+              </div>
+            )}
+
+            {/* Painel de reencaminhamento */}
+            {hasRequestContext && (
+              <div className="space-y-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full flex items-center gap-1.5"
+                  onClick={() => setShowForward(!showForward)}
+                >
+                  <Forward className="h-3.5 w-3.5" />
+                  {showForward ? "Fechar reencaminhamento" : "Reencaminhar pedido"}
+                </Button>
+
+                {showForward && (
+                  <div className="border rounded-lg p-3 space-y-3 bg-card">
+                    <p className="text-xs font-semibold text-foreground">Encontrar novo profissional</p>
+
+                    {/* Filtro categoria */}
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Categoria</p>
+                      <Select value={filterCategory} onValueChange={setFilterCategory}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Todas as categorias" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Todas</SelectItem>
+                          {categories.map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filtro cidade */}
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Cidade</p>
+                      <div className="relative">
+                        <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
+                        <Input
+                          value={filterCity}
+                          onChange={(e) => setFilterCity(e.target.value)}
+                          placeholder="Ex: Lisboa"
+                          className="h-8 text-xs pl-6"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Resultados */}
+                    {searchingBusinesses ? (
+                      <div className="flex justify-center py-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : filteredBusinesses.length > 0 ? (
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {filteredBusinesses.map((b: any) => (
+                          <button
+                            key={b.id}
+                            onClick={() => setSelectedBusiness(b)}
+                            className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${
+                              selectedBusiness?.id === b.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                            }`}
+                          >
+                            <span className="font-medium">{b.name}</span>
+                            {b.city && <span className="opacity-70"> · {b.city}</span>}
+                          </button>
+                        ))}
+                      </div>
+                    ) : filterCategory || filterCity ? (
+                      <p className="text-xs text-muted-foreground text-center py-2">Sem resultados</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground text-center py-2">Filtra para ver negócios</p>
+                    )}
+
+                    {/* Mensagem para o consumidor */}
+                    {selectedBusiness && (
+                      <div className="space-y-2 pt-1 border-t">
+                        <p className="text-xs text-muted-foreground">
+                          Mensagem ao consumidor <span className="text-primary">(opcional)</span>
+                        </p>
+                        <Textarea
+                          value={forwardMessage}
+                          onChange={(e) => setForwardMessage(e.target.value)}
+                          placeholder={`A nossa equipa encontrou ${selectedBusiness.name} para o teu pedido...`}
+                          className="resize-none text-xs min-h-[60px]"
+                          rows={3}
+                        />
+                        <Button
+                          size="sm"
+                          className="w-full flex items-center gap-1.5"
+                          onClick={handleForward}
+                          disabled={forwarding}
+                        >
+                          {forwarding ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Forward className="h-3.5 w-3.5" />
+                          )}
+                          Reencaminhar para {selectedBusiness.name}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -321,9 +538,7 @@ const TicketDetailModal = ({ ticket, open, onOpenChange, userRole = "cs" }: Tick
                 <p className="text-xs text-muted-foreground">Primeira resposta</p>
                 <p>
                   {ticket.first_response_at
-                    ? `${Math.round(
-                        (new Date(ticket.first_response_at).getTime() - new Date(ticket.created_at).getTime()) / 60000,
-                      )} min`
+                    ? `${Math.round((new Date(ticket.first_response_at).getTime() - new Date(ticket.created_at).getTime()) / 60000)} min`
                     : "Sem resposta"}
                 </p>
               </div>
