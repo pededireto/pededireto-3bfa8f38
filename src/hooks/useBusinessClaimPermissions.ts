@@ -4,7 +4,6 @@ import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 interface ClaimPermissions {
   claimStatus: string;
   isPending: boolean;
-  isPreview: boolean;
   isVerified: boolean;
   isRejected: boolean;
   isRevoked: boolean;
@@ -29,7 +28,6 @@ export const useBusinessClaimPermissions = (business: BusinessWithCategory | nul
     return {
       claimStatus: "unclaimed",
       isPending: false,
-      isPreview: false,
       isVerified: false,
       isRejected: false,
       isRevoked: false,
@@ -49,38 +47,31 @@ export const useBusinessClaimPermissions = (business: BusinessWithCategory | nul
 
   const claimStatus = (business as any).claim_status || "unclaimed";
   const isPending = claimStatus === "pending";
-  const isPreview = claimStatus === "preview";
   const isVerified = claimStatus === "verified";
   const isRejected = claimStatus === "rejected";
   const isRevoked = claimStatus === "revoked";
 
-  const hasPaidSubscription = business.subscription_status === "active" && business.subscription_plan !== "free";
-
+  const hasPaidSubscription =
+    business.subscription_status === "active" &&
+    business.subscription_plan !== "free";
   const isPaidPlan = hasPaidSubscription;
   const isFreePlan = !isPaidPlan;
 
   const allowAnalyticsPro = !!(planRule as any)?.allow_analytics_pro;
   const allowAnalyticsBasic = (planRule as any)?.allow_analytics_basic !== false;
 
-  // Preview: vê analytics básicos, não vê pedidos nem insights nem equipa
-  // Verified + free: igual ao preview mas pode editar campos avançados
-  // Verified + paid: acesso total conforme plan_rules
-  const canEditBasicFields = isPending || isPreview || isVerified;
+  const canEditBasicFields = isPending || isVerified;
   const canEditAdvancedFields = isVerified;
-  const canViewBasicAnalytics = (isPreview || isVerified) && allowAnalyticsBasic;
+  const canViewBasicAnalytics = isVerified && allowAnalyticsBasic;
   const canViewProAnalytics = isVerified && allowAnalyticsPro;
-  const canViewRequests = isVerified && isPaidPlan;
+  const canViewRequests = isVerified;
   const canViewTeam = isVerified;
-  const canViewInsights = isVerified && isPaidPlan;
+  const canViewInsights = isVerified;
 
   let bannerMessage: string | null = null;
   let bannerVariant: "warning" | "destructive" | "secondary" | null = null;
 
-  if (isPreview) {
-    bannerMessage =
-      "O teu negócio está em verificação. Podes explorar o painel — para receber pedidos ativa um plano pago.";
-    bannerVariant = "warning";
-  } else if (isPending) {
+  if (isPending) {
     bannerMessage = "O seu pedido está em validação. Aguarde contacto da nossa equipa comercial.";
     bannerVariant = "warning";
   } else if (isRejected) {
@@ -94,7 +85,6 @@ export const useBusinessClaimPermissions = (business: BusinessWithCategory | nul
   return {
     claimStatus,
     isPending,
-    isPreview,
     isVerified,
     isRejected,
     isRevoked,
