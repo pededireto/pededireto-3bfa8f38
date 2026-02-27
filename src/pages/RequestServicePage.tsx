@@ -39,7 +39,7 @@ const RequestServicePage = () => {
   });
 
   const profileIncomplete = profile && (!profile.full_name?.trim() || !profile.phone?.trim());
-  
+
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
   const [description, setDescription] = useState("");
@@ -100,7 +100,10 @@ const RequestServicePage = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Helmet>
         <title>Pedir Serviço | Pede Direto</title>
-        <meta name="description" content="Descreva o que precisa e receba respostas dos melhores profissionais perto de si. Rápido, direto e sem intermediários." />
+        <meta
+          name="description"
+          content="Descreva o que precisa e receba respostas dos melhores profissionais perto de si. Rápido, direto e sem intermediários."
+        />
         <link rel="canonical" href={`${BASE_URL}/pedir-servico`} />
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
@@ -108,7 +111,9 @@ const RequestServicePage = () => {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Pedir Serviço</h1>
-        <p className="text-muted-foreground mb-6">Descreva o que precisa e enviaremos o seu pedido aos melhores profissionais.</p>
+        <p className="text-muted-foreground mb-6">
+          Descreva o que precisa e enviaremos o seu pedido aos melhores profissionais.
+        </p>
 
         {profileLoading ? (
           <div className="flex justify-center py-12">
@@ -120,7 +125,8 @@ const RequestServicePage = () => {
               <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
               <h2 className="text-lg font-bold text-foreground">Complete o seu perfil primeiro</h2>
               <p className="text-muted-foreground max-w-md mx-auto">
-                Para garantir que os profissionais consigam contactá-lo, precisa de preencher o seu <strong>nome</strong> e <strong>telefone</strong> no perfil.
+                Para garantir que os profissionais consigam contactá-lo, precisa de preencher o seu{" "}
+                <strong>nome</strong> e <strong>telefone</strong> no perfil.
               </p>
               <Button asChild>
                 <Link to="/perfil">Completar Perfil</Link>
@@ -128,71 +134,89 @@ const RequestServicePage = () => {
             </CardContent>
           </Card>
         ) : (
-        <form onSubmit={handleSubmit} className="space-y-5 bg-card rounded-xl p-6 shadow-card">
-          <div>
-            <label className="block text-sm font-medium mb-1">Categoria *</label>
-            <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubcategoryId(""); }}>
-              <SelectTrigger><SelectValue placeholder="Selecione uma categoria" /></SelectTrigger>
-              <SelectContent>
-                {categories.filter(c => c.is_active).map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {subcategories.length > 0 && (
+          <form onSubmit={handleSubmit} className="space-y-5 bg-card rounded-xl p-6 shadow-card">
             <div>
-              <label className="block text-sm font-medium mb-1">Subcategoria</label>
-              <Select value={subcategoryId} onValueChange={setSubcategoryId}>
-                <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+              <label className="block text-sm font-medium mb-1">Categoria *</label>
+              <Select
+                value={categoryId}
+                onValueChange={(v) => {
+                  setCategoryId(v);
+                  setSubcategoryId("");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
                 <SelectContent>
-                  {subcategories.map((s: any) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
+                  {categories
+                    .filter((c) => c.is_active)
+                    .map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Descrição do pedido *</label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva o que precisa..."
-              rows={4}
-              required
-            />
-          </div>
+            {subcategories.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Subcategoria</label>
+                <Select value={subcategoryId} onValueChange={setSubcategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Opcional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subcategories.map((s: any) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Cidade</label>
-              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ex: Lisboa" />
+              <label className="block text-sm font-medium mb-1">Descrição do pedido *</label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descreva o que precisa..."
+                rows={4}
+                required
+              />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Cidade</label>
+                <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ex: Lisboa" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Código Postal</label>
+                <Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="Ex: 1000-001" />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium mb-1">Código Postal</label>
-              <Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="Ex: 1000-001" />
+              <label className="block text-sm font-medium mb-1">Urgência</label>
+              <Select value={urgency} onValueChange={setUrgency}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="urgent">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Urgência</label>
-            <Select value={urgency} onValueChange={setUrgency}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="urgent">Urgente</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Enviar Pedido
-          </Button>
-        </form>
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Enviar Pedido
+            </Button>
+          </form>
         )}
       </main>
       <Footer />
