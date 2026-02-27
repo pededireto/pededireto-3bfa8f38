@@ -27,6 +27,8 @@ interface OwnerBusinessUpdate {
   show_schedule?: boolean;
   show_social?: boolean;
   show_gallery?: boolean;
+  // Admin
+  is_visible?: boolean;
 }
 
 export const useUpdateBusinessOwner = () => {
@@ -34,13 +36,7 @@ export const useUpdateBusinessOwner = () => {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: OwnerBusinessUpdate) => {
-      const { data, error } = await supabase
-        .from("businesses")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from("businesses").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
