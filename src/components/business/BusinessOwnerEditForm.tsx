@@ -24,6 +24,9 @@ import {
   Wand2,
   Eye,
   EyeOff,
+  Plus,
+  Trash2,
+  Image,
 } from "lucide-react";
 
 // ── Parser de horários do Google ──────────────────────────
@@ -47,6 +50,19 @@ const DAY_MAP: Record<string, string> = {
 
 const WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira"];
 const WEEKEND = ["sábado", "domingo"];
+
+// Limite de imagens por plano
+const GALLERY_LIMITS: Record<string, number> = {
+  free: 0,
+  "1_month": 2, // START
+  "3_months": 2,
+  "6_months": 6, // PRO
+  "1_year": 6,
+};
+
+function getGalleryLimit(subscriptionPlan: string): number {
+  return GALLERY_LIMITS[subscriptionPlan] ?? 2;
+}
 
 function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string } {
   let text = raw.replace(/–|—/g, "-").replace(/\t/g, " ").trim();
@@ -185,6 +201,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   const [rawSchedulePaste, setRawSchedulePaste] = useState("");
   const [showPasteBox, setShowPasteBox] = useState(false);
 
+  const galleryLimit = getGalleryLimit(business?.subscription_plan ?? "free");
+
   const [form, setForm] = useState({
     // Identidade
     name: "",
@@ -211,9 +229,10 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     facebook_url: "",
     other_social_url: "",
     show_social: true,
+    images: [] as string[],
     show_gallery: true,
     // Admin
-    is_visible: true,
+    is_active: true,
   });
 
   useEffect(() => {
@@ -240,8 +259,9 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         facebook_url: business.facebook_url || "",
         other_social_url: business.other_social_url || "",
         show_social: business.show_social ?? true,
+        images: business.images || [],
         show_gallery: business.show_gallery ?? true,
-        is_visible: business.is_visible ?? true,
+        is_active: business.is_active ?? true,
       });
     }
   }, [business]);
@@ -265,6 +285,22 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     }));
   };
 
+  // ── Gestão de galeria ──────────────────────────────────────
+  const addImage = () => {
+    if (form.images.length >= galleryLimit) return;
+    setForm((prev) => ({ ...prev, images: [...prev.images, ""] }));
+  };
+
+  const updateImage = (index: number, url: string) => {
+    const updated = [...form.images];
+    updated[index] = url;
+    setForm((prev) => ({ ...prev, images: updated }));
+  };
+
+  const removeImage = (index: number) => {
+    setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
+  };
+
   const handleFormatSchedule = () => {
     if (!rawSchedulePaste.trim()) return;
     const { weekdays, weekend } = parseGoogleSchedule(rawSchedulePaste);
@@ -281,6 +317,9 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
       toast({ title: "Nome obrigatório", variant: "destructive" });
       return;
     }
+
+    // Filtra URLs vazias da galeria antes de guardar
+    const cleanImages = form.images.filter((url) => url.trim() !== "");
 
     try {
       await updateBusiness.mutateAsync({
@@ -306,8 +345,9 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         facebook_url: form.facebook_url || null,
         other_social_url: form.other_social_url || null,
         show_social: form.show_social,
+        images: cleanImages.length > 0 ? cleanImages : null,
         show_gallery: form.show_gallery,
-        is_visible: form.is_visible,
+        is_active: form.is_active,
       });
 
       if (form.subcategory_ids.length > 0) {
@@ -599,14 +639,82 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
           </div>
 
           {/* Galeria */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Galeria</Label>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Galeria</Label>
+                <span className="text-[11px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                  {form.images.filter((u) => u.trim()).length} / {galleryLimit} imagens
+                </span>
+              </div>
               <VisibilityBadge visible={form.show_gallery} onChange={(v) => set("show_gallery", v)} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              As imagens da galeria podem ser carregadas após a criação do negócio.
-            </p>
+
+            {galleryLimit === 0 ? (
+              <p className="text-xs text-muted-foreground bg-muted/30 rounded px-3 py-2">
+                O plano gratuito não inclui galeria. Faz upgrade para START ou PRO para adicionar imagens.
+              </p>
+            ) : (
+              <div className={`space-y-2 ${!form.show_gallery ? "opacity-50" : ""}`}>
+                {form.images.map((url, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="flex-shrink-0">
+                      {url.trim() ? (
+                        <img
+                          src={url}
+                          alt={`Imagem ${index + 1}`}
+                          className="h-10 w-10 object-cover rounded-md border border-border"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            (e.currentTarget.nextSibling as HTMLElement)?.style.setProperty("display", "flex");
+                          }}
+                        />
+                      ) : null}
+                      <div className="h-10 w-10 rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 items-center justify-center hidden">
+                        <Image className="h-4 w-4 text-muted-foreground/40" />
+                      </div>
+                    </div>
+                    <Input
+                      value={url}
+                      onChange={(e) => updateImage(index, e.target.value)}
+                      placeholder="https://... (URL da imagem)"
+                      className="flex-1 text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeImage(index)}
+                      className="flex-shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+
+                {form.images.length < galleryLimit && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addImage}
+                    className="w-full border-dashed text-xs mt-1"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Adicionar imagem
+                    {galleryLimit > 0 && (
+                      <span className="ml-1 text-muted-foreground">
+                        ({form.images.length}/{galleryLimit})
+                      </span>
+                    )}
+                  </Button>
+                )}
+
+                <p className="text-[11px] text-muted-foreground">
+                  Cola o URL de qualquer imagem pública — Instagram, Facebook, Supabase, ou outro site.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </Section>
@@ -629,31 +737,5 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     </form>
   );
 };
-
-// Componente auxiliar (definido fora para evitar re-render)
-function ScheduleInputStandalone({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
-      <Textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={2}
-        className="text-sm resize-none"
-      />
-    </div>
-  );
-}
 
 export default BusinessOwnerEditForm;
