@@ -12,6 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import CityAutocomplete from "@/components/ui/CityAutocomplete";
+import { supabase } from "@/integrations/supabase/client";
 import {
   ChevronDown,
   ChevronRight,
@@ -51,10 +53,6 @@ const DAY_MAP: Record<string, string> = {
 const WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira"];
 const WEEKEND = ["sábado", "domingo"];
 
-// Limite de imagens por plano
-// is_premium = true  → PRO / PRO Pioneiro → 6 imagens
-// is_premium = false → START              → 2 imagens
-// free (sem plano)                        → 0 imagens
 function getGalleryLimit(subscriptionPlan: string, isPremium: boolean): number {
   if (subscriptionPlan === "free" || !subscriptionPlan) return 0;
   return isPremium ? 6 : 2;
@@ -123,7 +121,6 @@ function ScheduleInput({
   );
 }
 
-// ── Toggle de visibilidade ──────────────────────────────────
 function VisibilityBadge({ visible, onChange }: { visible: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
@@ -200,11 +197,9 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   const galleryLimit = getGalleryLimit(business?.subscription_plan ?? "free", business?.is_premium ?? false);
 
   const [form, setForm] = useState({
-    // Identidade
     name: "",
     description: "",
     logo_url: "",
-    // Presença Pública
     category_id: "",
     subcategory_ids: [] as string[],
     city: "",
@@ -214,11 +209,9 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     cta_phone: "",
     cta_email: "",
     cta_website: "",
-    // Horários
     schedule_weekdays: "",
     schedule_weekend: "",
     show_schedule: true,
-    // Presença Digital (PRO)
     cta_whatsapp: "",
     show_whatsapp: true,
     instagram_url: "",
@@ -227,7 +220,6 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     show_social: true,
     images: [] as string[],
     show_gallery: true,
-    // Admin
     is_active: true,
   });
 
@@ -281,7 +273,6 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     }));
   };
 
-  // ── Gestão de galeria ──────────────────────────────────────
   const addImage = () => {
     if (form.images.length >= galleryLimit) return;
     setForm((prev) => ({ ...prev, images: [...prev.images, ""] }));
@@ -313,10 +304,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
       toast({ title: "Nome obrigatório", variant: "destructive" });
       return;
     }
-
-    // Filtra URLs vazias da galeria antes de guardar
     const cleanImages = form.images.filter((url) => url.trim() !== "");
-
     try {
       await updateBusiness.mutateAsync({
         id: business.id,
@@ -351,6 +339,13 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
           businessId: business.id,
           subcategoryIds: form.subcategory_ids,
         });
+      }
+
+      // Actualizar tabela de cidades canónicas
+      if (form.city.trim()) {
+        await (supabase as any)
+          .from("cities")
+          .upsert({ name: form.city.trim() }, { onConflict: "name", ignoreDuplicates: true });
       }
 
       toast({ title: "✅ Negócio atualizado com sucesso!" });
@@ -398,7 +393,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         </div>
       </Section>
 
-      {/* 2. Presença Pública — Gratuito + START */}
+      {/* 2. Presença Pública */}
       <Section title="Presença Pública" icon={Globe} badge="Gratuito · START">
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -453,9 +448,10 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* ── Campo Cidade com autocomplete ── */}
             <div className="space-y-2">
               <Label>Cidade</Label>
-              <Input value={form.city} onChange={(e) => set("city", e.target.value)} />
+              <CityAutocomplete value={form.city} onChange={(v) => set("city", v)} placeholder="Ex: Lisboa" />
             </div>
             <div className="space-y-2">
               <Label>Zona / Região</Label>
@@ -499,7 +495,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         </div>
       </Section>
 
-      {/* 3. Horários — Gratuito + START */}
+      {/* 3. Horários */}
       <Section title="Horários" icon={Clock} defaultOpen={false} badge="Gratuito · START">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -571,10 +567,9 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         </div>
       </Section>
 
-      {/* 4. Presença Digital — PRO */}
+      {/* 4. Presença Digital */}
       <Section title="Presença Digital" icon={Share2} defaultOpen={false} badge="PRO">
         <div className="space-y-6">
-          {/* WhatsApp */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>WhatsApp</Label>
@@ -593,7 +588,6 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
             )}
           </div>
 
-          {/* Redes Sociais */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">Redes Sociais</Label>
@@ -634,7 +628,6 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
             </div>
           </div>
 
-          {/* Galeria */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -687,7 +680,6 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
                     </Button>
                   </div>
                 ))}
-
                 {form.images.length < galleryLimit && (
                   <Button
                     type="button"
@@ -705,12 +697,26 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
                     )}
                   </Button>
                 )}
-
                 <p className="text-[11px] text-muted-foreground">
                   Cola o URL de qualquer imagem pública — Instagram, Facebook, Supabase, ou outro site.
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      </Section>
+
+      {/* 5. Administração */}
+      <Section title="Administração" icon={Building2} defaultOpen={false}>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div>
+              <p className="text-sm font-medium">Negócio activo</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Quando desactivado, o negócio não aparece nas pesquisas nem recebe pedidos.
+              </p>
+            </div>
+            <Switch checked={form.is_active} onCheckedChange={(v) => set("is_active", v)} />
           </div>
         </div>
       </Section>
