@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
 import { useSubcategory, useSubcategories } from "@/hooks/useSubcategories";
 import { useCategory } from "@/hooks/useCategories";
-import { usePublicBusinesses } from "@/hooks/usePublicBusinesses"; // ← era: useBusinesses de useBusinesses
+import { useBusinesses } from "@/hooks/useBusinesses";
 import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -23,9 +23,7 @@ const SubcategoryPage = () => {
   const { data: category } = useCategory(categorySlug);
   const { data: allSubcategories = [] } = useSubcategories(category?.id);
 
-  // ← usePublicBusinesses: usa a view businesses_public que já aplica
-  //   is_active (consentimento) + regras de plano (whatsapp só PRO, etc.)
-  const { data: allBusinesses = [], isLoading: businessesLoading } = usePublicBusinesses(
+  const { data: allBusinesses = [], isLoading: businessesLoading } = useBusinesses(
     undefined,
     cityFilter,
     subcategory?.id,
@@ -76,7 +74,9 @@ const SubcategoryPage = () => {
      SEO DINÂMICO
   =========================== */
 
-  const locationLabel = cityFilter.trim() ? `em ${cityFilter.trim()}` : "em Portugal";
+  const locationLabel = cityFilter.trim()
+    ? `em ${cityFilter.trim()}`
+    : "em Portugal";
 
   const pageTitle = `${subcategory.name} ${locationLabel} | ${category?.name || "Pede Direto"}`;
 
@@ -123,7 +123,9 @@ const SubcategoryPage = () => {
         <meta name="twitter:description" content={pageDescription} />
         <meta name="twitter:image" content={pageImage} />
 
-        <script type="application/ld+json">{JSON.stringify(schemaData)}</script>
+        <script type="application/ld+json">
+          {JSON.stringify(schemaData)}
+        </script>
       </Helmet>
 
       <Header />
