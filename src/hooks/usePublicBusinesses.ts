@@ -33,19 +33,14 @@ export interface PublicBusiness {
   is_premium: boolean;
   premium_level: string | null;
   display_order: number;
-  // Calculados pela view
   plan_level: "free" | "start" | "pro";
   badge: "START" | "PRO" | null;
-  // Contactos básicos (todos os planos)
   cta_phone: string | null;
   cta_email: string | null;
   cta_website: string | null;
-  // Horários (todos os planos, respeita show_schedule do owner)
   schedule_weekdays: string | null;
   schedule_weekend: string | null;
-  // Galeria (START: 2 | PRO: 6 | Gratuito: null, respeita show_gallery)
   images: string[] | null;
-  // PRO apenas (null se não for PRO ou se owner ocultou)
   cta_whatsapp: string | null;
   instagram_url: string | null;
   facebook_url: string | null;
@@ -66,7 +61,6 @@ export interface PublicBusinessWithCategory extends PublicBusiness {
   } | null;
 }
 
-// Join às categorias a partir da view
 const PUBLIC_SELECT = `
   *,
   categories (
@@ -86,15 +80,10 @@ const PUBLIC_SELECT = `
 // Hook: listagem pública (página de categoria)
 // ─────────────────────────────────────────────
 
-export const usePublicBusinesses = (
-  categoryId?: string,
-  city?: string,
-  subcategoryId?: string,
-) => {
+export const usePublicBusinesses = (categoryId?: string, city?: string, subcategoryId?: string) => {
   return useQuery({
     queryKey: ["public-businesses", categoryId, city, subcategoryId],
     queryFn: async () => {
-      // Filtro por subcategoria via junction table
       if (subcategoryId) {
         const { data: junctionData, error: jError } = await supabase
           .from("business_subcategories")
@@ -106,7 +95,7 @@ export const usePublicBusinesses = (
 
         const businessIds = junctionData.map((j) => j.business_id);
 
-        let query = supabase
+        let query = (supabase as any)
           .from("businesses_public")
           .select(PUBLIC_SELECT)
           .in("id", businessIds)
@@ -122,8 +111,7 @@ export const usePublicBusinesses = (
         return data as unknown as PublicBusinessWithCategory[];
       }
 
-      // Listagem geral
-      let query = supabase
+      let query = (supabase as any)
         .from("businesses_public")
         .select(PUBLIC_SELECT)
         .order("is_featured", { ascending: false })
@@ -150,7 +138,7 @@ export const usePublicBusiness = (slug: string | undefined) => {
     queryFn: async () => {
       if (!slug) return null;
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("businesses_public")
         .select(PUBLIC_SELECT)
         .eq("slug", slug)
@@ -171,7 +159,7 @@ export const usePublicFeaturedBusinesses = (categoryId?: string) => {
   return useQuery({
     queryKey: ["public-businesses", "featured", categoryId],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("businesses_public")
         .select(PUBLIC_SELECT)
         .eq("is_featured", true)
@@ -180,7 +168,6 @@ export const usePublicFeaturedBusinesses = (categoryId?: string) => {
 
       if (categoryId) query = query.eq("category_id", categoryId);
 
-      // Excluir SUPER (aparecem noutra secção)
       query = query.or("premium_level.is.null,premium_level.neq.SUPER");
 
       const { data, error } = await query;
