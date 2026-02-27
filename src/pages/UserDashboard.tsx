@@ -28,6 +28,8 @@ import {
   MessageCircle,
   Bell,
   ArrowRight,
+  Store,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -51,11 +53,9 @@ const UserDashboard = () => {
   const deleteSearch = useDeleteSavedSearch();
   const toggleFavorite = useToggleFavorite();
 
-  // Buscar meta-dados (respostas + não lidas) para todos os pedidos de uma vez
   const requestIds = myRequests.map((r: any) => r.id);
   const { data: requestMeta = {} } = useConsumerRequestsMeta(requestIds);
 
-  // Contar total de não lidas para o badge do separador
   const totalUnread = Object.values(requestMeta).filter((m: any) => m.hasUnread).length;
 
   const { data: profile } = useQuery({
@@ -72,6 +72,21 @@ const UserDashboard = () => {
     enabled: !!user,
   });
 
+  // Buscar nome do negócio para mostrar no banner
+  const { data: businessInfo } = useQuery({
+    queryKey: ["business-name", membership?.business_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("name, slug")
+        .eq("id", membership!.business_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!membership?.business_id,
+  });
+
   const profileIncomplete = profile && (!profile.full_name?.trim() || !profile.phone?.trim());
 
   useEffect(() => {
@@ -80,10 +95,10 @@ const UserDashboard = () => {
       navigate("/login");
     } else if (isAdmin) {
       navigate("/admin");
-    } else if (membership?.business_id) {
-      navigate("/business-dashboard");
     }
-  }, [user, isAdmin, authLoading, membershipLoading, membership, navigate]);
+    // ✅ REMOVIDO: redirect automático para /business-dashboard
+    // O utilizador pode ter os dois perfis e deve poder escolher
+  }, [user, isAdmin, authLoading, membershipLoading, navigate]);
 
   if (authLoading || membershipLoading) {
     return (
@@ -121,6 +136,32 @@ const UserDashboard = () => {
           <h1 className="text-3xl font-bold text-foreground">A Minha Conta</h1>
           <p className="text-muted-foreground mt-1">{user.email}</p>
         </div>
+
+        {/* ── Banner: Tens também um negócio registado ─────────────────── */}
+        {membership?.business_id && (
+          <Card className="mb-6 border-primary/40 bg-primary/5 dark:bg-primary/10">
+            <CardContent className="py-4 px-6">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/15 rounded-full p-2.5">
+                    <Store className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Tens um negócio registado no Pede Direto</p>
+                    {businessInfo?.name && <p className="text-xs text-muted-foreground mt-0.5">{businessInfo.name}</p>}
+                  </div>
+                </div>
+                <Button asChild size="sm" className="gap-2 flex-shrink-0">
+                  <Link to="/business-dashboard">
+                    <Store className="h-4 w-4" />
+                    Ir para o Painel do Negócio
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Profile Card */}
         {profile && (
@@ -194,7 +235,6 @@ const UserDashboard = () => {
 
         <Tabs defaultValue="requests" className="w-full">
           <TabsList className="mb-6">
-            {/* Badge de não lidas no separador */}
             <TabsTrigger value="requests" className="gap-2">
               <ClipboardList className="h-4 w-4" />
               Os Meus Pedidos
@@ -244,7 +284,6 @@ const UserDashboard = () => {
                       className={`transition-colors ${meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : ""}`}
                     >
                       <CardContent className="py-4 px-6 space-y-3">
-                        {/* Linha 1 — categoria + badge de estado */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-primary uppercase tracking-wide">
@@ -262,7 +301,6 @@ const UserDashboard = () => {
                           <Badge variant={cfg.variant}>{cfg.label}</Badge>
                         </div>
 
-                        {/* Linha 2 — localização + data + indicadores */}
                         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           {req.location_city && (
                             <span className="flex items-center gap-1">
@@ -280,16 +318,12 @@ const UserDashboard = () => {
                               year: "numeric",
                             })}
                           </span>
-
-                          {/* Contador de respostas */}
                           {meta && meta.responses > 0 && (
                             <span className="flex items-center gap-1 text-foreground font-medium">
                               <MessageCircle className="h-3.5 w-3.5 text-primary" />
                               {meta.responses} {meta.responses === 1 ? "resposta" : "respostas"}
                             </span>
                           )}
-
-                          {/* Indicador de mensagem não lida */}
                           {meta?.hasUnread && (
                             <span className="flex items-center gap-1 text-primary font-semibold animate-pulse">
                               <Bell className="h-3.5 w-3.5" />
@@ -298,7 +332,6 @@ const UserDashboard = () => {
                           )}
                         </div>
 
-                        {/* Linha 3 — botão Ver Conversa */}
                         <div className="flex justify-end pt-1">
                           <Button asChild size="sm" variant={meta?.hasUnread ? "default" : "outline"}>
                             <Link to={`/pedido/${req.id}`} className="flex items-center gap-1.5">
