@@ -139,11 +139,13 @@ function Section({
   icon: Icon,
   defaultOpen = true,
   children,
+  badge,
 }: {
   title: string;
   icon: React.ElementType;
   defaultOpen?: boolean;
   children: React.ReactNode;
+  badge?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -160,6 +162,11 @@ function Section({
           )}
           <Icon className="h-4 w-4 text-primary" />
           <span className="font-semibold text-sm">{title}</span>
+          {badge && (
+            <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+              {badge}
+            </span>
+          )}
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="px-1 pt-4 pb-2">{children}</CollapsibleContent>
@@ -179,9 +186,11 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   const [showPasteBox, setShowPasteBox] = useState(false);
 
   const [form, setForm] = useState({
+    // Identidade
     name: "",
     description: "",
     logo_url: "",
+    // Presença Pública
     category_id: "",
     subcategory_ids: [] as string[],
     city: "",
@@ -190,18 +199,21 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     public_address: "",
     cta_phone: "",
     cta_email: "",
-    cta_whatsapp: "",
     cta_website: "",
+    // Horários
     schedule_weekdays: "",
     schedule_weekend: "",
+    show_schedule: true,
+    // Presença Digital (PRO)
+    cta_whatsapp: "",
+    show_whatsapp: true,
     instagram_url: "",
     facebook_url: "",
     other_social_url: "",
-    // Visibilidade
-    show_whatsapp: true,
-    show_schedule: true,
     show_social: true,
     show_gallery: true,
+    // Admin
+    is_visible: true,
   });
 
   useEffect(() => {
@@ -218,18 +230,18 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         public_address: business.public_address || "",
         cta_phone: business.cta_phone || "",
         cta_email: business.cta_email || "",
-        cta_whatsapp: business.cta_whatsapp || "",
         cta_website: business.cta_website || "",
         schedule_weekdays: business.schedule_weekdays || "",
         schedule_weekend: business.schedule_weekend || "",
+        show_schedule: business.show_schedule ?? true,
+        cta_whatsapp: business.cta_whatsapp || "",
+        show_whatsapp: business.show_whatsapp ?? true,
         instagram_url: business.instagram_url || "",
         facebook_url: business.facebook_url || "",
         other_social_url: business.other_social_url || "",
-        // Visibilidade — default true se null (negócios antigos)
-        show_whatsapp: business.show_whatsapp ?? true,
-        show_schedule: business.show_schedule ?? true,
         show_social: business.show_social ?? true,
         show_gallery: business.show_gallery ?? true,
+        is_visible: business.is_visible ?? true,
       });
     }
   }, [business]);
@@ -284,18 +296,18 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         public_address: form.public_address || null,
         cta_phone: form.cta_phone || null,
         cta_email: form.cta_email || null,
-        cta_whatsapp: form.cta_whatsapp || null,
         cta_website: form.cta_website || null,
         schedule_weekdays: form.schedule_weekdays || null,
         schedule_weekend: form.schedule_weekend || null,
+        show_schedule: form.show_schedule,
+        cta_whatsapp: form.cta_whatsapp || null,
+        show_whatsapp: form.show_whatsapp,
         instagram_url: form.instagram_url || null,
         facebook_url: form.facebook_url || null,
         other_social_url: form.other_social_url || null,
-        // Visibilidade
-        show_whatsapp: form.show_whatsapp,
-        show_schedule: form.show_schedule,
         show_social: form.show_social,
         show_gallery: form.show_gallery,
+        is_visible: form.is_visible,
       });
 
       if (form.subcategory_ids.length > 0) {
@@ -350,8 +362,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         </div>
       </Section>
 
-      {/* 2. Presença Pública */}
-      <Section title="Presença Pública" icon={Globe}>
+      {/* 2. Presença Pública — Gratuito + START */}
+      <Section title="Presença Pública" icon={Globe} badge="Gratuito · START">
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -440,84 +452,19 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
             </div>
           </div>
 
-          {/* WhatsApp com toggle de visibilidade */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>WhatsApp</Label>
-                <VisibilityBadge visible={form.show_whatsapp} onChange={(v) => set("show_whatsapp", v)} />
-              </div>
-              <Input
-                value={form.cta_whatsapp}
-                onChange={(e) => set("cta_whatsapp", e.target.value)}
-                placeholder="+351 900 000 000"
-                className={!form.show_whatsapp ? "opacity-50" : ""}
-              />
-              {!form.show_whatsapp && (
-                <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                  <EyeOff className="h-3 w-3" /> Número guardado mas não visível ao público
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Website</Label>
-              <Input
-                value={form.cta_website}
-                onChange={(e) => set("cta_website", e.target.value)}
-                placeholder="https://..."
-              />
-            </div>
+          <div className="space-y-2">
+            <Label>Website</Label>
+            <Input
+              value={form.cta_website}
+              onChange={(e) => set("cta_website", e.target.value)}
+              placeholder="https://..."
+            />
           </div>
         </div>
       </Section>
 
-      {/* 3. Presença Digital */}
-      <Section title="Presença Digital" icon={Share2} defaultOpen={false}>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Links para as tuas redes sociais.</p>
-            <VisibilityBadge visible={form.show_social} onChange={(v) => set("show_social", v)} />
-          </div>
-
-          {!form.show_social && (
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1 bg-muted/30 rounded px-3 py-2">
-              <EyeOff className="h-3 w-3" /> Redes sociais guardadas mas não visíveis ao público
-            </p>
-          )}
-
-          <div className={`space-y-4 ${!form.show_social ? "opacity-50" : ""}`}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Instagram</Label>
-                <Input
-                  value={form.instagram_url}
-                  onChange={(e) => set("instagram_url", e.target.value)}
-                  placeholder="https://instagram.com/..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Facebook</Label>
-                <Input
-                  value={form.facebook_url}
-                  onChange={(e) => set("facebook_url", e.target.value)}
-                  placeholder="https://facebook.com/..."
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Outra rede social</Label>
-              <Input
-                value={form.other_social_url}
-                onChange={(e) => set("other_social_url", e.target.value)}
-                placeholder="LinkedIn, TikTok, YouTube..."
-              />
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* 4. Horários */}
-      <Section title="Horários" icon={Clock} defaultOpen={false}>
+      {/* 3. Horários — Gratuito + START */}
+      <Section title="Horários" icon={Clock} defaultOpen={false} badge="Gratuito · START">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Podes copiar o horário diretamente do Google e colar aqui.</p>
@@ -584,6 +531,82 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
               onChange={(v) => set("schedule_weekend", v)}
               placeholder="Ex: sábado 10:00-14:00  domingo Encerrado"
             />
+          </div>
+        </div>
+      </Section>
+
+      {/* 4. Presença Digital — PRO */}
+      <Section title="Presença Digital" icon={Share2} defaultOpen={false} badge="PRO">
+        <div className="space-y-6">
+          {/* WhatsApp */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>WhatsApp</Label>
+              <VisibilityBadge visible={form.show_whatsapp} onChange={(v) => set("show_whatsapp", v)} />
+            </div>
+            <Input
+              value={form.cta_whatsapp}
+              onChange={(e) => set("cta_whatsapp", e.target.value)}
+              placeholder="+351 900 000 000"
+              className={!form.show_whatsapp ? "opacity-50" : ""}
+            />
+            {!form.show_whatsapp && (
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                <EyeOff className="h-3 w-3" /> Número guardado mas não visível ao público
+              </p>
+            )}
+          </div>
+
+          {/* Redes Sociais */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Redes Sociais</Label>
+              <VisibilityBadge visible={form.show_social} onChange={(v) => set("show_social", v)} />
+            </div>
+            {!form.show_social && (
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1 bg-muted/30 rounded px-3 py-2">
+                <EyeOff className="h-3 w-3" /> Redes sociais guardadas mas não visíveis ao público
+              </p>
+            )}
+            <div className={`space-y-4 ${!form.show_social ? "opacity-50" : ""}`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Instagram</Label>
+                  <Input
+                    value={form.instagram_url}
+                    onChange={(e) => set("instagram_url", e.target.value)}
+                    placeholder="https://instagram.com/..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Facebook</Label>
+                  <Input
+                    value={form.facebook_url}
+                    onChange={(e) => set("facebook_url", e.target.value)}
+                    placeholder="https://facebook.com/..."
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Outra rede social</Label>
+                <Input
+                  value={form.other_social_url}
+                  onChange={(e) => set("other_social_url", e.target.value)}
+                  placeholder="LinkedIn, TikTok, YouTube..."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Galeria */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Galeria</Label>
+              <VisibilityBadge visible={form.show_gallery} onChange={(v) => set("show_gallery", v)} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              As imagens da galeria podem ser carregadas após a criação do negócio.
+            </p>
           </div>
         </div>
       </Section>
