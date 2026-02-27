@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useBusiness } from "@/hooks/useBusinesses";
+import { usePublicBusiness } from "@/hooks/usePublicBusinesses"; // ← era: useBusiness de useBusinesses
 import { useTrackEvent } from "@/hooks/useAnalytics";
 import { useActiveBusinessModules, useBusinessModuleValues } from "@/hooks/useBusinessModules";
 import { useBusinessNavigation } from "@/hooks/useCategoryBusinesses";
@@ -33,7 +33,16 @@ const BASE_URL = "https://pededireto.pt";
 
 const BusinessPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { data: business, isLoading } = useBusiness(slug);
+
+  // ← usePublicBusiness: usa a view businesses_public que já aplica todas as regras:
+  //   · is_active = false            → devolve null (negócio não aparece)
+  //   · cta_whatsapp                 → null se não for PRO ou show_whatsapp=false
+  //   · images                       → limitadas por plano + show_gallery
+  //   · schedule_weekdays/weekend    → null se show_schedule=false
+  //   · instagram/facebook/social    → null se não for PRO ou show_social=false
+  // Não é necessário verificar (business as any).show_* no frontend — a view já fez isso.
+  const { data: business, isLoading } = usePublicBusiness(slug);
+
   const { user } = useAuth();
   const navigate = useNavigate();
   const trackEvent = useTrackEvent();
@@ -193,7 +202,7 @@ const BusinessPage = () => {
       <Header />
 
       {/* Banner para utilizador já associado (verified + owner) */}
-      {userIsOwner && business.claim_status === "verified" && (
+      {userIsOwner && (business as any).claim_status === "verified" && (
         <div className="bg-primary/10 border-b border-primary/20">
           <div className="container py-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -216,8 +225,8 @@ const BusinessPage = () => {
       )}
 
       {/* Banner para negócios não reclamados ou pending */}
-      {!(business.claim_status === "verified" && userIsOwner) && (
-        <UnclaimedBusinessBanner businessId={business.id} claimStatus={business.claim_status} />
+      {!((business as any).claim_status === "verified" && userIsOwner) && (
+        <UnclaimedBusinessBanner businessId={business.id} claimStatus={(business as any).claim_status} />
       )}
 
       <main className="flex-1">
@@ -252,15 +261,25 @@ const BusinessPage = () => {
                     </div>
                   )}
 
-                  {/* Badges */}
+                  {/* Badges — badge vem direto da view ("START" | "PRO" | null) */}
                   <div className="absolute top-4 right-4 flex gap-2 items-center">
+                    {business.badge && (
+                      <span
+                        className={`text-xs font-bold px-2 py-1 rounded-full ${
+                          business.badge === "PRO"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-secondary-foreground"
+                        }`}
+                      >
+                        {business.badge}
+                      </span>
+                    )}
                     {business.is_featured && (
                       <span className="badge-featured">
                         <Star className="w-3 h-3" />
                         Destaque
                       </span>
                     )}
-                    {business.is_premium && !business.is_featured && <span className="badge-premium">Premium</span>}
                     <FavoriteButton
                       businessId={business.id}
                       className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"
@@ -284,7 +303,7 @@ const BusinessPage = () => {
                     <span>{getAlcanceLabel()}</span>
                   </div>
 
-                  {/* Morada Comercial (Pública) */}
+                  {/* Morada Comercial */}
                   {business.public_address && (
                     <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                       <div className="flex items-start gap-2">
@@ -307,26 +326,78 @@ const BusinessPage = () => {
                     <p className="text-lg text-muted-foreground leading-relaxed">{business.description}</p>
                   )}
 
-                  {/* Schedule */}
-                  {(business.schedule_weekdays || business.schedule_weekend) &&
-                    (business as any).show_schedule !== false && (
-                      <div className="bg-muted/50 rounded-xl p-4 space-y-2">
-                        <div className="flex items-center gap-2 font-medium">
-                          <Clock className="w-5 h-5 text-primary" />
-                          Horário
-                        </div>
-                        {business.schedule_weekdays && (
-                          <p className="text-sm text-muted-foreground">
-                            <span className="font-medium">Dias úteis:</span> {business.schedule_weekdays}
-                          </p>
-                        )}
-                        {business.schedule_weekend && (
-                          <p className="text-sm text-muted-foreground">
-                            <span className="font-medium">Fim de semana:</span> {business.schedule_weekend}
-                          </p>
-                        )}
+                  {/* Horários — a view já devolveu null se show_schedule=false, basta verificar se existe */}
+                  {(business.schedule_weekdays || business.schedule_weekend) && (
+                    <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center gap-2 font-medium">
+                        <Clock className="w-5 h-5 text-primary" />
+                        Horário
                       </div>
-                    )}
+                      {business.schedule_weekdays && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Dias úteis:</span> {business.schedule_weekdays}
+                        </p>
+                      )}
+                      {business.schedule_weekend && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Fim de semana:</span> {business.schedule_weekend}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Galeria — a view já limitou imagens por plano e aplicou show_gallery */}
+                  {business.images && business.images.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Galeria</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {business.images.map((url, i) => (
+                          <img
+                            key={i}
+                            src={url}
+                            alt={`${business.name} ${i + 1}`}
+                            className="rounded-lg w-full aspect-square object-cover"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Redes sociais — a view já devolveu null se não for PRO ou show_social=false */}
+                  {(business.instagram_url || business.facebook_url || business.other_social_url) && (
+                    <div className="flex flex-wrap gap-3">
+                      {business.instagram_url && (
+                        <a
+                          href={business.instagram_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Instagram
+                        </a>
+                      )}
+                      {business.facebook_url && (
+                        <a
+                          href={business.facebook_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Facebook
+                        </a>
+                      )}
+                      {business.other_social_url && (
+                        <a
+                          href={business.other_social_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Redes Sociais
+                        </a>
+                      )}
+                    </div>
+                  )}
 
                   {/* Dynamic Module Values */}
                   {(() => {
@@ -374,24 +445,23 @@ const BusinessPage = () => {
                                   />
                                 </div>
                               )}
-                              {mod.type === "gallery" &&
-                                (business as any).show_gallery !== false &&
-                                Array.isArray(v.value_json) &&
-                                v.value_json.length > 0 && (
-                                  <div>
-                                    <span className="text-sm font-medium block mb-2">{mod.label}</span>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                      {v.value_json.map((url: string, i: number) => (
-                                        <img
-                                          key={i}
-                                          src={url}
-                                          alt={`${mod.label} ${i + 1}`}
-                                          className="rounded-lg w-full aspect-square object-cover"
-                                        />
-                                      ))}
-                                    </div>
+                              {/* Galeria de módulo: sem verificação show_gallery — estes são campos extra
+                                  de módulos dinâmicos, não a galeria principal do negócio */}
+                              {mod.type === "gallery" && Array.isArray(v.value_json) && v.value_json.length > 0 && (
+                                <div>
+                                  <span className="text-sm font-medium block mb-2">{mod.label}</span>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    {v.value_json.map((url: string, i: number) => (
+                                      <img
+                                        key={i}
+                                        src={url}
+                                        alt={`${mod.label} ${i + 1}`}
+                                        className="rounded-lg w-full aspect-square object-cover"
+                                      />
+                                    ))}
                                   </div>
-                                )}
+                                </div>
+                              )}
                               {mod.type === "video" && v.value && (
                                 <div>
                                   <span className="text-sm font-medium block mb-1">{mod.label}</span>
@@ -432,7 +502,8 @@ const BusinessPage = () => {
                   <p className="text-sm text-muted-foreground">Contacte diretamente — sem intermediários!</p>
 
                   <div className="space-y-3 pt-2">
-                    {business.cta_whatsapp && (business as any).show_whatsapp !== false && (
+                    {/* WhatsApp — a view já devolveu null se não for PRO ou show_whatsapp=false */}
+                    {business.cta_whatsapp && (
                       <Button
                         className="btn-cta-whatsapp w-full justify-center text-base"
                         onClick={() => {
