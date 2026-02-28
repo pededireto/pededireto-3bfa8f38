@@ -1,20 +1,73 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Building2, Search, Inbox, TrendingUp, DollarSign } from "lucide-react";
+import { Users, Building2, Search, Inbox, TrendingUp, DollarSign, UserPlus, Activity, Zap } from "lucide-react";
 import type { AdminIntelligenceData } from "@/hooks/useAdminIntelligence";
 
 interface ExecutiveCardsProps {
   data: AdminIntelligenceData["executive"];
 }
 
+const fmt = (v: number) => v.toLocaleString("pt-PT");
+const fmtEur = (v: number) => `€${v.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtPct = (v: number) => `${v}%`;
+
 const ExecutiveCards = ({ data }: ExecutiveCardsProps) => {
   const cards = [
-    { label: "Utilizadores", value: data.total_users, icon: Users, fmt: (v: number) => v.toLocaleString("pt-PT") },
-    { label: "Negócios", value: data.total_businesses, icon: Building2, fmt: (v: number) => v.toLocaleString("pt-PT") },
-    { label: "Negócios Ativos", value: data.active_businesses, icon: Building2, fmt: (v: number) => v.toLocaleString("pt-PT") },
-    { label: "Pesquisas", value: data.total_searches, icon: Search, fmt: (v: number) => v.toLocaleString("pt-PT") },
-    { label: "Pedidos", value: data.total_requests, icon: Inbox, fmt: (v: number) => v.toLocaleString("pt-PT") },
-    { label: "Receita Mês", value: data.revenue_this_month, icon: DollarSign, fmt: (v: number) => `€${v.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}` },
-    { label: "MRR Estimado", value: data.mrr_estimate, icon: TrendingUp, fmt: (v: number) => `€${v.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}` },
+    {
+      label: "Utilizadores",
+      value: fmt(data.total_users),
+      sub: `+${fmt(data.new_users)} novos`,
+      icon: Users,
+      color: "text-blue-500",
+      bg: "bg-blue-500/10",
+    },
+    {
+      label: "Negócios",
+      value: fmt(data.total_businesses),
+      sub: `+${fmt(data.new_businesses)} novos`,
+      icon: Building2,
+      color: "text-purple-500",
+      bg: "bg-purple-500/10",
+    },
+    {
+      label: "Negócios Ativos",
+      value: fmt(data.active_businesses),
+      sub: `${fmtPct(data.activation_rate)} activação`,
+      icon: Zap,
+      color: "text-green-500",
+      bg: "bg-green-500/10",
+    },
+    {
+      label: "Pesquisas",
+      value: fmt(data.total_searches),
+      sub: "no período",
+      icon: Search,
+      color: "text-cyan-500",
+      bg: "bg-cyan-500/10",
+    },
+    {
+      label: "Pedidos",
+      value: fmt(data.total_requests),
+      sub: "no período",
+      icon: Inbox,
+      color: "text-orange-500",
+      bg: "bg-orange-500/10",
+    },
+    {
+      label: "Receita Mês",
+      value: fmtEur(data.revenue_this_month),
+      sub: "activos pagos",
+      icon: DollarSign,
+      color: "text-emerald-500",
+      bg: "bg-emerald-500/10",
+    },
+    {
+      label: "MRR Estimado",
+      value: fmtEur(data.mrr_estimate),
+      sub: "recorrente",
+      icon: TrendingUp,
+      color: "text-yellow-500",
+      bg: "bg-yellow-500/10",
+    },
   ];
 
   return (
@@ -22,11 +75,12 @@ const ExecutiveCards = ({ data }: ExecutiveCardsProps) => {
       {cards.map((card) => (
         <Card key={card.label} className="border-border/50">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <card.icon className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground truncate">{card.label}</span>
+            <div className={`w-8 h-8 rounded-lg ${card.bg} flex items-center justify-center mb-3`}>
+              <card.icon className={`h-4 w-4 ${card.color}`} />
             </div>
-            <p className="text-lg font-semibold tracking-tight">{card.fmt(card.value)}</p>
+            <p className="text-lg font-bold tracking-tight leading-none">{card.value}</p>
+            <p className="text-xs text-muted-foreground mt-1">{card.label}</p>
+            {card.sub && <p className="text-xs text-muted-foreground/60 mt-0.5">{card.sub}</p>}
           </CardContent>
         </Card>
       ))}
