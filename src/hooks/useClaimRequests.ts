@@ -23,7 +23,7 @@ export const useClaimRequests = () => {
       const { data, error } = await supabase
         .from("businesses")
         .select("id, name, city, claim_status, claim_requested_by, claim_requested_at, claim_review_notes, verified_by, verified_at")
-        .in("claim_status", ["pending", "verified", "rejected", "revoked"])
+        .in("claim_status", ["pending", "preview", "verified", "rejected", "revoked"])
         .order("claim_requested_at", { ascending: false });
 
       if (error) throw error;
@@ -61,7 +61,7 @@ export const usePendingClaimsCount = () => {
       const { count, error } = await supabase
         .from("businesses")
         .select("id", { count: "exact", head: true })
-        .eq("claim_status", "pending");
+        .in("claim_status", ["pending", "preview"]);
 
       if (error) throw error;
       return count || 0;
