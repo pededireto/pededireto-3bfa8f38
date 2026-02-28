@@ -226,32 +226,32 @@ const usePublicBadges = (businessId: string | undefined) => {
 const BADGE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
   verified: {
     icon: ShieldCheck,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bg: "bg-emerald-500/10 border-emerald-500/30",
+    color: "text-emerald-700 dark:text-emerald-300",
+    bg: "bg-emerald-100 dark:bg-emerald-900/50 border-emerald-400 dark:border-emerald-600",
     label: "Verificado",
   },
   "lider-local": {
     icon: Trophy,
-    color: "text-amber-500",
-    bg: "bg-amber-500/10 border-amber-500/30",
+    color: "text-amber-700 dark:text-amber-300",
+    bg: "bg-amber-100 dark:bg-amber-900/50 border-amber-400 dark:border-amber-600",
     label: "Líder Local",
   },
   "top-avaliado": {
     icon: Star,
-    color: "text-yellow-500",
-    bg: "bg-yellow-500/10 border-yellow-500/30",
+    color: "text-yellow-700 dark:text-yellow-300",
+    bg: "bg-yellow-100 dark:bg-yellow-900/50 border-yellow-400 dark:border-yellow-600",
     label: "Top Avaliado",
   },
   "resposta-rapida": {
     icon: Zap,
-    color: "text-blue-500",
-    bg: "bg-blue-500/10 border-blue-500/30",
+    color: "text-blue-700 dark:text-blue-300",
+    bg: "bg-blue-100 dark:bg-blue-900/50 border-blue-400 dark:border-blue-600",
     label: "Resposta Rápida",
   },
   "founding-member": {
     icon: Medal,
-    color: "text-purple-500",
-    bg: "bg-purple-500/10 border-purple-500/30",
+    color: "text-white",
+    bg: "bg-gradient-to-r from-violet-600 to-indigo-600 border-violet-500",
     label: "Membro Fundador",
   },
 };
@@ -499,7 +499,7 @@ const BusinessPage = () => {
                     return (
                       <span
                         key={slug}
-                        className={`absolute top-4 left-4 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm ${cfg.bg} ${cfg.color}`}
+                        className={`absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border-2 shadow-sm backdrop-blur-sm ${cfg.bg} ${cfg.color}`}
                       >
                         <Icon className="w-3.5 h-3.5" />
                         {cfg.label}
@@ -544,7 +544,7 @@ const BusinessPage = () => {
                         return (
                           <span
                             key={slug}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.color}`}
+                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold border-2 shadow-sm ${cfg.bg} ${cfg.color}`}
                           >
                             <Icon className="w-3.5 h-3.5" />
                             {cfg.label}
