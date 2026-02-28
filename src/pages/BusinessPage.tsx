@@ -6,6 +6,8 @@ import { useBusinessNavigation } from "@/hooks/useCategoryBusinesses";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Helmet } from "react-helmet-async";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -27,10 +29,82 @@ import {
   Clock,
   Star,
   Settings,
+  ShieldCheck,
+  Trophy,
+  Zap,
+  Medal,
 } from "lucide-react";
 
 const BASE_URL = "https://pededireto.pt";
 
+// ─────────────────────────────────────────────
+// Hook para buscar badges públicos do negócio
+// ─────────────────────────────────────────────
+const usePublicBadges = (businessId: string | undefined) => {
+  return useQuery({
+    queryKey: ["public-badges", businessId],
+    queryFn: async () => {
+      if (!businessId) return [];
+      const { data, error } = await supabase.rpc("get_business_public_badges" as any, { p_business_id: businessId });
+      if (error) throw error;
+      return (data || []) as { badge_name: string; badge_slug: string }[];
+    },
+    enabled: !!businessId,
+  });
+};
+
+// ─────────────────────────────────────────────
+// Configuração visual dos badges por slug
+// ─────────────────────────────────────────────
+const BADGE_CONFIG: Record<
+  string,
+  {
+    icon: React.ElementType;
+    color: string;
+    bg: string;
+    label: string;
+  }
+> = {
+  verified: {
+    icon: ShieldCheck,
+    color: "text-emerald-600 dark:text-emerald-400",
+    bg: "bg-emerald-500/10 border-emerald-500/30",
+    label: "Verificado",
+  },
+  "lider-local": {
+    icon: Trophy,
+    color: "text-amber-500",
+    bg: "bg-amber-500/10 border-amber-500/30",
+    label: "Líder Local",
+  },
+  "top-avaliado": {
+    icon: Star,
+    color: "text-yellow-500",
+    bg: "bg-yellow-500/10 border-yellow-500/30",
+    label: "Top Avaliado",
+  },
+  "resposta-rapida": {
+    icon: Zap,
+    color: "text-blue-500",
+    bg: "bg-blue-500/10 border-blue-500/30",
+    label: "Resposta Rápida",
+  },
+  "founding-member": {
+    icon: Medal,
+    color: "text-purple-500",
+    bg: "bg-purple-500/10 border-purple-500/30",
+    label: "Membro Fundador",
+  },
+};
+
+// Slugs por zona de renderização
+const NAME_BADGE_SLUGS = ["verified", "lider-local", "top-avaliado"];
+const SIDEBAR_BADGE_SLUGS = ["resposta-rapida"];
+const RIBBON_BADGE_SLUGS = ["founding-member"];
+
+// ─────────────────────────────────────────────
+// Componente principal
+// ─────────────────────────────────────────────
 const BusinessPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: business, isLoading } = useBusiness(slug);
@@ -39,6 +113,7 @@ const BusinessPage = () => {
   const trackEvent = useTrackEvent();
   const { data: activeModules = [] } = useActiveBusinessModules();
   const { data: moduleValues = [] } = useBusinessModuleValues(business?.id);
+  const { data: publicBadges = [] } = usePublicBadges(business?.id);
 
   const [showSuggestionForm, setShowSuggestionForm] = useState(false);
 
@@ -46,6 +121,12 @@ const BusinessPage = () => {
 
   const { previousBusiness, nextBusiness, isLastBusiness, currentPosition, totalBusinesses, hasFilter } =
     useBusinessNavigation(business?.category_id, slug, cityFilter);
+
+  // Calcular badges por zona
+  const badgesBySlug = new Set(publicBadges.map((b) => b.badge_slug));
+  const nameBadges = NAME_BADGE_SLUGS.filter((s) => badgesBySlug.has(s));
+  const sidebarBadges = SIDEBAR_BADGE_SLUGS.filter((s) => badgesBySlug.has(s));
+  const ribbonBadges = RIBBON_BADGE_SLUGS.filter((s) => badgesBySlug.has(s));
 
   useEffect(() => {
     if (business) {
@@ -101,10 +182,6 @@ const BusinessPage = () => {
 
   const userIsOwner = user?.id === (business as any)?.owner_id;
 
-  /* ===========================
-     SEO DINÂMICO
-  =========================== */
-
   const pageTitle = business
     ? `${business.name} em ${business.city || "Portugal"} | ${business.categories?.name || "Negócio"}`
     : "Negócio | Pede Direto";
@@ -114,7 +191,6 @@ const BusinessPage = () => {
     : "Encontre serviços e profissionais diretamente no Pede Direto.";
 
   const pageUrl = `${BASE_URL}/negocio/${business?.slug}`;
-
   const pageImage = business?.logo_url || `${BASE_URL}/og-default.jpg`;
 
   const schemaData = business
@@ -134,8 +210,6 @@ const BusinessPage = () => {
         url: pageUrl,
       }
     : null;
-
-  /* =========================== */
 
   if (isLoading) {
     return (
@@ -175,18 +249,15 @@ const BusinessPage = () => {
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
         <link rel="canonical" href={pageUrl} />
-
         <meta property="og:type" content="website" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:image" content={pageImage} />
         <meta property="og:url" content={pageUrl} />
-
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
         <meta name="twitter:image" content={pageImage} />
-
         {schemaData && <script type="application/ld+json">{JSON.stringify(schemaData)}</script>}
       </Helmet>
 
@@ -242,7 +313,7 @@ const BusinessPage = () => {
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Main Content */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Image */}
+                {/* Imagem com ribbon Membro Fundador */}
                 <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
                   {business.logo_url ? (
                     <img src={business.logo_url} alt={business.name} className="max-w-full max-h-full object-contain" />
@@ -252,7 +323,23 @@ const BusinessPage = () => {
                     </div>
                   )}
 
-                  {/* Badges */}
+                  {/* Ribbon Membro Fundador — canto superior esquerdo */}
+                  {ribbonBadges.map((slug) => {
+                    const cfg = BADGE_CONFIG[slug];
+                    if (!cfg) return null;
+                    const Icon = cfg.icon;
+                    return (
+                      <span
+                        key={slug}
+                        className={`absolute top-4 left-4 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm ${cfg.bg} ${cfg.color}`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        {cfg.label}
+                      </span>
+                    );
+                  })}
+
+                  {/* Badges Destaque/Premium + Favorito — canto superior direito */}
                   <div className="absolute top-4 right-4 flex gap-2 items-center">
                     {business.is_featured && (
                       <span className="badge-featured">
@@ -276,7 +363,28 @@ const BusinessPage = () => {
                     </span>
                   )}
 
+                  {/* Nome */}
                   <h1 className="text-3xl md:text-4xl font-bold">{business.name}</h1>
+
+                  {/* Badges junto ao nome */}
+                  {nameBadges.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {nameBadges.map((slug) => {
+                        const cfg = BADGE_CONFIG[slug];
+                        if (!cfg) return null;
+                        const Icon = cfg.icon;
+                        return (
+                          <span
+                            key={slug}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.color}`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                            {cfg.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Location */}
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -284,7 +392,7 @@ const BusinessPage = () => {
                     <span>{getAlcanceLabel()}</span>
                   </div>
 
-                  {/* Morada Comercial (Pública) */}
+                  {/* Morada Comercial */}
                   {business.public_address && (
                     <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                       <div className="flex items-start gap-2">
@@ -432,6 +540,22 @@ const BusinessPage = () => {
                   <p className="text-sm text-muted-foreground">Contacte diretamente — sem intermediários!</p>
 
                   <div className="space-y-3 pt-2">
+                    {/* Badge Resposta Rápida — antes dos botões */}
+                    {sidebarBadges.map((slug) => {
+                      const cfg = BADGE_CONFIG[slug];
+                      if (!cfg) return null;
+                      const Icon = cfg.icon;
+                      return (
+                        <div
+                          key={slug}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${cfg.bg} ${cfg.color}`}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          {cfg.label} — responde em menos de 2h
+                        </div>
+                      );
+                    })}
+
                     {business.cta_whatsapp && (business as any).show_whatsapp !== false && (
                       <Button
                         className="btn-cta-whatsapp w-full justify-center text-base"
