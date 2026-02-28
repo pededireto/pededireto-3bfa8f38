@@ -6,27 +6,38 @@ export interface AdminIntelligenceData {
     total_users: number;
     total_businesses: number;
     active_businesses: number;
+    inactive_businesses: number;
     total_requests: number;
     total_searches: number;
     revenue_this_month: number;
     mrr_estimate: number;
+    new_businesses: number;
+    new_users: number;
+    activation_rate: number;
   };
   revenue: {
-    monthly_revenue: { month: string; total: number }[];
-    conversions_by_plan: { plan_name: string; total: number }[];
-    revenue_by_commercial: { commercial_name: string; total: number }[];
+    conversions_by_plan: { plan_name: string; total: number; revenue: number }[];
+    plan_distribution: { plan_name: string; total: number }[];
+    revenue_by_plan: { plan_name: string; businesses: number; revenue: number }[];
+    expiring_soon: number;
+    monthly_conversions: { month: string; total: number; revenue: number }[];
   };
   search: {
     total_searches: number;
     no_result_percent: number;
     top_terms: { term: string; total: number }[];
-    searches_by_city: { city: string; total: number }[];
-    intent_breakdown: { intent: string; total: number }[];
+    zero_result_terms: { term: string; total: number }[];
+    daily_searches: { day: string; total: number }[];
   };
   marketplace: {
     request_business_ratio: number;
     inactive_businesses: number;
-    avg_response_time: number;
+    pending_requests: number;
+    requests_by_status: { status: string; total: number }[];
+    requests_by_city: { city: string; total: number }[];
+    avg_resolution_time: number;
+    total_clicks: number;
+    total_views: number;
   };
 }
 
