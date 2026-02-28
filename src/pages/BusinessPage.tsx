@@ -472,7 +472,21 @@ const BusinessPage = () => {
                 {/* Logo / Hero image */}
                 <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
                   {business.logo_url ? (
-                    <img src={business.logo_url} alt={business.name} className="max-w-full max-h-full object-contain" />
+                    <>
+                      {/* Fundo desfocado para preencher o espaço */}
+                      <img
+                        src={business.logo_url}
+                        alt=""
+                        aria-hidden
+                        className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-40 pointer-events-none"
+                      />
+                      {/* Imagem principal centrada e completa */}
+                      <img
+                        src={business.logo_url}
+                        alt={business.name}
+                        className="relative z-10 max-w-full max-h-full object-contain drop-shadow-xl"
+                      />
+                    </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-primary/10">
                       <span className="text-8xl font-bold text-primary/30">{business.name.charAt(0)}</span>
