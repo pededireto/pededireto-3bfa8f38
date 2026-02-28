@@ -7,8 +7,6 @@ interface ExecutiveCardsProps {
 }
 
 const ExecutiveCards = ({ data }: ExecutiveCardsProps) => {
-  if (!data) return null;
-
   const cards = [
     {
       label: "Utilizadores",
