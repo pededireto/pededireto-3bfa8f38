@@ -6,11 +6,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const CALLMEBOT_PHONE = "351210203862";
-const CALLMEBOT_APIKEY = "3427290";
-
 async function sendWhatsApp(text: string) {
-  const waUrl = `https://api.callmebot.com/whatsapp.php?phone=${CALLMEBOT_PHONE}&text=${encodeURIComponent(text)}&apikey=${CALLMEBOT_APIKEY}`;
+  const phone = Deno.env.get("CALLMEBOT_PHONE");
+  const apikey = Deno.env.get("CALLMEBOT_APIKEY");
+
+  if (!phone || !apikey) {
+    console.warn("CallMeBot credentials not configured, skipping WhatsApp");
+    return;
+  }
+
+  const waUrl = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(text)}&apikey=${apikey}`;
   const res = await fetch(waUrl);
   if (!res.ok) console.error("CallMeBot error:", await res.text());
   else console.log("WhatsApp sent");
