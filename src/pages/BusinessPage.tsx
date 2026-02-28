@@ -3,7 +3,7 @@ import { useBusiness } from "@/hooks/useBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
 import { useActiveBusinessModules, useBusinessModuleValues } from "@/hooks/useBusinessModules";
 import { useBusinessNavigation } from "@/hooks/useCategoryBusinesses";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
@@ -33,9 +33,179 @@ import {
   Trophy,
   Zap,
   Medal,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
 } from "lucide-react";
 
 const BASE_URL = "https://pededireto.pt";
+
+// ─────────────────────────────────────────────
+// Lightbox Component
+// ─────────────────────────────────────────────
+interface LightboxProps {
+  images: string[];
+  initialIndex: number;
+  onClose: () => void;
+}
+
+const Lightbox = ({ images, initialIndex, onClose }: LightboxProps) => {
+  const [current, setCurrent] = useState(initialIndex);
+
+  const prev = useCallback(() => {
+    setCurrent((i) => (i === 0 ? images.length - 1 : i - 1));
+  }, [images.length]);
+
+  const next = useCallback(() => {
+    setCurrent((i) => (i === images.length - 1 ? 0 : i + 1));
+  }, [images.length]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", handleKey);
+    // Prevent body scroll
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose, prev, next]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm" onClick={onClose}>
+      {/* Close button */}
+      <button
+        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+        onClick={onClose}
+      >
+        <X className="w-6 h-6" />
+      </button>
+
+      {/* Counter */}
+      {images.length > 1 && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full bg-white/10 text-white text-sm font-medium">
+          {current + 1} / {images.length}
+        </div>
+      )}
+
+      {/* Prev button */}
+      {images.length > 1 && (
+        <button
+          className="absolute left-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            prev();
+          }}
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Image */}
+      <div
+        className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          key={current}
+          src={images[current]}
+          alt={`Imagem ${current + 1}`}
+          className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+          style={{ animation: "fadeIn 0.2s ease" }}
+        />
+      </div>
+
+      {/* Next button */}
+      {images.length > 1 && (
+        <button
+          className="absolute right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            next();
+          }}
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Thumbnails strip */}
+      {images.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 px-4 py-2 rounded-2xl bg-black/40 backdrop-blur-sm">
+          {images.map((url, i) => (
+            <button
+              key={i}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrent(i);
+              }}
+              className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                i === current ? "border-white scale-110" : "border-white/30 opacity-60 hover:opacity-90"
+              }`}
+            >
+              <img src={url} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.97); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// Gallery Grid Component
+// ─────────────────────────────────────────────
+interface GalleryGridProps {
+  images: string[];
+  label?: string;
+}
+
+const GalleryGrid = ({ images, label }: GalleryGridProps) => {
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  if (!images || images.length === 0) return null;
+
+  return (
+    <div>
+      {label && <span className="text-sm font-medium block mb-2">{label}</span>}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {images.map((url, i) => (
+          <button
+            key={i}
+            onClick={() => setLightboxIndex(i)}
+            className="group relative aspect-square rounded-lg overflow-hidden bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <img
+              src={url}
+              alt={`Foto ${i + 1}`}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            {/* Overlay on hover */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
+              <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" />
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {lightboxIndex !== null && (
+        <Lightbox images={images} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
+      )}
+    </div>
+  );
+};
 
 // ─────────────────────────────────────────────
 // Hook para buscar badges públicos do negócio
@@ -53,18 +223,7 @@ const usePublicBadges = (businessId: string | undefined) => {
   });
 };
 
-// ─────────────────────────────────────────────
-// Configuração visual dos badges por slug
-// ─────────────────────────────────────────────
-const BADGE_CONFIG: Record<
-  string,
-  {
-    icon: React.ElementType;
-    color: string;
-    bg: string;
-    label: string;
-  }
-> = {
+const BADGE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
   verified: {
     icon: ShieldCheck,
     color: "text-emerald-600 dark:text-emerald-400",
@@ -97,7 +256,6 @@ const BADGE_CONFIG: Record<
   },
 };
 
-// Slugs por zona de renderização
 const NAME_BADGE_SLUGS = ["verified", "lider-local", "top-avaliado"];
 const SIDEBAR_BADGE_SLUGS = ["resposta-rapida"];
 const RIBBON_BADGE_SLUGS = ["founding-member"];
@@ -122,7 +280,6 @@ const BusinessPage = () => {
   const { previousBusiness, nextBusiness, isLastBusiness, currentPosition, totalBusinesses, hasFilter } =
     useBusinessNavigation(business?.category_id, slug, cityFilter);
 
-  // Calcular badges por zona
   const badgesBySlug = new Set(publicBadges.map((b) => b.badge_slug));
   const nameBadges = NAME_BADGE_SLUGS.filter((s) => badgesBySlug.has(s));
   const sidebarBadges = SIDEBAR_BADGE_SLUGS.filter((s) => badgesBySlug.has(s));
@@ -185,11 +342,9 @@ const BusinessPage = () => {
   const pageTitle = business
     ? `${business.name} em ${business.city || "Portugal"} | ${business.categories?.name || "Negócio"}`
     : "Negócio | Pede Direto";
-
   const pageDescription = business?.description
     ? business.description.slice(0, 155)
     : "Encontre serviços e profissionais diretamente no Pede Direto.";
-
   const pageUrl = `${BASE_URL}/negocio/${business?.slug}`;
   const pageImage = business?.logo_url || `${BASE_URL}/og-default.jpg`;
 
@@ -243,6 +398,11 @@ const BusinessPage = () => {
     );
   }
 
+  // Galeria principal do negócio (campo images)
+  const businessImages: string[] = Array.isArray((business as any).images)
+    ? (business as any).images.filter((u: string) => u?.trim())
+    : [];
+
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
@@ -263,7 +423,6 @@ const BusinessPage = () => {
 
       <Header />
 
-      {/* Banner para utilizador já associado (verified + owner) */}
       {userIsOwner && business.claim_status === "verified" && (
         <div className="bg-primary/10 border-b border-primary/20">
           <div className="container py-4">
@@ -286,13 +445,11 @@ const BusinessPage = () => {
         </div>
       )}
 
-      {/* Banner para negócios não reclamados ou pending */}
       {!(business.claim_status === "verified" && userIsOwner) && (
         <UnclaimedBusinessBanner businessId={business.id} claimStatus={business.claim_status} />
       )}
 
       <main className="flex-1">
-        {/* Hero Section */}
         <section className="section-hero py-8">
           <div className="container">
             {business.categories && (
@@ -307,13 +464,12 @@ const BusinessPage = () => {
           </div>
         </section>
 
-        {/* Business Details */}
         <section className="pb-12">
           <div className="container">
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Main Content */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Imagem com ribbon Membro Fundador */}
+                {/* Logo / Hero image */}
                 <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
                   {business.logo_url ? (
                     <img src={business.logo_url} alt={business.name} className="max-w-full max-h-full object-contain" />
@@ -322,8 +478,6 @@ const BusinessPage = () => {
                       <span className="text-8xl font-bold text-primary/30">{business.name.charAt(0)}</span>
                     </div>
                   )}
-
-                  {/* Ribbon Membro Fundador — canto superior esquerdo */}
                   {ribbonBadges.map((slug) => {
                     const cfg = BADGE_CONFIG[slug];
                     if (!cfg) return null;
@@ -338,8 +492,6 @@ const BusinessPage = () => {
                       </span>
                     );
                   })}
-
-                  {/* Badges Destaque/Premium + Favorito — canto superior direito */}
                   <div className="absolute top-4 right-4 flex gap-2 items-center">
                     {business.is_featured && (
                       <span className="badge-featured">
@@ -355,6 +507,11 @@ const BusinessPage = () => {
                   </div>
                 </div>
 
+                {/* ── Galeria principal (campo images) com lightbox ── */}
+                {businessImages.length > 0 && (business as any).show_gallery !== false && (
+                  <GalleryGrid images={businessImages} label="Galeria" />
+                )}
+
                 {/* Info */}
                 <div className="space-y-4">
                   {business.categories && (
@@ -362,11 +519,8 @@ const BusinessPage = () => {
                       {business.categories.name}
                     </span>
                   )}
-
-                  {/* Nome */}
                   <h1 className="text-3xl md:text-4xl font-bold">{business.name}</h1>
 
-                  {/* Badges junto ao nome */}
                   {nameBadges.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {nameBadges.map((slug) => {
@@ -386,13 +540,11 @@ const BusinessPage = () => {
                     </div>
                   )}
 
-                  {/* Location */}
                   <div className="flex items-center gap-2 text-muted-foreground">
                     {business.alcance === "nacional" ? <Globe className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
                     <span>{getAlcanceLabel()}</span>
                   </div>
 
-                  {/* Morada Comercial */}
                   {business.public_address && (
                     <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                       <div className="flex items-start gap-2">
@@ -410,12 +562,10 @@ const BusinessPage = () => {
                     </div>
                   )}
 
-                  {/* Description */}
                   {business.description && (
                     <p className="text-lg text-muted-foreground leading-relaxed">{business.description}</p>
                   )}
 
-                  {/* Schedule */}
                   {(business.schedule_weekdays || business.schedule_weekend) &&
                     (business as any).show_schedule !== false && (
                       <div className="bg-muted/50 rounded-xl p-4 space-y-2">
@@ -446,9 +596,7 @@ const BusinessPage = () => {
                       const v = valuesMap.get(m.id);
                       return v && (v.value || v.value_json);
                     });
-
                     if (filledModules.length === 0) return null;
-
                     return (
                       <div className="space-y-3">
                         {filledModules.map((mod) => {
@@ -482,24 +630,11 @@ const BusinessPage = () => {
                                   />
                                 </div>
                               )}
+                              {/* ── Galeria de módulo com lightbox ── */}
                               {mod.type === "gallery" &&
                                 (business as any).show_gallery !== false &&
                                 Array.isArray(v.value_json) &&
-                                v.value_json.length > 0 && (
-                                  <div>
-                                    <span className="text-sm font-medium block mb-2">{mod.label}</span>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                      {v.value_json.map((url: string, i: number) => (
-                                        <img
-                                          key={i}
-                                          src={url}
-                                          alt={`${mod.label} ${i + 1}`}
-                                          className="rounded-lg w-full aspect-square object-cover"
-                                        />
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
+                                v.value_json.length > 0 && <GalleryGrid images={v.value_json} label={mod.label} />}
                               {mod.type === "video" && v.value && (
                                 <div>
                                   <span className="text-sm font-medium block mb-1">{mod.label}</span>
@@ -533,14 +668,12 @@ const BusinessPage = () => {
                 </div>
               </div>
 
-              {/* Sidebar - CTAs */}
+              {/* Sidebar */}
               <div className="lg:col-span-1">
                 <div className="sticky top-24 bg-card rounded-2xl p-6 shadow-card space-y-4">
                   <h3 className="text-xl font-bold">Resolva hoje o seu problema</h3>
                   <p className="text-sm text-muted-foreground">Contacte diretamente — sem intermediários!</p>
-
                   <div className="space-y-3 pt-2">
-                    {/* Badge Resposta Rápida — antes dos botões */}
                     {sidebarBadges.map((slug) => {
                       const cfg = BADGE_CONFIG[slug];
                       if (!cfg) return null;
@@ -569,7 +702,6 @@ const BusinessPage = () => {
                         WhatsApp
                       </Button>
                     )}
-
                     {business.cta_phone && (
                       <Button
                         className="btn-cta-phone w-full justify-center text-base"
@@ -583,7 +715,6 @@ const BusinessPage = () => {
                         Ligar Agora
                       </Button>
                     )}
-
                     {business.cta_email && (
                       <Button
                         variant="outline"
@@ -598,7 +729,6 @@ const BusinessPage = () => {
                         Enviar Email
                       </Button>
                     )}
-
                     {business.cta_website && (
                       <Button
                         variant="outline"
@@ -621,7 +751,6 @@ const BusinessPage = () => {
         </section>
       </main>
 
-      {/* Navegação entre negócios */}
       <BusinessNavigation
         previousBusiness={previousBusiness}
         nextBusiness={nextBusiness}
