@@ -39,13 +39,9 @@ const IntelligenceCenterContent = () => {
       </div>
 
       <ExecutiveCards data={data.executive} />
-
-      <RevenueChart data={data.revenue} />
-
+      <RevenueChart data={data.revenue.monthly_revenue} conversionsByPlan={data.revenue.conversions_by_plan} />
       <SearchDemandChart search={data.search} />
-
       <MarketplaceHealth data={data.marketplace} />
-
       <TopTermsTable terms={data.search.top_terms} noResultPercent={data.search.no_result_percent} />
     </div>
   );

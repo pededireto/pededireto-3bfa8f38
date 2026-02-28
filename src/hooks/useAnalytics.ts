@@ -115,44 +115,33 @@ export const useAnalyticsSummary = (filters: AnalyticsFilters = { period: "30d" 
 
       const topCategories = Object.values(categoryCounts)
         .sort((a, b) => b.count - a.count)
-        .slice(0, 50); // buscar mais para suportar "Ver mais"
+        .slice(0, 10);
 
-      // Top businesses — inclui subcategory_id para filtragem client-side
+      // Top businesses
       let bizQuery = supabase
         .from("analytics_events")
-        .select("business_id, businesses (name, city, category_id, subcategory_id)")
+        .select("business_id, businesses (name, city, category_id)")
         .not("business_id", "is", null);
       bizQuery = buildBase(bizQuery);
+      if (filters.subcategoryId) {
+        // filter by subcategory via businesses join — fetch all and filter client-side
+      }
       const { data: businessEvents } = await bizQuery.limit(2000);
 
-      const businessCounts: Record<
-        string,
-        { name: string; count: number; city: string; subcategoryId: string | null }
-      > = {};
+      const businessCounts: Record<string, { name: string; count: number; city: string }> = {};
       businessEvents?.forEach((event) => {
         if (event.business_id && event.businesses) {
-          const biz = event.businesses as {
-            name: string;
-            city: string;
-            category_id: string;
-            subcategory_id: string | null;
-          };
+          const biz = event.businesses as { name: string; city: string; category_id: string };
           if (!businessCounts[event.business_id]) {
-            businessCounts[event.business_id] = {
-              name: biz.name,
-              count: 0,
-              city: biz.city,
-              subcategoryId: biz.subcategory_id ?? null,
-            };
+            businessCounts[event.business_id] = { name: biz.name, count: 0, city: biz.city };
           }
           businessCounts[event.business_id].count++;
         }
       });
 
       const topBusinesses = Object.values(businessCounts)
-        .filter((b) => !filters.subcategoryId || b.subcategoryId === filters.subcategoryId)
         .sort((a, b) => b.count - a.count)
-        .slice(0, 50); // buscar mais para suportar "Ver mais"
+        .slice(0, 10);
 
       return {
         totalViews: totalViews || 0,
@@ -196,51 +185,6 @@ export const useAnalyticsCities = () => {
 
       const cities = [...new Set((data || []).map((e) => e.city).filter(Boolean))].sort();
       return cities as string[];
-    },
-  });
-};
-
-// Hook para categorias activas (para o filtro de categoria)
-export const useActiveCategories = () => {
-  return useQuery({
-    queryKey: ["categories", "active"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("id, name").eq("is_active", true).order("name");
-      if (error) throw error;
-      return data || [];
-    },
-  });
-};
-
-// Hook para subcategorias filtradas por categoria
-export const useSubcategories = (categoryId: string | null | undefined) => {
-  return useQuery({
-    queryKey: ["subcategories", categoryId],
-    enabled: !!categoryId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("subcategories")
-        .select("id, name")
-        .eq("category_id", categoryId!)
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data || [];
-    },
-  });
-};
-
-// Hook para negócios activos
-export const useActiveBusinessesCount = () => {
-  return useQuery({
-    queryKey: ["businesses", "active-count"],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("businesses")
-        .select("*", { count: "exact", head: true })
-        .eq("is_active", true);
-      if (error) throw error;
-      return count || 0;
     },
   });
 };

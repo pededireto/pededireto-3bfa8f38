@@ -1,87 +1,65 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Users, Building2, Search, Inbox, TrendingUp, DollarSign, Zap } from "lucide-react";
-import type { AdminIntelligenceData } from "@/hooks/useAdminIntelligence";
+import { useState } from "react";
+import { useCategories } from "@/hooks/useCategories";
+import { useFeaturedBusinesses } from "@/hooks/useBusinesses";
+import { useHomepageBlocks } from "@/hooks/useHomepageBlocks";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import HeroSection from "@/components/HeroSection";
+import CategoriesGrid from "@/components/CategoriesGrid";
+import FeaturedSection from "@/components/FeaturedSection";
+import SuperHighlightsSection from "@/components/SuperHighlightsSection";
+import FeaturedCategoriesSection from "@/components/FeaturedCategoriesSection";
+import HomepageBlockRenderer from "@/components/HomepageBlockRenderer";
+import CategoryAccordion from "@/components/home/CategoryAccordion";
 
-interface ExecutiveCardsProps {
-  data: AdminIntelligenceData["executive"];
-}
+const Index = () => {
+  const [searchTerm, setSearchTerm] = useState("");
 
-const ExecutiveCards = ({ data }: ExecutiveCardsProps) => {
-  const cards = [
-    {
-      label: "Utilizadores",
-      value: data.total_users.toLocaleString("pt-PT"),
-      sub: `+${data.new_users} novos`,
-      icon: Users,
-      color: "text-blue-500",
-      bg: "bg-blue-500/10",
-    },
-    {
-      label: "Negócios",
-      value: data.total_businesses.toLocaleString("pt-PT"),
-      sub: `+${data.new_businesses} novos`,
-      icon: Building2,
-      color: "text-purple-500",
-      bg: "bg-purple-500/10",
-    },
-    {
-      label: "Negócios Ativos",
-      value: data.active_businesses.toLocaleString("pt-PT"),
-      sub: `${data.activation_rate}% activação`,
-      icon: Zap,
-      color: "text-green-500",
-      bg: "bg-green-500/10",
-    },
-    {
-      label: "Pesquisas",
-      value: data.total_searches.toLocaleString("pt-PT"),
-      sub: "no período",
-      icon: Search,
-      color: "text-cyan-500",
-      bg: "bg-cyan-500/10",
-    },
-    {
-      label: "Pedidos",
-      value: data.total_requests.toLocaleString("pt-PT"),
-      sub: "no período",
-      icon: Inbox,
-      color: "text-orange-500",
-      bg: "bg-orange-500/10",
-    },
-    {
-      label: "Receita Mês",
-      value: `€${data.revenue_this_month.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      sub: "activos pagos",
-      icon: DollarSign,
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
-    },
-    {
-      label: "MRR Estimado",
-      value: `€${data.mrr_estimate.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      sub: "recorrente",
-      icon: TrendingUp,
-      color: "text-yellow-500",
-      bg: "bg-yellow-500/10",
-    },
-  ];
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const { data: featuredBusinesses = [], isLoading: featuredLoading } = useFeaturedBusinesses();
+  const { data: blocks = [] } = useHomepageBlocks();
+
+  const useBlocks = blocks.length > 0;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-      {cards.map((card) => (
-        <Card key={card.label} className="border-border/50">
-          <CardContent className="p-4">
-            <div className={`w-8 h-8 rounded-lg ${card.bg} flex items-center justify-center mb-3`}>
-              <card.icon className={`h-4 w-4 ${card.color}`} />
-            </div>
-            <p className="text-lg font-bold tracking-tight leading-none">{card.value}</p>
-            <p className="text-xs text-muted-foreground mt-1">{card.label}</p>
-            <p className="text-xs text-muted-foreground/60 mt-0.5">{card.sub}</p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="min-h-screen flex flex-col">
+      <Header />
+
+      {/* 
+        MAIN LANDMARK
+        - id necessário para skip link
+        - tabIndex=-1 necessário para foco programático em SPA
+      */}
+      <main id="main-content" className="flex-1" tabIndex={-1}>
+        {useBlocks ? (
+          blocks.map((block) => (
+            <HomepageBlockRenderer
+              key={block.id}
+              block={block}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+            />
+          ))
+        ) : (
+          <>
+            <HeroSection searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+
+            <SuperHighlightsSection />
+
+            <FeaturedCategoriesSection />
+
+            <CategoryAccordion />
+
+            <CategoriesGrid categories={categories} isLoading={categoriesLoading} />
+
+            <FeaturedSection businesses={featuredBusinesses} isLoading={featuredLoading} />
+          </>
+        )}
+      </main>
+
+      <Footer />
     </div>
   );
 };
 
-export default ExecutiveCards;
+export default Index;
