@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Inbox, Bell, CreditCard, ExternalLink, LogOut, TrendingUp, Users, Lock, Star, Edit3 } from "lucide-react";
+import { LayoutDashboard, Inbox, Bell, CreditCard, ExternalLink, LogOut, TrendingUp, Users, Lock, Star, Edit3, Award } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 import { useBusinessUnreadRequestsCount } from "@/hooks/useBusinessDashboard";
 import { Badge } from "@/components/ui/badge";
 
-export type BusinessTab = "overview" | "requests" | "notifications" | "plan" | "insights" | "team" | "reviews" | "edit";
+export type BusinessTab = "overview" | "requests" | "notifications" | "plan" | "insights" | "team" | "reviews" | "edit" | "badges";
 
 interface BusinessSidebarProps {
   businessName: string;
@@ -27,6 +27,7 @@ const allItems: { id: BusinessTab; label: string; icon: React.ElementType }[] = 
   { id: "notifications", label: "Notificações",    icon: Bell },
   { id: "reviews",       label: "Avaliações",      icon: Star },
   { id: "team",          label: "Equipa",          icon: Users },
+  { id: "badges",        label: "Caderneta",       icon: Award },
   { id: "insights",      label: "Insights",        icon: TrendingUp },
   { id: "edit",          label: "Editar Negócio",  icon: Edit3 },
   { id: "plan",          label: "O Meu Plano",     icon: CreditCard },

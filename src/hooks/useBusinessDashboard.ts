@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { BusinessWithCategory } from "@/hooks/useBusinesses";
@@ -9,7 +9,6 @@ export const useBusinessByUser = () => {
     queryKey: ["business-by-user", user?.id],
     queryFn: async () => {
       if (!user) return null;
-      // First try via business_users table (claim flow)
       const { data: buData } = await supabase
         .from("business_users")
         .select("business_id")
@@ -24,7 +23,6 @@ export const useBusinessByUser = () => {
           .maybeSingle();
         if (!error && data) return data as unknown as BusinessWithCategory;
       }
-      // Fallback to owner_email match
       if (user.email) {
         const { data, error } = await supabase
           .from("businesses")
@@ -39,12 +37,19 @@ export const useBusinessByUser = () => {
   });
 };
 
-export const useBusinessRequests = (businessId: string | undefined) => {
+// ─── Filtros para pedidos ─────────────────────────────────────────────────────
+
+export type RequestArchiveFilter = "active" | "archived" | "all";
+
+export const useBusinessRequests = (
+  businessId: string | undefined,
+  archiveFilter: RequestArchiveFilter = "all"
+) => {
   return useQuery({
-    queryKey: ["business-requests", businessId],
+    queryKey: ["business-requests", businessId, archiveFilter],
     queryFn: async () => {
       if (!businessId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("request_business_matches" as any)
         .select(`
           *,
@@ -58,10 +63,61 @@ export const useBusinessRequests = (businessId: string | undefined) => {
         `)
         .eq("business_id", businessId)
         .order("sent_at", { ascending: false });
+
+      if (archiveFilter === "active") {
+        query = query.is("archived_at", null);
+      } else if (archiveFilter === "archived") {
+        query = query.not("archived_at", "is", null);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as any[];
     },
     enabled: !!businessId,
+  });
+};
+
+// ─── Mutações de arquivo ──────────────────────────────────────────────────────
+
+export const useArchiveRequest = () => {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (matchId: string) => {
+      const { error } = await supabase
+        .from("request_business_matches" as any)
+        .update({
+          archived_at: new Date().toISOString(),
+          archived_by: user?.id,
+        } as any)
+        .eq("id", matchId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["business-requests"] });
+    },
+  });
+};
+
+export const useRestoreRequest = () => {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (matchId: string) => {
+      const { error } = await supabase
+        .from("request_business_matches" as any)
+        .update({
+          archived_at: null,
+          archived_by: null,
+        } as any)
+        .eq("id", matchId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["business-requests"] });
+    },
   });
 };
 
@@ -76,7 +132,6 @@ export const useBusinessRequestsMeta = (businessId: string | undefined, requestI
     queryKey: ["business-requests-meta", businessId, requestIds],
     enabled: !!businessId && requestIds.length > 0,
     queryFn: async () => {
-      // Mensagens não lidas enviadas pelo consumidor (sender_role = "consumer")
       const { data: unread, error } = await supabase
         .from("request_messages" as any)
         .select("request_id")
@@ -102,11 +157,10 @@ export const useBusinessUnreadRequestsCount = (businessId: string | undefined) =
   return useQuery({
     queryKey: ["business-unread-requests-count", businessId],
     enabled: !!businessId,
-    refetchInterval: 30000, // polling a cada 30s
+    refetchInterval: 30000,
     queryFn: async () => {
       if (!businessId) return 0;
 
-      // Buscar todos os request_ids associados a este negócio
       const { data: matches, error: matchError } = await supabase
         .from("request_business_matches" as any)
         .select("request_id")
@@ -116,7 +170,6 @@ export const useBusinessUnreadRequestsCount = (businessId: string | undefined) =
       const requestIds = (matches || []).map((m: any) => m.request_id);
       if (requestIds.length === 0) return 0;
 
-      // Contar mensagens não lidas do consumidor
       const { data: unread, error: msgError } = await supabase
         .from("request_messages" as any)
         .select("request_id")
@@ -125,7 +178,6 @@ export const useBusinessUnreadRequestsCount = (businessId: string | undefined) =
         .is("read_at", null);
       if (msgError) throw msgError;
 
-      // Contar pedidos únicos com não lidas (não o nº de mensagens)
       const uniqueRequests = new Set((unread || []).map((m: any) => m.request_id));
       return uniqueRequests.size;
     },
