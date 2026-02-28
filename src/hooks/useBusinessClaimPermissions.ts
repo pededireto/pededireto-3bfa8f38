@@ -1,101 +1,103 @@
-// hooks/useBusinessClaimPermissions.ts
-import { useUser } from "./useUser";
-import { useBusiness } from "./useBusiness";
+import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
+import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 
-type ClaimStatus = "none" | "unclaimed" | "preview" | "pending" | "verified" | "rejected" | "revoked";
-
-interface BusinessPermissions {
-  // Estados
-  isUnclaimed: boolean;
-  isPreview: boolean;
+interface ClaimPermissions {
+  claimStatus: string;
   isPending: boolean;
   isVerified: boolean;
   isRejected: boolean;
   isRevoked: boolean;
-
-  // Permissões de visualização
-  canViewDashboard: boolean;
-  canViewBasicAnalytics: boolean; // ← NOVO: Preview vê isto
-  canViewRequests: boolean; // ← Bloqueado em Preview
-  canViewInsights: boolean; // ← Bloqueado em Preview
-  canViewConversations: boolean; // ← Bloqueado em Preview
-  canEditBusiness: boolean;
-  canManageTeam: boolean;
-  canManagePlan: boolean;
-
-  // Permissões de ação
-  canAcceptRequests: boolean;
-  canRespondToMessages: boolean;
-  canUpgradePlan: boolean; // ← Sempre true em Preview
-
-  // Helpers UI
-  showUpgradeBanner: boolean; // ← NOVO: Controla banner CTA
-  upgradeMessage: string; // ← NOVO: Mensagem contextual
+  isFreePlan: boolean;
+  isPaidPlan: boolean;
+  canEditBasicFields: boolean;
+  canEditAdvancedFields: boolean;
+  canViewBasicAnalytics: boolean;
+  canViewProAnalytics: boolean;
+  canViewRequests: boolean;
+  canViewTeam: boolean;
+  canViewInsights: boolean;
+  bannerMessage: string | null;
+  bannerVariant: "warning" | "destructive" | "secondary" | null;
 }
 
-export function useBusinessClaimPermissions(businessId: string): BusinessPermissions {
-  const { user } = useUser();
-  const { business, businessUser } = useBusiness(businessId);
+export const useBusinessClaimPermissions = (business: BusinessWithCategory | null | undefined): ClaimPermissions => {
+  const planId = business?.plan_id ?? null;
+  const { data: planRule } = usePlanRuleByPlanId(planId);
 
-  const claimStatus = (business?.claim_status as ClaimStatus) || "none";
-  const userRole = businessUser?.role;
+  if (!business) {
+    return {
+      claimStatus: "unclaimed",
+      isPending: false,
+      isVerified: false,
+      isRejected: false,
+      isRevoked: false,
+      isFreePlan: true,
+      isPaidPlan: false,
+      canEditBasicFields: false,
+      canEditAdvancedFields: false,
+      canViewBasicAnalytics: false,
+      canViewProAnalytics: false,
+      canViewRequests: false,
+      canViewTeam: false,
+      canViewInsights: false,
+      bannerMessage: null,
+      bannerVariant: null,
+    };
+  }
 
-  // Estados derivados
-  const isUnclaimed = claimStatus === "unclaimed" || claimStatus === "none";
-  const isPreview = claimStatus === "preview";
+  const claimStatus = (business as any).claim_status || "unclaimed";
   const isPending = claimStatus === "pending";
   const isVerified = claimStatus === "verified";
   const isRejected = claimStatus === "rejected";
   const isRevoked = claimStatus === "revoked";
 
-  // Qualquer estado "reivindicado" vê alguma coisa
-  const isClaimed = isPreview || isPending || isVerified || isRejected;
+  const hasPaidSubscription =
+    business.subscription_status === "active" &&
+    business.subscription_plan !== "free";
+  const isPaidPlan = hasPaidSubscription;
+  const isFreePlan = !isPaidPlan;
 
-  // Permissões de visualização
-  const canViewDashboard = isClaimed;
-  const canViewBasicAnalytics = isPreview || isVerified; // Preview vê básico
-  const canViewRequests = isVerified; // Só verified vê pedidos
-  const canViewInsights = isVerified; // Só verified vê insights
-  const canViewConversations = isVerified;
+  const allowAnalyticsPro = !!(planRule as any)?.allow_analytics_pro;
+  const allowAnalyticsBasic = (planRule as any)?.allow_analytics_basic !== false;
 
-  // Edição só verified
-  const canEditBusiness = isVerified;
-  const canManageTeam = isVerified;
-  const canManagePlan = isVerified || isPreview; // Preview pode ver planos
+  const canEditBasicFields = isPending || isVerified;
+  const canEditAdvancedFields = isVerified;
+  const canViewBasicAnalytics = isVerified && allowAnalyticsBasic;
+  const canViewProAnalytics = isVerified && allowAnalyticsPro;
+  const canViewRequests = isVerified;
+  const canViewTeam = isVerified;
+  const canViewInsights = isVerified;
 
-  // Ações
-  const canAcceptRequests = isVerified;
-  const canRespondToMessages = isVerified;
-  const canUpgradePlan = isPreview || isVerified;
+  let bannerMessage: string | null = null;
+  let bannerVariant: "warning" | "destructive" | "secondary" | null = null;
 
-  // Banner CTA contextual
-  const showUpgradeBanner = isPreview;
-  const upgradeMessage = isPreview
-    ? "🚀 Está em modo Preview! Valide o seu negócio para desbloquear pedidos de orçamento e chat com clientes."
-    : "";
+  if (isPending) {
+    bannerMessage = "O seu pedido está em validação. Aguarde contacto da nossa equipa comercial.";
+    bannerVariant = "warning";
+  } else if (isRejected) {
+    bannerMessage = "O seu pedido de claim foi rejeitado. Contacte o suporte para mais informações.";
+    bannerVariant = "destructive";
+  } else if (isRevoked) {
+    bannerMessage = "O acesso a este negócio foi revogado.";
+    bannerVariant = "secondary";
+  }
 
   return {
-    isUnclaimed,
-    isPreview,
+    claimStatus,
     isPending,
     isVerified,
     isRejected,
     isRevoked,
-
-    canViewDashboard,
+    isFreePlan,
+    isPaidPlan,
+    canEditBasicFields,
+    canEditAdvancedFields,
     canViewBasicAnalytics,
+    canViewProAnalytics,
     canViewRequests,
+    canViewTeam,
     canViewInsights,
-    canViewConversations,
-    canEditBusiness,
-    canManageTeam,
-    canManagePlan,
-
-    canAcceptRequests,
-    canRespondToMessages,
-    canUpgradePlan,
-
-    showUpgradeBanner,
-    upgradeMessage,
+    bannerMessage,
+    bannerVariant,
   };
-}
+};
