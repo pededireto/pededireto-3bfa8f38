@@ -525,6 +525,73 @@ export type Database = {
           },
         ]
       }
+      business_badge_progress: {
+        Row: {
+          badge_id: string
+          business_id: string
+          current_value: number
+          target_value: number
+          updated_at: string
+        }
+        Insert: {
+          badge_id: string
+          business_id: string
+          current_value?: number
+          target_value?: number
+          updated_at?: string
+        }
+        Update: {
+          badge_id?: string
+          business_id?: string
+          current_value?: number
+          target_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_badge_progress_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "business_badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_badge_progress_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_badge_progress_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_badge_progress_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_badge_progress_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_badge_progress_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_badges: {
         Row: {
           color: string | null
@@ -4165,6 +4232,8 @@ export type Database = {
       }
       request_business_matches: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           business_id: string
           contact_unlocked: boolean | null
           first_response_at: string | null
@@ -4177,6 +4246,8 @@ export type Database = {
           viewed_at: string | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           business_id: string
           contact_unlocked?: boolean | null
           first_response_at?: string | null
@@ -4189,6 +4260,8 @@ export type Database = {
           viewed_at?: string | null
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           business_id?: string
           contact_unlocked?: boolean | null
           first_response_at?: string | null
@@ -4201,6 +4274,13 @@ export type Database = {
           viewed_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "request_business_matches_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "request_business_matches_business_id_fkey"
             columns: ["business_id"]
@@ -6220,6 +6300,10 @@ export type Database = {
         Args: { days_to_keep?: number }
         Returns: number
       }
+      compute_badge_progress: {
+        Args: { p_business_id: string }
+        Returns: undefined
+      }
       create_consumer_support_ticket:
         | {
             Args: {
@@ -6332,6 +6416,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      invite_business_member: {
+        Args: {
+          p_business_id: string
+          p_email: string
+          p_role: Database["public"]["Enums"]["business_role"]
+        }
+        Returns: Json
+      }
       is_admin: { Args: never; Returns: boolean }
       is_business_member: { Args: { p_business_id: string }; Returns: boolean }
       is_commercial: { Args: never; Returns: boolean }
@@ -6360,6 +6452,10 @@ export type Database = {
           p_subcategory_id?: string
         }
         Returns: string
+      }
+      remove_business_member: {
+        Args: { p_business_id: string; p_user_id: string }
+        Returns: undefined
       }
       revoke_business_access: {
         Args: { p_business_id: string; p_user_id: string }

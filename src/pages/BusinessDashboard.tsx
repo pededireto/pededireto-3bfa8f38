@@ -15,6 +15,7 @@ import BusinessEditContent from "@/components/business/BusinessEditContent";
 import TeamSection from "@/components/business/TeamSection";
 import ClaimStatusBanner from "@/components/business/ClaimStatusBanner";
 import BusinessReviewsPanel from "@/components/business/BusinessReviewsPanel";
+import BadgesTab from "@/components/business/BadgesTab";
 
 const BusinessDashboard = () => {
   const [activeTab, setActiveTab] = useState<BusinessTab>("overview");
@@ -65,6 +66,8 @@ const BusinessDashboard = () => {
         return permissions.canViewTeam ? <TeamSection businessId={business.id} /> : null;
       case "reviews":
         return <BusinessReviewsPanel businessId={business.id} />;
+      case "badges":
+        return <BadgesTab businessId={business.id} />;
       default:
         return null;
     }
