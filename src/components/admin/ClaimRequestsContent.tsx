@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 
 const statusBadge = (status: string | null) => {
   switch (status) {
+    case "preview": return <Badge className="bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30">Preview</Badge>;
     case "pending": return <Badge className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30">Pendente</Badge>;
     case "verified": return <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30">Verificado</Badge>;
     case "rejected": return <Badge variant="destructive">Rejeitado</Badge>;
@@ -105,7 +106,7 @@ const ClaimRequestsContent = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {claim.claim_status === "pending" && (
+                      {(claim.claim_status === "pending" || claim.claim_status === "preview") && (
                         <>
                           <Button
                             size="sm"
