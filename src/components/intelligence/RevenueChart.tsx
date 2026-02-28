@@ -108,7 +108,7 @@ const RevenueChart = ({ data }: RevenueChartProps) => {
                   />
                   <Bar dataKey="total" radius={[0, 4, 4, 0]}>
                     {data.plan_distribution.map((entry) => (
-                      <Cell key={entry.plan_name} fill={PLAN_COLORS[entry.plan_name] ?? "hsl(var(--primary))"} />
+                      <Cell key={entry.plan_name} fill="hsl(var(--primary))" />
                     ))}
                   </Bar>
                 </BarChart>
