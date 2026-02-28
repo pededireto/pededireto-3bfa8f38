@@ -1,72 +1,107 @@
 
 
-# Plano: Preview Mode para Claims + Dashboard com Teasing
+# Business Dashboard -- 4 Blocos (Ordem do Documento)
 
-## Resumo
+Implementacao dos 4 blocos seguindo a ordem de prioridade do documento fornecido.
 
-Implementar um novo estado `preview` no ciclo de vida do claim que permite ao utilizador ver o dashboard imediatamente apos reclamar um negocio, com cards de Contactos e Pedidos bloqueados (blur + cadeado) para incentivar upgrade.
+---
 
-## Peca 1 -- SQL (2 migrations)
+## Ordem de Execucao
 
-### 1A: Alterar `claim_business()` RPC
-- Mudar `claim_status` de `'pending'` para `'preview'`
-- Manter tudo o resto igual (business_users, notificacao)
+| # | Bloco | Prioridade |
+|---|-------|-----------|
+| 1 | Caderneta de Badges (Gamificacao) | Maxima |
+| 2 | Pedidos Melhorados | Alta |
+| 3 | Avaliacoes Melhoradas | Media |
+| 4 | Equipa com Roles | Normal |
 
-### 1B: Alterar `search_businesses_for_claim()` RPC
-- Mudar filtro de `claimed = false` para `claim_status IN ('unclaimed', 'none', 'rejected')`
-- Isto permite que os ~2020 negocios scrappados aparecam na pesquisa de claim
+---
 
-### 1C: Atualizar queries no hook e admin
-- `useClaimRequests` atualmente filtra por `["pending", "verified", "rejected", "revoked"]` -- adicionar `"preview"` a lista
-- `usePendingClaimsCount` filtra por `eq("claim_status", "pending")` -- mudar para `.in("claim_status", ["pending", "preview"])` para contar ambos como pendentes no badge do admin
+## Bloco 1 -- Caderneta de Badges
 
-## Peca 2 -- useBusinessClaimPermissions.ts
+### SQL Migration
+- Criar tabela `business_badge_progress` (business_id, badge_id, current_value, target_value, updated_at) com PK composta
+- RLS: leitura permitida para membros do negocio via `business_users`
+- Criar RPC `compute_badge_progress(p_business_id uuid)` que calcula progresso baseado no campo `criteria` JSON de cada badge (types: views, contacts, requests) usando dados de `analytics_events` e `request_business_matches`
 
-Adicionar `isPreview` ao interface e logica:
+### Novos Ficheiros
+- `src/hooks/useBadgeProgress.ts` -- chama RPC, query para progress + badges, separa em desbloqueados/em progresso
+- `src/components/business/BadgesTab.tsx` -- grid responsivo (2 col mobile, 3 desktop), desbloqueados primeiro com icone colorido e data, bloqueados com barra de progresso e label de plano necessario, seccao "Proximo Objetivo"
 
-- `isPreview = claimStatus === "preview"`
-- `canEditBasicFields`: `isPending || isPreview || isVerified`
-- `canViewBasicAnalytics`: `(isPreview || isVerified) && allowAnalyticsBasic`
-- `canViewRequests`: `isVerified && isPaidPlan` (bloqueado em preview)
-- `canViewInsights`: `isVerified && isPaidPlan` (bloqueado em preview)
-- Banner para preview: "O teu negocio esta em verificacao. Podes explorar o painel -- para receber pedidos ativa um plano pago."
+### Ficheiros Alterados
+- `BusinessSidebar.tsx` -- adicionar tab "badges" (label: "Caderneta", icone: Award/Trophy)
+- `BusinessDashboard.tsx` -- adicionar case "badges" no renderContent()
 
-## Peca 3 -- BusinessDashboardOverview.tsx
+---
 
-Redesenhar os 4 KPI cards com logica de bloqueio:
+## Bloco 2 -- Pedidos Melhorados
 
-| Card | Preview/Free | Verified+Paid |
-|------|-------------|---------------|
-| Visualizacoes | Visivel com numero real | Visivel |
-| Contactos | Blur + cadeado + CTA | Visivel |
-| Pedidos | Blur + cadeado + CTA | Visivel |
-| Notificacoes | Visivel | Visivel |
+### SQL Migration
+- Adicionar `archived_at timestamptz DEFAULT NULL` e `archived_by uuid DEFAULT NULL REFERENCES profiles(id)` a `request_business_matches`
+- Criar indice `idx_rbm_archived ON request_business_matches (business_id, archived_at)`
+- Nota: nao modifica o enum `match_status` -- usa `archived_at IS NOT NULL` para determinar arquivo
 
-Adicionar:
-- Componente `LockedCard` com blur CSS + overlay com icone Lock + texto + botao "Desbloquear"
-- Componente `UpgradeBanner` no topo com mensagem contextual (preview vs free) + CTA para planos
-- Card "O teu Potencial" no fundo para preview/free mostrando quantas pessoas viram o perfil
+### Ficheiros Alterados
+- `useBusinessDashboard.ts` -- adicionar parametros de filtro (status, archived, search com ilike server-side), mutacoes `archiveRequest` e `restoreRequest`
+- `BusinessRequestsContent.tsx` -- reescrever com:
+  - Tabs internas: Ativos | Arquivados | Todos (com contadores em badge)
+  - Search debounced 300ms (descricao, nome consumidor, cidade)
+  - Filtros: Estado, Urgencia, Periodo (7/30/90 dias)
+  - Acoes: Aceitar/Recusar/Arquivar (ativos), Restaurar (arquivados)
+  - Empty states especificos por tab
+  - Skeleton loaders
+  - Manter chat inline existente sem quebrar
 
-## Peca 4 -- Admin: statusBadge em ClaimRequestsContent.tsx e CommercialClaimRequestsContent.tsx
+---
 
-- Adicionar case `"preview"` ao `statusBadge()` com badge azul "Preview"
-- Admin ClaimRequestsContent: adicionar `"preview"` as condicoes de acoes (aprovar/rejeitar disponivel tanto para "pending" como "preview")
-- Admin badge counter: contar `preview` + `pending` como pendentes
-- Commercial: filtrar `pendingClaims` por `["pending", "preview"]`
+## Bloco 3 -- Avaliacoes Melhoradas
 
-## Detalhes Tecnicos
+### SQL
+Nenhuma migracao -- todos os campos ja existem.
 
-### Ficheiros a alterar:
-1. **SQL migration** -- `claim_business()` e `search_businesses_for_claim()` RPCs
-2. **`src/hooks/useClaimRequests.ts`** -- adicionar "preview" aos filtros de query
-3. **`src/hooks/useBusinessClaimPermissions.ts`** -- adicionar `isPreview` e ajustar permissoes
-4. **`src/components/business/BusinessDashboardOverview.tsx`** -- LockedCard, UpgradeBanner, logica de bloqueio
-5. **`src/components/admin/ClaimRequestsContent.tsx`** -- statusBadge + acoes para preview
-6. **`src/components/commercial/CommercialClaimRequestsContent.tsx`** -- statusBadge + filtro
+### Ficheiros Alterados
+- `BusinessReviewsPanel.tsx` -- adicionar:
+  - Filtro por estrelas (1-5) clicavel na distribuicao
+  - Filtro: Todas | Sem resposta | Respondidas
+  - Search por conteudo do comentario
+  - Filtros aplicados no cliente (volume baixo esperado)
+  - Manter resposta in-line existente
 
-### Ordem de execucao:
-1. SQL migration (base)
-2. useClaimRequests (queries)
-3. useBusinessClaimPermissions (permissoes)
-4. BusinessDashboardOverview (UI principal)
-5. ClaimRequestsContent + CommercialClaimRequestsContent (admin)
+---
+
+## Bloco 4 -- Equipa com Roles
+
+### SQL Migration
+- Criar RPC `invite_business_member(p_business_id, p_email, p_role)` -- SECURITY DEFINER, verifica permissao (owner/manager), procura email em profiles, insere em business_users com ON CONFLICT
+- Criar RPC `remove_business_member(p_business_id, p_user_id)` -- SECURITY DEFINER, owner remove todos, manager remove staff, delete de business_users
+- Sem alteracoes de schema -- `business_users` ja tem enum `business_role` com owner/manager/staff
+
+### Ficheiros Alterados
+- `TeamSection.tsx` -- reescrever com:
+  - Tabela de membros (avatar, nome, email, role badge, estado, acoes)
+  - Dialog "Convidar Membro" com campo email + selecao de role (Administrador=manager, Operacional=staff)
+  - Editar role inline
+  - Remover membro com confirmacao (AlertDialog)
+  - Permissoes: owner controla tudo, manager controla staff, staff so ve
+
+---
+
+## Resumo de Ficheiros
+
+### Novos (2):
+1. `src/hooks/useBadgeProgress.ts`
+2. `src/components/business/BadgesTab.tsx`
+
+### Alterados (6):
+3. `src/components/business/BusinessSidebar.tsx`
+4. `src/pages/BusinessDashboard.tsx`
+5. `src/hooks/useBusinessDashboard.ts`
+6. `src/components/business/BusinessRequestsContent.tsx`
+7. `src/components/business/BusinessReviewsPanel.tsx`
+8. `src/components/business/TeamSection.tsx`
+
+### SQL Migrations (3):
+9. `business_badge_progress` + RPC `compute_badge_progress`
+10. `archived_at/archived_by` em `request_business_matches` + indice
+11. RPCs `invite_business_member` + `remove_business_member`
+
