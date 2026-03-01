@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useSearch } from "@/hooks/useSearch";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
@@ -22,7 +21,6 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   const autoSaveSearch = useAutoSaveSearch();
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
 
   const heroTitle = settings?.hero_title || "Tem um problema? Nós mostramos quem resolve.";
   const heroSubtitle = settings?.hero_subtitle || "Restaurantes, serviços, lojas e profissionais — tudo num só sítio.";
@@ -33,10 +31,8 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
     e.preventDefault();
     if (searchTerm.trim().length >= 2) {
       autoSaveSearch.mutate({ searchQuery: searchTerm.trim() });
-      setShowResults(false);
-      // ✅ Navega para a página de pesquisa dedicada
-      navigate(`/pesquisa?q=${encodeURIComponent(searchTerm.trim())}`);
       onSearch?.(searchTerm);
+      setShowResults(false);
     }
   };
 
@@ -110,20 +106,12 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                     setShowResults(true);
                   }}
                   onFocus={() => {
-                    if (searchTerm.length >= 2) setShowResults(true);
-                  }}
-                  onKeyDown={(e) => {
-                    // Enter sem resultado selecionado → vai para página de pesquisa
-                    if (e.key === "Enter" && searchTerm.trim().length >= 2) {
-                      e.preventDefault();
-                      setShowResults(false);
-                      autoSaveSearch.mutate({ searchQuery: searchTerm.trim() });
-                      navigate(`/pesquisa?q=${encodeURIComponent(searchTerm.trim())}`);
+                    if (searchTerm.length >= 2) {
+                      setShowResults(true);
                     }
                   }}
                 />
 
-                {/* Dropdown autocomplete (mantém-se igual) */}
                 {showResults && searchTerm.length >= 2 && (
                   <div id="search-results">
                     <SearchResults
@@ -132,9 +120,13 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                       searchTerm={searchTerm}
                       onSelect={(result) => {
                         setShowResults(false);
+
                         if (result?.result_name) {
-                          autoSaveSearch.mutate({ searchQuery: result.result_name });
+                          autoSaveSearch.mutate({
+                            searchQuery: result.result_name,
+                          });
                         }
+
                         onSearchChange?.("");
                         inputRef.current?.focus();
                       }}
@@ -146,16 +138,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
 
             {/* CTAs */}
             <div className="flex flex-wrap gap-3">
-              <Button
-                className="btn-cta-primary text-base"
-                onClick={() => {
-                  if (searchTerm.trim().length >= 2) {
-                    navigate(`/pesquisa?q=${encodeURIComponent(searchTerm.trim())}`);
-                  } else {
-                    scrollToCategorias();
-                  }
-                }}
-              >
+              <Button className="btn-cta-primary text-base" onClick={scrollToCategorias}>
                 Encontrar quem resolve
               </Button>
 
