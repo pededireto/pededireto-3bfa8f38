@@ -1,40 +1,71 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// ── Mapa de serviços complementares ─────────────────────────────────────────
+// ── Serviços complementares ──────────────────────────────────────────────────
 const COMPLEMENTARY_SERVICES: Record<string, string[]> = {
-  canalizador:          ["pedreiro", "materiais de construção", "impermeabilização"],
-  eletricista:          ["obras remodelação", "ar condicionado"],
-  serralheiro:          ["eletricista", "vidraceiro"],
-  pedreiro:             ["canalizador", "eletricista", "pintor", "materiais de construção"],
-  pintor:               ["pedreiro", "limpeza pós-obra"],
-  telhado:              ["impermeabilização", "pedreiro"],
-  impermeabilização:    ["pedreiro", "pintor"],
-  caldeira:             ["eletricista", "energia solar"],
-  mecânico:             ["reboque", "pneus"],
-  mudanças:             ["limpeza", "montagem"],
-  casamento:            ["fotógrafo", "catering", "decoração", "DJ"],
-  dentista:             ["médico", "farmácia"],
-  fisioterapia:         ["médico", "psicólogo"],
-  nutricionista:        ["personal trainer", "médico"],
-  explicador:           ["centro de estudos"],
-  advogado:             ["contabilista"],
-  contabilista:         ["advogado"],
-  remodelação:          ["pedreiro", "eletricista", "canalizador", "pintor"],
-  desinfestação:        ["limpeza profunda"],
-  jardinagem:           ["limpeza"],
+  canalizador: ["pedreiro", "materiais de construção", "impermeabilização"],
+  eletricista: ["obras remodelação", "ar condicionado"],
+  serralheiro: ["eletricista", "vidraceiro"],
+  pedreiro: ["canalizador", "eletricista", "pintor", "materiais de construção"],
+  pintor: ["pedreiro", "limpeza pós-obra"],
+  telhado: ["impermeabilização", "pedreiro"],
+  impermeabilização: ["pedreiro", "pintor"],
+  caldeira: ["eletricista", "energia solar"],
+  mecânico: ["reboque", "pneus"],
+  mudanças: ["limpeza", "montagem"],
+  casamento: ["fotógrafo", "catering", "decoração", "DJ"],
+  dentista: ["médico", "farmácia"],
+  fisioterapia: ["médico", "psicólogo"],
+  nutricionista: ["personal trainer", "médico"],
+  explicador: ["centro de estudos"],
+  advogado: ["contabilista"],
+  contabilista: ["advogado"],
+  remodelação: ["pedreiro", "eletricista", "canalizador", "pintor"],
+  desinfestação: ["limpeza profunda"],
+  jardinagem: ["limpeza"],
+  farmácia: ["médico", "enfermagem"],
+  "cuidados domiciliários": ["enfermagem", "médico", "fisioterapia"],
+  "energia solar": ["eficiência energética", "eletricista"],
+  tatuagens: ["estética"],
+  "pet shop": ["veterinário", "jardinagem"],
 };
 
 // ── Termos de urgência ───────────────────────────────────────────────────────
 const URGENCY_TERMS = new Set([
-  "cano rebentado", "rebentou um cano", "fuga de água", "fuga de agua",
-  "cozinha inundada", "casa de banho inundada", "sem luz", "sem eletricidade",
-  "sem electricidade", "curto circuito", "curto-circuito", "tomada a faiscar",
-  "caldeira avariada", "sem aquecimento", "aquecimento avariado",
-  "fiquei fechado fora", "perdi a chave", "porta arrombada",
-  "telhado a pingar", "goteira", "carro avariado", "carro nao arranca",
-  "pneu furado", "bateria descarregada", "sanita entupida",
-  "baratas em casa", "ratos em casa",
+  "cano rebentado",
+  "rebentou um cano",
+  "fuga de água",
+  "fuga de agua",
+  "cozinha inundada",
+  "casa de banho inundada",
+  "sem luz",
+  "sem eletricidade",
+  "sem electricidade",
+  "curto circuito",
+  "curto-circuito",
+  "tomada a faiscar",
+  "caldeira avariada",
+  "sem aquecimento",
+  "aquecimento avariado",
+  "fiquei fechado fora",
+  "perdi a chave",
+  "porta arrombada",
+  "telhado a pingar",
+  "goteira",
+  "carro avariado",
+  "carro nao arranca",
+  "pneu furado",
+  "bateria descarregada",
+  "sanita entupida",
+  "baratas em casa",
+  "ratos em casa",
+  "fuga de gás",
+  "cheira a gás",
+  "casa inundada",
+  "tou tramado",
+  "urgente",
+  "emergência",
+  "socorro",
 ]);
 
 export interface SmartBusiness {
@@ -57,6 +88,7 @@ export interface SmartSearchResult {
   businesses: SmartBusiness[];
   complementaryServices: string[];
   totalFound: number;
+  zeroResults: boolean;
 }
 
 function normalize(text: string): string {
@@ -67,87 +99,92 @@ function normalize(text: string): string {
     .trim();
 }
 
+// ── Log de pesquisa — usa colunas reais da tabela search_logs ────────────────
+async function logSearch(term: string, resultsCount: number) {
+  try {
+    await supabase.from("search_logs").insert({
+      search_term: term,
+      search_type: "smart",
+      results_count: resultsCount,
+    });
+  } catch {
+    // Silently fail — logging nunca deve quebrar a pesquisa
+  }
+}
+
 export const useSmartSearch = (term: string, userCity?: string | null) => {
   const normalizedTerm = normalize(term.trim());
 
   return useQuery({
     queryKey: ["smart-search", normalizedTerm, userCity],
     queryFn: async (): Promise<SmartSearchResult | null> => {
-      if (!normalizedTerm || normalizedTerm.length < 3) return null;
+      if (!normalizedTerm || normalizedTerm.length < 2) return null;
 
-      // ── 1. Buscar sinónimos ──────────────────────────────────────────────
-      const { data: synonyms, error: synError } = await supabase
+      // ── 1. Exact match server-side ───────────────────────────────────────
+      const { data: exactSynonyms } = await supabase
         .from("search_synonyms")
-        .select("termo, equivalente");
+        .select("termo, equivalente")
+        .ilike("termo", normalizedTerm)
+        .limit(1);
 
-      if (synError || !synonyms || synonyms.length === 0) return null;
+      let resolvedTerm: string | null = exactSynonyms?.[0]?.equivalente ?? null;
 
-      // ── 2. Encontrar match (exact → partial → keyword) ───────────────────
-      let resolvedTerm: string | null = null;
-
-      // 2a. Match exato
-      const exactMatch = synonyms.find(
-        (s) => normalize(s.termo) === normalizedTerm
-      );
-      if (exactMatch) resolvedTerm = exactMatch.equivalente;
-
-      // 2b. Match parcial
+      // ── 2. Partial match por palavras ────────────────────────────────────
       if (!resolvedTerm) {
-        const partialMatch = synonyms.find(
-          (s) =>
-            normalizedTerm.includes(normalize(s.termo)) ||
-            normalize(s.termo).includes(normalizedTerm)
-        );
-        if (partialMatch) resolvedTerm = partialMatch.equivalente;
-      }
-
-      // 2c. Match por palavra individual
-      if (!resolvedTerm) {
-        const words = normalizedTerm.split(/\s+/).filter((w) => w.length > 3);
+        const words = normalizedTerm.split(/\s+/).filter((w) => w.length > 2);
         for (const word of words) {
-          const wordMatch = synonyms.find(
-            (s) =>
-              normalize(s.termo).includes(word) ||
-              normalize(s.equivalente) === word
-          );
-          if (wordMatch) {
-            resolvedTerm = wordMatch.equivalente;
+          const { data: partialSynonyms } = await supabase
+            .from("search_synonyms")
+            .select("termo, equivalente")
+            .ilike("termo", `%${word}%`)
+            .limit(5);
+
+          if (partialSynonyms && partialSynonyms.length > 0) {
+            const best = partialSynonyms.sort((a, b) => b.termo.length - a.termo.length)[0];
+            resolvedTerm = best.equivalente;
             break;
           }
         }
       }
 
-      if (!resolvedTerm) return null;
+      const searchTerm = resolvedTerm ?? normalizedTerm;
 
-      // ── 3. Buscar negócios com o termo resolvido ─────────────────────────
-      let bizQuery = supabase
+      // ── 3. Buscar negócios por categoria ─────────────────────────────────
+      let businesses: any[] = [];
+
+      const { data: byCategory } = await supabase
         .from("businesses")
         .select("id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug)")
         .eq("is_active", true)
-        .or(`name.ilike.%${resolvedTerm}%,description.ilike.%${resolvedTerm}%`)
+        .ilike("categories.name", `%${searchTerm}%`)
         .order("is_premium", { ascending: false })
         .limit(20);
 
-      if (userCity) {
-        bizQuery = bizQuery.ilike("city", `%${userCity}%`);
+      if (byCategory && byCategory.length > 0) {
+        businesses = byCategory.filter((b) => b.categories);
       }
 
-      let { data: businesses } = await bizQuery;
-
-      // Fallback: buscar por categoria se não encontrou por nome/descrição
-      if (!businesses || businesses.length === 0) {
-        const { data: catBiz } = await supabase
+      // ── 4. Fallback: por nome/descrição ──────────────────────────────────
+      if (businesses.length === 0) {
+        const { data: byText } = await supabase
           .from("businesses")
           .select("id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug)")
           .eq("is_active", true)
-          .ilike("categories.name", `%${resolvedTerm}%`)
+          .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
           .order("is_premium", { ascending: false })
           .limit(20);
-        businesses = catBiz || [];
+
+        businesses = byText || [];
       }
 
-      // ── 4. Formatar ──────────────────────────────────────────────────────
-      const formattedBusinesses: SmartBusiness[] = (businesses || []).map((b: any) => ({
+      // ── 5. Filtro de cidade (soft — só aplica se houver resultados) ───────
+      if (userCity && businesses.length > 0) {
+        const cityFiltered = businesses.filter((b) => b.city?.toLowerCase().includes(userCity.toLowerCase()));
+        if (cityFiltered.length > 0) businesses = cityFiltered;
+      }
+
+      // ── 6. Formatar ──────────────────────────────────────────────────────
+      const formattedBusinesses: SmartBusiness[] = businesses.map((b: any) => ({
         id: b.id,
         name: b.name,
         slug: b.slug,
@@ -159,29 +196,34 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         category_slug: b.categories?.slug ?? null,
       }));
 
-      // ── 5. Complementares ────────────────────────────────────────────────
-      const normResolved = normalize(resolvedTerm);
+      // ── 7. Complementares ────────────────────────────────────────────────
+      const normResolved = normalize(searchTerm);
       const complementary =
         COMPLEMENTARY_SERVICES[normResolved] ||
-        COMPLEMENTARY_SERVICES[
-          Object.keys(COMPLEMENTARY_SERVICES).find((k) => normalize(k) === normResolved) ?? ""
-        ] ||
+        COMPLEMENTARY_SERVICES[Object.keys(COMPLEMENTARY_SERVICES).find((k) => normalize(k) === normResolved) ?? ""] ||
         [];
 
-      // ── 6. Urgência ──────────────────────────────────────────────────────
-      const isUrgent = URGENCY_TERMS.has(normalizedTerm);
+      // ── 8. Urgência ──────────────────────────────────────────────────────
+      const isUrgent =
+        URGENCY_TERMS.has(normalizedTerm) ||
+        normalizedTerm.includes("urgente") ||
+        normalizedTerm.includes("emergencia");
+
+      // ── 9. Log assíncrono usando colunas reais da search_logs ────────────
+      logSearch(term.trim(), formattedBusinesses.length);
 
       return {
-        isSmartMatch: true,
+        isSmartMatch: !!resolvedTerm,
         isUrgent,
         searchedTerm: term.trim(),
-        resolvedTerm,
+        resolvedTerm: searchTerm,
         businesses: formattedBusinesses,
         complementaryServices: complementary,
         totalFound: formattedBusinesses.length,
+        zeroResults: formattedBusinesses.length === 0,
       };
     },
-    enabled: normalizedTerm.length >= 3,
-    staleTime: 30000,
+    enabled: normalizedTerm.length >= 2,
+    staleTime: 30_000,
   });
 };
