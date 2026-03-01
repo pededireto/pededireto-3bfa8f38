@@ -445,8 +445,8 @@ const BusinessPage = () => {
         </div>
       )}
 
-      {!(business.claim_status === "verified" && userIsOwner) && (
-        <UnclaimedBusinessBanner businessId={business.id} claimStatus={business.claim_status} />
+      {!(business as any).is_claimed && !(business.claim_status === "verified" && userIsOwner) && (
+        <UnclaimedBusinessBanner businessId={business.id} claimStatus={business.claim_status} isClaimed={(business as any).is_claimed} />
       )}
 
       <main className="flex-1">

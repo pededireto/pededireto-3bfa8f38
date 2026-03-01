@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BusinessWithCategory,
   useUpdateBusiness,
@@ -21,6 +22,8 @@ import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
 import { useCreateAuditLog } from "@/hooks/useAuditLogs";
 import { useContactLogs, useCreateContactLog } from "@/hooks/useContactLogs";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +59,7 @@ import {
   ExternalLink,
   Image,
   Trash2,
+  FlaskConical,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────
@@ -318,6 +322,111 @@ function ContactHistoryInline({ businessId }: { businessId: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Trial & Claim Section (admin only)
+// ─────────────────────────────────────────────
+
+function TrialClaimSection({ business }: { business: BusinessWithCategory }) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const trialEnd = (business as any).trial_ends_at ? new Date((business as any).trial_ends_at) : null;
+  const isTrialActive = !!trialEnd && trialEnd > new Date();
+  const trialDaysLeft = isTrialActive
+    ? Math.ceil((trialEnd!.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 0;
+  const isClaimed = (business as any).is_claimed === true;
+
+  const handleActivateTrial = async () => {
+    const now = new Date();
+    const ends = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
+    const { error } = await supabase
+      .from("businesses")
+      .update({
+        trial_ends_at: ends.toISOString(),
+        trial_activated_at: now.toISOString(),
+        trial_activated_by: user?.id,
+        is_claimed: true,
+      } as any)
+      .eq("id", business.id);
+    if (error) {
+      toast({ title: "Erro ao activar trial", variant: "destructive" });
+    } else {
+      toast({ title: "Trial de 15 dias activado" });
+      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+    }
+  };
+
+  const handleCancelTrial = async () => {
+    const { error } = await supabase
+      .from("businesses")
+      .update({ trial_ends_at: null } as any)
+      .eq("id", business.id);
+    if (error) {
+      toast({ title: "Erro ao cancelar trial", variant: "destructive" });
+    } else {
+      toast({ title: "Trial cancelado" });
+      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+    }
+  };
+
+  const handleToggleClaimed = async (value: boolean) => {
+    const { error } = await supabase
+      .from("businesses")
+      .update({ is_claimed: value } as any)
+      .eq("id", business.id);
+    if (error) {
+      toast({ title: "Erro ao alterar estado", variant: "destructive" });
+    } else {
+      toast({ title: value ? "Negócio marcado como reclamado" : "Negócio marcado como não reclamado" });
+      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+    }
+  };
+
+  return (
+    <Section title="Trial & Claim" icon={FlaskConical} defaultOpen={true}>
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Switch checked={isClaimed} onCheckedChange={handleToggleClaimed} />
+          <Label>Negócio Reclamado</Label>
+          {isClaimed && (
+            <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+              Reclamado
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 flex-wrap">
+          {isTrialActive ? (
+            <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+              Trial Activo — {trialDaysLeft} dias restantes
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
+              Sem Trial
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          {!isTrialActive && (
+            <Button type="button" size="sm" onClick={handleActivateTrial}>
+              <FlaskConical className="h-3.5 w-3.5 mr-1.5" />
+              Activar Trial 15 dias
+            </Button>
+          )}
+          {isTrialActive && (
+            <Button type="button" size="sm" variant="destructive" onClick={handleCancelTrial}>
+              Cancelar Trial
+            </Button>
+          )}
+        </div>
+      </div>
+    </Section>
   );
 }
 
@@ -1167,6 +1276,11 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             </div>
           )}
         </Section>
+      )}
+
+      {/* ── 6B. Trial & Claim (admin only) ── */}
+      {!isOwner && isEditing && business && (
+        <TrialClaimSection business={business} />
       )}
 
       {/* ── 7. Subscrição e Produto ── */}

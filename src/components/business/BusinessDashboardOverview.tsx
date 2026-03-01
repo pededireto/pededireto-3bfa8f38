@@ -6,6 +6,7 @@ import { useBusinessRequests } from "@/hooks/useBusinessDashboard";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
+import { useBusinessPlan } from "@/hooks/useBusinessPlan";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
 import BusinessProAlerts from "@/components/business/BusinessProAlerts";
 import BusinessSearchPosition from "@/components/business/BusinessSearchPosition";
@@ -14,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import {
   Building2, CreditCard, Inbox, Bell,
   Eye, MousePointerClick, TrendingUp,
-  Calendar, ArrowRight, Lock, Zap
+  Calendar, ArrowRight, Lock, Zap,
+  Clock, AlertTriangle as AlertTriangleIcon
 } from "lucide-react";
 
 interface Props {
@@ -100,6 +102,11 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
   const { data: unreadCount = 0 } = useUnreadNotificationsCount(business.id);
   const { data: analytics, refetch } = useBusinessAnalytics(business.id);
   const permissions = useBusinessClaimPermissions(business);
+  const { isOnTrial, trialDaysLeft } = useBusinessPlan({
+    subscription_plan: (business as any).subscription_plan,
+    subscription_status: business.subscription_status,
+    trial_ends_at: (business as any).trial_ends_at,
+  });
   const plan = plans.find((p) => p.id === business.plan_id);
 
   useEffect(() => {
@@ -128,6 +135,41 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">Bem-vindo, <span className="font-medium text-foreground">{business.name}</span></p>
       </div>
+
+      {/* Trial Banner */}
+      {isOnTrial && trialDaysLeft > 3 && (
+        <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 flex items-center gap-4">
+          <div className="rounded-full bg-yellow-500/20 p-2.5 shrink-0">
+            <Clock className="h-5 w-5 text-yellow-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">Estás em modo Trial PRO — {trialDaysLeft} dias restantes</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Experimenta todas as funcionalidades PRO gratuitamente.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => onNavigate?.("plan")} className="shrink-0">
+            Escolher Plano <ArrowRight className="h-3 w-3 ml-1" />
+          </Button>
+        </div>
+      )}
+
+      {isOnTrial && trialDaysLeft <= 3 && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 flex items-center gap-4">
+          <div className="rounded-full bg-destructive/20 p-2.5 shrink-0">
+            <AlertTriangleIcon className="h-5 w-5 text-destructive" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">O teu Trial termina em {trialDaysLeft} dias!</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Não percas o acesso PRO.
+            </p>
+          </div>
+          <Button size="sm" variant="destructive" onClick={() => onNavigate?.("plan")} className="shrink-0">
+            Manter acesso PRO <ArrowRight className="h-3 w-3 ml-1" />
+          </Button>
+        </div>
+      )}
 
       <UpgradeBanner
         isPreview={permissions.isPreview}

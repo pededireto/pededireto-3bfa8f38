@@ -226,17 +226,23 @@ const PlansContent = () => {
                       {premiumLabel(plan.premium_level)}
                     </Badge>
                   )}
-                  {/* Indicador Stripe */}
+                  {/* Indicador Stripe com ambiente */}
                   {plan.stripe_price_id ? (
-                    <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
-                      ✓ Stripe
-                    </Badge>
+                    plan.stripe_price_id.includes("_test_") ? (
+                      <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                        ⚠ Modo Teste
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+                        ✓ Produção
+                      </Badge>
+                    )
                   ) : plan.price > 0 ? (
                     <Badge
                       variant="outline"
                       className="text-xs bg-destructive/10 text-destructive border-destructive/20"
                     >
-                      ! Sem Stripe
+                      ! Não configurado
                     </Badge>
                   ) : null}
                 </div>
@@ -420,18 +426,30 @@ const PlansContent = () => {
                     />
                   </div>
                 </div>
-                {form.stripe_price_id && (
-                  <div className="flex items-center gap-2 text-xs text-green-500">
-                    <span>✓</span>
-                    <span>Stripe ID configurado</span>
+                {form.stripe_price_id ? (
+                  form.stripe_price_id.includes("_test_") ? (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                        ⚠ Modo Teste
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">Este ID é de teste — actualiza para produção</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+                        ✓ Produção
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">Stripe ID de produção configurado</span>
+                    </div>
+                  )
+                ) : form.price > 0 ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/20">
+                      ! Não configurado
+                    </Badge>
+                    <span className="text-xs text-destructive">Plano pago sem Stripe ID — pagamentos não vão funcionar</span>
                   </div>
-                )}
-                {!form.stripe_price_id && form.price > 0 && (
-                  <div className="flex items-center gap-2 text-xs text-destructive">
-                    <span>!</span>
-                    <span>Plano pago sem Stripe ID — pagamentos não vão funcionar</span>
-                  </div>
-                )}
+                ) : null}
               </div>
             )}
 
