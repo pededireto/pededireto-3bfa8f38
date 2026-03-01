@@ -40,13 +40,13 @@ import AdminRegister from "./pages/AdminRegister";
 import CommercialPage from "./pages/CommercialPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import CustomerSuccessPage from "./pages/CustomerSuccessPage";
-
 import RequestServicePage from "./pages/RequestServicePage";
 import RequestDetailPage from "./pages/RequestDetailPage";
 import UpgradePage from "./pages/UpgradePage";
 import NotFound from "./pages/NotFound";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
+import SearchPage from "./pages/SearchPage";
 
 const queryClient = new QueryClient();
 
@@ -130,6 +130,7 @@ const App = () => {
                     <Route path="/categoria/:slug" element={<CategoryPage />} />
                     <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
                     <Route path="/negocio/:slug" element={<BusinessPage />} />
+                    <Route path="/pesquisa" element={<SearchPage />} />
                     <Route path="/pagina/:slug" element={<InstitutionalPage />} />
 
                     {/* AUTH */}
@@ -169,12 +170,22 @@ const App = () => {
                       }
                     />
 
-                    <Route path="/admin/stripe-setup" element={
-                      <ProtectedRoute requireAdmin><StripeSetup /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/stripe-cleanup" element={
-                      <ProtectedRoute requireAdmin><StripeCleanup /></ProtectedRoute>
-                    } />
+                    <Route
+                      path="/admin/stripe-setup"
+                      element={
+                        <ProtectedRoute requireAdmin>
+                          <StripeSetup />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/stripe-cleanup"
+                      element={
+                        <ProtectedRoute requireAdmin>
+                          <StripeCleanup />
+                        </ProtectedRoute>
+                      }
+                    />
 
                     <Route
                       path="/comercial"
