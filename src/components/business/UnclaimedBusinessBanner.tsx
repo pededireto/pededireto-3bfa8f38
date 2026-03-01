@@ -5,12 +5,14 @@ import { useNavigate } from "react-router-dom";
 interface Props {
   businessId: string;
   claimStatus?: string | null;
+  isClaimed?: boolean;
 }
 
-export function UnclaimedBusinessBanner({ businessId, claimStatus }: Props) {
+export function UnclaimedBusinessBanner({ businessId, claimStatus, isClaimed }: Props) {
   const navigate = useNavigate();
 
-  // Se for verified, não mostra nada
+  // Se is_claimed é true ou claim_status é verified, não mostra nada
+  if (isClaimed === true) return null;
   if (claimStatus === "verified") return null;
 
   // Para pending - pedido em análise
