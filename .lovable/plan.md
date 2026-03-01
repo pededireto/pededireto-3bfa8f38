@@ -1,107 +1,129 @@
+# Feature 1: Stripe em Producao + Feature 2: Sistema de Trial 15 Dias
 
+## Resumo
 
-# Business Dashboard -- 4 Blocos (Ordem do Documento)
-
-Implementacao dos 4 blocos seguindo a ordem de prioridade do documento fornecido.
-
----
-
-## Ordem de Execucao
-
-| # | Bloco | Prioridade |
-|---|-------|-----------|
-| 1 | Caderneta de Badges (Gamificacao) | Maxima |
-| 2 | Pedidos Melhorados | Alta |
-| 3 | Avaliacoes Melhoradas | Media |
-| 4 | Equipa com Roles | Normal |
+Duas features independentes a implementar em simultaneo: (1) badges visuais de ambiente Stripe no admin e garantia de uso de chaves de producao, e (2) sistema completo de Trial de 15 dias com gestao no admin, banner no dashboard e logica de ocultacao do banner "Nao reclamado".
 
 ---
 
-## Bloco 1 -- Caderneta de Badges
+## Feature 1 -- Stripe em Producao
 
-### SQL Migration
-- Criar tabela `business_badge_progress` (business_id, badge_id, current_value, target_value, updated_at) com PK composta
-- RLS: leitura permitida para membros do negocio via `business_users`
-- Criar RPC `compute_badge_progress(p_business_id uuid)` que calcula progresso baseado no campo `criteria` JSON de cada badge (types: views, contacts, requests) usando dados de `analytics_events` e `request_business_matches`
+### 1A. Chave secreta (STRIPE_SECRET_KEY)
 
-### Novos Ficheiros
-- `src/hooks/useBadgeProgress.ts` -- chama RPC, query para progress + badges, separa em desbloqueados/em progresso
-- `src/components/business/BadgesTab.tsx` -- grid responsivo (2 col mobile, 3 desktop), desbloqueados primeiro com icone colorido e data, bloqueados com barra de progresso e label de plano necessario, seccao "Proximo Objetivo"
+A chave `STRIPE_SECRET_KEY` **nao esta configurada** nos secrets do projeto. As Edge Functions (`create-checkout-session`, `stripe-webhook`, `create-stripe-plans`, `stripe-cleanup`) ja a referenciam via `Deno.env.get("STRIPE_SECRET_KEY")`.
 
-### Ficheiros Alterados
-- `BusinessSidebar.tsx` -- adicionar tab "badges" (label: "Caderneta", icone: Award/Trophy)
-- `BusinessDashboard.tsx` -- adicionar case "badges" no renderContent()
+**Accao:** Usar a ferramenta `add_secret` para pedir ao utilizador que introduza a chave secreta de producao do Stripe (`sk_live_...`). Sem esta chave, nenhum pagamento funciona.
 
----
+### 1B. Chave publicavel (frontend)
 
-## Bloco 2 -- Pedidos Melhorados
+Atualmente o frontend **nao usa** nenhuma chave publishable do Stripe (nao ha `loadStripe` nem `VITE_STRIPE_PUBLISHABLE_KEY`). O checkout e feito via Edge Function que devolve um URL -- nao e necessario Stripe.js no frontend. Logo, **nenhuma alteracao e necessaria** neste ponto.
 
-### SQL Migration
-- Adicionar `archived_at timestamptz DEFAULT NULL` e `archived_by uuid DEFAULT NULL REFERENCES profiles(id)` a `request_business_matches`
-- Criar indice `idx_rbm_archived ON request_business_matches (business_id, archived_at)`
-- Nota: nao modifica o enum `match_status` -- usa `archived_at IS NOT NULL` para determinar arquivo
+### 1C. Badges de ambiente no PlansContent.tsx
 
-### Ficheiros Alterados
-- `useBusinessDashboard.ts` -- adicionar parametros de filtro (status, archived, search com ilike server-side), mutacoes `archiveRequest` e `restoreRequest`
-- `BusinessRequestsContent.tsx` -- reescrever com:
-  - Tabs internas: Ativos | Arquivados | Todos (com contadores em badge)
-  - Search debounced 300ms (descricao, nome consumidor, cidade)
-  - Filtros: Estado, Urgencia, Periodo (7/30/90 dias)
-  - Acoes: Aceitar/Recusar/Arquivar (ativos), Restaurar (arquivados)
-  - Empty states especificos por tab
-  - Skeleton loaders
-  - Manter chat inline existente sem quebrar
+Alterar a seccao "Ligacao Stripe" no dialog de edicao (linhas 393-436) para mostrar badges condicionais:
+
+- **Badge verde "Producao"** -- se `stripe_price_id` comecar por `price_` e NAO contiver `_test_`
+- **Badge amarelo "Modo Teste"** -- se `stripe_price_id` contiver `_test_`
+- **Badge vermelho "Nao configurado"** -- se `stripe_price_id` estiver vazio
+
+Substituir o indicador simples existente (`"Stripe ID configurado"`) por estes badges com cores e icones distintos.
+
+Tambem actualizar o badge na listagem de planos (linhas 229-241) com a mesma logica.
+
+**Ficheiro:** `src/components/admin/PlansContent.tsx`
 
 ---
 
-## Bloco 3 -- Avaliacoes Melhoradas
+## Feature 2 -- Sistema de Trial 15 Dias
 
-### SQL
-Nenhuma migracao -- todos os campos ja existem.
+### 2.1 SQL Migration
 
-### Ficheiros Alterados
-- `BusinessReviewsPanel.tsx` -- adicionar:
-  - Filtro por estrelas (1-5) clicavel na distribuicao
-  - Filtro: Todas | Sem resposta | Respondidas
-  - Search por conteudo do comentario
-  - Filtros aplicados no cliente (volume baixo esperado)
-  - Manter resposta in-line existente
+Adicionar 4 colunas a tabela `businesses`:
+
+```sql
+ALTER TABLE businesses
+  ADD COLUMN IF NOT EXISTS is_claimed boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS trial_ends_at timestamptz DEFAULT null,
+  ADD COLUMN IF NOT EXISTS trial_activated_at timestamptz DEFAULT null,
+  ADD COLUMN IF NOT EXISTS trial_activated_by uuid REFERENCES auth.users(id);
+```
+
+Nota: sem RLS adicional necessaria -- a tabela `businesses` ja tem politicas existentes que permitem leitura publica e escrita via RPCs.
+
+### 2.2 Hook useBusinessPlan.ts
+
+Criar novo ficheiro `src/hooks/useBusinessPlan.ts` com a logica exacta fornecida pelo utilizador:
+
+- Recebe `subscription_plan`, `subscription_status`, `trial_ends_at`
+- Calcula `isPro`, `isStart`, `isFree`, `isOnTrial`, `trialDaysLeft`
+- Trial activo concede acesso PRO
+
+### 2.3 BusinessFileCard.tsx -- Seccao Trial & Claim
+
+Adicionar nova `Section` no formulario admin (entre a seccao 6 "Estado Comercial" e a seccao 7 "Subscricao"), visivel apenas para admin (`!isOwner`):
+
+- **Toggle `is_claimed**` com label "Negocio Reclamado"
+- **Badge de estado do trial:**
+  - Verde "Trial Activo -- X dias restantes" se `trial_ends_at > now()`
+  - Cinzento "Sem Trial" se `trial_ends_at` e null ou passado
+- **Botao "Activar Trial 15 dias"** que faz update directo via supabase (nao via mutation do form):
+  - `trial_ends_at = now() + 15 dias`
+  - `trial_activated_at = now()`
+  - `trial_activated_by = auth.uid()`
+  - `is_claimed = true`
+  - Invalida query `["businesses"]`
+  - Toast de sucesso
+- **Botao "Cancelar Trial"** (so visivel se trial activo):
+  - `trial_ends_at = null`
+  - Toast "Trial cancelado"
+  - Invalida query `["businesses"]`
+
+Os valores `is_claimed` e `trial_ends_at` sao lidos do objecto `business` passado por props (ja carregado).
+
+### 2.4 UnclaimedBusinessBanner.tsx + BusinessPage.tsx
+
+**UnclaimedBusinessBanner.tsx:** Adicionar prop `isClaimed` e retornar `null` se `isClaimed === true`.
+
+**BusinessPage.tsx (linha 448):** Alterar a condicao de renderizacao:
+
+- Antes: `!(business.claim_status === "verified" && userIsOwner)`
+- Depois: `!business.is_claimed && !(business.claim_status === "verified" && userIsOwner)`
+
+Passar `isClaimed={(business as any).is_claimed}` ao componente.
+
+### 2.5 Banner Trial no Dashboard
+
+Em `BusinessDashboardOverview.tsx`, adicionar banner condicional entre o titulo e o `UpgradeBanner` existente:
+
+- Usar `useBusinessPlan` com dados do `business`
+- Se `isOnTrial && trialDaysLeft > 3`: banner amber com icone Clock, texto "Estas em modo Trial PRO -- X dias restantes", botao "Escolher Plano"
+- Se `isOnTrial && trialDaysLeft <= 3`: banner red/destructive com icone AlertTriangle, texto "O teu Trial termina em X dias!", botao "Manter acesso PRO"
+- Botao navega para tab "plan" via `onNavigate?.("plan")`  
+  
+Quando o Trial tiver quase a expirar, o `useBusinessPlan` volta automaticamente ao plano gratuito pela leitura dos campos — Deverá nessa altura  enviar um **email automático** via Supabase Edge Function que avisa 3 dias antes do trial expirar. 
 
 ---
 
-## Bloco 4 -- Equipa com Roles
+## Ficheiros a criar/alterar
 
-### SQL Migration
-- Criar RPC `invite_business_member(p_business_id, p_email, p_role)` -- SECURITY DEFINER, verifica permissao (owner/manager), procura email em profiles, insere em business_users com ON CONFLICT
-- Criar RPC `remove_business_member(p_business_id, p_user_id)` -- SECURITY DEFINER, owner remove todos, manager remove staff, delete de business_users
-- Sem alteracoes de schema -- `business_users` ja tem enum `business_role` com owner/manager/staff
 
-### Ficheiros Alterados
-- `TeamSection.tsx` -- reescrever com:
-  - Tabela de membros (avatar, nome, email, role badge, estado, acoes)
-  - Dialog "Convidar Membro" com campo email + selecao de role (Administrador=manager, Operacional=staff)
-  - Editar role inline
-  - Remover membro com confirmacao (AlertDialog)
-  - Permissoes: owner controla tudo, manager controla staff, staff so ve
+| Ficheiro                                                | Accao                            |
+| ------------------------------------------------------- | -------------------------------- |
+| SQL Migration                                           | Criar: 4 colunas em `businesses` |
+| `src/hooks/useBusinessPlan.ts`                          | Criar                            |
+| `src/components/admin/PlansContent.tsx`                 | Alterar: badges Stripe           |
+| `src/components/admin/BusinessFileCard.tsx`             | Alterar: seccao Trial & Claim    |
+| `src/components/business/UnclaimedBusinessBanner.tsx`   | Alterar: prop `isClaimed`        |
+| `src/pages/BusinessPage.tsx`                            | Alterar: condicao de banner      |
+| `src/components/business/BusinessDashboardOverview.tsx` | Alterar: banner trial            |
 
----
 
-## Resumo de Ficheiros
+## Ordem de execucao
 
-### Novos (2):
-1. `src/hooks/useBadgeProgress.ts`
-2. `src/components/business/BadgesTab.tsx`
-
-### Alterados (6):
-3. `src/components/business/BusinessSidebar.tsx`
-4. `src/pages/BusinessDashboard.tsx`
-5. `src/hooks/useBusinessDashboard.ts`
-6. `src/components/business/BusinessRequestsContent.tsx`
-7. `src/components/business/BusinessReviewsPanel.tsx`
-8. `src/components/business/TeamSection.tsx`
-
-### SQL Migrations (3):
-9. `business_badge_progress` + RPC `compute_badge_progress`
-10. `archived_at/archived_by` em `request_business_matches` + indice
-11. RPCs `invite_business_member` + `remove_business_member`
-
+1. Pedir secret `STRIPE_SECRET_KEY` ao utilizador
+2. SQL migration (4 colunas)
+3. Criar `useBusinessPlan.ts`
+4. Alterar `BusinessFileCard.tsx` (seccao Trial & Claim)
+5. Alterar `UnclaimedBusinessBanner.tsx` + `BusinessPage.tsx`
+6. Alterar `BusinessDashboardOverview.tsx` (banner trial)
+7. Alterar `PlansContent.tsx` (badges Stripe)
