@@ -233,6 +233,7 @@ const CategoryCard = ({ category, onOpen }: { category: Category; onOpen: () => 
             loading="lazy"
           />
           <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+          {/* ✅ Apenas o nome — descrição removida do card, fica só no modal */}
           <div className="relative z-10 flex flex-col justify-end h-full min-h-[180px] md:min-h-[200px] p-4">
             <h3
               className="font-semibold text-base md:text-lg text-white text-center"
@@ -240,14 +241,6 @@ const CategoryCard = ({ category, onOpen }: { category: Category; onOpen: () => 
             >
               {category.name}
             </h3>
-            {category.description && (
-              <p
-                className="text-xs md:text-sm text-white/80 line-clamp-2 text-center mt-1"
-                style={{ textShadow: "0 1px 4px rgba(0,0,0,0.7)" }}
-              >
-                {category.description}
-              </p>
-            )}
           </div>
         </>
       ) : (
@@ -255,8 +248,8 @@ const CategoryCard = ({ category, onOpen }: { category: Category; onOpen: () => 
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
             <IconComponent className="w-7 h-7 text-primary" />
           </div>
-          <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">{category.name}</h3>
-          {category.description && <p className="text-sm text-muted-foreground line-clamp-2">{category.description}</p>}
+          {/* ✅ Sem imagem: também só o nome, sem descrição */}
+          <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{category.name}</h3>
         </>
       )}
     </div>
