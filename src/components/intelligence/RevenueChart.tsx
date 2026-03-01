@@ -104,11 +104,13 @@ const RevenueChart = ({ data }: RevenueChartProps) => {
                       fontSize: 12,
                       color: "hsl(var(--foreground))",
                     }}
+                    labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+                    itemStyle={{ color: "hsl(var(--foreground))" }}
                     formatter={(v: number) => [v, "Negócios"]}
                   />
                   <Bar dataKey="total" radius={[0, 4, 4, 0]}>
-                    {data.plan_distribution.map((entry) => (
-                      <Cell key={entry.plan_name} fill="hsl(var(--primary))" />
+                    {data.plan_distribution.map((entry, index) => (
+                      <Cell key={entry.plan_name} fill={index % 2 === 0 ? "hsl(var(--primary))" : "#16a34a"} />
                     ))}
                   </Bar>
                 </BarChart>
