@@ -1989,6 +1989,7 @@ export type Database = {
           images: string[] | null
           instagram_url: string | null
           is_active: boolean | null
+          is_claimed: boolean | null
           is_featured: boolean | null
           is_premium: boolean | null
           logo_url: string | null
@@ -2018,6 +2019,9 @@ export type Database = {
           subscription_price: number | null
           subscription_start_date: string | null
           subscription_status: Database["public"]["Enums"]["subscription_status_tipo"]
+          trial_activated_at: string | null
+          trial_activated_by: string | null
+          trial_ends_at: string | null
           updated_at: string | null
           verified_at: string | null
           verified_by: string | null
@@ -2057,6 +2061,7 @@ export type Database = {
           images?: string[] | null
           instagram_url?: string | null
           is_active?: boolean | null
+          is_claimed?: boolean | null
           is_featured?: boolean | null
           is_premium?: boolean | null
           logo_url?: string | null
@@ -2086,6 +2091,9 @@ export type Database = {
           subscription_price?: number | null
           subscription_start_date?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status_tipo"]
+          trial_activated_at?: string | null
+          trial_activated_by?: string | null
+          trial_ends_at?: string | null
           updated_at?: string | null
           verified_at?: string | null
           verified_by?: string | null
@@ -2125,6 +2133,7 @@ export type Database = {
           images?: string[] | null
           instagram_url?: string | null
           is_active?: boolean | null
+          is_claimed?: boolean | null
           is_featured?: boolean | null
           is_premium?: boolean | null
           logo_url?: string | null
@@ -2154,6 +2163,9 @@ export type Database = {
           subscription_price?: number | null
           subscription_start_date?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status_tipo"]
+          trial_activated_at?: string | null
+          trial_activated_by?: string | null
+          trial_ends_at?: string | null
           updated_at?: string | null
           verified_at?: string | null
           verified_by?: string | null
@@ -2208,6 +2220,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "subcategories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_trial_activated_by_fkey"
+            columns: ["trial_activated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -6373,6 +6392,15 @@ export type Database = {
       get_business_profile_score: {
         Args: { p_business_id: string }
         Returns: Json
+      }
+      get_business_public_badges: {
+        Args: { p_business_id: string }
+        Returns: {
+          badge_color: string
+          badge_icon: string
+          badge_name: string
+          badge_slug: string
+        }[]
       }
       get_business_public_profile: { Args: { p_slug: string }; Returns: Json }
       get_businesses_for_cadence: {
