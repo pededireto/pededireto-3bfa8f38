@@ -262,14 +262,11 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       const bestPatternEntry = Object.entries(patternScores).sort(([, a], [, b]) => b - a)[0];
       let bestPatternId: string | null = bestPatternEntry?.[0] ?? null;
 
-      // CORREÇÃO 1: Threshold mínimo de 3 para evitar falsos positivos
-      // por keywords genéricas como "comida" que matcham padrões errados
-      if (bestPatternId && bestPatternEntry[1] >= 3) {
+      if (bestPatternId && bestPatternEntry[1] > 0) {
         const bestPattern = patternMap.get(bestPatternId);
         intentType = bestPattern?.intent_type ?? null;
         urgencyLevel = bestPattern?.urgency_level ?? 0;
-        // CORREÇÃO 2: NÃO marcar isSmartMatch = true aqui ainda
-        // Só confirmar após encontrar negócios reais
+        isSmartMatch = true;
 
         const { data: solutions } = await supabase
           .from("pattern_categories")
@@ -312,8 +309,6 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
                 businesses = biz.map(formatBusiness);
                 primarySolution = (solution.subcategories as any)?.name ?? primarySolution;
                 resolvedTerm = primarySolution ?? normalizedTerm;
-                // CORREÇÃO 3: só marca smartMatch quando há negócios reais
-                isSmartMatch = true;
                 break;
               }
             }
@@ -333,14 +328,10 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
                 businesses = biz.map(formatBusiness);
                 primarySolution = (solution.categories as any)?.name ?? primarySolution;
                 resolvedTerm = primarySolution ?? normalizedTerm;
-                // CORREÇÃO 3: só marca smartMatch quando há negócios reais
-                isSmartMatch = true;
                 break;
               }
             }
           }
-          // Se percorreu todas as soluções sem encontrar negócios,
-          // isSmartMatch fica false e cai para Camada 2 normalmente
         }
       }
 
