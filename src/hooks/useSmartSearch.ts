@@ -360,28 +360,39 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         let synonymTerm: string | null = null;
 
         if (allSynonyms) {
+          // PASSO 1: match exato em TODOS os candidatos primeiro
           for (const candidate of candidates) {
             if (!candidate || candidate.length < 2) continue;
-
-            // 1. Match exato
             const exact = allSynonyms.find((s) => normalize(s.termo) === normalize(candidate));
             if (exact) {
               synonymTerm = exact.equivalente;
               break;
             }
+          }
 
-            // 2. Candidato contém o sinónimo: "site de delivery" contém "site"
-            const supersetMatch = allSynonyms.find((s) => normalize(candidate).includes(normalize(s.termo)));
-            if (supersetMatch) {
-              synonymTerm = supersetMatch.equivalente;
-              break;
-            }
+          // PASSO 2: match parcial só se não houve match exato
+          // Mínimo 4 chars para evitar falsos positivos ("de", "ou", etc.)
+          if (!synonymTerm) {
+            for (const candidate of candidates) {
+              if (!candidate || candidate.length < 4) continue;
 
-            // 3. Sinónimo contém o candidato: "criar site" contém "site"
-            const subsetMatch = allSynonyms.find((s) => normalize(s.termo).includes(normalize(candidate)));
-            if (subsetMatch) {
-              synonymTerm = subsetMatch.equivalente;
-              break;
+              // Candidato contém o termo: "site de delivery" contém "fazer um site"
+              const supersetMatch = allSynonyms.find(
+                (s) => normalize(s.termo).length >= 4 && normalize(candidate).includes(normalize(s.termo)),
+              );
+              if (supersetMatch) {
+                synonymTerm = supersetMatch.equivalente;
+                break;
+              }
+
+              // Termo contém o candidato: "fazer um site" contém "site"
+              const subsetMatch = allSynonyms.find(
+                (s) => normalize(candidate).length >= 4 && normalize(s.termo).includes(normalize(candidate)),
+              );
+              if (subsetMatch) {
+                synonymTerm = subsetMatch.equivalente;
+                break;
+              }
             }
           }
         }
