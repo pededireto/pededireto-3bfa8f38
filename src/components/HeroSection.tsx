@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSearch } from "@/hooks/useSearch";
@@ -14,6 +15,7 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionProps) => {
+  const navigate = useNavigate();
   const [showResults, setShowResults] = useState(false);
   const [activeDescendant, setActiveDescendant] = useState<string | undefined>();
   const { data: searchResults = [], isLoading: searchLoading } = useSearch(searchTerm);
@@ -31,8 +33,8 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
     e.preventDefault();
     if (searchTerm.trim().length >= 2) {
       autoSaveSearch.mutate({ searchQuery: searchTerm.trim() });
-      onSearch?.(searchTerm);
       setShowResults(false);
+      navigate(`/pesquisa?q=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
 
