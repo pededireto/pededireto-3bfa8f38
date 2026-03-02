@@ -114,14 +114,11 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       let businesses: SmartBusiness[] = [];
 
       // ── CAMADA 1: Pattern Detection (Problema → Solução) ─────────────
-
       const { data: patternKeywords } = await supabase.from("pattern_keywords").select("keyword, weight, pattern_id");
-
       const { data: activePatterns } = await supabase
         .from("search_patterns")
         .select("id, intent_type, urgency_level")
         .eq("is_active", true);
-
       const activePatternIds = new Set(activePatterns?.map((p) => p.id) ?? []);
       const patternMap = new Map(activePatterns?.map((p) => [p.id, p]) ?? []);
 
@@ -137,7 +134,6 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       });
 
       const bestPatternEntry = Object.entries(patternScores).sort(([, a], [, b]) => b - a)[0];
-
       let bestPatternId: string | null = bestPatternEntry?.[0] ?? null;
 
       if (bestPatternId && bestPatternEntry[1] > 0) {
@@ -159,8 +155,7 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
           .order("priority");
 
         if (solutions && solutions.length > 0) {
-          const primary = solutions[0];
-          primarySolution = (primary.subcategories as any)?.name ?? (primary.categories as any)?.name ?? null;
+          primarySolution = (solutions[0].subcategories as any)?.name ?? (solutions[0].categories as any)?.name ?? null;
           resolvedTerm = primarySolution ?? normalizedTerm;
 
           complementaryServices = solutions
@@ -168,35 +163,48 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
             .map((s) => (s.subcategories as any)?.name ?? (s.categories as any)?.name ?? "")
             .filter(Boolean);
 
-          const primarySubId = (primary.subcategories as any)?.id;
-          const primaryCatId = (primary.categories as any)?.id;
+          // Iterar soluções por prioridade até encontrar negócios
+          for (const solution of solutions) {
+            const subId = (solution.subcategories as any)?.id;
+            const catId = (solution.categories as any)?.id;
 
-          if (primarySubId) {
-            const { data: biz } = await supabase
-              .from("businesses")
-              .select(
-                "id, name, slug, city, logo_url, subscription_plan, is_premium, subcategory_id, categories(name, slug), subcategories(name, slug)",
-              )
-              .eq("is_active", true)
-              .eq("subcategory_id", primarySubId)
-              .order("is_premium", { ascending: false })
-              .limit(30);
+            if (subId) {
+              const { data: biz } = await supabase
+                .from("businesses")
+                .select(
+                  "id, name, slug, city, logo_url, subscription_plan, is_premium, subcategory_id, categories(name, slug), subcategories(name, slug)",
+                )
+                .eq("is_active", true)
+                .eq("subcategory_id", subId)
+                .order("is_premium", { ascending: false })
+                .limit(30);
 
-            businesses = (biz ?? []).map(formatBusiness);
-          }
+              if (biz && biz.length > 0) {
+                businesses = biz.map(formatBusiness);
+                primarySolution = (solution.subcategories as any)?.name ?? primarySolution;
+                resolvedTerm = primarySolution ?? normalizedTerm;
+                break;
+              }
+            }
 
-          if (businesses.length === 0 && primaryCatId) {
-            const { data: biz } = await supabase
-              .from("businesses")
-              .select(
-                "id, name, slug, city, logo_url, subscription_plan, is_premium, category_id, categories(name, slug), subcategories(name, slug)",
-              )
-              .eq("is_active", true)
-              .eq("category_id", primaryCatId)
-              .order("is_premium", { ascending: false })
-              .limit(30);
+            if (businesses.length === 0 && catId) {
+              const { data: biz } = await supabase
+                .from("businesses")
+                .select(
+                  "id, name, slug, city, logo_url, subscription_plan, is_premium, category_id, categories(name, slug), subcategories(name, slug)",
+                )
+                .eq("is_active", true)
+                .eq("category_id", catId)
+                .order("is_premium", { ascending: false })
+                .limit(30);
 
-            businesses = (biz ?? []).map(formatBusiness);
+              if (biz && biz.length > 0) {
+                businesses = biz.map(formatBusiness);
+                primarySolution = (solution.categories as any)?.name ?? primarySolution;
+                resolvedTerm = primarySolution ?? normalizedTerm;
+                break;
+              }
+            }
           }
         }
       }
