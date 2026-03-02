@@ -405,45 +405,61 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       }
 
       // ── CAMADA 3: Buscar Negócios (se ainda sem resultados) ──────────
+      // Estratégia: resolver o nome para IDs reais, depois filtrar por ID
+      // (ilike em colunas de joins não funciona no Supabase)
 
       if (businesses.length === 0) {
-        // Try by category name
-        const { data: byCat } = await supabase
-          .from("businesses")
-          .select(
-            "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-          )
-          .eq("is_active", true)
-          .ilike("categories.name", `%${resolvedTerm}%`)
-          .order("is_premium", { ascending: false })
-          .limit(30);
+        // 3a. Resolver subcategoria pelo nome/slug → buscar por subcategory_id
+        const { data: subMatches } = await supabase
+          .from("subcategories")
+          .select("id")
+          .or(`name.ilike.%${resolvedTerm}%,slug.ilike.%${resolvedTerm}%`);
 
-        const filtered = (byCat ?? []).filter((b: any) => b.categories);
-        if (filtered.length > 0) {
-          businesses = filtered.map(formatBusiness);
+        if (subMatches && subMatches.length > 0) {
+          const subIds = subMatches.map((s) => s.id);
+          const { data: bySub } = await supabase
+            .from("businesses")
+            .select(
+              "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
+            )
+            .eq("is_active", true)
+            .in("subcategory_id", subIds)
+            .order("is_premium", { ascending: false })
+            .limit(30);
+
+          if (bySub && bySub.length > 0) {
+            businesses = bySub.map(formatBusiness);
+          }
         }
       }
 
       if (businesses.length === 0) {
-        // Try by subcategory name
-        const { data: bySub } = await supabase
-          .from("businesses")
-          .select(
-            "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-          )
-          .eq("is_active", true)
-          .ilike("subcategories.name", `%${resolvedTerm}%`)
-          .order("is_premium", { ascending: false })
-          .limit(30);
+        // 3b. Resolver categoria pelo nome/slug → buscar por category_id
+        const { data: catMatches } = await supabase
+          .from("categories")
+          .select("id")
+          .or(`name.ilike.%${resolvedTerm}%,slug.ilike.%${resolvedTerm}%`);
 
-        const filtered = (bySub ?? []).filter((b: any) => b.subcategories);
-        if (filtered.length > 0) {
-          businesses = filtered.map(formatBusiness);
+        if (catMatches && catMatches.length > 0) {
+          const catIds = catMatches.map((c) => c.id);
+          const { data: byCat } = await supabase
+            .from("businesses")
+            .select(
+              "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
+            )
+            .eq("is_active", true)
+            .in("category_id", catIds)
+            .order("is_premium", { ascending: false })
+            .limit(30);
+
+          if (byCat && byCat.length > 0) {
+            businesses = byCat.map(formatBusiness);
+          }
         }
       }
 
       if (businesses.length === 0) {
-        // Fallback: by name/description
+        // 3c. Fallback: por nome/descrição do negócio
         const { data: byText } = await supabase
           .from("businesses")
           .select(
