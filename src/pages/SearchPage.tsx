@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Search, Loader2, MapPin, Star, Filter } from "lucide-react";
+import { Search, Loader2, MapPin, Star, Filter, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
@@ -27,12 +27,14 @@ const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlQuery = searchParams.get("q") ?? "";
   const [inputValue, setInputValue] = useState(urlQuery);
+  const [cityFilter, setCityFilter] = useState("");
+  const [showCityFilter, setShowCityFilter] = useState(false);
   const debouncedTerm = useDebounce(inputValue, 400);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: result, isPending } = useSmartSearch(debouncedTerm);
+  const { data: result, isPending } = useSmartSearch(debouncedTerm, cityFilter || null);
 
-  // Sync URL → input (when navigating via complementary chips)
+  // Sync URL → input
   useEffect(() => {
     const q = searchParams.get("q") ?? "";
     setInputValue(q);
@@ -59,6 +61,11 @@ const SearchPage = () => {
   const showResults = debouncedTerm.length >= 2;
   const businesses = result?.businesses ?? [];
 
+  // Detectar se o termo pesquisado corresponde a uma categoria conhecida
+  // para mostrar link "Ver todos em categoria"
+  const categorySlug = result?.businesses?.[0]?.category_slug ?? null;
+  const categoryName = result?.businesses?.[0]?.category_name ?? null;
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -66,29 +73,66 @@ const SearchPage = () => {
       {/* Sticky search bar */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container py-3">
-          <div className="relative max-w-2xl mx-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="O que procura? (ex: canalizador, fuga de água, restaurante...)"
-              className="search-input-hero pl-12 pr-4 w-full"
-              autoFocus
-            />
+          <div className="flex gap-2 max-w-3xl mx-auto">
+            {/* Campo principal */}
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="O que procura? (ex: canalizador, fuga de água, restaurante...)"
+                className="search-input-hero pl-12 pr-4 w-full"
+                autoFocus
+              />
+            </div>
+
+            {/* Filtro cidade */}
+            <Button
+              variant="outline"
+              size="sm"
+              className={`gap-1.5 shrink-0 h-auto ${showCityFilter ? "border-primary text-primary" : ""}`}
+              onClick={() => setShowCityFilter((v) => !v)}
+            >
+              <MapPin className="h-4 w-4" />
+              {cityFilter ? cityFilter : "Cidade"}
+            </Button>
           </div>
+
+          {/* Cidade expandida */}
+          {showCityFilter && (
+            <div className="max-w-3xl mx-auto mt-2">
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={cityFilter}
+                  onChange={(e) => setCityFilter(e.target.value)}
+                  placeholder="Filtrar por cidade (ex: Lisboa, Porto...)"
+                  className="w-full pl-9 pr-4 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  autoFocus
+                />
+                {cityFilter && (
+                  <button
+                    onClick={() => setCityFilter("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                  >
+                    ✕ limpar
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="container flex-1 py-6">
-        {/* Empty state — no query */}
+        {/* Empty state */}
         {!showResults && (
           <div className="text-center py-16">
             <Search className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-foreground mb-2">
-              O que precisa hoje?
-            </h2>
+            <h2 className="text-xl font-semibold text-foreground mb-2">O que precisa hoje?</h2>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Escreva o que procura ou escolha uma sugestão abaixo
             </p>
@@ -121,6 +165,7 @@ const SearchPage = () => {
             {/* Smart banner */}
             <SmartSearchBanner
               result={result}
+              userCity={cityFilter || null}
               onComplementaryClick={handleComplementaryClick}
             />
 
@@ -130,11 +175,26 @@ const SearchPage = () => {
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm text-muted-foreground">
                     {result.totalFound} resultado{result.totalFound !== 1 ? "s" : ""}
+                    {cityFilter && (
+                      <span className="ml-1">
+                        em <span className="font-medium text-foreground">{cityFilter}</span>
+                        <button onClick={() => setCityFilter("")} className="ml-1 text-primary hover:underline text-xs">
+                          (limpar)
+                        </button>
+                      </span>
+                    )}
                   </p>
-                  <Button variant="outline" size="sm" disabled className="gap-1.5">
-                    <Filter className="h-4 w-4" />
-                    Filtrar
-                  </Button>
+
+                  {/* Link para categoria completa — quando há muitos resultados */}
+                  {result.totalFound >= 10 && categorySlug && categoryName && (
+                    <Link
+                      to={`/categoria/${categorySlug}`}
+                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                    >
+                      Ver todos em {categoryName}
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -142,6 +202,19 @@ const SearchPage = () => {
                     <SearchResultCard key={biz.id} business={biz} />
                   ))}
                 </div>
+
+                {/* CTA ver categoria completa no fundo — sempre visível se há categoria */}
+                {categorySlug && categoryName && (
+                  <div className="mt-8 text-center">
+                    <Link
+                      to={`/categoria/${categorySlug}`}
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-primary/30 bg-primary/5 text-primary font-medium hover:bg-primary/10 transition-colors"
+                    >
+                      Ver todos os negócios em {categoryName}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                )}
               </>
             )}
           </>
@@ -153,7 +226,7 @@ const SearchPage = () => {
   );
 };
 
-// ── Result Card ──────────────────────────────────────────────────────────────
+// ── Result Card ───────────────────────────────────────────────────────────────
 
 function SearchResultCard({ business }: { business: SmartBusiness }) {
   return (
@@ -161,23 +234,14 @@ function SearchResultCard({ business }: { business: SmartBusiness }) {
       to={`/negocio/${business.slug}`}
       className="group flex gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all"
     >
-      {/* Logo */}
       <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
         {business.logo_url ? (
-          <img
-            src={business.logo_url}
-            alt={business.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
+          <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" loading="lazy" />
         ) : (
-          <span className="text-xl font-bold text-primary/40">
-            {business.name.charAt(0)}
-          </span>
+          <span className="text-xl font-bold text-primary/40">{business.name.charAt(0)}</span>
         )}
       </div>
 
-      {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
