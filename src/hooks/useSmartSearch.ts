@@ -262,13 +262,12 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       const bestPatternEntry = Object.entries(patternScores).sort(([, a], [, b]) => b - a)[0];
       let bestPatternId: string | null = bestPatternEntry?.[0] ?? null;
 
-      // CORREÇÃO 1: Threshold mínimo de 3 para evitar falsos positivos
-      // por keywords genéricas como "comida" que matcham padrões errados
+      // Threshold mínimo de 3 para evitar falsos positivos
       if (bestPatternId && bestPatternEntry[1] >= 3) {
         const bestPattern = patternMap.get(bestPatternId);
         intentType = bestPattern?.intent_type ?? null;
         urgencyLevel = bestPattern?.urgency_level ?? 0;
-        // CORREÇÃO 2: NÃO marcar isSmartMatch = true aqui ainda
+        // NÃO marcar isSmartMatch = true aqui ainda
         // Só confirmar após encontrar negócios reais
 
         const { data: solutions } = await supabase
@@ -312,7 +311,7 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
                 businesses = biz.map(formatBusiness);
                 primarySolution = (solution.subcategories as any)?.name ?? primarySolution;
                 resolvedTerm = primarySolution ?? normalizedTerm;
-                // CORREÇÃO 3: só marca smartMatch quando há negócios reais
+                // Só marca smartMatch quando há negócios reais
                 isSmartMatch = true;
                 break;
               }
@@ -333,26 +332,20 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
                 businesses = biz.map(formatBusiness);
                 primarySolution = (solution.categories as any)?.name ?? primarySolution;
                 resolvedTerm = primarySolution ?? normalizedTerm;
-                // CORREÇÃO 3: só marca smartMatch quando há negócios reais
+                // Só marca smartMatch quando há negócios reais
                 isSmartMatch = true;
                 break;
               }
             }
           }
-          // Se percorreu todas as soluções sem encontrar negócios,
-          // isSmartMatch fica false e cai para Camada 2 normalmente
+          // Se percorreu todas as soluções sem negócios,
+          // isSmartMatch fica false e cai para Camada 2
         }
       }
 
-      // ── CAMADA 2: Sinónimos (melhorado com intent stripping) ──────────
+      // ── CAMADA 2: Sinónimos (apenas match exato — parcial desativado) ──
 
       if (!isSmartMatch) {
-        // Gerar candidatos por ordem de especificidade.
-        // Exemplo: "fazer um site de delivery"
-        //   strippedTerm  → "site de delivery"
-        //   keywords      → ["site", "delivery"]
-        //   combos        → ["site delivery", "site", "delivery"]
-        //   candidatos    → [frase original, stripped, combos...]
         const strippedTerm = stripIntent(query);
         const keywords = extractKeywords(strippedTerm || query);
 
@@ -363,45 +356,19 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
 
         const candidates = [query, strippedTerm, ...keywordCombos].filter(Boolean);
 
-        // Uma única query à BD em vez de N queries (mais eficiente)
         const { data: allSynonyms } = await supabase.from("search_synonyms").select("termo, equivalente");
 
         let synonymTerm: string | null = null;
 
         if (allSynonyms) {
-          // PASSO 1: match exato em TODOS os candidatos primeiro
+          // APENAS match exato — match parcial desativado por causar falsos positivos graves
+          // Exemplo: "comida para cão" continha "comida" → match errado com "comida chinesa" → "restaurante chinês"
           for (const candidate of candidates) {
             if (!candidate || candidate.length < 2) continue;
             const exact = allSynonyms.find((s) => normalize(s.termo) === normalize(candidate));
             if (exact) {
               synonymTerm = exact.equivalente;
               break;
-            }
-          }
-
-          // PASSO 2: match parcial só se não houve match exato
-          // Mínimo 4 chars para evitar falsos positivos ("de", "ou", etc.)
-          if (!synonymTerm) {
-            for (const candidate of candidates) {
-              if (!candidate || candidate.length < 4) continue;
-
-              // Candidato contém o termo: "site de delivery" contém "fazer um site"
-              const supersetMatch = allSynonyms.find(
-                (s) => normalize(s.termo).length >= 4 && normalize(candidate).includes(normalize(s.termo)),
-              );
-              if (supersetMatch) {
-                synonymTerm = supersetMatch.equivalente;
-                break;
-              }
-
-              // Termo contém o candidato: "fazer um site" contém "site"
-              const subsetMatch = allSynonyms.find(
-                (s) => normalize(candidate).length >= 4 && normalize(s.termo).includes(normalize(candidate)),
-              );
-              if (subsetMatch) {
-                synonymTerm = subsetMatch.equivalente;
-                break;
-              }
             }
           }
         }
