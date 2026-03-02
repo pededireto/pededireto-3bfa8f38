@@ -17,14 +17,21 @@ export interface SmartBusiness {
   logo_url: string | null;
 }
 
+export interface BusinessGroup {
+  label: string;
+  businesses: SmartBusiness[];
+}
+
 export interface SmartSearchResult {
   isSmartMatch: boolean;
   isUrgent: boolean;
   searchedTerm: string;
-  resolvedTerm: string;
+  resolvedTerms: string[]; // array em vez de string única
+  resolvedTerm: string; // mantido para compatibilidade (primeiro termo)
   intentType: string | null;
   urgencyLevel: number;
-  businesses: SmartBusiness[];
+  businesses: SmartBusiness[]; // mantido para compatibilidade (todos juntos)
+  businessGroups: BusinessGroup[]; // NOVO: negócios por grupo
   complementaryServices: string[];
   primarySolution: string | null;
   totalFound: number;
@@ -41,9 +48,6 @@ function normalize(text: string): string {
     .trim();
 }
 
-// ── Intent stripping — remove palavras de intenção antes do match de sinónimos
-// "fazer um site de delivery" → "site de delivery" → keywords: ["site","delivery"]
-// Ordenadas do mais longo para o mais curto para evitar matches parciais
 const INTENT_PREFIXES = [
   "preciso de um",
   "preciso de uma",
@@ -219,6 +223,63 @@ async function logSearch(
   }
 }
 
+// ── Buscar negócios por equivalente (subcategoria ou categoria) ───────────────
+
+async function fetchBusinessesByEquivalent(equivalent: string): Promise<SmartBusiness[]> {
+  // 1. Tentar subcategoria
+  const { data: subMatches } = await supabase
+    .from("subcategories")
+    .select("id")
+    .or(`name.ilike.%${equivalent}%,slug.ilike.%${equivalent}%`);
+
+  if (subMatches && subMatches.length > 0) {
+    const subIds = subMatches.map((s) => s.id);
+    const { data: biz } = await supabase
+      .from("businesses")
+      .select(
+        "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
+      )
+      .eq("is_active", true)
+      .in("subcategory_id", subIds)
+      .order("is_premium", { ascending: false })
+      .limit(30);
+    if (biz && biz.length > 0) return biz.map(formatBusiness);
+  }
+
+  // 2. Tentar categoria
+  const { data: catMatches } = await supabase
+    .from("categories")
+    .select("id")
+    .or(`name.ilike.%${equivalent}%,slug.ilike.%${equivalent}%`);
+
+  if (catMatches && catMatches.length > 0) {
+    const catIds = catMatches.map((c) => c.id);
+    const { data: biz } = await supabase
+      .from("businesses")
+      .select(
+        "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
+      )
+      .eq("is_active", true)
+      .in("category_id", catIds)
+      .order("is_premium", { ascending: false })
+      .limit(30);
+    if (biz && biz.length > 0) return biz.map(formatBusiness);
+  }
+
+  // 3. Fallback por nome/descrição
+  const { data: byText } = await supabase
+    .from("businesses")
+    .select(
+      "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
+    )
+    .eq("is_active", true)
+    .or(`name.ilike.%${equivalent}%,description.ilike.%${equivalent}%`)
+    .order("is_premium", { ascending: false })
+    .limit(30);
+
+  return (byText ?? []).map(formatBusiness);
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export const useSmartSearch = (term: string, userCity?: string | null) => {
@@ -234,10 +295,10 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       let isSmartMatch = false;
       let intentType: string | null = null;
       let urgencyLevel = 0;
-      let resolvedTerm = normalizedTerm;
+      let resolvedTerms: string[] = [];
       let primarySolution: string | null = null;
       let complementaryServices: string[] = [];
-      let businesses: SmartBusiness[] = [];
+      let businessGroups: BusinessGroup[] = [];
 
       // ── CAMADA 1: Pattern Detection (Problema → Solução) ─────────────
       const { data: patternKeywords } = await supabase.from("pattern_keywords").select("keyword, weight, pattern_id");
@@ -248,7 +309,6 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       const activePatternIds = new Set(activePatterns?.map((p) => p.id) ?? []);
       const patternMap = new Map(activePatterns?.map((p) => [p.id, p]) ?? []);
 
-      // Score each pattern by keyword match (com stemming básico)
       const patternScores: Record<string, number> = {};
       patternKeywords?.forEach((pk) => {
         if (!pk.pattern_id || !activePatternIds.has(pk.pattern_id)) return;
@@ -260,15 +320,12 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       });
 
       const bestPatternEntry = Object.entries(patternScores).sort(([, a], [, b]) => b - a)[0];
-      let bestPatternId: string | null = bestPatternEntry?.[0] ?? null;
+      const bestPatternId: string | null = bestPatternEntry?.[0] ?? null;
 
-      // Threshold mínimo de 3 para evitar falsos positivos
       if (bestPatternId && bestPatternEntry[1] >= 3) {
         const bestPattern = patternMap.get(bestPatternId);
         intentType = bestPattern?.intent_type ?? null;
         urgencyLevel = bestPattern?.urgency_level ?? 0;
-        // NÃO marcar isSmartMatch = true aqui ainda
-        // Só confirmar após encontrar negócios reais
 
         const { data: solutions } = await supabase
           .from("pattern_categories")
@@ -284,17 +341,16 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
 
         if (solutions && solutions.length > 0) {
           primarySolution = (solutions[0].subcategories as any)?.name ?? (solutions[0].categories as any)?.name ?? null;
-          resolvedTerm = primarySolution ?? normalizedTerm;
 
           complementaryServices = solutions
             .filter((s) => (s.priority ?? 0) > 1)
             .map((s) => (s.subcategories as any)?.name ?? (s.categories as any)?.name ?? "")
             .filter(Boolean);
 
-          // Iterar soluções por prioridade até encontrar negócios
           for (const solution of solutions) {
             const subId = (solution.subcategories as any)?.id;
             const catId = (solution.categories as any)?.id;
+            const label = (solution.subcategories as any)?.name ?? (solution.categories as any)?.name ?? "";
 
             if (subId) {
               const { data: biz } = await supabase
@@ -308,16 +364,14 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
                 .limit(30);
 
               if (biz && biz.length > 0) {
-                businesses = biz.map(formatBusiness);
-                primarySolution = (solution.subcategories as any)?.name ?? primarySolution;
-                resolvedTerm = primarySolution ?? normalizedTerm;
-                // Só marca smartMatch quando há negócios reais
+                businessGroups.push({ label, businesses: biz.map(formatBusiness) });
+                resolvedTerms.push(label);
                 isSmartMatch = true;
                 break;
               }
             }
 
-            if (businesses.length === 0 && catId) {
+            if (businessGroups.length === 0 && catId) {
               const { data: biz } = await supabase
                 .from("businesses")
                 .select(
@@ -329,22 +383,17 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
                 .limit(30);
 
               if (biz && biz.length > 0) {
-                businesses = biz.map(formatBusiness);
-                primarySolution = (solution.categories as any)?.name ?? primarySolution;
-                resolvedTerm = primarySolution ?? normalizedTerm;
-                // Só marca smartMatch quando há negócios reais
+                businessGroups.push({ label, businesses: biz.map(formatBusiness) });
+                resolvedTerms.push(label);
                 isSmartMatch = true;
                 break;
               }
             }
           }
-          // Se percorreu todas as soluções sem negócios,
-          // isSmartMatch fica false e cai para Camada 2
         }
       }
 
-      // ── CAMADA 2: Sinónimos (apenas match exato — parcial desativado) ──
-
+      // ── CAMADA 2: Sinónimos — todos os equivalentes para o termo ──────
       if (!isSmartMatch) {
         const strippedTerm = stripIntent(query);
         const keywords = extractKeywords(strippedTerm || query);
@@ -358,38 +407,44 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
 
         const { data: allSynonyms } = await supabase.from("search_synonyms").select("termo, equivalente");
 
-        let synonymTerm: string | null = null;
+        // Recolher TODOS os equivalentes únicos para os candidatos
+        const equivalentsFound = new Set<string>();
 
         if (allSynonyms) {
-          // APENAS match exato — match parcial desativado por causar falsos positivos graves
-          // Exemplo: "comida para cão" continha "comida" → match errado com "comida chinesa" → "restaurante chinês"
           for (const candidate of candidates) {
             if (!candidate || candidate.length < 2) continue;
-            const exact = allSynonyms.find((s) => normalize(s.termo) === normalize(candidate));
-            if (exact) {
-              synonymTerm = exact.equivalente;
-              break;
-            }
+            // Só match exato — parcial desativado para evitar falsos positivos
+            const matches = allSynonyms.filter((s) => normalize(s.termo) === normalize(candidate));
+            matches.forEach((m) => equivalentsFound.add(m.equivalente));
           }
         }
 
-        if (synonymTerm) {
+        if (equivalentsFound.size > 0) {
           isSmartMatch = true;
-          resolvedTerm = synonymTerm;
-          primarySolution = synonymTerm;
+          resolvedTerms = Array.from(equivalentsFound);
+          primarySolution = resolvedTerms[0];
+
+          // Buscar negócios para cada equivalente em paralelo
+          const groupResults = await Promise.all(
+            resolvedTerms.map(async (equiv) => {
+              const bizList = await fetchBusinessesByEquivalent(equiv);
+              return { label: equiv, businesses: bizList };
+            }),
+          );
+
+          // Só incluir grupos com negócios
+          businessGroups = groupResults.filter((g) => g.businesses.length > 0);
         }
       }
 
-      // ── CAMADA 3: Buscar Negócios (se ainda sem resultados) ──────────
-      // Estratégia: resolver o nome para IDs reais, depois filtrar por ID
-      // (ilike em colunas de joins não funciona no Supabase)
+      // ── CAMADA 3: Fallback direto se ainda sem resultados ─────────────
+      if (businessGroups.length === 0) {
+        const termToSearch = resolvedTerms[0] ?? normalizedTerm;
 
-      if (businesses.length === 0) {
-        // 3a. Resolver subcategoria pelo nome/slug → buscar por subcategory_id
         const { data: subMatches } = await supabase
           .from("subcategories")
           .select("id")
-          .or(`name.ilike.%${resolvedTerm}%,slug.ilike.%${resolvedTerm}%`);
+          .or(`name.ilike.%${termToSearch}%,slug.ilike.%${termToSearch}%`);
 
         if (subMatches && subMatches.length > 0) {
           const subIds = subMatches.map((s) => s.id);
@@ -404,78 +459,86 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
             .limit(30);
 
           if (bySub && bySub.length > 0) {
-            businesses = bySub.map(formatBusiness);
+            businessGroups = [{ label: termToSearch, businesses: bySub.map(formatBusiness) }];
           }
         }
-      }
 
-      if (businesses.length === 0) {
-        // 3b. Resolver categoria pelo nome/slug → buscar por category_id
-        const { data: catMatches } = await supabase
-          .from("categories")
-          .select("id")
-          .or(`name.ilike.%${resolvedTerm}%,slug.ilike.%${resolvedTerm}%`);
+        if (businessGroups.length === 0) {
+          const { data: catMatches } = await supabase
+            .from("categories")
+            .select("id")
+            .or(`name.ilike.%${termToSearch}%,slug.ilike.%${termToSearch}%`);
 
-        if (catMatches && catMatches.length > 0) {
-          const catIds = catMatches.map((c) => c.id);
-          const { data: byCat } = await supabase
+          if (catMatches && catMatches.length > 0) {
+            const catIds = catMatches.map((c) => c.id);
+            const { data: byCat } = await supabase
+              .from("businesses")
+              .select(
+                "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
+              )
+              .eq("is_active", true)
+              .in("category_id", catIds)
+              .order("is_premium", { ascending: false })
+              .limit(30);
+
+            if (byCat && byCat.length > 0) {
+              businessGroups = [{ label: termToSearch, businesses: byCat.map(formatBusiness) }];
+            }
+          }
+        }
+
+        if (businessGroups.length === 0) {
+          const { data: byText } = await supabase
             .from("businesses")
             .select(
               "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
             )
             .eq("is_active", true)
-            .in("category_id", catIds)
+            .or(`name.ilike.%${termToSearch}%,description.ilike.%${termToSearch}%`)
             .order("is_premium", { ascending: false })
             .limit(30);
 
-          if (byCat && byCat.length > 0) {
-            businesses = byCat.map(formatBusiness);
+          if (byText && byText.length > 0) {
+            businessGroups = [{ label: termToSearch, businesses: byText.map(formatBusiness) }];
           }
         }
       }
 
-      if (businesses.length === 0) {
-        // 3c. Fallback: por nome/descrição do negócio
-        const { data: byText } = await supabase
-          .from("businesses")
-          .select(
-            "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-          )
-          .eq("is_active", true)
-          .or(`name.ilike.%${resolvedTerm}%,description.ilike.%${resolvedTerm}%`)
-          .order("is_premium", { ascending: false })
-          .limit(30);
-
-        businesses = (byText ?? []).map(formatBusiness);
+      // ── Filtro soft de cidade em todos os grupos ──────────────────────
+      if (userCity && businessGroups.length > 0) {
+        businessGroups = businessGroups.map((group) => {
+          const cityFiltered = group.businesses.filter((b) => b.city?.toLowerCase().includes(userCity.toLowerCase()));
+          return {
+            ...group,
+            businesses: cityFiltered.length > 0 ? cityFiltered : group.businesses,
+          };
+        });
       }
 
-      // ── Filtro soft de cidade ────────────────────────────────────────
-
-      if (userCity && businesses.length > 0) {
-        const cityFiltered = businesses.filter((b) => b.city?.toLowerCase().includes(userCity.toLowerCase()));
-        if (cityFiltered.length > 0) businesses = cityFiltered;
-      }
-
-      // ── CAMADA 4: Detecção de Urgência ───────────────────────────────
-
+      // ── CAMADA 4: Detecção de Urgência ────────────────────────────────
       const isUrgent = urgencyLevel >= 4 || URGENCY_WORDS.some((w) => query.includes(normalize(w)));
 
-      // ── Log assíncrono ───────────────────────────────────────────────
+      // ── Compatibilidade: businesses = todos os grupos juntos ──────────
+      const allBusinesses = businessGroups.flatMap((g) => g.businesses);
+      const totalFound = allBusinesses.length;
 
-      logSearch(term.trim(), businesses.length, user?.id, intentType, isUrgent, userCity);
+      // ── Log ───────────────────────────────────────────────────────────
+      logSearch(term.trim(), totalFound, user?.id, intentType, isUrgent, userCity);
 
       return {
         isSmartMatch,
         isUrgent,
         searchedTerm: term.trim(),
-        resolvedTerm,
+        resolvedTerms,
+        resolvedTerm: resolvedTerms[0] ?? normalizedTerm, // compatibilidade
         intentType,
         urgencyLevel,
-        businesses,
+        businesses: allBusinesses, // compatibilidade
+        businessGroups,
         complementaryServices,
         primarySolution,
-        totalFound: businesses.length,
-        zeroResults: businesses.length === 0,
+        totalFound,
+        zeroResults: totalFound === 0,
       };
     },
     enabled: normalizedTerm.length >= 2,
