@@ -16,6 +16,7 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
     isUrgent,
     isSmartMatch,
     searchedTerm,
+    resolvedTerms,
     resolvedTerm,
     intentType,
     totalFound,
@@ -24,7 +25,6 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
     zeroResults,
   } = result;
 
-  // Só mostrar se há algo útil — FIX: zeroResults só conta se não houve smart match
   const realZeroResults = zeroResults && !isSmartMatch;
   if (!isSmartMatch && !isUrgent && !realZeroResults) return null;
 
@@ -36,7 +36,11 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
     }
   };
 
-  // ── Caso 1: Zero resultados reais (sem smart match) ──────────────────────
+  // Label com todos os termos resolvidos: "pintor, pintores, chapa e pintura"
+  const resolvedLabel =
+    resolvedTerms && resolvedTerms.length > 0 ? resolvedTerms.join(", ") : (primarySolution ?? resolvedTerm);
+
+  // ── Caso 1: Zero resultados ──────────────────────────────────────────
   if (realZeroResults) {
     return (
       <div className="mb-6 space-y-4">
@@ -52,7 +56,6 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
               <p className="text-sm text-muted-foreground mt-1">Tente outro termo ou explore as categorias abaixo.</p>
             </div>
           </div>
-
           <div className="mt-4 flex flex-wrap gap-2">
             {["canalizador", "eletricista", "pintor", "restaurante", "cabeleireiro", "dentista"].map((s) => (
               <button
@@ -65,7 +68,6 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
               </button>
             ))}
           </div>
-
           <div className="mt-4">
             <Button asChild size="sm" variant="default">
               <Link to="/pedir-servico">
@@ -79,7 +81,7 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
     );
   }
 
-  // ── Caso 2: Emergência ───────────────────────────────────────────────────
+  // ── Caso 2: Emergência ───────────────────────────────────────────────
   if (isUrgent) {
     return (
       <div className="mb-6 space-y-4">
@@ -118,7 +120,7 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
     );
   }
 
-  // ── Caso 3: Orçamento detectado ──────────────────────────────────────────
+  // ── Caso 3: Orçamento ────────────────────────────────────────────────
   if (intentType === "quote") {
     return (
       <div className="mb-6 space-y-4">
@@ -132,7 +134,7 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
               <p className="font-semibold text-base text-foreground">
                 Conectámos com{" "}
                 <span className="text-primary">
-                  {totalFound} profissionais de {primarySolution ?? resolvedTerm}
+                  {totalFound} profissionais de {resolvedLabel}
                 </span>
               </p>
             </div>
@@ -143,7 +145,7 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
     );
   }
 
-  // ── Caso 4: Match inteligente normal ─────────────────────────────────────
+  // ── Caso 4: Match inteligente normal ─────────────────────────────────
   return (
     <div className="mb-6 space-y-4">
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
@@ -156,12 +158,9 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
               Pesquisou <span className="font-semibold text-foreground">"{searchedTerm}"</span>
             </span>
             <p className="font-semibold text-base text-foreground mt-1">
-              A mostrar{" "}
-              <span className="text-primary">
-                {totalFound} resultados para {primarySolution ?? resolvedTerm}
-              </span>
+              A mostrar resultados para <span className="text-primary">{resolvedLabel}</span>
               {userCity && (
-                <span className="inline-flex items-center gap-1 ml-1">
+                <span className="inline-flex items-center gap-1 ml-1 text-sm font-normal text-muted-foreground">
                   em <MapPin className="h-3.5 w-3.5" />
                   {userCity}
                 </span>
