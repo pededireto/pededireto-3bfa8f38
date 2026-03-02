@@ -1,14 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import {
-  AlertTriangle,
-  Lightbulb,
-  Search,
-  ArrowRight,
-  MapPin,
-  Zap,
-  FileText,
-  Frown,
-} from "lucide-react";
+import { AlertTriangle, Lightbulb, Search, ArrowRight, MapPin, Zap, FileText, Frown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { SmartSearchResult } from "@/hooks/useSmartSearch";
@@ -19,11 +10,7 @@ interface SmartSearchBannerProps {
   onComplementaryClick?: (service: string) => void;
 }
 
-const SmartSearchBanner = ({
-  result,
-  userCity,
-  onComplementaryClick,
-}: SmartSearchBannerProps) => {
+const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSearchBannerProps) => {
   const navigate = useNavigate();
   const {
     isUrgent,
@@ -37,8 +24,9 @@ const SmartSearchBanner = ({
     zeroResults,
   } = result;
 
-  // Only show if there's something meaningful to display
-  if (!isSmartMatch && !isUrgent && !zeroResults) return null;
+  // Só mostrar se há algo útil — FIX: zeroResults só conta se não houve smart match
+  const realZeroResults = zeroResults && !isSmartMatch;
+  if (!isSmartMatch && !isUrgent && !realZeroResults) return null;
 
   const handleComplementaryClick = (service: string) => {
     if (onComplementaryClick) {
@@ -48,8 +36,8 @@ const SmartSearchBanner = ({
     }
   };
 
-  // ── Caso 1: Zero resultados ──────────────────────────────────────────────
-  if (zeroResults) {
+  // ── Caso 1: Zero resultados reais (sem smart match) ──────────────────────
+  if (realZeroResults) {
     return (
       <div className="mb-6 space-y-4">
         <div className="rounded-2xl border border-border bg-muted/30 p-5">
@@ -59,29 +47,23 @@ const SmartSearchBanner = ({
             </div>
             <div className="flex-1">
               <p className="font-semibold text-foreground">
-                Não encontrámos resultados para{" "}
-                <span className="text-primary">"{searchedTerm}"</span>
+                Não encontrámos resultados para <span className="text-primary">"{searchedTerm}"</span>
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Tente outro termo ou explore as categorias abaixo.
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">Tente outro termo ou explore as categorias abaixo.</p>
             </div>
           </div>
 
-          {/* Sugestões rápidas */}
           <div className="mt-4 flex flex-wrap gap-2">
-            {["canalizador", "eletricista", "pintor", "restaurante", "cabeleireiro", "dentista"].map(
-              (s) => (
-                <button
-                  key={s}
-                  onClick={() => handleComplementaryClick(s)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-border bg-background hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors"
-                >
-                  <Search className="h-3 w-3" />
-                  {s}
-                </button>
-              ),
-            )}
+            {["canalizador", "eletricista", "pintor", "restaurante", "cabeleireiro", "dentista"].map((s) => (
+              <button
+                key={s}
+                onClick={() => handleComplementaryClick(s)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-border bg-background hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors"
+              >
+                <Search className="h-3 w-3" />
+                {s}
+              </button>
+            ))}
           </div>
 
           <div className="mt-4">
@@ -97,7 +79,7 @@ const SmartSearchBanner = ({
     );
   }
 
-  // ── Caso 2: Emergência (urgency >= 4) ────────────────────────────────────
+  // ── Caso 2: Emergência ───────────────────────────────────────────────────
   if (isUrgent) {
     return (
       <div className="mb-6 space-y-4">
@@ -112,18 +94,15 @@ const SmartSearchBanner = ({
                   <Zap className="h-3 w-3" /> Emergência
                 </Badge>
                 <span className="text-xs text-muted-foreground">
-                  Pesquisou{" "}
-                  <span className="font-semibold text-foreground">
-                    "{searchedTerm}"
-                  </span>
+                  Pesquisou <span className="font-semibold text-foreground">"{searchedTerm}"</span>
                 </span>
               </div>
               <p className="font-semibold text-base text-red-700 dark:text-red-300">
                 Encontrámos{" "}
                 <span className="text-red-600 dark:text-red-400">
                   {totalFound} {primarySolution ?? resolvedTerm}
-                </span>
-                {totalFound !== 1 ? "" : ""} disponíveis agora
+                </span>{" "}
+                disponíveis agora
                 {userCity && (
                   <span className="inline-flex items-center gap-1 ml-1">
                     em <MapPin className="h-3.5 w-3.5" />
@@ -134,10 +113,7 @@ const SmartSearchBanner = ({
             </div>
           </div>
         </div>
-        <ComplementaryChips
-          services={complementaryServices}
-          onClick={handleComplementaryClick}
-        />
+        <ComplementaryChips services={complementaryServices} onClick={handleComplementaryClick} />
       </div>
     );
   }
@@ -152,23 +128,17 @@ const SmartSearchBanner = ({
               <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-muted-foreground mb-1">
-                Parece que está a pedir um orçamento
-              </p>
+              <p className="text-sm text-muted-foreground mb-1">Parece que está a pedir um orçamento</p>
               <p className="font-semibold text-base text-foreground">
                 Conectámos com{" "}
                 <span className="text-primary">
-                  {totalFound} profissionais de{" "}
-                  {primarySolution ?? resolvedTerm}
+                  {totalFound} profissionais de {primarySolution ?? resolvedTerm}
                 </span>
               </p>
             </div>
           </div>
         </div>
-        <ComplementaryChips
-          services={complementaryServices}
-          onClick={handleComplementaryClick}
-        />
+        <ComplementaryChips services={complementaryServices} onClick={handleComplementaryClick} />
       </div>
     );
   }
@@ -183,16 +153,12 @@ const SmartSearchBanner = ({
           </div>
           <div className="flex-1 min-w-0">
             <span className="text-xs text-muted-foreground">
-              Pesquisou{" "}
-              <span className="font-semibold text-foreground">
-                "{searchedTerm}"
-              </span>
+              Pesquisou <span className="font-semibold text-foreground">"{searchedTerm}"</span>
             </span>
             <p className="font-semibold text-base text-foreground mt-1">
               A mostrar{" "}
               <span className="text-primary">
-                {totalFound} resultados para{" "}
-                {primarySolution ?? resolvedTerm}
+                {totalFound} resultados para {primarySolution ?? resolvedTerm}
               </span>
               {userCity && (
                 <span className="inline-flex items-center gap-1 ml-1">
@@ -204,31 +170,20 @@ const SmartSearchBanner = ({
           </div>
         </div>
       </div>
-      <ComplementaryChips
-        services={complementaryServices}
-        onClick={handleComplementaryClick}
-      />
+      <ComplementaryChips services={complementaryServices} onClick={handleComplementaryClick} />
     </div>
   );
 };
 
-// ── Complementary chips subcomponent ─────────────────────────────────────────
+// ── Complementary chips ───────────────────────────────────────────────────────
 
-function ComplementaryChips({
-  services,
-  onClick,
-}: {
-  services: string[];
-  onClick: (s: string) => void;
-}) {
+function ComplementaryChips({ services, onClick }: { services: string[]; onClick: (s: string) => void }) {
   if (services.length === 0) return null;
   return (
     <div className="rounded-2xl border border-border bg-muted/30 p-4">
       <div className="flex items-center gap-2 mb-3">
         <Search className="h-4 w-4 text-muted-foreground" />
-        <p className="text-sm font-medium text-muted-foreground">
-          Pode também precisar de:
-        </p>
+        <p className="text-sm font-medium text-muted-foreground">Pode também precisar de:</p>
       </div>
       <div className="flex flex-wrap gap-2">
         {services.map((service) => (
