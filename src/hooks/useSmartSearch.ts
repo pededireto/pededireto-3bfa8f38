@@ -42,9 +42,20 @@ function normalize(text: string): string {
 }
 
 const URGENCY_WORDS = [
-  "urgente", "urgência", "emergência", "rebentou", "partiu",
-  "fuga", "avaria", "socorro", "agora", "imediato",
-  "sem luz", "sem água", "inundada", "entupida",
+  "urgente",
+  "urgência",
+  "emergência",
+  "rebentou",
+  "partiu",
+  "fuga",
+  "avaria",
+  "socorro",
+  "agora",
+  "imediato",
+  "sem luz",
+  "sem água",
+  "inundada",
+  "entupida",
 ];
 
 // ── Logging (never break UX) ─────────────────────────────────────────────────
@@ -63,7 +74,9 @@ async function logSearch(
       search_type: "smart",
       results_count: resultsCount,
     });
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
 
   if (userId) {
     try {
@@ -74,7 +87,9 @@ async function logSearch(
         urgency_detected: isUrgent ?? false,
         location_detected: cityDetected ?? null,
       } as any);
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   }
 }
 
@@ -100,11 +115,8 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
 
       // ── CAMADA 1: Pattern Detection (Problema → Solução) ─────────────
 
-      const { data: patternKeywords } = await supabase
-        .from("pattern_keywords")
-        .select("keyword, weight, pattern_id");
+      const { data: patternKeywords } = await supabase.from("pattern_keywords").select("keyword, weight, pattern_id");
 
-      // We also need active patterns
       const { data: activePatterns } = await supabase
         .from("search_patterns")
         .select("id, intent_type, urgency_level")
@@ -113,18 +125,18 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       const activePatternIds = new Set(activePatterns?.map((p) => p.id) ?? []);
       const patternMap = new Map(activePatterns?.map((p) => [p.id, p]) ?? []);
 
-      // Score each pattern by keyword match
+      // Score each pattern by keyword match (com stemming básico)
       const patternScores: Record<string, number> = {};
       patternKeywords?.forEach((pk) => {
         if (!pk.pattern_id || !activePatternIds.has(pk.pattern_id)) return;
-        if (query.includes(normalize(pk.keyword))) {
-          patternScores[pk.pattern_id] =
-            (patternScores[pk.pattern_id] || 0) + (pk.weight ?? 1);
+        const keywordLower = normalize(pk.keyword);
+        const keywordRoot = keywordLower.slice(0, Math.max(4, keywordLower.length - 2));
+        if (query.includes(keywordLower) || query.includes(keywordRoot)) {
+          patternScores[pk.pattern_id] = (patternScores[pk.pattern_id] || 0) + (pk.weight ?? 1);
         }
       });
 
-      const bestPatternEntry = Object.entries(patternScores)
-        .sort(([, a], [, b]) => b - a)[0];
+      const bestPatternEntry = Object.entries(patternScores).sort(([, a], [, b]) => b - a)[0];
 
       let bestPatternId: string | null = bestPatternEntry?.[0] ?? null;
 
@@ -134,37 +146,28 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         urgencyLevel = bestPattern?.urgency_level ?? 0;
         isSmartMatch = true;
 
-        // Get solutions ordered by priority
         const { data: solutions } = await supabase
           .from("pattern_categories")
-          .select(`
+          .select(
+            `
             priority, reasoning,
             categories(id, name, slug),
             subcategories(id, name, slug)
-          `)
+          `,
+          )
           .eq("pattern_id", bestPatternId)
           .order("priority");
 
         if (solutions && solutions.length > 0) {
           const primary = solutions[0];
-          primarySolution =
-            (primary.subcategories as any)?.name ??
-            (primary.categories as any)?.name ??
-            null;
+          primarySolution = (primary.subcategories as any)?.name ?? (primary.categories as any)?.name ?? null;
           resolvedTerm = primarySolution ?? normalizedTerm;
 
-          // Complementary = priority > 1
           complementaryServices = solutions
             .filter((s) => (s.priority ?? 0) > 1)
-            .map(
-              (s) =>
-                (s.subcategories as any)?.name ??
-                (s.categories as any)?.name ??
-                "",
-            )
+            .map((s) => (s.subcategories as any)?.name ?? (s.categories as any)?.name ?? "")
             .filter(Boolean);
 
-          // Search businesses by subcategory_id of primary solution
           const primarySubId = (primary.subcategories as any)?.id;
           const primaryCatId = (primary.categories as any)?.id;
 
@@ -182,7 +185,6 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
             businesses = (biz ?? []).map(formatBusiness);
           }
 
-          // If no businesses by subcategory, try category
           if (businesses.length === 0 && primaryCatId) {
             const { data: biz } = await supabase
               .from("businesses")
@@ -211,7 +213,48 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         let synonymTerm: string | null = exactMatch?.equivalente ?? null;
 
         if (!synonymTerm) {
-          const words = query.split(/\s+/).filter((w) => w.length > 3);
+          const stopWords = new Set([
+            "fazer",
+            "quero",
+            "tenho",
+            "preciso",
+            "minha",
+            "meu",
+            "meus",
+            "minhas",
+            "uma",
+            "para",
+            "com",
+            "que",
+            "como",
+            "onde",
+            "quando",
+            "qual",
+            "quais",
+            "esta",
+            "este",
+            "essa",
+            "esse",
+            "isso",
+            "aqui",
+            "ali",
+            "mais",
+            "muito",
+            "pouco",
+            "agora",
+            "hoje",
+            "urgente",
+            "preciso",
+            "ajuda",
+            "queria",
+            "gostava",
+          ]);
+
+          const words = query
+            .split(/\s+/)
+            .filter((w) => w.length >= 5)
+            .filter((w) => !stopWords.has(w.toLowerCase()));
+
           for (const word of words) {
             const { data: partialMatch } = await supabase
               .from("search_synonyms")
@@ -279,9 +322,7 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
             "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
           )
           .eq("is_active", true)
-          .or(
-            `name.ilike.%${resolvedTerm}%,description.ilike.%${resolvedTerm}%`,
-          )
+          .or(`name.ilike.%${resolvedTerm}%,description.ilike.%${resolvedTerm}%`)
           .order("is_premium", { ascending: false })
           .limit(30);
 
@@ -291,28 +332,17 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       // ── Filtro soft de cidade ────────────────────────────────────────
 
       if (userCity && businesses.length > 0) {
-        const cityFiltered = businesses.filter((b) =>
-          b.city?.toLowerCase().includes(userCity.toLowerCase()),
-        );
+        const cityFiltered = businesses.filter((b) => b.city?.toLowerCase().includes(userCity.toLowerCase()));
         if (cityFiltered.length > 0) businesses = cityFiltered;
       }
 
       // ── CAMADA 4: Detecção de Urgência ───────────────────────────────
 
-      const isUrgent =
-        urgencyLevel >= 4 ||
-        URGENCY_WORDS.some((w) => query.includes(normalize(w)));
+      const isUrgent = urgencyLevel >= 4 || URGENCY_WORDS.some((w) => query.includes(normalize(w)));
 
       // ── Log assíncrono ───────────────────────────────────────────────
 
-      logSearch(
-        term.trim(),
-        businesses.length,
-        user?.id,
-        intentType,
-        isUrgent,
-        userCity,
-      );
+      logSearch(term.trim(), businesses.length, user?.id, intentType, isUrgent, userCity);
 
       return {
         isSmartMatch,
