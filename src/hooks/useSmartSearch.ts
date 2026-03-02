@@ -41,6 +41,132 @@ function normalize(text: string): string {
     .trim();
 }
 
+// ── Intent stripping — remove palavras de intenção antes do match de sinónimos
+// "fazer um site de delivery" → "site de delivery" → keywords: ["site","delivery"]
+// Ordenadas do mais longo para o mais curto para evitar matches parciais
+const INTENT_PREFIXES = [
+  "preciso de um",
+  "preciso de uma",
+  "preciso dum",
+  "preciso duma",
+  "queria um",
+  "queria uma",
+  "queria ter",
+  "gostava de ter",
+  "gostava de um",
+  "gostava de uma",
+  "necessito de um",
+  "necessito de uma",
+  "necessito de",
+  "estou a precisar de",
+  "estou a precisar dum",
+  "onde posso encontrar",
+  "onde encontro",
+  "onde ha",
+  "onde tem",
+  "como encontro",
+  "como arranjo",
+  "como contratar",
+  "ajuda com",
+  "ajuda para",
+  "ajuda a",
+  "procuro um",
+  "procuro uma",
+  "procuro",
+  "busco um",
+  "busco uma",
+  "busco",
+  "quero um",
+  "quero uma",
+  "quero",
+  "preciso de",
+  "preciso",
+  "fazer um",
+  "fazer uma",
+  "fazer",
+  "criar um",
+  "criar uma",
+  "criar",
+  "arranjar um",
+  "arranjar uma",
+  "arranjar",
+  "contratar um",
+  "contratar uma",
+  "contratar",
+  "encontrar um",
+  "encontrar uma",
+  "encontrar",
+  "chamar um",
+  "chamar uma",
+  "chamar",
+  "tenho de",
+  "tenho que",
+  "alguem que",
+  "alguem para",
+  "um bom",
+  "uma boa",
+  "o melhor",
+  "a melhor",
+  "algum",
+  "alguma",
+]
+  .map(normalize)
+  .sort((a, b) => b.length - a.length);
+
+const STOP_WORDS_SYNONYMS = new Set([
+  "de",
+  "do",
+  "da",
+  "dos",
+  "das",
+  "em",
+  "no",
+  "na",
+  "nos",
+  "nas",
+  "por",
+  "para",
+  "com",
+  "sem",
+  "um",
+  "uma",
+  "uns",
+  "umas",
+  "o",
+  "a",
+  "os",
+  "as",
+  "e",
+  "ou",
+  "que",
+  "se",
+  "ao",
+  "aos",
+  "isto",
+  "isso",
+  "meu",
+  "minha",
+  "meus",
+  "minhas",
+]);
+
+function stripIntent(text: string): string {
+  const norm = normalize(text);
+  for (const prefix of INTENT_PREFIXES) {
+    if (norm.startsWith(prefix + " ")) return norm.slice(prefix.length).trim();
+    if (norm === prefix) return "";
+  }
+  return norm;
+}
+
+function extractKeywords(text: string): string[] {
+  return normalize(text)
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP_WORDS_SYNONYMS.has(w));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const URGENCY_WORDS = [
   "urgente",
   "urgência",
@@ -209,69 +335,52 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         }
       }
 
-      // ── CAMADA 2: Sinónimos (se CAMADA 1 não encontrou) ──────────────
+      // ── CAMADA 2: Sinónimos (melhorado com intent stripping) ──────────
 
       if (!isSmartMatch) {
-        const { data: exactMatch } = await supabase
-          .from("search_synonyms")
-          .select("equivalente")
-          .ilike("termo", query)
-          .maybeSingle();
+        // Gerar candidatos por ordem de especificidade.
+        // Exemplo: "fazer um site de delivery"
+        //   strippedTerm  → "site de delivery"
+        //   keywords      → ["site", "delivery"]
+        //   combos        → ["site delivery", "site", "delivery"]
+        //   candidatos    → [frase original, stripped, combos...]
+        const strippedTerm = stripIntent(query);
+        const keywords = extractKeywords(strippedTerm || query);
 
-        let synonymTerm: string | null = exactMatch?.equivalente ?? null;
+        const keywordCombos: string[] = [];
+        for (let len = keywords.length; len >= 1; len--) {
+          keywordCombos.push(keywords.slice(0, len).join(" "));
+        }
 
-        if (!synonymTerm) {
-          const stopWords = new Set([
-            "fazer",
-            "quero",
-            "tenho",
-            "preciso",
-            "minha",
-            "meu",
-            "meus",
-            "minhas",
-            "uma",
-            "para",
-            "com",
-            "que",
-            "como",
-            "onde",
-            "quando",
-            "qual",
-            "quais",
-            "esta",
-            "este",
-            "essa",
-            "esse",
-            "isso",
-            "aqui",
-            "ali",
-            "mais",
-            "muito",
-            "pouco",
-            "agora",
-            "hoje",
-            "urgente",
-            "preciso",
-            "ajuda",
-            "queria",
-            "gostava",
-          ]);
+        const candidates = [query, strippedTerm, ...keywordCombos].filter(Boolean);
 
-          const words = query
-            .split(/\s+/)
-            .filter((w) => w.length >= 5)
-            .filter((w) => !stopWords.has(w.toLowerCase()));
+        // Uma única query à BD em vez de N queries (mais eficiente)
+        const { data: allSynonyms } = await supabase.from("search_synonyms").select("termo, equivalente");
 
-          for (const word of words) {
-            const { data: partialMatch } = await supabase
-              .from("search_synonyms")
-              .select("equivalente")
-              .ilike("termo", `%${word}%`)
-              .limit(1)
-              .maybeSingle();
-            if (partialMatch) {
-              synonymTerm = partialMatch.equivalente;
+        let synonymTerm: string | null = null;
+
+        if (allSynonyms) {
+          for (const candidate of candidates) {
+            if (!candidate || candidate.length < 2) continue;
+
+            // 1. Match exato
+            const exact = allSynonyms.find((s) => normalize(s.termo) === normalize(candidate));
+            if (exact) {
+              synonymTerm = exact.equivalente;
+              break;
+            }
+
+            // 2. Candidato contém o sinónimo: "site de delivery" contém "site"
+            const supersetMatch = allSynonyms.find((s) => normalize(candidate).includes(normalize(s.termo)));
+            if (supersetMatch) {
+              synonymTerm = supersetMatch.equivalente;
+              break;
+            }
+
+            // 3. Sinónimo contém o candidato: "criar site" contém "site"
+            const subsetMatch = allSynonyms.find((s) => normalize(s.termo).includes(normalize(candidate)));
+            if (subsetMatch) {
+              synonymTerm = subsetMatch.equivalente;
               break;
             }
           }
