@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Search, Loader2, MapPin, Star, Filter, ArrowRight } from "lucide-react";
+import { Search, Loader2, MapPin, Star, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
@@ -34,13 +34,11 @@ const SearchPage = () => {
 
   const { data: result, isPending } = useSmartSearch(debouncedTerm, cityFilter || null);
 
-  // Sync URL → input
   useEffect(() => {
     const q = searchParams.get("q") ?? "";
     setInputValue(q);
   }, [searchParams]);
 
-  // Sync debounced input → URL
   useEffect(() => {
     const current = searchParams.get("q") ?? "";
     if (debouncedTerm !== current) {
@@ -59,12 +57,13 @@ const SearchPage = () => {
   };
 
   const showResults = debouncedTerm.length >= 2;
-  const businesses = result?.businesses ?? [];
+  const businessGroups = result?.businessGroups ?? [];
+  const totalFound = result?.totalFound ?? 0;
 
-  // Detectar se o termo pesquisado corresponde a uma categoria conhecida
-  // para mostrar link "Ver todos em categoria"
-  const categorySlug = result?.businesses?.[0]?.category_slug ?? null;
-  const categoryName = result?.businesses?.[0]?.category_name ?? null;
+  // Para o link "Ver todos em categoria" — usar o primeiro grupo
+  const firstBusiness = businessGroups[0]?.businesses[0] ?? null;
+  const categorySlug = firstBusiness?.category_slug ?? null;
+  const categoryName = firstBusiness?.category_name ?? null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -74,7 +73,6 @@ const SearchPage = () => {
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container py-3">
           <div className="flex gap-2 max-w-3xl mx-auto">
-            {/* Campo principal */}
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <input
@@ -87,8 +85,6 @@ const SearchPage = () => {
                 autoFocus
               />
             </div>
-
-            {/* Filtro cidade */}
             <Button
               variant="outline"
               size="sm"
@@ -100,7 +96,6 @@ const SearchPage = () => {
             </Button>
           </div>
 
-          {/* Cidade expandida */}
           {showCityFilter && (
             <div className="max-w-3xl mx-auto mt-2">
               <div className="relative">
@@ -162,19 +157,18 @@ const SearchPage = () => {
         {/* Results */}
         {showResults && !isPending && result && (
           <>
-            {/* Smart banner */}
             <SmartSearchBanner
               result={result}
               userCity={cityFilter || null}
               onComplementaryClick={handleComplementaryClick}
             />
 
-            {/* Results grid */}
-            {businesses.length > 0 && (
+            {businessGroups.length > 0 && (
               <>
-                <div className="flex items-center justify-between mb-4">
+                {/* Contador total */}
+                <div className="flex items-center justify-between mb-6">
                   <p className="text-sm text-muted-foreground">
-                    {result.totalFound} resultado{result.totalFound !== 1 ? "s" : ""}
+                    {totalFound} resultado{totalFound !== 1 ? "s" : ""}
                     {cityFilter && (
                       <span className="ml-1">
                         em <span className="font-medium text-foreground">{cityFilter}</span>
@@ -184,9 +178,7 @@ const SearchPage = () => {
                       </span>
                     )}
                   </p>
-
-                  {/* Link para categoria completa — quando há muitos resultados */}
-                  {result.totalFound >= 10 && categorySlug && categoryName && (
+                  {totalFound >= 10 && categorySlug && categoryName && (
                     <Link
                       to={`/categoria/${categorySlug}`}
                       className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
@@ -197,13 +189,31 @@ const SearchPage = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {businesses.map((biz) => (
-                    <SearchResultCard key={biz.id} business={biz} />
+                {/* Grupos separados */}
+                <div className="space-y-10">
+                  {businessGroups.map((group) => (
+                    <div key={group.label}>
+                      {/* Título do grupo — só mostrar se há mais de 1 grupo */}
+                      {businessGroups.length > 1 && (
+                        <div className="flex items-center gap-3 mb-4">
+                          <h2 className="text-base font-semibold text-foreground capitalize">{group.label}</h2>
+                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                            {group.businesses.length}
+                          </span>
+                          <div className="flex-1 h-px bg-border" />
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {group.businesses.map((biz) => (
+                          <SearchResultCard key={biz.id} business={biz} />
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
 
-                {/* CTA ver categoria completa no fundo — sempre visível se há categoria */}
+                {/* CTA ver categoria no fundo */}
                 {categorySlug && categoryName && (
                   <div className="mt-8 text-center">
                     <Link
@@ -241,7 +251,6 @@ function SearchResultCard({ business }: { business: SmartBusiness }) {
           <span className="text-xl font-bold text-primary/40">{business.name.charAt(0)}</span>
         )}
       </div>
-
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
