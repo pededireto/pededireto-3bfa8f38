@@ -62,7 +62,6 @@ const Lightbox = ({ images, initialIndex, onClose }: LightboxProps) => {
     setCurrent((i) => (i === images.length - 1 ? 0 : i + 1));
   }, [images.length]);
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -70,7 +69,6 @@ const Lightbox = ({ images, initialIndex, onClose }: LightboxProps) => {
       if (e.key === "ArrowRight") next();
     };
     window.addEventListener("keydown", handleKey);
-    // Prevent body scroll
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", handleKey);
@@ -80,7 +78,6 @@ const Lightbox = ({ images, initialIndex, onClose }: LightboxProps) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm" onClick={onClose}>
-      {/* Close button */}
       <button
         className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
         onClick={onClose}
@@ -88,14 +85,12 @@ const Lightbox = ({ images, initialIndex, onClose }: LightboxProps) => {
         <X className="w-6 h-6" />
       </button>
 
-      {/* Counter */}
       {images.length > 1 && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full bg-white/10 text-white text-sm font-medium">
           {current + 1} / {images.length}
         </div>
       )}
 
-      {/* Prev button */}
       {images.length > 1 && (
         <button
           className="absolute left-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
@@ -108,7 +103,6 @@ const Lightbox = ({ images, initialIndex, onClose }: LightboxProps) => {
         </button>
       )}
 
-      {/* Image */}
       <div
         className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
@@ -122,7 +116,6 @@ const Lightbox = ({ images, initialIndex, onClose }: LightboxProps) => {
         />
       </div>
 
-      {/* Next button */}
       {images.length > 1 && (
         <button
           className="absolute right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
@@ -135,7 +128,6 @@ const Lightbox = ({ images, initialIndex, onClose }: LightboxProps) => {
         </button>
       )}
 
-      {/* Thumbnails strip */}
       {images.length > 1 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 px-4 py-2 rounded-2xl bg-black/40 backdrop-blur-sm">
           {images.map((url, i) => (
@@ -193,7 +185,6 @@ const GalleryGrid = ({ images, label }: GalleryGridProps) => {
               alt={`Foto ${i + 1}`}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
-            {/* Overlay on hover */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
               <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" />
             </div>
@@ -399,7 +390,6 @@ const BusinessPage = () => {
     );
   }
 
-  // Galeria principal do negócio (campo images)
   const businessImages: string[] = Array.isArray((business as any).images)
     ? (business as any).images.filter((u: string) => u?.trim())
     : [];
@@ -447,7 +437,11 @@ const BusinessPage = () => {
       )}
 
       {!(business as any).is_claimed && !(business.claim_status === "verified" && userIsOwner) && (
-        <UnclaimedBusinessBanner businessId={business.id} claimStatus={business.claim_status} isClaimed={(business as any).is_claimed} />
+        <UnclaimedBusinessBanner
+          businessId={business.id}
+          claimStatus={business.claim_status}
+          isClaimed={(business as any).is_claimed}
+        />
       )}
 
       <main className="flex-1">
@@ -474,14 +468,12 @@ const BusinessPage = () => {
                 <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
                   {business.logo_url ? (
                     <>
-                      {/* Fundo desfocado para preencher o espaço */}
                       <img
                         src={business.logo_url}
                         alt=""
                         aria-hidden
                         className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-40 pointer-events-none"
                       />
-                      {/* Imagem principal centrada e completa */}
                       <img
                         src={business.logo_url}
                         alt={business.name}
@@ -529,7 +521,7 @@ const BusinessPage = () => {
                   </div>
                 </div>
 
-                {/* ── Galeria principal (campo images) com lightbox ── */}
+                {/* Galeria principal */}
                 {businessImages.length > 0 && (business as any).show_gallery !== false && (
                   <GalleryGrid images={businessImages} label="Galeria" />
                 )}
@@ -584,8 +576,16 @@ const BusinessPage = () => {
                     </div>
                   )}
 
+                  {/* ── DESCRIÇÃO COM PARÁGRAFOS ── */}
                   {business.description && (
-                    <p className="text-lg text-muted-foreground leading-relaxed">{business.description}</p>
+                    <div className="text-lg text-muted-foreground leading-relaxed space-y-4">
+                      {business.description
+                        .split("\n")
+                        .filter((p: string) => p.trim())
+                        .map((paragraph: string, i: number) => (
+                          <p key={i}>{paragraph}</p>
+                        ))}
+                    </div>
                   )}
 
                   {(business.schedule_weekdays || business.schedule_weekend) &&
@@ -636,10 +636,18 @@ const BusinessPage = () => {
                                   {mod.label}
                                 </a>
                               )}
+                              {/* ── TEXTAREA COM PARÁGRAFOS ── */}
                               {(mod.type === "text" || mod.type === "textarea") && v.value && (
                                 <div>
-                                  <span className="text-sm font-medium">{mod.label}:</span>{" "}
-                                  <span className="text-muted-foreground">{v.value}</span>
+                                  <span className="text-sm font-medium">{mod.label}:</span>
+                                  <div className="text-muted-foreground space-y-2 mt-1">
+                                    {v.value
+                                      .split("\n")
+                                      .filter((p: string) => p.trim())
+                                      .map((paragraph: string, i: number) => (
+                                        <p key={i}>{paragraph}</p>
+                                      ))}
+                                  </div>
                                 </div>
                               )}
                               {mod.type === "image" && v.value && (
@@ -652,7 +660,6 @@ const BusinessPage = () => {
                                   />
                                 </div>
                               )}
-                              {/* ── Galeria de módulo com lightbox ── */}
                               {mod.type === "gallery" &&
                                 (business as any).show_gallery !== false &&
                                 Array.isArray(v.value_json) &&
