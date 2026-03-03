@@ -18,6 +18,7 @@ interface OwnerBusinessUpdate {
   cta_website?: string | null;
   schedule_weekdays?: string | null;
   schedule_weekend?: string | null;
+  schedule_closed?: string | null;
   // PRO
   cta_whatsapp?: string | null;
   instagram_url?: string | null;
@@ -41,7 +42,6 @@ interface OwnerBusinessUpdate {
 
 export const useUpdateBusinessOwner = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ id, ...updates }: OwnerBusinessUpdate) => {
       const { data, error } = await supabase.from("businesses").update(updates).eq("id", id).select().single();
