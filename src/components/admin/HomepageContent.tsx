@@ -78,7 +78,11 @@ const HomepageContent = () => {
   const handleSave = async () => {
     try {
       let parsedConfig = {};
-      try { parsedConfig = JSON.parse(configJson); } catch { /* ignore */ }
+      try {
+        parsedConfig = JSON.parse(configJson);
+      } catch {
+        /* ignore */
+      }
 
       const payload: any = {
         type: form.type,
@@ -153,13 +157,30 @@ const HomepageContent = () => {
         {sorted.map((block, i) => (
           <div
             key={block.id}
-            className={`flex items-center gap-4 p-4 rounded-xl bg-card shadow-card border ${block.is_active ? "border-transparent" : "border-destructive/20 opacity-60"}`}
+            // Torna o card clicável e altera o cursor
+            onClick={() => openEdit(block)}
+            className={`flex items-center gap-4 p-4 rounded-xl bg-card shadow-card border cursor-pointer transition-colors hover:bg-accent/50 ${
+              block.is_active ? "border-transparent" : "border-destructive/20 opacity-60"
+            }`}
           >
-            <div className="flex flex-col gap-1">
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveBlock(block, "up")} disabled={i === 0}>
+            {/* Wrapper de ordenação com stopPropagation para não abrir o modal ao mover */}
+            <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                onClick={() => moveBlock(block, "up")}
+                disabled={i === 0}
+              >
                 <ArrowUp className="h-4 w-4" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveBlock(block, "down")} disabled={i === sorted.length - 1}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                onClick={() => moveBlock(block, "down")}
+                disabled={i === sorted.length - 1}
+              >
                 <ArrowDown className="h-4 w-4" />
               </Button>
             </div>
@@ -173,23 +194,45 @@ const HomepageContent = () => {
               <h3 className="font-medium">{block.title || typeLabel(block.type)}</h3>
               <div className="flex gap-2 mt-1">
                 <Badge variant="outline">{typeLabel(block.type)}</Badge>
-                <Badge variant={block.is_active ? "default" : "secondary"}>{block.is_active ? "Ativo" : "Inativo"}</Badge>
-                {block.start_date && <Badge variant="secondary" className="text-[10px]">De: {new Date(block.start_date).toLocaleDateString("pt-PT")}</Badge>}
-                {block.end_date && <Badge variant="secondary" className="text-[10px]">Até: {new Date(block.end_date).toLocaleDateString("pt-PT")}</Badge>}
+                <Badge variant={block.is_active ? "default" : "secondary"}>
+                  {block.is_active ? "Ativo" : "Inativo"}
+                </Badge>
+                {block.start_date && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    De: {new Date(block.start_date).toLocaleDateString("pt-PT")}
+                  </Badge>
+                )}
+                {block.end_date && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    Até: {new Date(block.end_date).toLocaleDateString("pt-PT")}
+                  </Badge>
+                )}
               </div>
             </div>
 
-            <div className="flex gap-1">
+            {/* Wrapper de ações com stopPropagation */}
+            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
               <Button size="icon" variant="ghost" onClick={() => openEdit(block)}>
                 <Pencil className="w-4 h-4" />
               </Button>
-              <Button size="icon" variant="ghost" onClick={() => handleDelete(block.id)}>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(block.id);
+                }}
+              >
                 <Trash2 className="w-4 h-4 text-destructive" />
               </Button>
             </div>
           </div>
         ))}
-        {sorted.length === 0 && <p className="text-muted-foreground text-center py-8">Nenhum bloco configurado. A homepage usará o layout padrão.</p>}
+        {sorted.length === 0 && (
+          <p className="text-muted-foreground text-center py-8">
+            Nenhum bloco configurado. A homepage usará o layout padrão.
+          </p>
+        )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -201,10 +244,14 @@ const HomepageContent = () => {
             <div>
               <Label>Tipo</Label>
               <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })} disabled={!!editing}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {BLOCK_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -216,7 +263,11 @@ const HomepageContent = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Ordem</Label>
-                <Input type="number" value={form.order_index} onChange={(e) => setForm({ ...form, order_index: parseInt(e.target.value) || 0 })} />
+                <Input
+                  type="number"
+                  value={form.order_index}
+                  onChange={(e) => setForm({ ...form, order_index: parseInt(e.target.value) || 0 })}
+                />
               </div>
               <div className="flex items-center gap-2 pt-6">
                 <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
@@ -226,11 +277,19 @@ const HomepageContent = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Data início</Label>
-                <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+                <Input
+                  type="date"
+                  value={form.start_date}
+                  onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                />
               </div>
               <div>
                 <Label>Data fim</Label>
-                <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+                <Input
+                  type="date"
+                  value={form.end_date}
+                  onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                />
               </div>
             </div>
             {["banner", "negocios_premium", "texto", "personalizado"].includes(form.type) && (
@@ -241,7 +300,11 @@ const HomepageContent = () => {
                   onChange={(e) => setConfigJson(e.target.value)}
                   rows={6}
                   className="font-mono text-xs"
-                  placeholder={form.type === "banner" ? '{\n  "titulo": "...",\n  "descricao": "...",\n  "link": "...",\n  "imagem_url": "..."\n}' : '{}'}
+                  placeholder={
+                    form.type === "banner"
+                      ? '{\n  "titulo": "...",\n  "descricao": "...",\n  "link": "...",\n  "imagem_url": "..."\n}'
+                      : "{}"
+                  }
                 />
               </div>
             )}
