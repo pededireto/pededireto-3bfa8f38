@@ -191,7 +191,6 @@ const GalleryGrid = ({ images, label }: GalleryGridProps) => {
           </button>
         ))}
       </div>
-
       {lightboxIndex !== null && (
         <Lightbox images={images} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
@@ -394,6 +393,13 @@ const BusinessPage = () => {
     ? (business as any).images.filter((u: string) => u?.trim())
     : [];
 
+  // ── Horário ──
+  const scheduleWeekdays = business.schedule_weekdays || "";
+  const scheduleWeekend = business.schedule_weekend || "";
+  const scheduleClosed = (business as any).schedule_closed || "";
+  const hasSchedule =
+    !!(scheduleWeekdays || scheduleWeekend || scheduleClosed) && (business as any).show_schedule !== false;
+
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
@@ -588,25 +594,56 @@ const BusinessPage = () => {
                     </div>
                   )}
 
-                  {(business.schedule_weekdays || business.schedule_weekend) &&
-                    (business as any).show_schedule !== false && (
-                      <div className="bg-muted/50 rounded-xl p-4 space-y-2">
-                        <div className="flex items-center gap-2 font-medium">
-                          <Clock className="w-5 h-5 text-primary" />
-                          Horário
-                        </div>
-                        {business.schedule_weekdays && (
-                          <p className="text-sm text-muted-foreground">
-                            <span className="font-medium">Dias úteis:</span> {business.schedule_weekdays}
-                          </p>
-                        )}
-                        {business.schedule_weekend && (
-                          <p className="text-sm text-muted-foreground">
-                            <span className="font-medium">Fim de semana:</span> {business.schedule_weekend}
-                          </p>
-                        )}
+                  {/* ── HORÁRIO ESTRUTURADO ── */}
+                  {hasSchedule && (
+                    <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2 font-medium">
+                        <Clock className="w-5 h-5 text-primary" />
+                        Horário
                       </div>
-                    )}
+
+                      {scheduleWeekdays && (
+                        <div className="text-sm">
+                          <span className="font-medium text-foreground flex items-center gap-1.5 mb-1">
+                            📅 Dias úteis
+                          </span>
+                          <div className="text-muted-foreground space-y-0.5 pl-5">
+                            {scheduleWeekdays
+                              .split("\n")
+                              .filter((l: string) => l.trim())
+                              .map((line: string, i: number) => (
+                                <p key={i}>{line}</p>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {scheduleWeekend && (
+                        <div className="text-sm">
+                          <span className="font-medium text-foreground flex items-center gap-1.5 mb-1">
+                            🗓 Fim de semana
+                          </span>
+                          <div className="text-muted-foreground space-y-0.5 pl-5">
+                            {scheduleWeekend
+                              .split("\n")
+                              .filter((l: string) => l.trim())
+                              .map((line: string, i: number) => (
+                                <p key={i}>{line}</p>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {scheduleClosed && (
+                        <div className="text-sm">
+                          <span className="font-medium text-foreground flex items-center gap-1.5 mb-1">
+                            🔴 Encerrado
+                          </span>
+                          <p className="text-muted-foreground pl-5">{scheduleClosed}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Dynamic Module Values */}
                   {(() => {
