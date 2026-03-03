@@ -41,7 +41,7 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
 
   return (
     <div
-      className={`card-business cursor-pointer ${business.is_featured ? "card-featured" : ""}`}
+      className={`card-business cursor-pointer transition-shadow hover:shadow-md ${business.is_featured ? "card-featured" : ""}`}
       onClick={handleCardClick}
     >
       {/* Featured Badge */}
@@ -61,15 +61,19 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
         </div>
       )}
 
-      {/* Favorite Button — stopPropagation para não navegar */}
-      <div className="absolute top-3 left-3 z-10" onClick={(e) => e.stopPropagation()}>
-        <FavoriteButton businessId={business.id} className="bg-card/80 backdrop-blur-sm hover:bg-card" />
+      {/* Favorito — stopPropagation para não navegar ao clicar no coração */}
+      <div className="absolute top-3 left-3 z-20" onClick={(e) => e.stopPropagation()}>
+        <FavoriteButton businessId={business.id} className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-sm" />
       </div>
 
       {/* Image/Logo */}
-      <div className="relative aspect-[4/3] bg-muted flex items-center justify-center">
+      <div className="relative aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
         {business.logo_url ? (
-          <img src={business.logo_url} alt={business.name} className="max-w-full max-h-full object-contain p-2" />
+          <img
+            src={business.logo_url}
+            alt={business.name}
+            className="max-w-full max-h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-primary/10">
             <span className="text-4xl font-bold text-primary/40">{business.name.charAt(0)}</span>
@@ -85,7 +89,9 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
         )}
 
         {/* Name */}
-        <h3 className="font-bold text-lg mt-1 mb-2 hover:text-primary transition-colors">{business.name}</h3>
+        <h3 className="font-bold text-lg mt-1 mb-2 group-hover:text-primary transition-colors line-clamp-1">
+          {business.name}
+        </h3>
 
         {/* Description */}
         {business.description && (
@@ -95,18 +101,18 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
         {/* Location */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
           {business.alcance === "nacional" ? <Globe className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
-          <span>{getAlcanceLabel()}</span>
+          <span className="truncate">{getAlcanceLabel()}</span>
         </div>
 
-        {/* CTA Buttons — stopPropagation para não navegar ao clicar */}
-        <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+        {/* Botões CTA — stopPropagation no wrapper para proteger as ações */}
+        <div className="flex flex-wrap gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
           {business.cta_whatsapp && (business as any).show_whatsapp !== false && (
             <Button
               size="sm"
-              className="btn-cta-whatsapp flex-1"
+              className="btn-cta-whatsapp flex-1 min-w-[100px]"
               onClick={() => {
                 handleCtaClick("whatsapp");
-                window.open(`https://wa.me/${business.cta_whatsapp.replace(/\D/g, "")}`, "_blank");
+                window.open(`https://wa.me/${business.cta_whatsapp?.replace(/\D/g, "")}`, "_blank");
               }}
             >
               <MessageCircle className="w-4 h-4" />
@@ -117,7 +123,7 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
           {business.cta_phone && (
             <Button
               size="sm"
-              className="btn-cta-phone flex-1"
+              className="btn-cta-phone flex-1 min-w-[100px]"
               onClick={() => {
                 handleCtaClick("phone");
                 window.open(`tel:${business.cta_phone}`, "_blank");
@@ -132,14 +138,14 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
             <Button
               size="sm"
               variant="outline"
-              className="flex-1"
+              className="flex-1 min-w-[100px]"
               onClick={() => {
                 handleCtaClick("website");
                 window.open(business.cta_website!, "_blank");
               }}
             >
               <ExternalLink className="w-4 h-4" />
-              Website
+              Site
             </Button>
           )}
         </div>
