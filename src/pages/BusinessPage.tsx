@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FavoriteButton from "@/components/FavoriteButton";
+import ShareButton from "@/components/ShareButton";
 import { UnclaimedBusinessBanner } from "@/components/business/UnclaimedBusinessBanner";
 import BusinessNavigation from "@/components/BusinessNavigation";
 import BusinessSuggestionForm from "@/components/BusinessSuggestionForm";
@@ -409,7 +410,7 @@ const BusinessPage = () => {
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
         <link rel="canonical" href={pageUrl} />
-        <meta property="og:type" content="website" />
+        <meta property="og:type" content="business.business" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:image" content={pageImage} />
@@ -514,6 +515,13 @@ const BusinessPage = () => {
                       </span>
                     )}
                     {business.is_premium && !business.is_featured && <span className="badge-premium">Premium</span>}
+                    <ShareButton
+                      url={pageUrl}
+                      title={business.name}
+                      description={`${business.categories?.name ?? ""} em ${business.city ?? "Portugal"}`}
+                      variant="icon"
+                      className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"
+                    />
                     <FavoriteButton
                       businessId={business.id}
                       className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"

@@ -398,6 +398,11 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         const strippedTerm = stripIntent(query);
         const keywords = extractKeywords(strippedTerm || query);
 
+        // Guard: skip synonym lookup if stripped term is too short (avoids false positives)
+        if (strippedTerm.length < 3 && keywords.length === 0) {
+          // Skip synonym layer entirely
+        } else {
+
         const keywordCombos: string[] = [];
         for (let len = keywords.length; len >= 1; len--) {
           keywordCombos.push(keywords.slice(0, len).join(" "));
@@ -435,6 +440,7 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
           // Só incluir grupos com negócios
           businessGroups = groupResults.filter((g) => g.businesses.length > 0);
         }
+        } // end else (guard)
       }
 
       // ── CAMADA 3: Fallback direto se ainda sem resultados ─────────────

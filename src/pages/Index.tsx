@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useCategories } from "@/hooks/useCategories";
 import { useFeaturedBusinesses } from "@/hooks/useBusinesses";
 import { useHomepageBlocks } from "@/hooks/useHomepageBlocks";
@@ -23,6 +24,17 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>PedeDireto — Encontre Profissionais Locais em Portugal</title>
+        <meta name="description" content="Conecte-se com os melhores profissionais locais. Canalizadores, electricistas, restaurantes e muito mais. Rápido, directo e sem intermediários." />
+        <meta name="keywords" content="profissionais locais, canalizador, electricista, obras, portugal, pede direto" />
+        <link rel="canonical" href="https://pededireto.pt" />
+        <meta property="og:title" content="PedeDireto — Encontre Profissionais Locais em Portugal" />
+        <meta property="og:description" content="Conecte-se com os melhores profissionais locais. Rápido, directo e sem intermediários." />
+        <meta property="og:url" content="https://pededireto.pt" />
+        <meta property="og:type" content="website" />
+      </Helmet>
+
       <Header />
 
       {/* 
