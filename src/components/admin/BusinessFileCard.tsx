@@ -67,7 +67,7 @@ import {
 // ─────────────────────────────────────────────
 
 interface BusinessFileCardProps {
-  business: BusinessWithCategory | null;
+  business: BusinessWithCategory | null; // null = create mode (admin only)
   categories: Category[];
   isAdmin: boolean;
   mode?: "admin" | "owner";
@@ -91,14 +91,13 @@ const generateSlug = (name: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
+// Limite de imagens por plano
 function getGalleryLimit(subscriptionPlan: string, isPremium: boolean): number {
   if (subscriptionPlan === "free" || !subscriptionPlan) return 0;
   return isPremium ? 6 : 2;
 }
 
-// ─────────────────────────────────────────────
-// Parser de horários do Google — MELHORADO
-// ─────────────────────────────────────────────
+// Parser de horários do Google
 const DAY_MAP: Record<string, string> = {
   "segunda-feira": "segunda-feira",
   segunda: "segunda-feira",
@@ -119,7 +118,7 @@ const DAY_MAP: Record<string, string> = {
 const WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira"];
 const WEEKEND = ["sábado", "domingo"];
 
-function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string; closed: string } {
+function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string } {
   const text = raw.replace(/–|—/g, "-").replace(/\t/g, " ").trim();
   const schedule: Record<string, string> = {};
   const segmented = text.replace(
@@ -137,29 +136,23 @@ function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string; 
     for (const [key, dayName] of Object.entries(DAY_MAP)) {
       if (norm.startsWith(key.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))) {
         const rest = line.slice(key.length).trim();
-        if (rest) schedule[dayName] = /encerrado|fechado|closed/i.test(rest) ? "Encerrado" : rest;
+        if (rest) schedule[dayName] = /encerrado|fechado/i.test(rest) ? "Encerrado" : rest;
         break;
       }
     }
   }
-
-  // Dias úteis — se todos iguais agrupa, senão lista individualmente
-  const wdOpen = WEEKDAYS.filter((d) => schedule[d] && schedule[d] !== "Encerrado");
-  const wdClosed = WEEKDAYS.filter((d) => schedule[d] === "Encerrado");
-  const wdHours = wdOpen.map((d) => schedule[d]);
+  const wdHours = WEEKDAYS.map((d) => schedule[d]).filter(Boolean);
   const allSame = wdHours.length > 0 && wdHours.every((h) => h === wdHours[0]);
-  const weekdays = allSame ? wdHours[0] : wdOpen.map((d) => `${d} ${schedule[d]}`).join("\n");
-
-  // Fim de semana — só dias com horário (não encerrados)
-  const weOpen = WEEKEND.filter((d) => schedule[d] && schedule[d] !== "Encerrado");
-  const weClosed = WEEKEND.filter((d) => schedule[d] === "Encerrado");
-  const weekend = weOpen.map((d) => `${d} ${schedule[d]}`).join("\n");
-
-  // Dias encerrados — todos os dias com "Encerrado"
-  const allClosed = [...wdClosed, ...weClosed];
-  const closed = allClosed.length > 0 ? allClosed.join(", ") : "";
-
-  return { weekdays, weekend, closed };
+  return {
+    weekdays: allSame
+      ? wdHours[0]
+      : WEEKDAYS.filter((d) => schedule[d])
+          .map((d) => `${d} ${schedule[d]}`)
+          .join("  "),
+    weekend: WEEKEND.filter((d) => schedule[d])
+      .map((d) => `${d} ${schedule[d]}`)
+      .join("  "),
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -343,7 +336,9 @@ function TrialClaimSection({ business }: { business: BusinessWithCategory }) {
 
   const trialEnd = (business as any).trial_ends_at ? new Date((business as any).trial_ends_at) : null;
   const isTrialActive = !!trialEnd && trialEnd > new Date();
-  const trialDaysLeft = isTrialActive ? Math.ceil((trialEnd!.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
+  const trialDaysLeft = isTrialActive
+    ? Math.ceil((trialEnd!.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 0;
   const isClaimed = (business as any).is_claimed === true;
 
   const handleActivateTrial = async () => {
@@ -444,6 +439,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   const isOwner = mode === "owner";
   const isEditing = !!business;
 
+  // Hooks — admin usa useUpdateBusiness, owner usa useUpdateBusinessOwner
   const updateBusinessAdmin = useUpdateBusiness();
   const updateBusinessOwner = useUpdateBusinessOwner();
   const createBusiness = useCreateBusiness();
@@ -460,6 +456,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   const [rawSchedulePaste, setRawSchedulePaste] = useState("");
   const [showPasteBox, setShowPasteBox] = useState(false);
 
+  // Gallery limit based on plan
   const galleryLimit = getGalleryLimit(
     (business as any)?.subscription_plan ?? "free",
     (business as any)?.is_premium ?? false,
@@ -484,7 +481,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     // 3. Horários
     schedule_weekdays: "",
     schedule_weekend: "",
-    schedule_closed: "",
     show_schedule: true,
     // 4. Presença Digital (PRO)
     cta_whatsapp: "",
@@ -504,7 +500,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     // 6. Estado Comercial (admin only)
     commercial_status: "nao_contactado" as CommercialStatus,
     is_active: false,
-    // 7. Subscrição
+    // 7. Subscrição (admin edita, owner lê)
     plan_id: "",
     subscription_start_date: "",
     subscription_status: "inactive" as SubscriptionStatus,
@@ -516,6 +512,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
 
   const [moduleValues, setModuleValues] = useState<Record<string, { value: string | null; value_json: any }>>({});
 
+  // Load business data
   useEffect(() => {
     if (business) {
       setForm({
@@ -534,7 +531,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         cta_website: business.cta_website || "",
         schedule_weekdays: business.schedule_weekdays || "",
         schedule_weekend: business.schedule_weekend || "",
-        schedule_closed: (business as any).schedule_closed || "",
         show_schedule: (business as any).show_schedule ?? true,
         cta_whatsapp: business.cta_whatsapp || "",
         show_whatsapp: (business as any).show_whatsapp ?? true,
@@ -590,6 +586,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     }));
   };
 
+  // Gallery helpers
   const addImage = () => {
     if (form.images.length >= galleryLimit) return;
     setForm((prev) => ({ ...prev, images: [...prev.images, ""] }));
@@ -603,18 +600,18 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
   };
 
-  // ── Handler do botão "Colar do Google" ──
+  // Schedule paste
   const handleFormatSchedule = () => {
     if (!rawSchedulePaste.trim()) return;
-    const { weekdays, weekend, closed } = parseGoogleSchedule(rawSchedulePaste);
+    const { weekdays, weekend } = parseGoogleSchedule(rawSchedulePaste);
     if (weekdays) set("schedule_weekdays", weekdays);
     if (weekend) set("schedule_weekend", weekend);
-    if (closed) set("schedule_closed", closed);
     setRawSchedulePaste("");
     setShowPasteBox(false);
-    toast({ title: "✅ Horário organizado automaticamente!" });
+    toast({ title: "✅ Horário formatado!" });
   };
 
+  // Subscription dates helper (admin)
   const getSubscriptionDates = (planId: string, startDate: string) => {
     if (!planId || !startDate) {
       return {
@@ -651,6 +648,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validação cliente (admin)
     if (!isOwner && form.commercial_status === "cliente") {
       const missing: string[] = [];
       if (!form.nif) missing.push("NIF");
@@ -667,6 +665,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       }
     }
 
+    // Validação módulos dinâmicos
     if (!isOwner) {
       const missingModules = activeModules.filter(
         (m) => m.is_required && !moduleValues[m.id]?.value && !moduleValues[m.id]?.value_json,
@@ -685,6 +684,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
 
     try {
       if (isOwner) {
+        // ── Owner: usa hook próprio com RLS ──────────────────
         await updateBusinessOwner.mutateAsync({
           id: business!.id,
           name: form.name,
@@ -701,7 +701,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           cta_website: form.cta_website || null,
           schedule_weekdays: form.schedule_weekdays || null,
           schedule_weekend: form.schedule_weekend || null,
-          schedule_closed: form.schedule_closed || null,
           show_schedule: form.show_schedule,
           cta_whatsapp: form.cta_whatsapp || null,
           show_whatsapp: form.show_whatsapp,
@@ -711,6 +710,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           show_social: form.show_social,
           images: cleanImages.length > 0 ? cleanImages : null,
           show_gallery: form.show_gallery,
+          // Dados Legais — owner também pode editar
           nif: form.nif || null,
           address: form.address || null,
           owner_name: form.owner_name || null,
@@ -720,6 +720,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         });
         toast({ title: "✅ Negócio atualizado com sucesso!" });
       } else {
+        // ── Admin: usa hook completo ─────────────────────────
         const subscriptionData = getSubscriptionDates(form.plan_id, form.subscription_start_date);
         const data: any = {
           name: form.name,
@@ -735,7 +736,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           public_address: form.public_address || null,
           schedule_weekdays: form.schedule_weekdays || null,
           schedule_weekend: form.schedule_weekend || null,
-          schedule_closed: form.schedule_closed || null,
           show_schedule: form.show_schedule,
           cta_website: form.cta_website || null,
           cta_whatsapp: form.cta_whatsapp || null,
@@ -988,9 +988,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       <Section title="Horários" icon={Clock} defaultOpen={false} badge="Gratuito · START">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              Copia o horário directamente do Google e cola aqui — o sistema organiza automaticamente.
-            </p>
+            <p className="text-xs text-muted-foreground">Podes copiar o horário diretamente do Google e colar aqui.</p>
             <div className="flex items-center gap-2">
               <VisibilityBadge visible={form.show_schedule} onChange={(v) => set("show_schedule", v)} />
               <Button
@@ -1011,23 +1009,20 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             </p>
           )}
 
-          {/* Caixa de colar do Google */}
           {showPasteBox && (
             <div className="border border-primary/30 bg-primary/5 rounded-lg p-4 space-y-3">
-              <Label className="text-sm font-medium">Cola aqui o horário copiado do Google</Label>
+              <Label className="text-sm font-medium">Cola aqui o horário do Google</Label>
               <Textarea
                 value={rawSchedulePaste}
                 onChange={(e) => setRawSchedulePaste(e.target.value)}
-                placeholder={
-                  "segunda-feira 09:00-22:00\nterça-feira 09:00-22:00\nquarta-feira 09:00-22:00\nquinta-feira 09:00-22:00\nsexta-feira 09:00-22:00\nsábado 12:00-18:00\ndomingo Encerrado"
-                }
-                rows={8}
+                placeholder={"sexta-feira\n09:00-22:00\nsábado\n12:00-18:00\ndomingo\nEncerrado\n..."}
+                rows={6}
                 className="text-sm font-mono"
                 autoFocus
               />
               <div className="flex gap-2">
                 <Button type="button" size="sm" onClick={handleFormatSchedule} disabled={!rawSchedulePaste.trim()}>
-                  <Wand2 className="h-3.5 w-3.5 mr-1.5" /> Organizar automaticamente
+                  <Wand2 className="h-3.5 w-3.5 mr-1.5" /> Formatar automaticamente
                 </Button>
                 <Button
                   type="button"
@@ -1044,41 +1039,26 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             </div>
           )}
 
-          {/* 3 campos de horário */}
-          <div className={`space-y-3 ${!form.show_schedule ? "opacity-50" : ""}`}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>📅 Dias úteis (seg–sex)</Label>
-                <Textarea
-                  value={form.schedule_weekdays}
-                  onChange={(e) => set("schedule_weekdays", e.target.value)}
-                  placeholder="Ex: 09:00–18:00"
-                  rows={2}
-                  className="text-sm resize-none"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>🗓 Fim de semana</Label>
-                <Textarea
-                  value={form.schedule_weekend}
-                  onChange={(e) => set("schedule_weekend", e.target.value)}
-                  placeholder="Ex: sábado 10:00–14:00"
-                  rows={2}
-                  className="text-sm resize-none"
-                />
-              </div>
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${!form.show_schedule ? "opacity-50" : ""}`}>
+            <div className="space-y-1.5">
+              <Label>Horário dias úteis</Label>
+              <Textarea
+                value={form.schedule_weekdays}
+                onChange={(e) => set("schedule_weekdays", e.target.value)}
+                placeholder="Ex: 09:00-18:00"
+                rows={2}
+                className="text-sm resize-none"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>🔴 Dias encerrados</Label>
-              <Input
-                value={form.schedule_closed}
-                onChange={(e) => set("schedule_closed", e.target.value)}
-                placeholder="Ex: domingo, segunda-feira"
-                className="text-sm"
+              <Label>Horário fim-de-semana</Label>
+              <Textarea
+                value={form.schedule_weekend}
+                onChange={(e) => set("schedule_weekend", e.target.value)}
+                placeholder="Ex: sábado 10:00-14:00  domingo Encerrado"
+                rows={2}
+                className="text-sm resize-none"
               />
-              <p className="text-[11px] text-muted-foreground">
-                Preenchido automaticamente ao colar do Google. Pode editar manualmente.
-              </p>
             </div>
           </div>
         </div>
@@ -1087,6 +1067,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       {/* ── 4. Presença Digital (PRO) ── */}
       <Section title="Presença Digital" icon={Share2} defaultOpen={false} badge="PRO">
         <div className="space-y-6">
+          {/* WhatsApp */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>WhatsApp</Label>
@@ -1105,6 +1086,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             )}
           </div>
 
+          {/* Redes Sociais */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">Redes Sociais</Label>
@@ -1145,6 +1127,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             </div>
           </div>
 
+          {/* Galeria */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1296,11 +1279,14 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       )}
 
       {/* ── 6B. Trial & Claim (admin only) ── */}
-      {!isOwner && isEditing && business && <TrialClaimSection business={business} />}
+      {!isOwner && isEditing && business && (
+        <TrialClaimSection business={business} />
+      )}
 
       {/* ── 7. Subscrição e Produto ── */}
       <Section title="Subscrição e Produto" icon={CreditCard} defaultOpen={false}>
         {isOwner ? (
+          // Owner: só leitura
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-4 space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
@@ -1346,6 +1332,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             </Button>
           </div>
         ) : (
+          // Admin: edita tudo
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1493,7 +1480,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         </Section>
       )}
 
-      {/* ── 9. Auditoria (admin only) ── */}
+      {/* ── 9. Auditoria (admin + isAdmin only) ── */}
       {!isOwner && isAdmin && isEditing && business && (
         <Section title="Auditoria e Alertas" icon={ShieldCheck} defaultOpen={false}>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
