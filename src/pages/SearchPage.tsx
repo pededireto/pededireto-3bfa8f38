@@ -1,72 +1,95 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Search, Loader2, MapPin, Star, ArrowRight } from "lucide-react";
+import { Search, Loader2, MapPin, Star, ArrowRight, Share2, ChevronDown } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SmartSearchBanner from "@/components/SmartSearchBanner";
+import ShareButton from "@/components/ShareButton";
 import { useSmartSearch } from "@/hooks/useSmartSearch";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useAuth } from "@/hooks/useAuth";
 import type { SmartBusiness } from "@/hooks/useSmartSearch";
 
+const BASE_URL = "https://pededireto.pt";
+const RESULTS_LIMIT = 5;
+
 const QUICK_SUGGESTIONS = [
-  "canalizador",
-  "eletricista",
-  "pintor",
-  "restaurante",
-  "cabeleireiro",
-  "dentista",
-  "mecânico",
-  "advogado",
-  "contabilista",
-  "remodelação",
+  "canalizador", "eletricista", "pintor", "restaurante", "cabeleireiro",
+  "dentista", "mecânico", "advogado", "contabilista", "remodelação",
 ];
 
 const SearchPage = () => {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlQuery = searchParams.get("q") ?? "";
+  const urlCity = searchParams.get("cidade") ?? "";
   const [inputValue, setInputValue] = useState(urlQuery);
-  const [cityFilter, setCityFilter] = useState("");
-  const [showCityFilter, setShowCityFilter] = useState(false);
+  const [cityFilter, setCityFilter] = useState(urlCity);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const debouncedTerm = useDebounce(inputValue, 400);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: result, isPending } = useSmartSearch(debouncedTerm, cityFilter || null);
 
+  // Sync from URL
   useEffect(() => {
-    const q = searchParams.get("q") ?? "";
-    setInputValue(q);
+    setInputValue(searchParams.get("q") ?? "");
+    setCityFilter(searchParams.get("cidade") ?? "");
   }, [searchParams]);
 
+  // Sync to URL
   useEffect(() => {
-    const current = searchParams.get("q") ?? "";
-    if (debouncedTerm !== current) {
-      if (debouncedTerm) {
-        setSearchParams({ q: debouncedTerm }, { replace: true });
-      } else {
-        setSearchParams({}, { replace: true });
-      }
+    const currentQ = searchParams.get("q") ?? "";
+    const currentCity = searchParams.get("cidade") ?? "";
+    if (debouncedTerm !== currentQ || cityFilter !== currentCity) {
+      const params: Record<string, string> = {};
+      if (debouncedTerm) params.q = debouncedTerm;
+      if (cityFilter) params.cidade = cityFilter;
+      setSearchParams(params, { replace: true });
     }
-  }, [debouncedTerm]);
+  }, [debouncedTerm, cityFilter]);
 
   const handleComplementaryClick = (service: string) => {
     setInputValue(service);
-    setSearchParams({ q: service });
+    setSearchParams({ q: service, ...(cityFilter ? { cidade: cityFilter } : {}) });
     inputRef.current?.focus();
+  };
+
+  const toggleGroup = (label: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
   };
 
   const showResults = debouncedTerm.length >= 2;
   const businessGroups = result?.businessGroups ?? [];
   const totalFound = result?.totalFound ?? 0;
+  const complementaryServices = result?.complementaryServices ?? [];
 
-  // Para o link "Ver todos em categoria" — usar o primeiro grupo
   const firstBusiness = businessGroups[0]?.businesses[0] ?? null;
   const categorySlug = firstBusiness?.category_slug ?? null;
   const categoryName = firstBusiness?.category_name ?? null;
 
+  const currentUrl = `${BASE_URL}/pesquisa${debouncedTerm ? `?q=${encodeURIComponent(debouncedTerm)}` : ""}${cityFilter ? `${debouncedTerm ? "&" : "?"}cidade=${encodeURIComponent(cityFilter)}` : ""}`;
+
+  const seoTitle = debouncedTerm
+    ? `Resultados para "${debouncedTerm}" | PedeDireto`
+    : "Pesquisa | PedeDireto";
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>{seoTitle}</title>
+        <meta name="description" content={debouncedTerm ? `Encontrámos ${totalFound} profissionais de ${debouncedTerm} em Portugal. Contacte directamente.` : "Pesquise profissionais e serviços locais em Portugal."} />
+        <meta name="robots" content="noindex, follow" />
+      </Helmet>
+
       <Header />
 
       {/* Sticky search bar */}
@@ -85,40 +108,29 @@ const SearchPage = () => {
                 autoFocus
               />
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className={`gap-1.5 shrink-0 h-auto ${showCityFilter ? "border-primary text-primary" : ""}`}
-              onClick={() => setShowCityFilter((v) => !v)}
-            >
-              <MapPin className="h-4 w-4" />
-              {cityFilter ? cityFilter : "Cidade"}
-            </Button>
           </div>
 
-          {showCityFilter && (
-            <div className="max-w-3xl mx-auto mt-2">
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={cityFilter}
-                  onChange={(e) => setCityFilter(e.target.value)}
-                  placeholder="Filtrar por cidade (ex: Lisboa, Porto...)"
-                  className="w-full pl-9 pr-4 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  autoFocus
-                />
-                {cityFilter && (
-                  <button
-                    onClick={() => setCityFilter("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
-                  >
-                    ✕ limpar
-                  </button>
-                )}
-              </div>
+          {/* City filter always visible */}
+          <div className="max-w-3xl mx-auto mt-2">
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                placeholder="Filtrar por cidade (ex: Lisboa, Porto...)"
+                className="w-full pl-9 pr-4 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              {cityFilter && (
+                <button
+                  onClick={() => setCityFilter("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                >
+                  ✕ limpar
+                </button>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -165,55 +177,105 @@ const SearchPage = () => {
 
             {businessGroups.length > 0 && (
               <>
-                {/* Contador total */}
+                {/* Counter + share */}
                 <div className="flex items-center justify-between mb-6">
                   <p className="text-sm text-muted-foreground">
                     {totalFound} resultado{totalFound !== 1 ? "s" : ""}
                     {cityFilter && (
                       <span className="ml-1">
                         em <span className="font-medium text-foreground">{cityFilter}</span>
-                        <button onClick={() => setCityFilter("")} className="ml-1 text-primary hover:underline text-xs">
-                          (limpar)
-                        </button>
+                        <button onClick={() => setCityFilter("")} className="ml-1 text-primary hover:underline text-xs">(limpar)</button>
                       </span>
                     )}
                   </p>
-                  {totalFound >= 10 && categorySlug && categoryName && (
-                    <Link
-                      to={`/categoria/${categorySlug}`}
-                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                    >
-                      Ver todos em {categoryName}
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <ShareButton url={currentUrl} title={`Pesquisa: ${debouncedTerm}`} variant="outline" />
+                    {totalFound >= 10 && categorySlug && categoryName && (
+                      <Link to={`/categoria/${categorySlug}`} className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                        Ver todos em {categoryName}
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    )}
+                  </div>
                 </div>
 
-                {/* Grupos separados */}
+                {/* Groups */}
                 <div className="space-y-10">
-                  {businessGroups.map((group) => (
-                    <div key={group.label}>
-                      {/* Título do grupo — só mostrar se há mais de 1 grupo */}
-                      {businessGroups.length > 1 && (
-                        <div className="flex items-center gap-3 mb-4">
-                          <h2 className="text-base font-semibold text-foreground capitalize">{group.label}</h2>
-                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                            {group.businesses.length}
-                          </span>
-                          <div className="flex-1 h-px bg-border" />
-                        </div>
-                      )}
+                  {businessGroups.map((group) => {
+                    const isExpanded = expandedGroups.has(group.label);
+                    const visibleBiz = isExpanded ? group.businesses : group.businesses.slice(0, RESULTS_LIMIT);
+                    const hasMore = group.businesses.length > RESULTS_LIMIT;
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {group.businesses.map((biz) => (
-                          <SearchResultCard key={biz.id} business={biz} />
-                        ))}
+                    return (
+                      <div key={group.label}>
+                        {businessGroups.length > 1 && (
+                          <div className="flex items-center gap-3 mb-4">
+                            <h2 className="text-base font-semibold text-foreground capitalize">{group.label}</h2>
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.businesses.length}</span>
+                            <div className="flex-1 h-px bg-border" />
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {visibleBiz.map((biz) => (
+                            <SearchResultCard key={biz.id} business={biz} searchTerm={debouncedTerm} cityFilter={cityFilter} isAuthenticated={!!user} />
+                          ))}
+                        </div>
+
+                        {hasMore && !isExpanded && (
+                          <div className="mt-4 text-center">
+                            <Button variant="outline" size="sm" className="gap-2" onClick={() => toggleGroup(group.label)}>
+                              <ChevronDown className="h-4 w-4" />
+                              Ver mais {group.businesses.length - RESULTS_LIMIT} profissionais
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
-                {/* CTA ver categoria no fundo */}
+                {/* Complementary section after results */}
+                {complementaryServices.length > 0 && (
+                  <div className="mt-10 rounded-2xl border border-border bg-muted/30 p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-medium text-muted-foreground">Também pode precisar de:</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {complementaryServices.map((service) => (
+                        <button
+                          key={service}
+                          onClick={() => handleComplementaryClick(service)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-border bg-background hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors"
+                        >
+                          <Search className="h-3 w-3" />
+                          {service}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fallback popular categories when no complementary */}
+                {complementaryServices.length === 0 && totalFound > 0 && (
+                  <div className="mt-10 rounded-2xl border border-border bg-muted/30 p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-medium text-muted-foreground">Categorias populares:</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {["canalizador", "eletricista", "pintor", "restaurante", "cabeleireiro"].map((s) => (
+                        <button key={s} onClick={() => handleComplementaryClick(s)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-border bg-background hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors">
+                          <Search className="h-3 w-3" />{s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* CTA bottom */}
                 {categorySlug && categoryName && (
                   <div className="mt-8 text-center">
                     <Link
@@ -238,44 +300,68 @@ const SearchPage = () => {
 
 // ── Result Card ───────────────────────────────────────────────────────────────
 
-function SearchResultCard({ business }: { business: SmartBusiness }) {
+function SearchResultCard({ business, searchTerm, cityFilter, isAuthenticated }: { business: SmartBusiness; searchTerm: string; cityFilter: string; isAuthenticated: boolean }) {
+  const redirectUrl = `/pesquisa?q=${encodeURIComponent(searchTerm)}${cityFilter ? `&cidade=${encodeURIComponent(cityFilter)}` : ""}`;
+
   return (
-    <Link
-      to={`/negocio/${business.slug}`}
-      className="group flex gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all"
-    >
-      <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
-        {business.logo_url ? (
-          <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" loading="lazy" />
-        ) : (
-          <span className="text-xl font-bold text-primary/40">{business.name.charAt(0)}</span>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-            {business.name}
-          </h3>
-          {business.is_premium && (
-            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800 text-[10px] px-1.5 py-0 shrink-0">
-              <Star className="h-2.5 w-2.5 mr-0.5" />
-              Premium
-            </Badge>
+    <div className="space-y-0">
+      <Link
+        to={`/negocio/${business.slug}`}
+        className="group flex gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all"
+      >
+        <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {business.logo_url ? (
+            <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" loading="lazy" />
+          ) : (
+            <span className="text-xl font-bold text-primary/40">{business.name.charAt(0)}</span>
           )}
         </div>
-        {(business.subcategory_name || business.category_name) && (
-          <p className="text-xs text-primary font-medium truncate">
-            {business.subcategory_name ?? business.category_name}
-          </p>
-        )}
-        {business.city && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-            <MapPin className="h-3 w-3 flex-shrink-0" />
-            {business.city}
-          </p>
-        )}
-      </div>
-    </Link>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+              {business.name}
+            </h3>
+            {business.is_premium && (
+              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800 text-[10px] px-1.5 py-0 shrink-0">
+                <Star className="h-2.5 w-2.5 mr-0.5" />
+                Premium
+              </Badge>
+            )}
+          </div>
+          {(business.subcategory_name || business.category_name) && (
+            <p className="text-xs text-primary font-medium truncate">
+              {business.subcategory_name ?? business.category_name}
+            </p>
+          )}
+          {business.city && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <MapPin className="h-3 w-3 flex-shrink-0" />
+              {business.city}
+            </p>
+          )}
+        </div>
+        <div className="flex items-start" onClick={(e) => e.preventDefault()}>
+          <ShareButton
+            url={`${BASE_URL}/negocio/${business.slug}`}
+            title={business.name}
+            description={`${business.subcategory_name ?? business.category_name ?? ""} em ${business.city ?? "Portugal"}`}
+            variant="icon"
+          />
+        </div>
+      </Link>
+
+      {/* CTA registo para não autenticados */}
+      {!isAuthenticated && (
+        <div className="px-4 pb-2 pt-1">
+          <Link
+            to={`/registar/consumidor?redirect=${encodeURIComponent(redirectUrl)}`}
+            className="text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            💬 Quer pedir orçamento directamente? <span className="underline">Registe-se gratuitamente →</span>
+          </Link>
+        </div>
+      )}
+    </div>
   );
 }
 

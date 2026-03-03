@@ -12,3 +12,12 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /perfil
+Disallow: /profile
+Disallow: /comercial
+Disallow: /onboarding
+Disallow: /cs
+
+Sitemap: https://pededireto.pt/sitemap.xml
