@@ -1,11 +1,17 @@
 import { useState, useMemo } from "react";
-import { useAllUsers, useUserRequestCounts, useUpdateUserStatus, useConfirmUserEmail } from "@/hooks/useUsers";
+import {
+  useAllUsers,
+  useUserRequestCounts,
+  useUpdateUserStatus,
+  useConfirmUserEmail,
+  useFixUserRole,
+} from "@/hooks/useUsers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, UserCheck, UserX, Shield, Building2, MailCheck } from "lucide-react";
+import { Loader2, Search, UserCheck, UserX, Shield, Building2, MailCheck, AlertTriangle } from "lucide-react";
 import AdminUserRoleEditorModal from "./AdminUserRoleEditorModal";
 import AdminUserBusinessManager from "./AdminUserBusinessManager";
 
@@ -14,6 +20,7 @@ const UsersContent = () => {
   const { data: requestCounts = {} } = useUserRequestCounts();
   const updateStatus = useUpdateUserStatus();
   const confirmEmail = useConfirmUserEmail();
+  const fixRole = useFixUserRole();
   const { toast } = useToast();
 
   const [search, setSearch] = useState("");
@@ -127,7 +134,17 @@ const UsersContent = () => {
           <tbody>
             {filtered.map((user) => (
               <tr key={user.id} className="border-b border-border/50 hover:bg-secondary/20">
-                <td className="p-4 font-medium">{user.full_name || "—"}</td>
+                <td className="p-4 font-medium">
+                  <div className="flex items-center gap-2">
+                    {user.full_name || "—"}
+                    {/* Badge de role — só mostra se tiver role */}
+                    {user.app_role && (
+                      <Badge variant="outline" className="text-xs hidden lg:inline-flex">
+                        {user.app_role}
+                      </Badge>
+                    )}
+                  </div>
+                </td>
                 <td className="p-4 text-muted-foreground">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span>{user.email || "—"}</span>
@@ -157,14 +174,14 @@ const UsersContent = () => {
                       size="sm"
                       variant="ghost"
                       title="Editar Role"
-                      onClick={() => setRoleModal({ userId: user.id })}
+                      onClick={() => setRoleModal({ userId: user.id, role: user.app_role || undefined })}
                     >
                       <Shield className="h-4 w-4" />
                     </Button>
                     <Button size="sm" variant="ghost" title="Gerir Negócios" onClick={() => setBizModal(user.id)}>
                       <Building2 className="h-4 w-4" />
                     </Button>
-                    {/* Só aparece se email não confirmado */}
+                    {/* Botão confirmar email — só se não confirmado */}
                     {!user.email_confirmed_at && (
                       <Button
                         size="sm"
@@ -174,6 +191,18 @@ const UsersContent = () => {
                         disabled={confirmEmail.isPending}
                       >
                         <MailCheck className="h-4 w-4 text-yellow-500" />
+                      </Button>
+                    )}
+                    {/* Botão corrigir role — só se não tiver role atribuído */}
+                    {!user.app_role && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        title="Sem role — clica para atribuir 'user'"
+                        onClick={() => fixRole.mutate(user.id)}
+                        disabled={fixRole.isPending}
+                      >
+                        <AlertTriangle className="h-4 w-4 text-orange-500" />
                       </Button>
                     )}
                     <Button
