@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
-import { useAllUsers, useUserRequestCounts, useUpdateUserStatus } from "@/hooks/useUsers";
+import { useAllUsers, useUserRequestCounts, useUpdateUserStatus, useConfirmUserEmail } from "@/hooks/useUsers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, UserCheck, UserX, Shield, Building2 } from "lucide-react";
+import { Loader2, Search, UserCheck, UserX, Shield, Building2, MailCheck } from "lucide-react";
 import AdminUserRoleEditorModal from "./AdminUserRoleEditorModal";
 import AdminUserBusinessManager from "./AdminUserBusinessManager";
 
@@ -13,6 +13,7 @@ const UsersContent = () => {
   const { data: users = [], isLoading } = useAllUsers();
   const { data: requestCounts = {} } = useUserRequestCounts();
   const updateStatus = useUpdateUserStatus();
+  const confirmEmail = useConfirmUserEmail();
   const { toast } = useToast();
 
   const [search, setSearch] = useState("");
@@ -127,7 +128,19 @@ const UsersContent = () => {
             {filtered.map((user) => (
               <tr key={user.id} className="border-b border-border/50 hover:bg-secondary/20">
                 <td className="p-4 font-medium">{user.full_name || "—"}</td>
-                <td className="p-4 text-muted-foreground">{user.email || "—"}</td>
+                <td className="p-4 text-muted-foreground">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span>{user.email || "—"}</span>
+                    {!user.email_confirmed_at && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-yellow-500/50 text-yellow-600 dark:text-yellow-400 shrink-0"
+                      >
+                        Não confirmado
+                      </Badge>
+                    )}
+                  </div>
+                </td>
                 <td className="p-4 text-muted-foreground hidden md:table-cell">{user.phone || "—"}</td>
                 <td className="p-4 text-muted-foreground hidden lg:table-cell">
                   {new Date(user.created_at).toLocaleDateString("pt-PT")}
@@ -151,6 +164,18 @@ const UsersContent = () => {
                     <Button size="sm" variant="ghost" title="Gerir Negócios" onClick={() => setBizModal(user.id)}>
                       <Building2 className="h-4 w-4" />
                     </Button>
+                    {/* Só aparece se email não confirmado */}
+                    {!user.email_confirmed_at && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        title="Confirmar email manualmente"
+                        onClick={() => confirmEmail.mutate(user.id)}
+                        disabled={confirmEmail.isPending}
+                      >
+                        <MailCheck className="h-4 w-4 text-yellow-500" />
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
