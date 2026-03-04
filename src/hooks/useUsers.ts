@@ -14,30 +14,39 @@ export interface UserProfile {
   created_at: string;
   updated_at: string;
   request_count?: number;
-  // Adicionados via view/join
   email_confirmed_at: string | null;
-  app_role: string | null; // role em user_roles (pode ser null se não existir)
+  app_role: string | null;
 }
 
-// Usa a view profiles_with_confirmation + join com user_roles
 export const useAllUsers = () => {
   return useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      // Buscar profiles com email_confirmed_at
       const { data: profiles, error } = await (supabase as any)
         .from("profiles_with_confirmation")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
 
-      // Buscar todos os roles
       const { data: roles } = await (supabase as any).from("user_roles").select("user_id, role");
 
-      // Mapear roles por user_id (auth UUID)
       const rolesMap: Record<string, string> = {};
       for (const r of roles || []) {
-        rolesMap[r.user_id] = r.role;
+        // Se já tem um role "importante", não sobrescrever com um menor
+        const priority = [
+          "super_admin",
+          "admin",
+          "commercial",
+          "cs",
+          "onboarding",
+          "business_owner",
+          "consumer",
+          "user",
+        ];
+        const existing = rolesMap[r.user_id];
+        if (!existing || priority.indexOf(r.role) < priority.indexOf(existing)) {
+          rolesMap[r.user_id] = r.role;
+        }
       }
 
       return (profiles || []).map((p: any) => ({
@@ -97,20 +106,19 @@ export const useConfirmUserEmail = () => {
   });
 };
 
-// NOVO: Corrigir role em falta — atribui 'user' se não tiver nenhum role
+// Corrigir role em falta — atribui consumer se não tiver nenhum role
 export const useFixUserRole = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (profileId: string) => {
-      // admin_set_user_role já foi corrigido para aceitar profiles.id
       const { error } = await (supabase as any).rpc("admin_set_user_role", {
         p_user_id: profileId,
-        p_role: "user",
+        p_role: "consumer",
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Role corrigido para 'user'");
+      toast.success("Role atribuído: consumer");
       qc.invalidateQueries({ queryKey: ["admin-users"] });
     },
     onError: (e: any) => toast.error(e.message || "Erro ao corrigir role"),
