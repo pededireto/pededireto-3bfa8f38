@@ -8,7 +8,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import VideoPlayer from "@/components/business/VideoPlayer";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -702,19 +701,7 @@ const BusinessPage = () => {
                                 (business as any).show_gallery !== false &&
                                 Array.isArray(v.value_json) &&
                                 v.value_json.length > 0 && <GalleryGrid images={v.value_json} label={mod.label} />}
-                              {mod.type === "video" && v.value && (
-                                <div>
-                                  <span className="text-sm font-medium block mb-1">{mod.label}</span>
-                                  <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                                    <iframe
-                                      src={getYouTubeEmbedUrl(v.value)}
-                                      className="w-full h-full"
-                                      allowFullScreen
-                                      title={mod.label}
-                                    />
-                                  </div>
-                                </div>
-                              )}
+                              {mod.type === "video" && v.value && <VideoPlayer url={v.value} label={mod.label} />}
                               {mod.type === "boolean" && v.value === "true" && (
                                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm">
                                   {mod.label}
