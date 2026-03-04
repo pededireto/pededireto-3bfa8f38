@@ -5,19 +5,40 @@ import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 
 export const useBusinessByUser = () => {
   const { user } = useAuth();
+
+  // Ler o negócio ativo do localStorage (definido pelo switcher)
+  const activeBusinessId = localStorage.getItem("activeBusinessId");
+
   return useQuery({
-    queryKey: ["business-by-user", user?.id],
+    queryKey: ["business-by-user", user?.id, activeBusinessId],
     queryFn: async () => {
       if (!user) return null;
 
-      // FIX: business_users.user_id = profiles.id, não auth.uid().
-      // Para utilizadores onde profiles.id != auth.uid() (criados manualmente),
-      // primeiro resolvemos o profiles.id correto.
+      // FIX: resolver profiles.id correto para utilizadores onde profiles.id != auth.uid()
       let profileId = user.id;
       const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
       if (profile?.id) profileId = profile.id;
 
-      // Buscar negócio via business_users usando o profiles.id correto
+      // Se há um negócio ativo selecionado pelo switcher, verificar que pertence ao user
+      if (activeBusinessId) {
+        const { data: buCheck } = await supabase
+          .from("business_users")
+          .select("business_id")
+          .eq("user_id", profileId)
+          .eq("business_id", activeBusinessId)
+          .maybeSingle();
+
+        if (buCheck?.business_id) {
+          const { data, error } = await supabase
+            .from("businesses")
+            .select(`*, categories(id, name, slug, icon), subcategories(id, name, slug)`)
+            .eq("id", activeBusinessId)
+            .maybeSingle();
+          if (!error && data) return data as unknown as BusinessWithCategory;
+        }
+      }
+
+      // Buscar o primeiro negócio do utilizador via profiles.id correto
       const { data: buData } = await supabase
         .from("business_users")
         .select("business_id")
@@ -26,6 +47,9 @@ export const useBusinessByUser = () => {
         .maybeSingle();
 
       if (buData?.business_id) {
+        // Guardar como ativo para futuras visitas
+        localStorage.setItem("activeBusinessId", buData.business_id);
+
         const { data, error } = await supabase
           .from("businesses")
           .select(`*, categories(id, name, slug, icon), subcategories(id, name, slug)`)
@@ -34,7 +58,7 @@ export const useBusinessByUser = () => {
         if (!error && data) return data as unknown as BusinessWithCategory;
       }
 
-      // Fallback: buscar por owner_email (para negócios criados antes do claim flow)
+      // Fallback: buscar por owner_email
       if (user.email) {
         const { data, error } = await supabase
           .from("businesses")
