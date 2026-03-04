@@ -234,16 +234,25 @@ async function fetchBusinessesByEquivalent(equivalent: string): Promise<SmartBus
 
   if (subMatches && subMatches.length > 0) {
     const subIds = subMatches.map((s) => s.id);
-    const { data: biz } = await supabase
-      .from("businesses")
-      .select(
-        "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-      )
-      .eq("is_active", true)
-      .in("subcategory_id", subIds)
-      .order("is_premium", { ascending: false })
-      .limit(30);
-    if (biz && biz.length > 0) return biz.map(formatBusiness);
+    // Junction table lookup for multi-subcategory support
+    const { data: junctionData } = await supabase
+      .from("business_subcategories")
+      .select("business_id")
+      .in("subcategory_id", subIds);
+    const businessIds = (junctionData || []).map((j: any) => j.business_id);
+
+    if (businessIds.length > 0) {
+      const { data: biz } = await supabase
+        .from("businesses")
+        .select(
+          "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
+        )
+        .eq("is_active", true)
+        .in("id", businessIds)
+        .order("is_premium", { ascending: false })
+        .limit(30);
+      if (biz && biz.length > 0) return biz.map(formatBusiness);
+    }
   }
 
   // 2. Tentar categoria
@@ -353,21 +362,30 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
             const label = (solution.subcategories as any)?.name ?? (solution.categories as any)?.name ?? "";
 
             if (subId) {
-              const { data: biz } = await supabase
-                .from("businesses")
-                .select(
-                  "id, name, slug, city, logo_url, subscription_plan, is_premium, subcategory_id, categories(name, slug), subcategories(name, slug)",
-                )
-                .eq("is_active", true)
-                .eq("subcategory_id", subId)
-                .order("is_premium", { ascending: false })
-                .limit(30);
+              // Junction table lookup for multi-subcategory support
+              const { data: junctionData } = await supabase
+                .from("business_subcategories")
+                .select("business_id")
+                .eq("subcategory_id", subId);
+              const businessIds = (junctionData || []).map((j: any) => j.business_id);
 
-              if (biz && biz.length > 0) {
-                businessGroups.push({ label, businesses: biz.map(formatBusiness) });
-                resolvedTerms.push(label);
-                isSmartMatch = true;
-                break;
+              if (businessIds.length > 0) {
+                const { data: biz } = await supabase
+                  .from("businesses")
+                  .select(
+                    "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
+                  )
+                  .eq("is_active", true)
+                  .in("id", businessIds)
+                  .order("is_premium", { ascending: false })
+                  .limit(30);
+
+                if (biz && biz.length > 0) {
+                  businessGroups.push({ label, businesses: biz.map(formatBusiness) });
+                  resolvedTerms.push(label);
+                  isSmartMatch = true;
+                  break;
+                }
               }
             }
 
@@ -454,18 +472,27 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
 
         if (subMatches && subMatches.length > 0) {
           const subIds = subMatches.map((s) => s.id);
-          const { data: bySub } = await supabase
-            .from("businesses")
-            .select(
-              "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-            )
-            .eq("is_active", true)
-            .in("subcategory_id", subIds)
-            .order("is_premium", { ascending: false })
-            .limit(30);
+          // Junction table lookup for multi-subcategory support
+          const { data: junctionData } = await supabase
+            .from("business_subcategories")
+            .select("business_id")
+            .in("subcategory_id", subIds);
+          const businessIds = (junctionData || []).map((j: any) => j.business_id);
 
-          if (bySub && bySub.length > 0) {
-            businessGroups = [{ label: termToSearch, businesses: bySub.map(formatBusiness) }];
+          if (businessIds.length > 0) {
+            const { data: bySub } = await supabase
+              .from("businesses")
+              .select(
+                "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
+              )
+              .eq("is_active", true)
+              .in("id", businessIds)
+              .order("is_premium", { ascending: false })
+              .limit(30);
+
+            if (bySub && bySub.length > 0) {
+              businessGroups = [{ label: termToSearch, businesses: bySub.map(formatBusiness) }];
+            }
           }
         }
 

@@ -64,7 +64,14 @@ const ServiceRequestsContent = () => {
         .eq("category_id", selectedRequest.category_id);
 
       if (selectedRequest.subcategory_id) {
-        query = query.eq("subcategory_id", selectedRequest.subcategory_id);
+        const { data: jData } = await supabase
+          .from("business_subcategories")
+          .select("business_id")
+          .eq("subcategory_id", selectedRequest.subcategory_id);
+        const bIds = (jData || []).map((j: any) => j.business_id);
+        if (bIds.length > 0) {
+          query = query.in("id", bIds);
+        }
       }
 
       const { data, error } = await query.limit(5);
