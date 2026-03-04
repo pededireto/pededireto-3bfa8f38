@@ -1,180 +1,84 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { ExternalLink } from "lucide-react";
 
-export interface BusinessModule {
-  id: string;
-  name: string;
-  label: string;
-  type: "text" | "textarea" | "url" | "image" | "gallery" | "video" | "boolean" | "select";
-  section: string;
-  is_public_default: boolean;
-  is_required: boolean;
-  is_active: boolean;
-  order_index: number;
-  plan_restriction: string | null;
-  options: any;
-  created_at: string;
-  updated_at: string;
+interface VideoPlayerProps {
+  url: string;
+  label?: string;
 }
 
-export interface BusinessModuleValue {
-  id: string;
-  business_id: string;
-  module_id: string;
-  value: string | null;
-  value_json: any;
-  created_at: string;
-  updated_at: string;
+function getEmbedInfo(url: string): { type: "youtube" | "external" | "direct"; embedUrl: string } {
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) {
+    return { type: "youtube", embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}` };
+  }
+
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) {
+    return { type: "youtube", embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
+  }
+
+  // Ficheiro de vídeo directo (mp4, webm, mov, etc.)
+  if (/\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(url)) {
+    return { type: "direct", embedUrl: url };
+  }
+
+  // Facebook, Instagram, TikTok, Supabase Storage — abrir externamente
+  return { type: "external", embedUrl: url };
 }
 
-export function useAllBusinessModules() {
-  return useQuery({
-    queryKey: ["business-modules"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_modules")
-        .select("*")
-        .order("section")
-        .order("order_index");
-      if (error) throw error;
-      return data as BusinessModule[];
-    },
-  });
-}
+const VideoPlayer = ({ url, label }: VideoPlayerProps) => {
+  const [error, setError] = useState(false);
 
-export function useActiveBusinessModules() {
-  return useQuery({
-    queryKey: ["business-modules", "active"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_modules")
-        .select("*")
-        .eq("is_active", true)
-        .order("section")
-        .order("order_index");
-      if (error) throw error;
-      return data as BusinessModule[];
-    },
-  });
-}
+  if (!url?.trim()) return null;
 
-export function useBusinessModuleValues(businessId: string | undefined) {
-  return useQuery({
-    queryKey: ["business-module-values", businessId],
-    queryFn: async () => {
-      if (!businessId) return [];
-      const { data, error } = await supabase
-        .from("business_module_values")
-        .select("*")
-        .eq("business_id", businessId);
-      if (error) throw error;
-      return data as BusinessModuleValue[];
-    },
-    enabled: !!businessId,
-  });
-}
+  const { type, embedUrl } = getEmbedInfo(url);
 
-export function useModuleValuesCount(moduleId: string | undefined) {
-  return useQuery({
-    queryKey: ["business-module-values-count", moduleId],
-    queryFn: async () => {
-      if (!moduleId) return 0;
-      const { count, error } = await supabase
-        .from("business_module_values")
-        .select("*", { count: "exact", head: true })
-        .eq("module_id", moduleId);
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!moduleId,
-  });
-}
+  return (
+    <div>
+      {label && <span className="text-sm font-medium block mb-1">{label}</span>}
 
-export function useCreateBusinessModule() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (module: Omit<BusinessModule, "id" | "created_at" | "updated_at">) => {
-      const { data, error } = await supabase
-        .from("business_modules")
-        .insert(module)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["business-modules"] }),
-  });
-}
+      {type === "youtube" && !error && (
+        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+          <iframe
+            src={embedUrl}
+            className="w-full h-full"
+            allowFullScreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            title={label || "Vídeo"}
+            onError={() => setError(true)}
+          />
+        </div>
+      )}
 
-export function useUpdateBusinessModule() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<BusinessModule> & { id: string }) => {
-      const { data, error } = await supabase
-        .from("business_modules")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["business-modules"] }),
-  });
-}
+      {type === "direct" && !error && (
+        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+          <video
+            src={embedUrl}
+            controls
+            className="w-full h-full object-contain"
+            onError={() => setError(true)}
+          >
+            O teu browser não suporta este formato de vídeo.
+          </video>
+        </div>
+      )}
 
-export function useDeleteBusinessModule() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("business_modules")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["business-modules"] }),
-  });
-}
+      {(type === "external" || error) && (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-3 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-colors text-sm text-primary"
+        >
+          <ExternalLink className="w-4 h-4 shrink-0" />
+          {label ? `Ver ${label}` : "Ver vídeo"}
+          <span className="text-xs text-muted-foreground ml-auto truncate max-w-[200px]">{url}</span>
+        </a>
+      )}
+    </div>
+  );
+};
 
-// Upsert batch values — apaga quando valor está vazio
-export function useUpsertBusinessModuleValues() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ businessId, values }: {
-      businessId: string;
-      values: { module_id: string; value: string | null; value_json?: any }[];
-    }) => {
-      for (const v of values) {
-        const isEmpty = !v.value?.trim() && !v.value_json;
-
-        if (isEmpty) {
-          // Apagar o registo se o valor ficou vazio
-          const { error } = await supabase
-            .from("business_module_values")
-            .delete()
-            .eq("business_id", businessId)
-            .eq("module_id", v.module_id);
-          if (error) throw error;
-        } else {
-          // Upsert normal
-          const { error } = await supabase
-            .from("business_module_values")
-            .upsert(
-              {
-                business_id: businessId,
-                module_id: v.module_id,
-                value: v.value,
-                value_json: v.value_json || null,
-              },
-              { onConflict: "business_id,module_id" }
-            );
-          if (error) throw error;
-        }
-      }
-    },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["business-module-values", vars.businessId] });
-    },
-  });
-}
+export default VideoPlayer;
