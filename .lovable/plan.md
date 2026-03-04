@@ -1,121 +1,89 @@
 
-# Partilha, SEO e Pesquisa Inteligente
 
-## Tema 1 -- ShareButton + Partilha
+# Embed de Vídeo + Fix Subcategorias Admin
 
-### 1A. Criar `src/components/ShareButton.tsx`
-Componente reutilizavel com Popover (shadcn) que mostra opcoes de partilha:
-- WhatsApp, Facebook, X/Twitter, LinkedIn, Email, Copiar Link
-- Props: `{ url, title, description?, imageUrl?, variant? }`
-- Mensagem WhatsApp formatada: nome do negocio + categoria + cidade + URL
-- "Copiar Link" com feedback visual temporario ("Copiado!") via useState + setTimeout
-- Usa icones Lucide (Share2, MessageCircle, Facebook nao existe -- usar texto/emoji, Link, Mail)
-- Mobile: usa Sheet (drawer), Desktop: usa Popover
+## 1. VideoPlayer.tsx — Suporte Facebook/Vimeo/Instagram
 
-### 1B. Adicionar ShareButton na BusinessPage.tsx
-- Junto ao FavoriteButton na zona do hero (linha ~517, ao lado do botao de favoritos)
-- Props: url=pageUrl, title=business.name, description=pageDescription, imageUrl=pageImage
+**Ficheiro**: `src/components/business/VideoPlayer.tsx`
 
-### 1C. Adicionar ShareButton nos cards da SearchPage.tsx
-- Pequeno botao de partilha em cada SearchResultCard
-- URL: `https://pededireto.pt/negocio/${business.slug}`
+Substituir conteudo completo com versao melhorada:
+- Tipo de retorno de `getEmbedInfo` passa a incluir `"vimeo" | "facebook"`
+- Vimeo retorna `type: "vimeo"` (nao `"youtube"`)
+- Facebook detecta `facebook.com` e `fb.watch`, usa API oficial `facebook.com/plugins/video.php`
+- Instagram detecta e faz fallback para link externo (Instagram bloqueia embeds)
+- Render: YouTube/Vimeo partilham iframe, Facebook tem iframe proprio (476px altura), directo usa `<video>`, externo/erro usa link
 
-### 1D. Botao "Partilhar pesquisa" na SearchPage
-- Botao no topo dos resultados para partilhar o URL completo `/pesquisa?q=...&cidade=...`
+## 2. BusinessPage.tsx — Remover getYouTubeEmbedUrl
 
-### 1E. OG meta tags na BusinessPage
-Ja existem (linhas 408-421) -- verificado. Alterar `og:type` de `website` para `business.business` para melhor semantica.
+**Ficheiro**: `src/pages/BusinessPage.tsx`
 
----
+- Remover a funcao `getYouTubeEmbedUrl` (linhas 327-330) — ja nao e usada, o VideoPlayer trata tudo
+- Nada mais a alterar — o import de VideoPlayer e a chamada `<VideoPlayer url={v.value} label={mod.label} />` ja existem
 
-## Tema 2 -- Sitemap + SEO
+## 3. Fix Subcategorias — useSmartSearch.ts
 
-### 2A. Edge Function `sitemap`
-Criar `supabase/functions/sitemap/index.ts`:
-- Query `businesses` activos (slug, updated_at)
-- Query `categories` (slug, updated_at)
-- Query `institutional_pages` activas (slug)
-- Gerar XML valido com prioridades: homepage 1.0/daily, negocios 0.8/weekly, categorias 0.7/weekly, paginas 0.5/monthly, pesquisa 0.3/monthly
-- Content-Type: `application/xml`
-- Registar em config.toml com `verify_jwt = false`
+**Ficheiro**: `src/hooks/useSmartSearch.ts` (linhas 355-364)
 
-### 2B. Actualizar `public/robots.txt`
-Adicionar:
+Substituir a query que usa `.eq("subcategory_id", subId)` na tabela `businesses` por um lookup via junction table:
+
+```typescript
+// ANTES:
+.from("businesses")
+.eq("subcategory_id", subId)
+
+// DEPOIS:
+// 1. Buscar business_ids da junction table
+const { data: junctionData } = await supabase
+  .from("business_subcategories")
+  .select("business_id")
+  .eq("subcategory_id", subId);
+
+const businessIds = (junctionData || []).map(j => j.business_id);
+
+// 2. Buscar businesses por ids
+if (businessIds.length > 0) {
+  const { data: biz } = await supabase
+    .from("businesses")
+    .select("id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)")
+    .eq("is_active", true)
+    .in("id", businessIds)
+    .order("is_premium", { ascending: false })
+    .limit(30);
+}
 ```
-Disallow: /admin
-Disallow: /dashboard
-Disallow: /perfil
-Disallow: /profile
-Disallow: /comercial
-Disallow: /onboarding
-Disallow: /cs
-Sitemap: https://pededireto.pt/sitemap.xml
+
+## 4. Fix Subcategorias — ServiceRequestsContent.tsx
+
+**Ficheiro**: `src/components/admin/ServiceRequestsContent.tsx` (linhas 60-68)
+
+Substituir `.eq("subcategory_id", selectedRequest.subcategory_id)` por lookup via junction:
+
+```typescript
+// Se ha subcategory_id, buscar business_ids da junction table primeiro
+if (selectedRequest.subcategory_id) {
+  const { data: jData } = await supabase
+    .from("business_subcategories")
+    .select("business_id")
+    .eq("subcategory_id", selectedRequest.subcategory_id);
+  const bIds = (jData || []).map(j => j.business_id);
+  if (bIds.length > 0) {
+    query = query.in("id", bIds);
+  }
+}
 ```
 
-### 2C. SEO meta tags
-- **Homepage (Index.tsx)**: Adicionar `<Helmet>` com title, description, canonical e keywords
-- **SearchPage.tsx**: Adicionar `<Helmet>` com title dinamico baseado no `?q=`, `noindex, follow` para evitar indexacao de pesquisas
-- **BusinessPage.tsx**: Ja tem -- apenas mudar og:type para `business.business`
+## 5. useBusinessHighlights.ts — Manter como esta
 
-### 2D. JSON-LD na BusinessPage
-Ja existe (linhas 351-367) com schema LocalBusiness -- verificado e correcto.
+A query em `useBusinessHighlights.ts` filtra a tabela `business_highlights` pelo seu proprio `subcategory_id` — nao e a tabela `businesses`. Nao precisa de correcao.
 
 ---
 
-## Tema 3 -- Corrigir Pesquisa Inteligente
-
-### 3A. Limitar resultados a 5 iniciais + "Ver mais"
-No SearchPage.tsx, em cada grupo de businessGroups:
-- Mostrar apenas os primeiros 5 negocios
-- Botao "Ver mais profissionais" que expande para mostrar todos
-- Estado local `expandedGroups` com Set de labels expandidos
-
-### 3B. Cidade no URL e filtro visivel para anonimos
-O filtro de cidade ja existe no SearchPage mas nao se reflecte no URL. Alterar:
-- Sincronizar `cityFilter` com param `cidade` no URL: `/pesquisa?q=canalizador&cidade=lisboa`
-- Ler `cidade` dos searchParams ao carregar
-- Mostrar o selector de cidade sempre visivel (nao escondido atras de botao toggle)
-
-### 3C. CTA de registo para utilizadores nao autenticados
-No SearchResultCard, abaixo do card:
-- Se `!user`: mostrar texto subtil com link para registo
-- "Quer pedir orcamento directamente? Registe-se gratuitamente"
-- Link para `/registar/consumidor?redirect=/pesquisa?q=...`
-
-### 3D. Seccao "Tambem pode precisar de" melhorada
-Apos os resultados no SearchPage:
-- Se `complementaryServices` tem items: mostrar chips clicaveis (ja funciona via SmartSearchBanner)
-- Se `complementaryServices` esta vazio E ha resultados: mostrar categorias populares como fallback
-- Mover esta seccao para depois dos resultados (nao dentro do banner)
-
-### 3E. Corrigir falsos positivos nos sinonimos
-No useSmartSearch.ts, a CAMADA 2 (sinonimos):
-- O strip de intent prefixes ja existe e funciona (linhas 51-118)
-- O match ja e exacto (linha 417: `normalize(s.termo) === normalize(candidate)`)
-- Problema potencial: palavras como "fazer", "quero" sao stripped mas se o termo resultante for muito curto (< 3 chars), pode dar match errado
-- Adicionar guard: se `strippedTerm.length < 3`, nao procurar sinonimos por stripped term
-- Na CAMADA 1 (patterns), o threshold de score >= 3 (linha 325) ja previne matches fracos -- manter
-
----
-
-## Ficheiros a criar/alterar
+## Ficheiros a alterar
 
 | Ficheiro | Accao |
 |----------|-------|
-| `src/components/ShareButton.tsx` | Criar |
-| `src/pages/BusinessPage.tsx` | Alterar: ShareButton + og:type |
-| `src/pages/SearchPage.tsx` | Alterar: limite 5, cidade no URL, CTA registo, partilha |
-| `src/pages/Index.tsx` | Alterar: Helmet SEO |
-| `public/robots.txt` | Alterar: Disallow + Sitemap |
-| `supabase/functions/sitemap/index.ts` | Criar |
-| `src/hooks/useSmartSearch.ts` | Alterar: guard contra termos curtos |
+| `src/components/business/VideoPlayer.tsx` | Reescrever com Facebook/Vimeo/Instagram |
+| `src/pages/BusinessPage.tsx` | Remover `getYouTubeEmbedUrl` (4 linhas) |
+| `src/hooks/useSmartSearch.ts` | Junction table lookup para subcategorias |
+| `src/components/admin/ServiceRequestsContent.tsx` | Junction table lookup para subcategorias |
 
-## Ordem de execucao
-
-1. ShareButton.tsx (componente novo)
-2. BusinessPage.tsx (ShareButton + og:type)
-3. SearchPage.tsx (todas as melhorias: limite, cidade URL, CTA, partilha)
-4. useSmartSearch.ts (guard termos curtos)
-5. Index.tsx (Helmet SEO)
-6. robots.txt (actualizar)
-7. Edge Function sitemap (criar + config.toml)
