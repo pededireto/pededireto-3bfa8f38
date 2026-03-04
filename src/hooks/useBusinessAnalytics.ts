@@ -20,8 +20,9 @@ export const useBusinessAnalytics = (businessId: string | null, days = 30) => {
       const since = new Date();
       since.setDate(since.getDate() - days);
 
+      // FIX: os dados estão em business_analytics_events, não analytics_events
       const { data, error } = await supabase
-        .from("analytics_events")
+        .from("business_analytics_events" as any)
         .select("event_type")
         .eq("business_id", businessId!)
         .gte("created_at", since.toISOString());
@@ -29,11 +30,11 @@ export const useBusinessAnalytics = (businessId: string | null, days = 30) => {
       if (error) throw error;
 
       const events = data || [];
-      const views = events.filter((e) => e.event_type === "view").length;
-      const phone = events.filter((e) => e.event_type === "click_phone").length;
-      const whatsapp = events.filter((e) => e.event_type === "click_whatsapp").length;
-      const website = events.filter((e) => e.event_type === "click_website").length;
-      const email = events.filter((e) => e.event_type === "click_email").length;
+      const views = events.filter((e: any) => e.event_type === "view").length;
+      const phone = events.filter((e: any) => e.event_type === "click_phone").length;
+      const whatsapp = events.filter((e: any) => e.event_type === "click_whatsapp").length;
+      const website = events.filter((e: any) => e.event_type === "click_website").length;
+      const email = events.filter((e: any) => e.event_type === "click_email").length;
 
       return {
         views,
