@@ -2006,6 +2006,7 @@ export type Database = {
             | null
           public_address: string | null
           registration_source: string | null
+          schedule_closed: string | null
           schedule_weekdays: string | null
           schedule_weekend: string | null
           show_gallery: boolean | null
@@ -2078,6 +2079,7 @@ export type Database = {
             | null
           public_address?: string | null
           registration_source?: string | null
+          schedule_closed?: string | null
           schedule_weekdays?: string | null
           schedule_weekend?: string | null
           show_gallery?: boolean | null
@@ -2150,6 +2152,7 @@ export type Database = {
             | null
           public_address?: string | null
           registration_source?: string | null
+          schedule_closed?: string | null
           schedule_weekdays?: string | null
           schedule_weekend?: string | null
           show_gallery?: boolean | null
