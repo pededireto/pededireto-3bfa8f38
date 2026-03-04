@@ -21,8 +21,9 @@ const UsersContent = () => {
   const [bizModal, setBizModal] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
-    return users.filter(u => {
-      const matchesSearch = !search ||
+    return users.filter((u) => {
+      const matchesSearch =
+        !search ||
         (u.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
         (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
         (u.phone || "").includes(search);
@@ -86,21 +87,23 @@ const UsersContent = () => {
           <p className="text-sm text-muted-foreground">Total</p>
         </div>
         <div className="bg-card rounded-xl p-4 shadow-card text-center">
-          <p className="text-2xl font-bold">{users.filter(u => u.status === "active").length}</p>
+          <p className="text-2xl font-bold">{users.filter((u) => u.status === "active").length}</p>
           <p className="text-sm text-muted-foreground">Ativos</p>
         </div>
         <div className="bg-card rounded-xl p-4 shadow-card text-center">
-          <p className="text-2xl font-bold">{users.filter(u => u.status === "suspended").length}</p>
+          <p className="text-2xl font-bold">{users.filter((u) => u.status === "suspended").length}</p>
           <p className="text-sm text-muted-foreground">Suspensos</p>
         </div>
         <div className="bg-card rounded-xl p-4 shadow-card text-center">
           <p className="text-2xl font-bold">
-            {users.filter(u => {
-              if (!u.last_activity_at) return false;
-              const thirtyDaysAgo = new Date();
-              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-              return new Date(u.last_activity_at) >= thirtyDaysAgo;
-            }).length}
+            {
+              users.filter((u) => {
+                if (!u.last_activity_at) return false;
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                return new Date(u.last_activity_at) >= thirtyDaysAgo;
+              }).length
+            }
           </p>
           <p className="text-sm text-muted-foreground">Ativos 30d</p>
         </div>
@@ -141,22 +144,17 @@ const UsersContent = () => {
                       size="sm"
                       variant="ghost"
                       title="Editar Role"
-                      onClick={() => setRoleModal({ userId: user.user_id })}
+                      onClick={() => setRoleModal({ userId: user.id })}
                     >
                       <Shield className="h-4 w-4" />
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      title="Gerir Negócios"
-                      onClick={() => setBizModal(user.user_id)}
-                    >
+                    <Button size="sm" variant="ghost" title="Gerir Negócios" onClick={() => setBizModal(user.id)}>
                       <Building2 className="h-4 w-4" />
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => toggleStatus(user.user_id, user.status)}
+                      onClick={() => toggleStatus(user.id, user.status)}
                       title={user.status === "active" ? "Suspender" : "Ativar"}
                     >
                       {user.status === "active" ? (
@@ -185,13 +183,7 @@ const UsersContent = () => {
           initialRole={roleModal.role}
         />
       )}
-      {bizModal && (
-        <AdminUserBusinessManager
-          userId={bizModal}
-          open={true}
-          onClose={() => setBizModal(null)}
-        />
-      )}
+      {bizModal && <AdminUserBusinessManager userId={bizModal} open={true} onClose={() => setBizModal(null)} />}
     </div>
   );
 };
