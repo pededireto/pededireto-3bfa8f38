@@ -236,11 +236,7 @@ export const useBusinessReviewsData = (businessId: string | null) => {
 
       const stats = statsResult.data;
       const reviews = Array.isArray(reviewsResult.data) ? reviewsResult.data : [];
-
-      const recentMapped = reviews.map((r) => ({
-        ...r,
-        pending_response: !r.business_response,
-      }));
+      const recentMapped = reviews.map((r) => ({ ...r, pending_response: !r.business_response }));
 
       return {
         total: stats?.total_reviews ?? 0,
@@ -328,7 +324,7 @@ export const useBusinessMonthlyHistory = (businessId: string | null) => {
       const since = new Date();
       since.setMonth(since.getMonth() - 12);
 
-      // ✅ CORRECTO: usar analytics_events
+      // ✅ Tabela correcta
       const { data, error } = await supabase
         .from("analytics_events")
         .select("event_type, created_at")
@@ -378,6 +374,17 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
   return useQuery({
     queryKey: ["business-benchmarking-pro", businessId],
     queryFn: async () => {
+      const empty: BenchmarkingData = {
+        posicao_geral: 0,
+        posicao_cidade: 0,
+        views_this_month: 0,
+        leads_this_month: 0,
+        media_views_categoria: 0,
+        media_leads_categoria: 0,
+        media_ctr_categoria: 0,
+        total_negocios_categoria: 0,
+      };
+
       // 1. Buscar category_id e city do negócio
       const { data: biz, error: bizError } = await supabase
         .from("businesses")
@@ -385,18 +392,7 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
         .eq("id", businessId!)
         .single();
       if (bizError) throw bizError;
-      if (!biz?.category_id) {
-        return {
-          posicao_geral: 0,
-          posicao_cidade: 0,
-          views_this_month: 0,
-          leads_this_month: 0,
-          media_views_categoria: 0,
-          media_leads_categoria: 0,
-          media_ctr_categoria: 0,
-          total_negocios_categoria: 0,
-        } as BenchmarkingData;
-      }
+      if (!biz?.category_id) return empty;
 
       // 2. Buscar IDs dos negócios da mesma categoria
       const { data: categoryBusinesses, error: catError } = await supabase
@@ -407,22 +403,11 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
       if (catError) throw catError;
 
       const categoryBizList = Array.isArray(categoryBusinesses) ? categoryBusinesses : [];
-      if (categoryBizList.length === 0) {
-        return {
-          posicao_geral: 0,
-          posicao_cidade: 0,
-          views_this_month: 0,
-          leads_this_month: 0,
-          media_views_categoria: 0,
-          media_leads_categoria: 0,
-          media_ctr_categoria: 0,
-          total_negocios_categoria: 0,
-        } as BenchmarkingData;
-      }
+      if (categoryBizList.length === 0) return empty;
 
       const categoryIds = categoryBizList.map((b: any) => b.id);
 
-      // 3. ✅ CORRECTO: usar business_analytics_metrics (esta tabela existe e tem dados)
+      // 3. ✅ Colunas correctas: views_this_month, leads_this_month, conversion_rate_this_month
       const { data: metrics, error: metricsError } = await supabase
         .from("business_analytics_metrics")
         .select("business_id, views_this_month, leads_this_month, conversion_rate_this_month")
@@ -431,7 +416,7 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
 
       const metricsList = Array.isArray(metrics) ? metrics : [];
 
-      // 4. Rankings
+      // 4. Rankings por views_this_month
       const sortedGeral = [...metricsList].sort(
         (a: any, b: any) => (b.views_this_month ?? 0) - (a.views_this_month ?? 0),
       );
@@ -444,7 +429,7 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
       );
       const posicao_cidade = sortedCity.findIndex((m: any) => m.business_id === businessId) + 1;
 
-      // 5. Médias
+      // 5. Médias da categoria
       const total = metricsList.length;
       const media_views =
         total > 0 ? Math.round(metricsList.reduce((s: number, m: any) => s + (m.views_this_month ?? 0), 0) / total) : 0;
