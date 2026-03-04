@@ -141,7 +141,6 @@ export const useBusinessServiceRequests = (businessId: string | null) => {
         } as ServiceRequestsData;
       }
 
-      // Buscar os service_requests separadamente para evitar problemas com joins
       const requestIds = rows.map((r: any) => r.request_id).filter(Boolean);
       const { data: srData } = await supabase
         .from("service_requests" as any)
@@ -329,8 +328,9 @@ export const useBusinessMonthlyHistory = (businessId: string | null) => {
       const since = new Date();
       since.setMonth(since.getMonth() - 12);
 
+      // ✅ CORRECTO: usar analytics_events
       const { data, error } = await supabase
-        .from("business_analytics_events")
+        .from("analytics_events")
         .select("event_type, created_at")
         .eq("business_id", businessId!)
         .gte("created_at", since.toISOString());
@@ -422,7 +422,7 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
 
       const categoryIds = categoryBizList.map((b: any) => b.id);
 
-      // 3. Buscar métricas só dos negócios desta categoria
+      // 3. ✅ CORRECTO: usar business_analytics_metrics (esta tabela existe e tem dados)
       const { data: metrics, error: metricsError } = await supabase
         .from("business_analytics_metrics")
         .select("business_id, views_this_month, leads_this_month, conversion_rate_this_month")
