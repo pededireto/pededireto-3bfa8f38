@@ -2,40 +2,34 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
+// FIX: em vez de .eq("user_id", user.id) que falha para utilizadores
+// onde profiles.id != auth.uid(), usamos uma RPC que resolve
+// o profiles.id correto internamente.
 export const useBusinessMembership = () => {
   const { user } = useAuth();
-
   return useQuery({
     queryKey: ["business-membership", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
 
-      // Try with JOIN first
-      const { data, error } = await supabase
-        .from("business_users")
-        .select("business_id, role, businesses(id, name, slug)")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await (supabase as any).rpc("get_user_business_membership");
 
-      if (!error) return data;
+      if (error) {
+        console.error("useBusinessMembership error:", error.message);
+        return null;
+      }
 
-      // Fallback: query without JOIN (handles RLS restrictions on inactive businesses)
-      console.warn("Membership JOIN failed, using fallback:", error.message);
-      const { data: fallback, error: fallbackError } = await supabase
-        .from("business_users")
-        .select("business_id, role")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (fallbackError) throw fallbackError;
-      return fallback;
+      return data as {
+        business_id: string;
+        role: string;
+        business: { id: string; name: string; slug: string } | null;
+      } | null;
     },
     enabled: !!user?.id,
   });
 };
 
+// SEM ALTERAÇÕES
 export const useBusinessTeam = (businessId: string | undefined) => {
   return useQuery({
     queryKey: ["business-team", businessId],
@@ -46,7 +40,6 @@ export const useBusinessTeam = (businessId: string | undefined) => {
         .select("id, user_id, role, created_at, profiles(full_name, email)")
         .eq("business_id", businessId)
         .order("created_at", { ascending: true });
-
       if (error) throw error;
       return data as any[];
     },
