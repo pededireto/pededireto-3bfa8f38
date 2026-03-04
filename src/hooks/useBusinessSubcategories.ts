@@ -25,6 +25,29 @@ export const useBusinessSubcategoryIds = (businessId: string | undefined) => {
   });
 };
 
+export const useSubcategoryBusinessCounts = () => {
+  return useQuery({
+    queryKey: ["business_subcategories", "counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("business_subcategories")
+        .select("subcategory_id, business_id");
+
+      if (error) throw error;
+
+      const grouped = new Map<string, Set<string>>();
+      (data || []).forEach(({ subcategory_id, business_id }) => {
+        if (!grouped.has(subcategory_id)) grouped.set(subcategory_id, new Set());
+        grouped.get(subcategory_id)?.add(business_id);
+      });
+
+      return Object.fromEntries(
+        Array.from(grouped.entries()).map(([subcategoryId, businessIds]) => [subcategoryId, businessIds.size])
+      ) as Record<string, number>;
+    },
+  });
+};
+
 export const useSyncBusinessSubcategories = () => {
   const queryClient = useQueryClient();
 

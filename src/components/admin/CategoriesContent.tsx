@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Category, useCreateCategory, useUpdateCategory, useDeleteCategory } from "@/hooks/useCategories";
 import { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useAllSubcategories, useCreateSubcategory, useUpdateSubcategory, useDeleteSubcategory, Subcategory } from "@/hooks/useSubcategories";
+import { useSubcategoryBusinessCounts } from "@/hooks/useBusinessSubcategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,7 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
   const { data: allSubcategories = [] } = useAllSubcategories();
+  const { data: subcategoryBusinessCounts = {} } = useSubcategoryBusinessCounts();
   const createSubcategory = useCreateSubcategory();
   const updateSubcategory = useUpdateSubcategory();
   const deleteSubcategory = useDeleteSubcategory();
@@ -167,7 +169,7 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
   };
 
   const handleDeleteSub = async (id: string) => {
-    const businessCount = businesses.filter(b => b.subcategory_id === id).length;
+    const businessCount = subcategoryBusinessCounts[id] ?? 0;
     if (businessCount > 0) {
       toast({ title: "Não é possível remover", description: `Tem ${businessCount} negócio(s) associado(s).`, variant: "destructive" });
       return;
@@ -182,7 +184,7 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
   };
 
   const getBusinessCount = (categoryId: string) => businesses.filter(b => b.category_id === categoryId).length;
-  const getSubBusinessCount = (subId: string) => businesses.filter(b => b.subcategory_id === subId).length;
+  const getSubBusinessCount = (subId: string) => subcategoryBusinessCounts[subId] ?? 0;
   const getSubcategoriesForCategory = (catId: string) => allSubcategories.filter(s => s.category_id === catId);
 
   const isCatLoading = createCategory.isPending || updateCategory.isPending;
