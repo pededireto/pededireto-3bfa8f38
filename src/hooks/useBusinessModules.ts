@@ -27,23 +27,17 @@ export interface BusinessModuleValue {
   updated_at: string;
 }
 
-// Fetch all modules (admin)
 export function useAllBusinessModules() {
   return useQuery({
     queryKey: ["business-modules"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_modules")
-        .select("*")
-        .order("section")
-        .order("order_index");
+      const { data, error } = await supabase.from("business_modules").select("*").order("section").order("order_index");
       if (error) throw error;
       return data as BusinessModule[];
     },
   });
 }
 
-// Fetch active modules only
 export function useActiveBusinessModules() {
   return useQuery({
     queryKey: ["business-modules", "active"],
@@ -60,16 +54,12 @@ export function useActiveBusinessModules() {
   });
 }
 
-// Fetch values for a specific business
 export function useBusinessModuleValues(businessId: string | undefined) {
   return useQuery({
     queryKey: ["business-module-values", businessId],
     queryFn: async () => {
       if (!businessId) return [];
-      const { data, error } = await supabase
-        .from("business_module_values")
-        .select("*")
-        .eq("business_id", businessId);
+      const { data, error } = await supabase.from("business_module_values").select("*").eq("business_id", businessId);
       if (error) throw error;
       return data as BusinessModuleValue[];
     },
@@ -77,7 +67,6 @@ export function useBusinessModuleValues(businessId: string | undefined) {
   });
 }
 
-// Count values for a module (used before delete)
 export function useModuleValuesCount(moduleId: string | undefined) {
   return useQuery({
     queryKey: ["business-module-values-count", moduleId],
@@ -94,16 +83,11 @@ export function useModuleValuesCount(moduleId: string | undefined) {
   });
 }
 
-// Create module
 export function useCreateBusinessModule() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (module: Omit<BusinessModule, "id" | "created_at" | "updated_at">) => {
-      const { data, error } = await supabase
-        .from("business_modules")
-        .insert(module)
-        .select()
-        .single();
+      const { data, error } = await supabase.from("business_modules").insert(module).select().single();
       if (error) throw error;
       return data;
     },
@@ -111,17 +95,11 @@ export function useCreateBusinessModule() {
   });
 }
 
-// Update module
 export function useUpdateBusinessModule() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<BusinessModule> & { id: string }) => {
-      const { data, error } = await supabase
-        .from("business_modules")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
+      const { data, error } = await supabase.from("business_modules").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -129,39 +107,53 @@ export function useUpdateBusinessModule() {
   });
 }
 
-// Delete module
 export function useDeleteBusinessModule() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("business_modules")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("business_modules").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["business-modules"] }),
   });
 }
 
-// Upsert batch values for a business
+// Upsert batch values — apaga quando valor está vazio
 export function useUpsertBusinessModuleValues() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ businessId, values }: {
+    mutationFn: async ({
+      businessId,
+      values,
+    }: {
       businessId: string;
       values: { module_id: string; value: string | null; value_json?: any }[];
     }) => {
-      const rows = values.map((v) => ({
-        business_id: businessId,
-        module_id: v.module_id,
-        value: v.value,
-        value_json: v.value_json || null,
-      }));
-      const { error } = await supabase
-        .from("business_module_values")
-        .upsert(rows, { onConflict: "business_id,module_id" });
-      if (error) throw error;
+      for (const v of values) {
+        const isEmpty = !v.value?.trim() && !v.value_json;
+
+        if (isEmpty) {
+          // Apagar o registo se o valor ficou vazio
+          const { error } = await supabase
+            .from("business_module_values")
+            .delete()
+            .eq("business_id", businessId)
+            .eq("module_id", v.module_id);
+          if (error) throw error;
+        } else {
+          // Upsert normal
+          const { error } = await supabase.from("business_module_values").upsert(
+            {
+              business_id: businessId,
+              module_id: v.module_id,
+              value: v.value,
+              value_json: v.value_json || null,
+            },
+            { onConflict: "business_id,module_id" },
+          );
+          if (error) throw error;
+        }
+      }
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["business-module-values", vars.businessId] });
