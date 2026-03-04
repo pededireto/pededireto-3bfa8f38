@@ -20,9 +20,8 @@ export const useBusinessAnalytics = (businessId: string | null, days = 30) => {
       const since = new Date();
       since.setDate(since.getDate() - days);
 
-      // FIX: os dados estão em business_analytics_events, não analytics_events
       const { data, error } = await supabase
-        .from("business_analytics_events" as any)
+        .from("analytics_events")
         .select("event_type")
         .eq("business_id", businessId!)
         .gte("created_at", since.toISOString());
