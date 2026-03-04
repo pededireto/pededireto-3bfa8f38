@@ -9,12 +9,22 @@ export const useBusinessByUser = () => {
     queryKey: ["business-by-user", user?.id],
     queryFn: async () => {
       if (!user) return null;
+
+      // FIX: business_users.user_id = profiles.id, não auth.uid().
+      // Para utilizadores onde profiles.id != auth.uid() (criados manualmente),
+      // primeiro resolvemos o profiles.id correto.
+      let profileId = user.id;
+      const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
+      if (profile?.id) profileId = profile.id;
+
+      // Buscar negócio via business_users usando o profiles.id correto
       const { data: buData } = await supabase
         .from("business_users")
         .select("business_id")
-        .eq("user_id", user.id)
+        .eq("user_id", profileId)
         .limit(1)
         .maybeSingle();
+
       if (buData?.business_id) {
         const { data, error } = await supabase
           .from("businesses")
@@ -23,6 +33,8 @@ export const useBusinessByUser = () => {
           .maybeSingle();
         if (!error && data) return data as unknown as BusinessWithCategory;
       }
+
+      // Fallback: buscar por owner_email (para negócios criados antes do claim flow)
       if (user.email) {
         const { data, error } = await supabase
           .from("businesses")
@@ -31,6 +43,7 @@ export const useBusinessByUser = () => {
           .maybeSingle();
         if (!error && data) return data as unknown as BusinessWithCategory;
       }
+
       return null;
     },
     enabled: !!user,
@@ -41,17 +54,15 @@ export const useBusinessByUser = () => {
 
 export type RequestArchiveFilter = "active" | "archived" | "all";
 
-export const useBusinessRequests = (
-  businessId: string | undefined,
-  archiveFilter: RequestArchiveFilter = "all"
-) => {
+export const useBusinessRequests = (businessId: string | undefined, archiveFilter: RequestArchiveFilter = "all") => {
   return useQuery({
     queryKey: ["business-requests", businessId, archiveFilter],
     queryFn: async () => {
       if (!businessId) return [];
       let query = supabase
         .from("request_business_matches" as any)
-        .select(`
+        .select(
+          `
           *,
           service_requests (
             id, description, address, status, created_at, urgency,
@@ -60,7 +71,8 @@ export const useBusinessRequests = (
             subcategories (id, name),
             profiles:user_id (full_name, email, phone, city)
           )
-        `)
+        `,
+        )
         .eq("business_id", businessId)
         .order("sent_at", { ascending: false });
 
