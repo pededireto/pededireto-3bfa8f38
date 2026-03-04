@@ -791,7 +791,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           await syncSubcategories.mutateAsync({ businessId, subcategoryIds: form.subcategory_ids });
         }
 
-        const moduleEntries = Object.entries(moduleValues).filter(([_, v]) => v.value || v.value_json);
+        const moduleEntries = Object.entries(moduleValues);
         if (moduleEntries.length > 0) {
           await upsertModuleValues.mutateAsync({
             businessId,
