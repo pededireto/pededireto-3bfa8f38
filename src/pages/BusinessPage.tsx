@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import VideoPlayer from "@/components/business/VideoPlayer";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
