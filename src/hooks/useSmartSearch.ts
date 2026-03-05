@@ -15,6 +15,7 @@ export interface SmartBusiness {
   subscription_plan: string | null;
   is_premium: boolean | null;
   logo_url: string | null;
+  ranking_score: number | null;
 }
 
 export interface BusinessGroup {
@@ -26,12 +27,12 @@ export interface SmartSearchResult {
   isSmartMatch: boolean;
   isUrgent: boolean;
   searchedTerm: string;
-  resolvedTerms: string[]; // array em vez de string única
-  resolvedTerm: string; // mantido para compatibilidade (primeiro termo)
+  resolvedTerms: string[];
+  resolvedTerm: string;
   intentType: string | null;
   urgencyLevel: number;
-  businesses: SmartBusiness[]; // mantido para compatibilidade (todos juntos)
-  businessGroups: BusinessGroup[]; // NOVO: negócios por grupo
+  businesses: SmartBusiness[];
+  businessGroups: BusinessGroup[];
   complementaryServices: string[];
   primarySolution: string | null;
   totalFound: number;
@@ -169,8 +170,6 @@ function extractKeywords(text: string): string[] {
     .filter((w) => w.length > 2 && !STOP_WORDS_SYNONYMS.has(w));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 const URGENCY_WORDS = [
   "urgente",
   "urgência",
@@ -188,7 +187,7 @@ const URGENCY_WORDS = [
   "entupida",
 ];
 
-// ── Logging (never break UX) ─────────────────────────────────────────────────
+// ── Logging ──────────────────────────────────────────────────────────────────
 
 async function logSearch(
   term: string,
@@ -223,10 +222,15 @@ async function logSearch(
   }
 }
 
-// ── Buscar negócios por equivalente (subcategoria ou categoria) ───────────────
+// ── Select fields (inclui ranking_score) ─────────────────────────────────────
+const BIZ_SELECT =
+  "id, name, slug, city, logo_url, ranking_score, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)";
+const BIZ_ORDER = { column: "ranking_score", ascending: false };
+
+// ── Buscar negócios por equivalente ──────────────────────────────────────────
 
 async function fetchBusinessesByEquivalent(equivalent: string): Promise<SmartBusiness[]> {
-  // 1. Tentar subcategoria
+  // 1. Subcategoria
   const { data: subMatches } = await supabase
     .from("subcategories")
     .select("id")
@@ -234,7 +238,6 @@ async function fetchBusinessesByEquivalent(equivalent: string): Promise<SmartBus
 
   if (subMatches && subMatches.length > 0) {
     const subIds = subMatches.map((s) => s.id);
-    // Junction table lookup for multi-subcategory support
     const { data: junctionData } = await supabase
       .from("business_subcategories")
       .select("business_id")
@@ -244,18 +247,16 @@ async function fetchBusinessesByEquivalent(equivalent: string): Promise<SmartBus
     if (businessIds.length > 0) {
       const { data: biz } = await supabase
         .from("businesses")
-        .select(
-          "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-        )
+        .select(BIZ_SELECT)
         .eq("is_active", true)
         .in("id", businessIds)
-        .order("is_premium", { ascending: false })
+        .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
         .limit(30);
       if (biz && biz.length > 0) return biz.map(formatBusiness);
     }
   }
 
-  // 2. Tentar categoria
+  // 2. Categoria
   const { data: catMatches } = await supabase
     .from("categories")
     .select("id")
@@ -265,25 +266,21 @@ async function fetchBusinessesByEquivalent(equivalent: string): Promise<SmartBus
     const catIds = catMatches.map((c) => c.id);
     const { data: biz } = await supabase
       .from("businesses")
-      .select(
-        "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-      )
+      .select(BIZ_SELECT)
       .eq("is_active", true)
       .in("category_id", catIds)
-      .order("is_premium", { ascending: false })
+      .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
       .limit(30);
     if (biz && biz.length > 0) return biz.map(formatBusiness);
   }
 
-  // 3. Fallback por nome/descrição
+  // 3. Fallback texto
   const { data: byText } = await supabase
     .from("businesses")
-    .select(
-      "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-    )
+    .select(BIZ_SELECT)
     .eq("is_active", true)
     .or(`name.ilike.%${equivalent}%,description.ilike.%${equivalent}%`)
-    .order("is_premium", { ascending: false })
+    .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
     .limit(30);
 
   return (byText ?? []).map(formatBusiness);
@@ -309,7 +306,7 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       let complementaryServices: string[] = [];
       let businessGroups: BusinessGroup[] = [];
 
-      // ── CAMADA 1: Pattern Detection (Problema → Solução) ─────────────
+      // ── CAMADA 1: Pattern Detection ───────────────────────────────────
       const { data: patternKeywords } = await supabase.from("pattern_keywords").select("keyword, weight, pattern_id");
       const { data: activePatterns } = await supabase
         .from("search_patterns")
@@ -338,19 +335,12 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
 
         const { data: solutions } = await supabase
           .from("pattern_categories")
-          .select(
-            `
-            priority, reasoning,
-            categories(id, name, slug),
-            subcategories(id, name, slug)
-          `,
-          )
+          .select("priority, reasoning, categories(id, name, slug), subcategories(id, name, slug)")
           .eq("pattern_id", bestPatternId)
           .order("priority");
 
         if (solutions && solutions.length > 0) {
           primarySolution = (solutions[0].subcategories as any)?.name ?? (solutions[0].categories as any)?.name ?? null;
-
           complementaryServices = solutions
             .filter((s) => (s.priority ?? 0) > 1)
             .map((s) => (s.subcategories as any)?.name ?? (s.categories as any)?.name ?? "")
@@ -362,7 +352,6 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
             const label = (solution.subcategories as any)?.name ?? (solution.categories as any)?.name ?? "";
 
             if (subId) {
-              // Junction table lookup for multi-subcategory support
               const { data: junctionData } = await supabase
                 .from("business_subcategories")
                 .select("business_id")
@@ -372,12 +361,10 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
               if (businessIds.length > 0) {
                 const { data: biz } = await supabase
                   .from("businesses")
-                  .select(
-                    "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-                  )
+                  .select(BIZ_SELECT)
                   .eq("is_active", true)
                   .in("id", businessIds)
-                  .order("is_premium", { ascending: false })
+                  .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
                   .limit(30);
 
                 if (biz && biz.length > 0) {
@@ -392,12 +379,10 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
             if (businessGroups.length === 0 && catId) {
               const { data: biz } = await supabase
                 .from("businesses")
-                .select(
-                  "id, name, slug, city, logo_url, subscription_plan, is_premium, category_id, categories(name, slug), subcategories(name, slug)",
-                )
+                .select(BIZ_SELECT)
                 .eq("is_active", true)
                 .eq("category_id", catId)
-                .order("is_premium", { ascending: false })
+                .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
                 .limit(30);
 
               if (biz && biz.length > 0) {
@@ -411,57 +396,45 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         }
       }
 
-      // ── CAMADA 2: Sinónimos — todos os equivalentes para o termo ──────
+      // ── CAMADA 2: Sinónimos ───────────────────────────────────────────
       if (!isSmartMatch) {
         const strippedTerm = stripIntent(query);
         const keywords = extractKeywords(strippedTerm || query);
 
-        // Guard: skip synonym lookup if stripped term is too short (avoids false positives)
-        if (strippedTerm.length < 3 && keywords.length === 0) {
-          // Skip synonym layer entirely
-        } else {
+        if (strippedTerm.length >= 3 || keywords.length > 0) {
+          const keywordCombos: string[] = [];
+          for (let len = keywords.length; len >= 1; len--) {
+            keywordCombos.push(keywords.slice(0, len).join(" "));
+          }
+          const candidates = [query, strippedTerm, ...keywordCombos].filter(Boolean);
+          const { data: allSynonyms } = await supabase.from("search_synonyms").select("termo, equivalente");
+          const equivalentsFound = new Set<string>();
 
-        const keywordCombos: string[] = [];
-        for (let len = keywords.length; len >= 1; len--) {
-          keywordCombos.push(keywords.slice(0, len).join(" "));
-        }
+          if (allSynonyms) {
+            for (const candidate of candidates) {
+              if (!candidate || candidate.length < 2) continue;
+              const matches = allSynonyms.filter((s) => normalize(s.termo) === normalize(candidate));
+              matches.forEach((m) => equivalentsFound.add(m.equivalente));
+            }
+          }
 
-        const candidates = [query, strippedTerm, ...keywordCombos].filter(Boolean);
+          if (equivalentsFound.size > 0) {
+            isSmartMatch = true;
+            resolvedTerms = Array.from(equivalentsFound);
+            primarySolution = resolvedTerms[0];
 
-        const { data: allSynonyms } = await supabase.from("search_synonyms").select("termo, equivalente");
-
-        // Recolher TODOS os equivalentes únicos para os candidatos
-        const equivalentsFound = new Set<string>();
-
-        if (allSynonyms) {
-          for (const candidate of candidates) {
-            if (!candidate || candidate.length < 2) continue;
-            // Só match exato — parcial desativado para evitar falsos positivos
-            const matches = allSynonyms.filter((s) => normalize(s.termo) === normalize(candidate));
-            matches.forEach((m) => equivalentsFound.add(m.equivalente));
+            const groupResults = await Promise.all(
+              resolvedTerms.map(async (equiv) => {
+                const bizList = await fetchBusinessesByEquivalent(equiv);
+                return { label: equiv, businesses: bizList };
+              }),
+            );
+            businessGroups = groupResults.filter((g) => g.businesses.length > 0);
           }
         }
-
-        if (equivalentsFound.size > 0) {
-          isSmartMatch = true;
-          resolvedTerms = Array.from(equivalentsFound);
-          primarySolution = resolvedTerms[0];
-
-          // Buscar negócios para cada equivalente em paralelo
-          const groupResults = await Promise.all(
-            resolvedTerms.map(async (equiv) => {
-              const bizList = await fetchBusinessesByEquivalent(equiv);
-              return { label: equiv, businesses: bizList };
-            }),
-          );
-
-          // Só incluir grupos com negócios
-          businessGroups = groupResults.filter((g) => g.businesses.length > 0);
-        }
-        } // end else (guard)
       }
 
-      // ── CAMADA 3: Fallback direto se ainda sem resultados ─────────────
+      // ── CAMADA 3: Fallback directo ────────────────────────────────────
       if (businessGroups.length === 0) {
         const termToSearch = resolvedTerms[0] ?? normalizedTerm;
 
@@ -472,7 +445,6 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
 
         if (subMatches && subMatches.length > 0) {
           const subIds = subMatches.map((s) => s.id);
-          // Junction table lookup for multi-subcategory support
           const { data: junctionData } = await supabase
             .from("business_subcategories")
             .select("business_id")
@@ -482,14 +454,11 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
           if (businessIds.length > 0) {
             const { data: bySub } = await supabase
               .from("businesses")
-              .select(
-                "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-              )
+              .select(BIZ_SELECT)
               .eq("is_active", true)
               .in("id", businessIds)
-              .order("is_premium", { ascending: false })
+              .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
               .limit(30);
-
             if (bySub && bySub.length > 0) {
               businessGroups = [{ label: termToSearch, businesses: bySub.map(formatBusiness) }];
             }
@@ -506,14 +475,11 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
             const catIds = catMatches.map((c) => c.id);
             const { data: byCat } = await supabase
               .from("businesses")
-              .select(
-                "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-              )
+              .select(BIZ_SELECT)
               .eq("is_active", true)
               .in("category_id", catIds)
-              .order("is_premium", { ascending: false })
+              .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
               .limit(30);
-
             if (byCat && byCat.length > 0) {
               businessGroups = [{ label: termToSearch, businesses: byCat.map(formatBusiness) }];
             }
@@ -523,39 +489,31 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         if (businessGroups.length === 0) {
           const { data: byText } = await supabase
             .from("businesses")
-            .select(
-              "id, name, slug, city, logo_url, subscription_plan, is_premium, categories(name, slug), subcategories(name, slug)",
-            )
+            .select(BIZ_SELECT)
             .eq("is_active", true)
             .or(`name.ilike.%${termToSearch}%,description.ilike.%${termToSearch}%`)
-            .order("is_premium", { ascending: false })
+            .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
             .limit(30);
-
           if (byText && byText.length > 0) {
             businessGroups = [{ label: termToSearch, businesses: byText.map(formatBusiness) }];
           }
         }
       }
 
-      // ── Filtro soft de cidade em todos os grupos ──────────────────────
+      // ── Filtro soft de cidade ─────────────────────────────────────────
       if (userCity && businessGroups.length > 0) {
         businessGroups = businessGroups.map((group) => {
           const cityFiltered = group.businesses.filter((b) => b.city?.toLowerCase().includes(userCity.toLowerCase()));
-          return {
-            ...group,
-            businesses: cityFiltered.length > 0 ? cityFiltered : group.businesses,
-          };
+          return { ...group, businesses: cityFiltered.length > 0 ? cityFiltered : group.businesses };
         });
       }
 
-      // ── CAMADA 4: Detecção de Urgência ────────────────────────────────
+      // ── CAMADA 4: Urgência ────────────────────────────────────────────
       const isUrgent = urgencyLevel >= 4 || URGENCY_WORDS.some((w) => query.includes(normalize(w)));
 
-      // ── Compatibilidade: businesses = todos os grupos juntos ──────────
       const allBusinesses = businessGroups.flatMap((g) => g.businesses);
       const totalFound = allBusinesses.length;
 
-      // ── Log ───────────────────────────────────────────────────────────
       logSearch(term.trim(), totalFound, user?.id, intentType, isUrgent, userCity);
 
       return {
@@ -563,10 +521,10 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         isUrgent,
         searchedTerm: term.trim(),
         resolvedTerms,
-        resolvedTerm: resolvedTerms[0] ?? normalizedTerm, // compatibilidade
+        resolvedTerm: resolvedTerms[0] ?? normalizedTerm,
         intentType,
         urgencyLevel,
-        businesses: allBusinesses, // compatibilidade
+        businesses: allBusinesses,
         businessGroups,
         complementaryServices,
         primarySolution,
@@ -588,6 +546,7 @@ function formatBusiness(b: any): SmartBusiness {
     slug: b.slug,
     city: b.city,
     logo_url: b.logo_url,
+    ranking_score: b.ranking_score ?? null,
     subscription_plan: b.subscription_plan,
     is_premium: b.is_premium,
     category_name: b.categories?.name ?? null,
