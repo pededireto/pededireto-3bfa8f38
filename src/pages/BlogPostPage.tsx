@@ -29,25 +29,20 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 /** Simple markdown-to-HTML renderer (no dependencies) */
 const renderMarkdown = (content: string): string => {
-  return (
-    content
-      // headings
-      .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-6 mb-2 text-foreground">$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-8 mb-3 text-foreground">$1</h2>')
-      // bold
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      // links
-      .replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
-        '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener noreferrer">$1</a>',
-      )
-      // list items
-      .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-muted-foreground">$1</li>')
-      // paragraphs (lines that aren't already HTML)
-      .replace(/^(?!<[hla-z])([\S].+)$/gm, '<p class="text-muted-foreground leading-relaxed mb-3">$1</p>')
-      // wrap consecutive <li> in <ul>
-      .replace(/(<li[^>]*>.*<\/li>\n?)+/g, '<ul class="space-y-1 mb-4">$&</ul>')
-  );
+  return content
+    // headings
+    .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-6 mb-2 text-foreground">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-8 mb-3 text-foreground">$1</h2>')
+    // bold
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    // links
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener noreferrer">$1</a>')
+    // list items
+    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-muted-foreground">$1</li>')
+    // paragraphs (lines that aren't already HTML)
+    .replace(/^(?!<[hla-z])([\S].+)$/gm, '<p class="text-muted-foreground leading-relaxed mb-3">$1</p>')
+    // wrap consecutive <li> in <ul>
+    .replace(/(<li[^>]*>.*<\/li>\n?)+/g, '<ul class="space-y-1 mb-4">$&</ul>');
 };
 
 const BlogPostPage = () => {
@@ -56,16 +51,11 @@ const BlogPostPage = () => {
   const { data: allPosts = [] } = useBlogPosts();
 
   // Increment views
-  const queryClient = useQueryClient();
-
   useEffect(() => {
     if (slug) {
-        if (slug) {
-    supabase.rpc("increment_blog_views", { post_slug: slug }).then(() => {
-      queryClient.invalidateQueries({ queryKey: ["blog-post", slug] });
-    });
-  }
-}, [slug]);
+      supabase.rpc("increment_blog_views", { post_slug: slug });
+    }
+  }, [slug]);
 
   const formatDate = (date: string | null) => {
     if (!date) return "";
@@ -105,9 +95,7 @@ const BlogPostPage = () => {
         <Header />
         <main className="flex-1 container py-16 text-center">
           <h1 className="text-2xl font-bold mb-4">Artigo não encontrado</h1>
-          <Link to="/blog" className="text-primary hover:underline">
-            ← Voltar ao blog
-          </Link>
+          <Link to="/blog" className="text-primary hover:underline">← Voltar ao blog</Link>
         </main>
         <Footer />
       </div>
@@ -146,13 +134,9 @@ const BlogPostPage = () => {
         {/* Breadcrumb */}
         <div className="container pt-6">
           <nav className="text-sm text-muted-foreground" aria-label="Breadcrumb">
-            <Link to="/" className="hover:text-primary">
-              Início
-            </Link>
+            <Link to="/" className="hover:text-primary">Início</Link>
             <span className="mx-2">›</span>
-            <Link to="/blog" className="hover:text-primary">
-              Blog
-            </Link>
+            <Link to="/blog" className="hover:text-primary">Blog</Link>
             <span className="mx-2">›</span>
             <span className="text-foreground">{post.title}</span>
           </nav>
@@ -179,12 +163,8 @@ const BlogPostPage = () => {
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-8 pb-6 border-b border-border">
                 <span>{post.author_name}</span>
                 <span>{formatDate(post.published_at)}</span>
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" /> {post.read_time_minutes} min de leitura
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5" /> {post.views_count} visualizações
-                </span>
+                <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {post.read_time_minutes} min de leitura</span>
+                <span className="inline-flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {post.views_count} visualizações</span>
               </div>
 
               <div
@@ -194,24 +174,14 @@ const BlogPostPage = () => {
 
               {/* Share */}
               <div className="flex items-center gap-3 mt-10 pt-6 border-t border-border">
-                <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  <Share2 className="h-4 w-4" /> Partilhar:
-                </span>
+                <span className="text-sm font-medium text-foreground flex items-center gap-1.5"><Share2 className="h-4 w-4" /> Partilhar:</span>
                 <Button variant="outline" size="sm" asChild>
-                  <a
-                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(post.title + " " + shareUrl)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(post.title + " " + shareUrl)}`} target="_blank" rel="noopener noreferrer">
                     <MessageCircle className="h-4 w-4 mr-1" /> WhatsApp
                   </a>
                 </Button>
                 <Button variant="outline" size="sm" asChild>
-                  <a
-                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer">
                     <Facebook className="h-4 w-4 mr-1" /> Facebook
                   </a>
                 </Button>
@@ -223,25 +193,15 @@ const BlogPostPage = () => {
               {/* Prev/Next */}
               <div className="flex justify-between gap-4 mt-10 pt-6 border-t border-border">
                 {prevPost ? (
-                  <Link
-                    to={`/blog/${prevPost.slug}`}
-                    className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1"
-                  >
+                  <Link to={`/blog/${prevPost.slug}`} className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1">
                     <ArrowLeft className="h-4 w-4" /> {prevPost.title}
                   </Link>
-                ) : (
-                  <div />
-                )}
+                ) : <div />}
                 {nextPost ? (
-                  <Link
-                    to={`/blog/${nextPost.slug}`}
-                    className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1 text-right"
-                  >
+                  <Link to={`/blog/${nextPost.slug}`} className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1 text-right">
                     {nextPost.title} <ArrowRight className="h-4 w-4" />
                   </Link>
-                ) : (
-                  <div />
-                )}
+                ) : <div />}
               </div>
             </article>
 
@@ -254,19 +214,10 @@ const BlogPostPage = () => {
                     {relatedPosts.map((rp) => (
                       <Link key={rp.id} to={`/blog/${rp.slug}`} className="block group">
                         {rp.cover_image_url && (
-                          <img
-                            src={rp.cover_image_url}
-                            alt={rp.title}
-                            className="w-full h-24 object-cover rounded-lg mb-2"
-                            loading="lazy"
-                          />
+                          <img src={rp.cover_image_url} alt={rp.title} className="w-full h-24 object-cover rounded-lg mb-2" loading="lazy" />
                         )}
-                        <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                          {rp.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {rp.read_time_minutes} min · {formatDate(rp.published_at)}
-                        </p>
+                        <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2">{rp.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{rp.read_time_minutes} min · {formatDate(rp.published_at)}</p>
                       </Link>
                     ))}
                   </div>
