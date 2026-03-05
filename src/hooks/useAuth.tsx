@@ -172,6 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     previousUserRef.current = null;
     setSessionExpired(false);
     await supabase.auth.signOut();
+    window.location.href = "/";
   };
 
   return (

@@ -781,10 +781,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "business_claim_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "business_claim_requests_reviewed_by_fkey"
             columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_claim_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["id"]
           },
         ]
@@ -871,6 +885,13 @@ export type Database = {
             columns: ["commercial_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_commercial_assignments_commercial_id_fkey"
+            columns: ["commercial_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["user_id"]
           },
         ]
@@ -1178,6 +1199,13 @@ export type Database = {
             columns: ["invited_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["id"]
           },
         ]
@@ -1506,6 +1534,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_profiles_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["id"]
           },
         ]
@@ -1903,6 +1938,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "business_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
+            referencedColumns: ["id"]
+          },
         ]
       }
       businesses: {
@@ -2141,6 +2183,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "businesses_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "businesses_conversion_plan_id_fkey"
             columns: ["conversion_plan_id"]
             isOneToOne: false
@@ -2159,6 +2208,13 @@ export type Database = {
             columns: ["converted_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "businesses_converted_by_fkey"
+            columns: ["converted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["user_id"]
           },
           {
@@ -2187,6 +2243,13 @@ export type Database = {
             columns: ["trial_activated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "businesses_trial_activated_by_fkey"
+            columns: ["trial_activated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["user_id"]
           },
         ]
@@ -2414,6 +2477,13 @@ export type Database = {
             columns: ["commercial_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "commercial_commissions_commercial_id_fkey"
+            columns: ["commercial_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["user_id"]
           },
           {
@@ -2718,6 +2788,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "consumer_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["user_id"]
           },
         ]
@@ -4167,6 +4244,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "request_business_matches_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "request_business_matches_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
@@ -4258,6 +4342,13 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "request_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["user_id"]
           },
         ]
@@ -4465,6 +4556,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "revenue_events_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "revenue_events_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
@@ -4504,6 +4602,13 @@ export type Database = {
             columns: ["triggered_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenue_events_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["id"]
           },
         ]
@@ -4826,6 +4931,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "service_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["user_id"]
           },
         ]
@@ -5463,6 +5575,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "user_search_context_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_with_confirmation"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       user_search_profile: {
@@ -5500,6 +5619,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_search_profile_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["user_id"]
           },
         ]
@@ -5734,6 +5860,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "businesses_converted_by_fkey"
+            columns: ["converted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       dashboard_executive: {
@@ -5835,6 +5968,22 @@ export type Database = {
           shortcut: string | null
           title: string | null
           usage_count: number | null
+        }
+        Relationships: []
+      }
+      profiles_with_confirmation: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string | null
+          email_confirmed_at: string | null
+          full_name: string | null
+          id: string | null
+          last_activity_at: string | null
+          phone: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
         }
         Relationships: []
       }
@@ -6065,6 +6214,23 @@ export type Database = {
         Args: { p_business_id: string; p_role?: string; p_user_id: string }
         Returns: undefined
       }
+      admin_associate_business_to_user: {
+        Args: { p_business_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      admin_confirm_user_email: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      admin_create_user: {
+        Args: {
+          p_email: string
+          p_full_name: string
+          p_password: string
+          p_phone?: string
+        }
+        Returns: string
+      }
       admin_reject_claim: {
         Args: { p_admin_notes: string; p_business_id: string }
         Returns: Json
@@ -6205,6 +6371,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_my_profile_id: { Args: never; Returns: string }
       get_request_ids_for_business: {
         Args: { p_user_id: string }
         Returns: string[]
@@ -6223,6 +6390,7 @@ export type Database = {
           slug: string
         }[]
       }
+      get_user_business_membership: { Args: never; Returns: Json }
       get_user_context: { Args: never; Returns: Json }
       has_permission: {
         Args: { _permission: string; _user_id: string }
