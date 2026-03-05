@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,27 +11,19 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, Building2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const baseSchema = {
   name: z.string().trim().min(2, "Mínimo 2 caracteres").max(200, "Máximo 200 caracteres"),
-  nif: z.string().trim().min(9, "NIF deve ter 9 dígitos").max(9, "NIF deve ter 9 dígitos").regex(/^\d{9}$/, "NIF deve conter apenas 9 dígitos"),
+  nif: z
+    .string()
+    .trim()
+    .min(9, "NIF deve ter 9 dígitos")
+    .max(9, "NIF deve ter 9 dígitos")
+    .regex(/^\d{9}$/, "NIF deve conter apenas 9 dígitos"),
   address: z.string().trim().min(5, "Morada é obrigatória").max(300, "Máximo 300 caracteres"),
   cta_email: z.string().trim().email("Email inválido").max(255),
   cta_phone: z.string().trim().min(9, "Telefone inválido").max(20, "Telefone inválido"),
@@ -74,6 +66,7 @@ const RegisterBusiness = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const schema = user ? formSchemaNoAuth : formSchemaAuth;
 
@@ -96,6 +89,26 @@ const RegisterBusiness = () => {
       password: "",
     },
   });
+
+  // ── Pré-preencher campos vindos do ClaimBusiness (passo anterior) ─────────
+  useEffect(() => {
+    // Fonte 1: React Router state (navegação direta)
+    const prefill = location.state?.prefill;
+
+    // Fonte 2: localStorage (fallback para casos de redirect)
+    const stored = localStorage.getItem("registerBusinessPrefill");
+    const storedPrefill = stored ? JSON.parse(stored) : null;
+
+    const data = prefill || storedPrefill;
+    if (!data) return;
+
+    if (data.name) form.setValue("name", data.name);
+    if (data.city) form.setValue("city", data.city);
+    if (data.categoryId) form.setValue("category_id", data.categoryId);
+
+    // Limpar localStorage após usar
+    localStorage.removeItem("registerBusinessPrefill");
+  }, []);
 
   const selectedCategoryId = form.watch("category_id");
   const { data: categories = [] } = useCategories();
@@ -127,7 +140,7 @@ const RegisterBusiness = () => {
         if (!currentUser) {
           toast({
             title: "Verifique o seu email",
-            description: "Enviámos um email de confirmação. Confirme para ativar a sua conta.",
+            description: "Enviámos um email de confirmação. Após confirmar, o seu negócio será validado pela equipa.",
           });
           setSubmitted(true);
           return;
@@ -136,27 +149,23 @@ const RegisterBusiness = () => {
 
       const slug = generateSlug(values.name);
 
-      // Use server-side RPC to create business + business_users atomically
-      const { data: businessId, error: rpcError } = await supabase.rpc(
-        "register_business_with_owner" as any,
-        {
-          p_name: values.name,
-          p_slug: slug,
-          p_nif: values.nif,
-          p_address: values.address,
-          p_city: values.city,
-          p_cta_email: values.cta_email,
-          p_cta_phone: values.cta_phone,
-          p_owner_name: values.owner_name,
-          p_owner_phone: values.owner_phone,
-          p_owner_email: values.owner_email,
-          p_category_id: values.category_id,
-          p_subcategory_id: values.subcategory_id,
-          p_cta_whatsapp: values.cta_whatsapp || null,
-          p_cta_website: values.cta_website || null,
-          p_registration_source: "register_form",
-        }
-      );
+      const { data: businessId, error: rpcError } = await supabase.rpc("register_business_with_owner" as any, {
+        p_name: values.name,
+        p_slug: slug,
+        p_nif: values.nif,
+        p_address: values.address,
+        p_city: values.city,
+        p_cta_email: values.cta_email,
+        p_cta_phone: values.cta_phone,
+        p_owner_name: values.owner_name,
+        p_owner_phone: values.owner_phone,
+        p_owner_email: values.owner_email,
+        p_category_id: values.category_id,
+        p_subcategory_id: values.subcategory_id,
+        p_cta_whatsapp: values.cta_whatsapp || null,
+        p_cta_website: values.cta_website || null,
+        p_registration_source: "register_form",
+      });
 
       if (rpcError) throw rpcError;
 
@@ -165,7 +174,6 @@ const RegisterBusiness = () => {
         description: "O seu negócio foi submetido e está pendente de validação.",
       });
       setSubmitted(true);
-
     } catch (err: any) {
       toast({
         title: "Erro",
@@ -205,9 +213,7 @@ const RegisterBusiness = () => {
         <div className="text-center mb-8">
           <Building2 className="mx-auto h-12 w-12 text-primary mb-3" />
           <h1 className="text-2xl font-bold text-foreground">Registar Novo Negócio</h1>
-          <p className="text-muted-foreground mt-1">
-            Preencha os dados do seu negócio para o adicionar à Pede Direto.
-          </p>
+          <p className="text-muted-foreground mt-1">Preencha os dados do seu negócio para o adicionar à Pede Direto.</p>
         </div>
 
         <Form {...form}>
@@ -216,106 +222,170 @@ const RegisterBusiness = () => {
             <div className="bg-card rounded-xl border border-border p-6 space-y-4">
               <h2 className="font-semibold text-foreground">Dados do Negócio</h2>
 
-              <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Negócio *</FormLabel>
-                  <FormControl><Input placeholder="Ex: Restaurante O Manel" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <FormField control={form.control} name="nif" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>NIF *</FormLabel>
-                  <FormControl><Input placeholder="123456789" maxLength={9} {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="address" render={({ field }) => (
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Morada *</FormLabel>
-                    <FormControl><Input placeholder="Rua..." {...field} /></FormControl>
+                    <FormLabel>Nome do Negócio *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Restaurante O Manel" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
-                )} />
-                <FormField control={form.control} name="city" render={({ field }) => (
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="nif"
+                render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Cidade *</FormLabel>
-                    <FormControl><Input placeholder="Lisboa" {...field} /></FormControl>
+                    <FormLabel>NIF *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123456789" maxLength={9} {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
-                )} />
-              </div>
+                )}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="category_id" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Morada *</FormLabel>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                        <Input placeholder="Rua..." {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {categories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="subcategory_id" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subcategoria *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCategoryId}>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cidade *</FormLabel>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                        <Input placeholder="Lisboa" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {subcategories.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="cta_email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email do Negócio *</FormLabel>
-                    <FormControl><Input type="email" placeholder="email@negocio.pt" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="cta_phone" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefone do Negócio *</FormLabel>
-                    <FormControl><Input placeholder="912345678" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="category_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoria *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecionar" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="subcategory_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subcategoria *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCategoryId}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecionar" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {subcategories.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="cta_whatsapp" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>WhatsApp</FormLabel>
-                    <FormControl><Input placeholder="912345678" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="cta_website" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Website</FormLabel>
-                    <FormControl><Input placeholder="https://..." {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="cta_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email do Negócio *</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="email@negocio.pt" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="cta_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone do Negócio *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="912345678" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="cta_whatsapp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>WhatsApp</FormLabel>
+                      <FormControl>
+                        <Input placeholder="912345678" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="cta_website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
@@ -323,47 +393,70 @@ const RegisterBusiness = () => {
             <div className="bg-card rounded-xl border border-border p-6 space-y-4">
               <h2 className="font-semibold text-foreground">Dados do Responsável</h2>
 
-              <FormField control={form.control} name="owner_name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome *</FormLabel>
-                  <FormControl><Input placeholder="Nome completo" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="owner_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nome completo" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="owner_phone" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefone *</FormLabel>
-                    <FormControl><Input placeholder="912345678" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="owner_email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email {!user ? "(será o seu email de acesso) *" : "*"}</FormLabel>
-                    <FormControl><Input type="email" placeholder="email@pessoal.pt" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="owner_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="912345678" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="owner_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email {!user ? "(será o seu email de acesso) *" : "*"}</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="email@pessoal.pt" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {!user && (
-                <FormField control={form.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password de acesso *</FormLabel>
-                    <FormControl><Input type="password" placeholder="Mínimo 6 caracteres" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password de acesso *</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Mínimo 6 caracteres" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
             </div>
 
             <Button type="submit" disabled={isSubmitting} className="w-full btn-cta-primary">
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  A registar...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />A registar...
                 </>
               ) : (
                 "Registar Negócio"
