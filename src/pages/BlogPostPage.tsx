@@ -53,24 +53,21 @@ const BlogPostPage = () => {
   useEffect(() => {
     if (!slug) return;
 
-    supabase
-      .rpc("increment_blog_views", { post_slug: slug })
-      .then(() => {
-        queryClient.invalidateQueries({ queryKey: ["blog-post", slug] });
-      })
-      .catch((err) => {
-        console.error("Erro ao incrementar views:", err);
+    const incrementViews = async () => {
+      const { error } = await supabase.rpc("increment_blog_views", {
+        post_slug: slug,
       });
-  }, [slug, queryClient]);
 
-  const formatDate = (date: string | null) => {
-    if (!date) return "";
-    return new Date(date).toLocaleDateString("pt-PT", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-  };
+      if (error) {
+        console.error("Erro ao incrementar views:", error);
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["blog-post", slug] });
+    };
+
+    incrementViews();
+  }, [slug, queryClient]);
 
   const currentIndex = allPosts.findIndex((p) => p.slug === slug);
   const prevPost = currentIndex > 0 ? allPosts[currentIndex - 1] : null;
