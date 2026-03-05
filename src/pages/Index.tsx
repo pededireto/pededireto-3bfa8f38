@@ -12,6 +12,7 @@ import SuperHighlightsSection from "@/components/SuperHighlightsSection";
 import FeaturedCategoriesSection from "@/components/FeaturedCategoriesSection";
 import HomepageBlockRenderer from "@/components/HomepageBlockRenderer";
 import CategoryAccordion from "@/components/home/CategoryAccordion";
+import LatestBlogPosts from "@/components/LatestBlogPosts";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -65,6 +66,8 @@ const Index = () => {
             <CategoriesGrid categories={categories} isLoading={categoriesLoading} />
 
             <FeaturedSection businesses={featuredBusinesses} isLoading={featuredLoading} />
+
+            <LatestBlogPosts />
           </>
         )}
       </main>

@@ -45,6 +45,8 @@ import RequestServicePage from "./pages/RequestServicePage";
 import RequestDetailPage from "./pages/RequestDetailPage";
 import UpgradePage from "./pages/UpgradePage";
 import SearchPage from "./pages/SearchPage";
+import BlogPage from "./pages/BlogPage";
+import BlogPostPage from "./pages/BlogPostPage";
 import NotFound from "./pages/NotFound";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
@@ -133,6 +135,8 @@ const App = () => {
                     <Route path="/negocio/:slug" element={<BusinessPage />} />
                     <Route path="/pagina/:slug" element={<InstitutionalPage />} />
                     <Route path="/pesquisa" element={<SearchPage />} />
+                    <Route path="/blog" element={<BlogPage />} />
+                    <Route path="/blog/:slug" element={<BlogPostPage />} />
 
                     {/* AUTH */}
                     <Route path="/login" element={<UserLogin />} />

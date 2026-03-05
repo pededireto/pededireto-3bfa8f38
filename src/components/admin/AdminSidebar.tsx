@@ -77,7 +77,8 @@ export type AdminTab =
   | "reviews"
   | "test-users"
   | "pending-claims"
-  | "emails";
+  | "emails"
+  | "blog";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -146,6 +147,7 @@ const SIDEBAR_STRUCTURE: Omit<SidebarItem, "badge">[][] = [
     { id: "pages", label: "Páginas", icon: FileText },
     { id: "synonyms", label: "Sinónimos", icon: BookOpen },
     { id: "homepage", label: "Homepage", icon: Home },
+    { id: "blog", label: "Blog", icon: BookOpen },
   ],
   // 7 - comunicacao
   [

@@ -59,6 +59,14 @@ const Header = () => {
           })}
 
           <Link
+            to="/blog"
+            aria-current={isActive("/blog") ? "page" : undefined}
+            className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+          >
+            Blog
+          </Link>
+
+          <Link
             to="/claim-business"
             aria-current={isActive("/claim-business") ? "page" : undefined}
             className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
@@ -147,6 +155,15 @@ const Header = () => {
                   </Link>
                 );
               })}
+
+              <Link
+                to="/blog"
+                aria-current={isActive("/blog") ? "page" : undefined}
+                className="text-lg font-medium text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                Blog
+              </Link>
 
               <Link
                 to="/claim-business"

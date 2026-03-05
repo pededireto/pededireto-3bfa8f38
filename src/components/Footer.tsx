@@ -103,6 +103,11 @@ const Footer = () => {
                   Categorias
                 </Link>
               </li>
+              <li>
+                <Link to="/blog" className="hover:text-primary transition-colors">
+                  Guias & Dicas
+                </Link>
+              </li>
               {pages.map((page) => (
                 <li key={page.id}>
                   <Link to={`/pagina/${page.slug}`} className="hover:text-primary transition-colors">
