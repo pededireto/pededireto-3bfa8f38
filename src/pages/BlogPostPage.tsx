@@ -49,7 +49,7 @@ const BlogPostPage = () => {
   const { data: allPosts = [] } = useBlogPosts();
   const queryClient = useQueryClient();
 
-  // ✅ Increment views e força refresh da query
+  // ✅ Increment views + refetch
   useEffect(() => {
     if (!slug) return;
 
@@ -68,6 +68,16 @@ const BlogPostPage = () => {
 
     incrementViews();
   }, [slug, queryClient]);
+
+  // ✅ FUNÇÃO QUE ESTAVA A FALTAR
+  const formatDate = (date: string | null) => {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("pt-PT", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  };
 
   const currentIndex = allPosts.findIndex((p) => p.slug === slug);
   const prevPost = currentIndex > 0 ? allPosts[currentIndex - 1] : null;
@@ -123,86 +133,55 @@ const BlogPostPage = () => {
         {post.cover_image_url && <meta property="og:image" content={post.cover_image_url} />}
         <meta property="og:type" content="article" />
         <meta property="og:url" content={shareUrl} />
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Article",
-            headline: post.title,
-            description: post.excerpt,
-            image: post.cover_image_url,
-            author: { "@type": "Organization", name: post.author_name },
-            publisher: {
-              "@type": "Organization",
-              name: "PedeDireto",
-              url: "https://pededireto.pt",
-            },
-            datePublished: post.published_at,
-            url: shareUrl,
-          })}
-        </script>
       </Helmet>
 
       <Header />
 
       <main id="main-content" className="flex-1" tabIndex={-1}>
-        <div className="container pt-6">
-          <nav className="text-sm text-muted-foreground" aria-label="Breadcrumb">
-            <Link to="/" className="hover:text-primary">
-              Início
-            </Link>
-            <span className="mx-2">›</span>
-            <Link to="/blog" className="hover:text-primary">
-              Blog
-            </Link>
-            <span className="mx-2">›</span>
-            <span className="text-foreground">{post.title}</span>
-          </nav>
-        </div>
-
         <div className="container py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-10">
-            <article>
-              {post.cover_image_url && (
-                <img
-                  src={post.cover_image_url}
-                  alt={post.title}
-                  className="w-full max-h-[400px] object-cover rounded-xl mb-8"
-                />
-              )}
-
-              <Badge className={CATEGORY_COLORS[post.category] || CATEGORY_COLORS.outros} variant="secondary">
-                {CATEGORY_LABELS[post.category] || post.category}
-              </Badge>
-
-              <h1 className="text-2xl md:text-4xl font-bold text-foreground mt-4 mb-4">{post.title}</h1>
-
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-8 pb-6 border-b border-border">
-                <span>{post.author_name}</span>
-                <span>{formatDate(post.published_at)}</span>
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" /> {post.read_time_minutes} min de leitura
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5" /> {post.views_count} visualizações
-                </span>
-              </div>
-
-              <div
-                className="prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }}
+          <article>
+            {post.cover_image_url && (
+              <img
+                src={post.cover_image_url}
+                alt={post.title}
+                className="w-full max-h-[400px] object-cover rounded-xl mb-8"
               />
+            )}
 
-              <div className="flex items-center gap-3 mt-10 pt-6 border-t border-border">
-                <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  <Share2 className="h-4 w-4" /> Partilhar:
-                </span>
+            <Badge className={CATEGORY_COLORS[post.category] || CATEGORY_COLORS.outros} variant="secondary">
+              {CATEGORY_LABELS[post.category] || post.category}
+            </Badge>
 
-                <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                  <Copy className="h-4 w-4 mr-1" /> Copiar link
-                </Button>
-              </div>
-            </article>
-          </div>
+            <h1 className="text-2xl md:text-4xl font-bold mt-4 mb-4">{post.title}</h1>
+
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-8 pb-6 border-b border-border">
+              <span>{post.author_name}</span>
+              <span>{formatDate(post.published_at)}</span>
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" /> {post.read_time_minutes} min
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Eye className="h-3.5 w-3.5" /> {post.views_count} visualizações
+              </span>
+            </div>
+
+            <div
+              className="prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{
+                __html: renderMarkdown(post.content),
+              }}
+            />
+
+            <div className="flex items-center gap-3 mt-10 pt-6 border-t border-border">
+              <span className="text-sm font-medium flex items-center gap-1.5">
+                <Share2 className="h-4 w-4" /> Partilhar:
+              </span>
+
+              <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                <Copy className="h-4 w-4 mr-1" /> Copiar link
+              </Button>
+            </div>
+          </article>
         </div>
       </main>
 
