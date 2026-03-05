@@ -19,7 +19,6 @@ const ClaimBusiness = () => {
   const { user } = useAuth();
   const { data: membership, isLoading: membershipLoading } = useBusinessMembership();
 
-  // Redirect authenticated users who already have a business
   useEffect(() => {
     if (!membershipLoading && user && membership?.business_id) {
       window.location.href = BUSINESS_DASHBOARD_URL;
@@ -56,7 +55,6 @@ const ClaimBusiness = () => {
       window.location.href = BUSINESS_DASHBOARD_URL;
       return;
     }
-    // Auto-claim
     (async () => {
       localStorage.removeItem("claimedBusinessId");
       const { error } = await claim(savedBusinessId);
@@ -67,7 +65,6 @@ const ClaimBusiness = () => {
     })();
   }, [user, membershipLoading]);
 
-  // Authenticated user claims directly
   const handleClaim = async () => {
     if (!selectedBusiness || !user) return;
     const { error } = await claim(selectedBusiness.id);
@@ -85,7 +82,6 @@ const ClaimBusiness = () => {
     }
   };
 
-  // Unauthenticated user: signup inline + claim
   const handleSignupAndClaim = async () => {
     if (!selectedBusiness) return;
     if (!signupName || !signupPhone || !signupEmail || !signupPassword) {
@@ -172,8 +168,26 @@ const ClaimBusiness = () => {
 
   const handleCreateOrRedirect = async () => {
     if (!user) {
-      localStorage.setItem("postLoginRedirect", "/register/business");
-      navigate("/register/business");
+      // ✅ FIX: passar os dados preenchidos para a página de registo via state
+      navigate("/register/business", {
+        state: {
+          prefill: {
+            name: newName,
+            city: newCity,
+            categoryId: newCategoryId,
+            // Também guardar no localStorage como fallback (alguns browsers bloqueiam state em redirects)
+          },
+        },
+      });
+      // Guardar também em localStorage como backup
+      localStorage.setItem(
+        "registerBusinessPrefill",
+        JSON.stringify({
+          name: newName,
+          city: newCity,
+          categoryId: newCategoryId,
+        }),
+      );
       return;
     }
     await handleCreateNew();
@@ -213,7 +227,6 @@ const ClaimBusiness = () => {
                 </div>
               )}
 
-              {/* Results list */}
               {results.length > 0 && !selectedBusiness && (
                 <div className="border border-border rounded-xl overflow-hidden divide-y divide-border max-h-64 overflow-y-auto">
                   {results.map((r) => (
@@ -236,7 +249,6 @@ const ClaimBusiness = () => {
                 </div>
               )}
 
-              {/* Selected business */}
               {selectedBusiness && (
                 <div className="border-2 border-primary rounded-xl p-4 bg-primary/5 space-y-4">
                   <div className="flex items-center gap-3">
@@ -308,7 +320,6 @@ const ClaimBusiness = () => {
                 </div>
               )}
 
-              {/* Create new */}
               <div className="pt-4 border-t border-border">
                 <button
                   onClick={() => setShowCreateForm(true)}

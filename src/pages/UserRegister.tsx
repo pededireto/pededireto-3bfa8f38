@@ -84,7 +84,10 @@ const UserRegister = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Helmet>
         <title>Criar Conta | Pede Direto</title>
-        <meta name="description" content="Cria a tua conta no Pede Direto para guardar pesquisas, favoritos e gerir os teus pedidos de serviço." />
+        <meta
+          name="description"
+          content="Cria a tua conta no Pede Direto para guardar pesquisas, favoritos e gerir os teus pedidos de serviço."
+        />
         <link rel="canonical" href={`${BASE_URL}/registar`} />
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
@@ -183,8 +186,7 @@ const UserRegister = () => {
             <Button type="submit" className="w-full btn-cta-primary" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  A criar...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />A criar...
                 </>
               ) : (
                 "Criar Conta"
