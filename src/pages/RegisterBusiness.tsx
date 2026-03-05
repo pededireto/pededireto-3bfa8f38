@@ -110,56 +110,6 @@ const RegisterBusiness = () => {
     localStorage.removeItem("registerBusinessPrefill");
   }, []);
 
-  // ── Criar negócio pendente após confirmação de email + login ─────────────
-  useEffect(() => {
-    if (!user) return;
-
-    const pending = localStorage.getItem("pendingBusinessRegistration");
-    if (!pending) return;
-
-    const doCreate = async () => {
-      try {
-        const data = JSON.parse(pending);
-        localStorage.removeItem("pendingBusinessRegistration");
-
-        const slug = generateSlug(data.name);
-        const { error: rpcError } = await supabase.rpc("register_business_with_owner" as any, {
-          p_name: data.name,
-          p_slug: slug,
-          p_nif: data.nif || "",
-          p_address: data.address || "",
-          p_city: data.city,
-          p_cta_email: data.cta_email,
-          p_cta_phone: data.cta_phone,
-          p_owner_name: data.owner_name,
-          p_owner_phone: data.owner_phone,
-          p_owner_email: data.owner_email,
-          p_category_id: data.category_id,
-          p_subcategory_id: data.subcategory_id,
-          p_cta_whatsapp: data.cta_whatsapp || null,
-          p_cta_website: data.cta_website || null,
-          p_registration_source: "register_form",
-        });
-
-        if (rpcError) throw rpcError;
-
-        toast({
-          title: "Negócio registado!",
-          description: "A sua conta foi confirmada e o negócio foi criado com sucesso.",
-        });
-        setSubmitted(true);
-      } catch (err: any) {
-        toast({
-          title: "Erro ao criar negócio",
-          description: err.message || "Tente novamente na página de registo.",
-          variant: "destructive",
-        });
-      }
-    };
-
-    doCreate();
-  }, [user]);
-
   const selectedCategoryId = form.watch("category_id");
   const { data: categories = [] } = useCategories();
   const { data: subcategories = [] } = useSubcategories(selectedCategoryId || undefined);
