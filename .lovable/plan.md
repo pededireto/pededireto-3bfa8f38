@@ -1,114 +1,81 @@
 
 
-# Analytics Fix + Logout Redirect + Security Errors
+# Blog / Guias & Dicas — Implementation Plan
 
-## Root Cause — Analytics Zeros
+## Overview
 
-The `business_users.user_id` column stores **`profiles.id`**, NOT `auth.uid()`. These are different UUIDs:
-- `auth.uid()` = `dfa4693b-...`
-- `profiles.id` = `b68d3865-...`
+Create a full blog system with public pages, admin CMS, and seed content. This involves a database migration, 4 new files, and edits to 5 existing files.
 
-**13 RLS policies** across the system check `business_users.user_id = auth.uid()` — this never matches. The analytics data exists (10 rows for the test business) but RLS blocks it.
+## 1. Database Migration
 
-## Plan
+Create `blog_posts` table with all specified columns, indexes, RLS policies (public read for published, admin full access), the `increment_blog_views` RPC function, and INSERT the 3 seed articles provided in the prompt.
 
-### 1. Database Migration — Fix RLS identity mapping
+## 2. New Files
 
-Create a SECURITY DEFINER helper function that resolves `auth.uid()` to `profiles.id`:
+### `src/hooks/useBlogPosts.ts`
+- `useBlogPosts(category?)` — fetch published posts, optional category filter, ordered by `published_at DESC`, staleTime 10min
+- `useBlogPost(slug)` — fetch single post by slug (include `?preview=true` support for admins via `is_admin` check)
+- `useFeaturedBlogPosts(limit=3)` — fetch latest published posts for homepage block
+- `useAdminBlogPosts()` — fetch ALL posts (published + drafts) for admin panel
+- CRUD mutations: `useCreateBlogPost`, `useUpdateBlogPost`, `useDeleteBlogPost`
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_my_profile_id()
-RETURNS uuid
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  SELECT id FROM profiles WHERE user_id = auth.uid() LIMIT 1
-$$;
-```
+### `src/pages/BlogPage.tsx`
+- SEO helmet, Header, Footer
+- Hero section with title "Guias & Dicas"
+- Category filter tabs: Todos | Serviços | Obras | Negócios | Dicas
+- Responsive grid of article cards (cover image, category badge, title, excerpt, author, date, read time)
+- Simple pagination (10 per page)
 
-Then update `is_business_member()` to use it:
+### `src/pages/BlogPostPage.tsx`
+- Helmet with full SEO meta tags + JSON-LD Article schema
+- Breadcrumb navigation
+- Cover image, H1 title, author/date/read time/views meta
+- Content rendered with basic markdown support (headings, bold, lists, links — no new dependency, use simple regex-based rendering)
+- Share buttons (WhatsApp, Facebook, copy link)
+- Related articles sidebar (desktop) — same category
+- Previous/next article navigation
+- View count increment via RPC on mount
 
-```sql
-CREATE OR REPLACE FUNCTION public.is_business_member(p_business_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM business_users
-    WHERE business_id = p_business_id
-    AND user_id = public.get_my_profile_id()
-  )
-$$;
-```
+### `src/components/admin/BlogContent.tsx`
+- Posts table with columns: title, category badge, status badge, published date, views, featured star, actions
+- "Novo Artigo" button
+- Create/Edit dialog with all form fields organized in sections (Content, Media, Organization, Author, SEO, Publication)
+- Auto-generated slug from title with manual override
+- Slug uniqueness check before save
+- Publish/unpublish toggle, delete with confirmation
+- Preview button opens `/blog/:slug?preview=true` in new tab
 
-Then recreate all 13 affected RLS policies, replacing `business_users.user_id = auth.uid()` with `business_users.user_id = public.get_my_profile_id()`. Affected tables:
-- `analytics_events` (2 policies)
-- `business_analytics_events` (1 policy)
-- `business_badge_progress` (1 policy)
-- `business_partner_memberships` (1 policy)
-- `business_reviews` (1 policy)
-- `business_scores` (1 policy)
-- `business_subcategories` (1 policy)
-- `businesses` (1 policy — owner update)
-- `request_business_matches` (2 policies)
-- `request_messages` (1 policy)
-- `user_favorites` (1 policy)
+## 3. Modified Files
 
-### 2. Fix Logout Redirect
+### `src/components/admin/AdminSidebar.tsx`
+- Add `"blog"` to `AdminTab` type
+- Add `{ id: "blog", label: "Blog", icon: BookOpen }` to group 6 (Conteúdo), after "Homepage"
+- Note: `BookOpen` is already imported
 
-In `src/hooks/useAuth.tsx`, change `signOut()` to redirect after sign out:
+### `src/pages/AdminPage.tsx`
+- Import `BlogContent`
+- Add `if (activeTab === "blog") return <BlogContent />;` to `renderContent()`
 
-```typescript
-const signOut = async () => {
-  previousUserRef.current = null;
-  setSessionExpired(false);
-  await supabase.auth.signOut();
-  window.location.href = "/";
-};
-```
+### `src/components/Header.tsx`
+- Add "Blog" link (`/blog`) in desktop and mobile nav, before "Registar Negócio"
 
-Using `window.location.href` (not `navigate`) to fully clear app state.
+### `src/components/Footer.tsx`
+- Add "Guias & Dicas" link (`/blog`) in the Navegação list
 
-### 3. Security Error — Business Owner Data Exposure
+### `src/App.tsx`
+- Import `BlogPage` and `BlogPostPage`
+- Add routes: `/blog` and `/blog/:slug` in public section
 
-The base `businesses` table policy "Anyone can view active businesses" exposes `owner_email`, `owner_phone`, `owner_name` to all users. The `businesses_public` view already excludes these fields.
+## 4. Homepage Blog Section
 
-**Fix:** Replace the public SELECT policy on `businesses` to exclude owner PII:
+Create `src/components/LatestBlogPosts.tsx` — shows 3 latest published posts in horizontal cards with "Ver todos os artigos" CTA. Only renders if posts exist.
 
-```sql
-DROP POLICY "Anyone can view active businesses" ON businesses;
+Add to `Index.tsx` after the existing content blocks (before Footer).
 
-CREATE POLICY "Anyone can view active businesses"
-ON businesses FOR SELECT
-USING (is_active = true);
-```
+## Technical Notes
 
-Since column-level RLS isn't possible in Postgres, create a restricted view and ensure frontend public queries use it. However, since the app already queries `businesses` directly in many places, the pragmatic fix is to NULL out owner fields for non-owners:
-
-Actually the cleanest approach: the `businesses_public` view already exists and excludes owner fields. The base table policy stays as-is (needed for owners/admins). The fix is ensuring public-facing frontend code uses `businesses_public` view where appropriate. But this is a larger refactor — for now, we document this as a known limitation.
-
-**Alternative minimal fix:** Set `owner_email`, `owner_phone`, `owner_name` to NULL via an UPDATE trigger when not needed, or accept this as low-risk since most businesses have these fields as NULL already.
-
-### 4. Security Error — Profiles Table Exposure
-
-Current profiles SELECT policies:
-- "Users can view own profile" (user_id = auth.uid()) ✅
-- "Admins can view all profiles" (is_admin()) ✅
-
-This is actually correct — users can only see their own profile, admins can see all. The scan flagged the admin access as a concern, but admin access to profiles is a legitimate business requirement. No change needed here.
-
----
-
-## Files to Change
-
-| File | Action |
-|------|--------|
-| DB Migration (SQL) | Create `get_my_profile_id()`, update `is_business_member()`, recreate 13 RLS policies |
-| `src/hooks/useAuth.tsx` | Add `window.location.href = "/"` after signOut |
-
-## Execution Order
-
-1. Database migration (fixes all RLS policies in one go)
-2. `useAuth.tsx` signOut redirect
+- No new npm dependencies — markdown rendering uses a simple custom renderer (regex for `##`, `**`, `-`, links)
+- Category badge colors: servicos=blue, obras=orange, negocios=green, dicas=purple, outros=gray
+- Dates formatted with `toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" })`
+- All queries use `staleTime: 10 * 60 * 1000`
 
