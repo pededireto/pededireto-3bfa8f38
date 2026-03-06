@@ -1,81 +1,79 @@
 
 
-# Blog / Guias & Dicas — Implementation Plan
+# Plan: Logo + Consumer Dashboard Review Feedback
 
-## Overview
+## Task 1 — Add PedeDireto Logo Image Everywhere
 
-Create a full blog system with public pages, admin CMS, and seed content. This involves a database migration, 4 new files, and edits to 5 existing files.
+Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
 
-## 1. Database Migration
+### Files to modify (logo replacement):
 
-Create `blog_posts` table with all specified columns, indexes, RLS policies (public read for published, admin full access), the `increment_blog_views` RPC function, and INSERT the 3 seed articles provided in the prompt.
+**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
 
-## 2. New Files
+| File | Location | Logo size |
+|------|----------|-----------|
+| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
+| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
+| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
+| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
+| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
+| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
+| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
+| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
+| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
+| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
+| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
+| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
+| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
+| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
+| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
+| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
+| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
 
-### `src/hooks/useBlogPosts.ts`
-- `useBlogPosts(category?)` — fetch published posts, optional category filter, ordered by `published_at DESC`, staleTime 10min
-- `useBlogPost(slug)` — fetch single post by slug (include `?preview=true` support for admins via `is_admin` check)
-- `useFeaturedBlogPosts(limit=3)` — fetch latest published posts for homepage block
-- `useAdminBlogPosts()` — fetch ALL posts (published + drafts) for admin panel
-- CRUD mutations: `useCreateBlogPost`, `useUpdateBlogPost`, `useDeleteBlogPost`
+Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
 
-### `src/pages/BlogPage.tsx`
-- SEO helmet, Header, Footer
-- Hero section with title "Guias & Dicas"
-- Category filter tabs: Todos | Serviços | Obras | Negócios | Dicas
-- Responsive grid of article cards (cover image, category badge, title, excerpt, author, date, read time)
-- Simple pagination (10 per page)
+---
 
-### `src/pages/BlogPostPage.tsx`
-- Helmet with full SEO meta tags + JSON-LD Article schema
-- Breadcrumb navigation
-- Cover image, H1 title, author/date/read time/views meta
-- Content rendered with basic markdown support (headings, bold, lists, links — no new dependency, use simple regex-based rendering)
-- Share buttons (WhatsApp, Facebook, copy link)
-- Related articles sidebar (desktop) — same category
-- Previous/next article navigation
-- View count increment via RPC on mount
+## Task 2 — Review Feedback on Consumer Dashboard Requests
 
-### `src/components/admin/BlogContent.tsx`
-- Posts table with columns: title, category badge, status badge, published date, views, featured star, actions
-- "Novo Artigo" button
-- Create/Edit dialog with all form fields organized in sections (Content, Media, Organization, Author, SEO, Publication)
-- Auto-generated slug from title with manual override
-- Slug uniqueness check before save
-- Publish/unpublish toggle, delete with confirmation
-- Preview button opens `/blog/:slug?preview=true` in new tab
+### Data model understanding
+- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
+- `request_business_matches` links `request_id` to `business_id`
+- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
 
-## 3. Modified Files
+### New hook: `useConsumerRequestReviews`
 
-### `src/components/admin/AdminSidebar.tsx`
-- Add `"blog"` to `AdminTab` type
-- Add `{ id: "blog", label: "Blog", icon: BookOpen }` to group 6 (Conteúdo), after "Homepage"
-- Note: `BookOpen` is already imported
+In `src/hooks/useServiceRequests.ts`, add a new hook that:
+1. Takes the list of request IDs
+2. For each request, gets the matched business IDs from `request_business_matches`
+3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
+4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
 
-### `src/pages/AdminPage.tsx`
-- Import `BlogContent`
-- Add `if (activeTab === "blog") return <BlogContent />;` to `renderContent()`
+Implementation approach — a single query that:
+```typescript
+// 1. Get all matches for the user's requests
+const { data: matches } = await supabase
+  .from("request_business_matches")
+  .select("request_id, business_id, businesses(name)")
+  .in("request_id", requestIds);
 
-### `src/components/Header.tsx`
-- Add "Blog" link (`/blog`) in desktop and mobile nav, before "Registar Negócio"
+// 2. Get all reviews by this user
+const { data: reviews } = await supabase
+  .from("business_reviews")
+  .select("business_id, rating, business_response, business_response_at")
+  .eq("user_id", userId);
 
-### `src/components/Footer.tsx`
-- Add "Guias & Dicas" link (`/blog`) in the Navegação list
+// 3. Cross-reference: for each match, find if there's a review
+```
 
-### `src/App.tsx`
-- Import `BlogPage` and `BlogPostPage`
-- Add routes: `/blog` and `/blog/:slug` in public section
+### UI changes in `src/pages/UserDashboard.tsx`
 
-## 4. Homepage Blog Section
+In the request card (lines 281-346), after the status Badge, add:
 
-Create `src/components/LatestBlogPosts.tsx` — shows 3 latest published posts in horizontal cards with "Ver todos os artigos" CTA. Only renders if posts exist.
+1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
+2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
 
-Add to `Index.tsx` after the existing content blocks (before Footer).
-
-## Technical Notes
-
-- No new npm dependencies — markdown rendering uses a simple custom renderer (regex for `##`, `**`, `-`, links)
-- Category badge colors: servicos=blue, obras=orange, negocios=green, dicas=purple, outros=gray
-- Dates formatted with `toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" })`
-- All queries use `staleTime: 10 * 60 * 1000`
+Visual design:
+- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
+- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
 
