@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Loader2 } from "lucide-react";
+import logoImg from "@/assets/pede-direto-logo.png";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { useAllBusinesses } from "@/hooks/useBusinesses";
 import { useAllCategories } from "@/hooks/useCategories";
@@ -51,7 +52,7 @@ const CommercialPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card">
-        <Link to="/" className="text-lg font-bold text-primary">Pede Direto</Link>
+        <Link to="/"><img src={logoImg} alt="Pede Direto" className="h-7" /></Link>
         <div className="flex items-center gap-1">
           <NotificationBell targetRole="commercial" />
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>

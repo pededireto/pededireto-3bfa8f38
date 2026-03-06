@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
 import {
   LayoutDashboard,
   Inbox,
@@ -113,7 +114,7 @@ const BusinessSidebar = ({
     <div className="flex flex-col h-full">
       <div className="p-6 border-b border-sidebar-border hidden lg:block">
         <Link to="/" className="block mb-3">
-          <h1 className="text-xl font-bold text-sidebar-primary">Pede Direto</h1>
+          <img src={logo} alt="Pede Direto" className="h-8" />
         </Link>
 
         {/* Switcher de negócios — só aparece se tiver mais de 1 */}

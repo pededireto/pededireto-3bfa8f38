@@ -2064,6 +2064,7 @@ export type Database = {
             | Database["public"]["Enums"]["premium_level_tipo"]
             | null
           public_address: string | null
+          ranking_score: number | null
           registration_source: string | null
           schedule_closed: string | null
           schedule_weekdays: string | null
@@ -2137,6 +2138,7 @@ export type Database = {
             | Database["public"]["Enums"]["premium_level_tipo"]
             | null
           public_address?: string | null
+          ranking_score?: number | null
           registration_source?: string | null
           schedule_closed?: string | null
           schedule_weekdays?: string | null
@@ -2210,6 +2212,7 @@ export type Database = {
             | Database["public"]["Enums"]["premium_level_tipo"]
             | null
           public_address?: string | null
+          ranking_score?: number | null
           registration_source?: string | null
           schedule_closed?: string | null
           schedule_weekdays?: string | null
@@ -5832,6 +5835,7 @@ export type Database = {
             | Database["public"]["Enums"]["premium_level_tipo"]
             | null
           public_address: string | null
+          ranking_score: number | null
           schedule_weekdays: string | null
           schedule_weekend: string | null
           slug: string | null
@@ -6322,6 +6326,10 @@ export type Database = {
         Args: { bid: string; period?: string }
         Returns: number
       }
+      calculate_business_ranking_score: {
+        Args: { p_business_id: string }
+        Returns: number
+      }
       calculate_business_score: {
         Args: { p_business_id: string }
         Returns: number
@@ -6578,6 +6586,7 @@ export type Database = {
         Returns: undefined
       }
       unaccent: { Args: { "": string }; Returns: string }
+      update_all_ranking_scores: { Args: never; Returns: undefined }
       update_business_full: {
         Args: {
           p_address?: string

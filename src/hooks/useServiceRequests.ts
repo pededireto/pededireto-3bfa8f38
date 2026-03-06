@@ -211,6 +211,78 @@ export interface RequestMeta {
   hasPending: boolean;
 }
 
+// ─── Review feedback por pedido ───────────────────────────────────────────────
+export interface RequestReviewInfo {
+  rating: number;
+  comment: string | null;
+  businessResponse: string | null;
+  businessResponseAt: string | null;
+  businessName: string;
+}
+
+export const useConsumerRequestReviews = (requestIds: string[]) => {
+  return useQuery({
+    queryKey: ["consumer-request-reviews", requestIds],
+    enabled: requestIds.length > 0,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return {} as Record<string, RequestReviewInfo[]>;
+
+      // 1. Get all matches for these requests
+      const { data: matches, error: matchErr } = await supabase
+        .from("request_business_matches" as any)
+        .select("request_id, business_id")
+        .in("request_id", requestIds);
+      if (matchErr) throw matchErr;
+
+      const allBusinessIds = [...new Set((matches || []).map((m: any) => m.business_id))];
+      if (allBusinessIds.length === 0) return {} as Record<string, RequestReviewInfo[]>;
+
+      // 2. Get user's reviews for those businesses
+      const { data: reviews, error: revErr } = await supabase
+        .from("business_reviews")
+        .select("business_id, rating, comment, business_response, business_response_at")
+        .eq("user_id", user.id)
+        .in("business_id", allBusinessIds);
+      if (revErr) throw revErr;
+
+      // 3. Get business names
+      const { data: businesses } = await supabase
+        .from("businesses")
+        .select("id, name")
+        .in("id", allBusinessIds);
+
+      const bizNameMap: Record<string, string> = {};
+      (businesses || []).forEach((b: any) => { bizNameMap[b.id] = b.name; });
+
+      // 4. Build review map by business_id
+      const reviewMap: Record<string, typeof reviews extends (infer T)[] ? T : never> = {};
+      (reviews || []).forEach((r: any) => { reviewMap[r.business_id] = r; });
+
+      // 5. Cross-reference: for each match, check if there's a review
+      const result: Record<string, RequestReviewInfo[]> = {};
+      (matches || []).forEach((m: any) => {
+        const rev = reviewMap[m.business_id];
+        if (rev) {
+          if (!result[m.request_id]) result[m.request_id] = [];
+          result[m.request_id].push({
+            rating: (rev as any).rating,
+            comment: (rev as any).comment,
+            businessResponse: (rev as any).business_response,
+            businessResponseAt: (rev as any).business_response_at,
+            businessName: bizNameMap[m.business_id] || "Negócio",
+          });
+        }
+      });
+
+      return result;
+    },
+  });
+};
+
 export const useConsumerRequestsMeta = (requestIds: string[]) => {
   return useQuery({
     queryKey: ["consumer-requests-meta", requestIds],

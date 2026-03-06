@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
 import {
   CreditCard,
   LayoutDashboard,
@@ -231,8 +232,8 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
       {/* Brand */}
       <div className="p-6 border-b border-sidebar-border hidden lg:block">
         <Link to="/" className="block">
-          <h1 className="text-xl font-bold text-sidebar-primary">Pede Direto</h1>
-          <p className="text-xs text-sidebar-foreground/70">Área de Gestão</p>
+          <img src={logo} alt="Pede Direto" className="h-8" />
+          <p className="text-xs text-sidebar-foreground/70 mt-1">Área de Gestão</p>
         </Link>
       </div>
 
