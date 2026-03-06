@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Clock, Eye, ArrowRight } from "lucide-react";
+import { Clock, ArrowRight } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useBlogPosts } from "@/hooks/useBlogPosts";
@@ -44,7 +44,10 @@ const BlogPage = () => {
     <div className="min-h-screen flex flex-col">
       <Helmet>
         <title>Guias & Dicas | PedeDireto</title>
-        <meta name="description" content="Tudo o que precisas de saber para contratar profissionais com confiança. Guias práticos, dicas e preços de referência." />
+        <meta
+          name="description"
+          content="Tudo o que precisas de saber para contratar profissionais com confiança. Guias práticos, dicas e preços de referência."
+        />
         <link rel="canonical" href="https://pededireto.pt/blog" />
       </Helmet>
 
@@ -69,7 +72,10 @@ const BlogPage = () => {
                 key={cat.value}
                 variant={category === cat.value ? "default" : "outline"}
                 size="sm"
-                onClick={() => { setCategory(cat.value); setPage(1); }}
+                onClick={() => {
+                  setCategory(cat.value);
+                  setPage(1);
+                }}
               >
                 {cat.label}
               </Button>
@@ -101,11 +107,11 @@ const BlogPage = () => {
                   className="group bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg transition-shadow"
                 >
                   {post.cover_image_url && (
-                    <div className="aspect-video overflow-hidden">
+                    <div className="w-full">
                       <img
                         src={post.cover_image_url}
                         alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-auto object-contain group-hover:opacity-95 transition-opacity duration-300"
                         loading="lazy"
                       />
                     </div>
@@ -117,9 +123,7 @@ const BlogPage = () => {
                     <h2 className="font-bold text-lg text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                       {post.title}
                     </h2>
-                    {post.excerpt && (
-                      <p className="text-sm text-muted-foreground line-clamp-3">{post.excerpt}</p>
-                    )}
+                    {post.excerpt && <p className="text-sm text-muted-foreground line-clamp-3">{post.excerpt}</p>}
                     <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
                       <span>{post.author_name}</span>
                       <span>{formatDate(post.published_at)}</span>
@@ -140,12 +144,7 @@ const BlogPage = () => {
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-10">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <Button
-                  key={p}
-                  variant={page === p ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPage(p)}
-                >
+                <Button key={p} variant={page === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)}>
                   {p}
                 </Button>
               ))}
