@@ -13,10 +13,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// ─────────────────────────────────────────────
-// Tipo público — só os campos que a view expõe
-// ─────────────────────────────────────────────
-
 export interface PublicBusiness {
   id: string;
   name: string;
@@ -33,6 +29,7 @@ export interface PublicBusiness {
   is_premium: boolean;
   premium_level: string | null;
   display_order: number;
+  ranking_score: number | null;
   plan_level: "free" | "start" | "pro";
   badge: "START" | "PRO" | null;
   cta_phone: string | null;
@@ -76,10 +73,6 @@ const PUBLIC_SELECT = `
   )
 `;
 
-// ─────────────────────────────────────────────
-// Hook: listagem pública (página de categoria)
-// ─────────────────────────────────────────────
-
 export const usePublicBusinesses = (categoryId?: string, city?: string, subcategoryId?: string) => {
   return useQuery({
     queryKey: ["public-businesses", categoryId, city, subcategoryId],
@@ -101,6 +94,7 @@ export const usePublicBusinesses = (categoryId?: string, city?: string, subcateg
           .in("id", businessIds)
           .order("is_featured", { ascending: false })
           .order("is_premium", { ascending: false })
+          .order("ranking_score", { ascending: false }) // ← ranking por eventos
           .order("display_order", { ascending: true });
 
         if (categoryId) query = query.eq("category_id", categoryId);
@@ -116,6 +110,7 @@ export const usePublicBusinesses = (categoryId?: string, city?: string, subcateg
         .select(PUBLIC_SELECT)
         .order("is_featured", { ascending: false })
         .order("is_premium", { ascending: false })
+        .order("ranking_score", { ascending: false }) // ← ranking por eventos
         .order("display_order", { ascending: true });
 
       if (categoryId) query = query.eq("category_id", categoryId);
@@ -127,10 +122,6 @@ export const usePublicBusinesses = (categoryId?: string, city?: string, subcateg
     },
   });
 };
-
-// ─────────────────────────────────────────────
-// Hook: página de detalhe de um negócio (slug)
-// ─────────────────────────────────────────────
 
 export const usePublicBusiness = (slug: string | undefined) => {
   return useQuery({
@@ -150,10 +141,6 @@ export const usePublicBusiness = (slug: string | undefined) => {
     enabled: !!slug,
   });
 };
-
-// ─────────────────────────────────────────────
-// Hook: negócios em destaque (homepage)
-// ─────────────────────────────────────────────
 
 export const usePublicFeaturedBusinesses = (categoryId?: string) => {
   return useQuery({
