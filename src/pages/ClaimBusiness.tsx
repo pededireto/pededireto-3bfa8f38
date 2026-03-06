@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
 import { Search, Building2, ArrowLeft, Loader2, MapPin, Plus, CheckCircle2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -199,7 +200,7 @@ const ClaimBusiness = () => {
         <div className="bg-card rounded-2xl shadow-card p-8">
           <div className="text-center mb-6">
             <Link to="/" className="inline-block mb-4">
-              <h1 className="text-2xl font-bold text-primary">Pede Direto</h1>
+              <img src={logo} alt="Pede Direto" className="h-10" />
             </Link>
             <h2 className="text-xl font-semibold text-foreground">Reclame o seu Negócio</h2>
             <p className="text-muted-foreground mt-1">O seu negócio pode já estar listado. Procure pelo nome abaixo.</p>

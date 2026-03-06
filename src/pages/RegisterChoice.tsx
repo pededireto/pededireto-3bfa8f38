@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
 import { Search, Building2, ArrowLeft } from "lucide-react";
 
 const RegisterChoice = () => {
@@ -10,7 +11,7 @@ const RegisterChoice = () => {
         <div className="bg-card rounded-2xl shadow-card p-8">
           <div className="text-center mb-8">
             <Link to="/" className="inline-block mb-6">
-              <h1 className="text-2xl font-bold text-primary">Pede Direto</h1>
+              <img src={logo} alt="Pede Direto" className="h-10" />
             </Link>
             <h2 className="text-xl font-semibold text-foreground">Criar Conta</h2>
             <p className="text-muted-foreground mt-1">Como queres usar o PedeDireto?</p>

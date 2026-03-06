@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Menu, User, LogOut } from "lucide-react";
+import logo from "@/assets/pede-direto-logo.png";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
@@ -31,7 +32,7 @@ const Header = () => {
     >
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-primary">Pede Direto</span>
+          <img src={logo} alt="Pede Direto" className="h-8" />
         </Link>
 
         {/* Desktop Navigation */}

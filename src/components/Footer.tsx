@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { MessageCircle, Mail } from "lucide-react";
+import logo from "@/assets/pede-direto-logo.png";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useFooterPages } from "@/hooks/useNavigationPages";
 
@@ -63,7 +64,7 @@ const Footer = () => {
           {/* Marca */}
           <div className="md:col-span-2">
             <Link to="/" className="inline-block mb-4">
-              <span className="text-2xl font-bold text-primary">Pede Direto</span>
+              <img src={logo} alt="Pede Direto" className="h-8" />
             </Link>
 
             <p className="text-foreground/70 max-w-md">

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
 import {
   Building2,
   LogOut,
@@ -39,8 +40,8 @@ const CommercialSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: Commerci
     <div className="flex flex-col h-full">
       <div className="p-6 border-b border-sidebar-border hidden lg:block">
         <Link to="/" className="block">
-          <h1 className="text-xl font-bold text-sidebar-primary">Pede Direto</h1>
-          <p className="text-xs text-sidebar-foreground/70">Área Comercial</p>
+          <img src={logo} alt="Pede Direto" className="h-8" />
+          <p className="text-xs text-sidebar-foreground/70 mt-1">Área Comercial</p>
         </Link>
       </div>
 

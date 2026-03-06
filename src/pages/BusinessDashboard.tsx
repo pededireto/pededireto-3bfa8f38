@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Loader2 } from "lucide-react";
+import logoImg from "@/assets/pede-direto-logo.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useBusinessByUser } from "@/hooks/useBusinessDashboard";
@@ -76,7 +77,7 @@ const BusinessDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card">
-        <Link to="/" className="text-lg font-bold text-primary">Pede Direto</Link>
+        <Link to="/"><img src={logoImg} alt="Pede Direto" className="h-7" /></Link>
         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
           {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>

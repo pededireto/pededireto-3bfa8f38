@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { useSavedSearches, useDeleteSavedSearch } from "@/hooks/useSavedSearches";
 import { useUserFavorites, useToggleFavorite } from "@/hooks/useUserFavorites";
-import { useConsumerRequests, useConsumerRequestsMeta } from "@/hooks/useServiceRequests";
+import { useConsumerRequests, useConsumerRequestsMeta, useConsumerRequestReviews, type RequestReviewInfo } from "@/hooks/useServiceRequests";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
@@ -30,8 +30,13 @@ import {
   ArrowRight,
   Store,
   ChevronRight,
+  Star,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   novo: { label: "Novo", variant: "secondary" },
@@ -39,6 +44,120 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   encaminhado: { label: "Encaminhado", variant: "default" },
   concluido: { label: "Concluído", variant: "default" },
   cancelado: { label: "Cancelado", variant: "destructive" },
+};
+
+// ─── Request Card with review feedback ────────────────────────────────────────
+const RequestCard = ({
+  req,
+  cfg,
+  meta,
+  reviews,
+}: {
+  req: any;
+  cfg: { label: string; variant: "default" | "secondary" | "outline" | "destructive" };
+  meta?: { responses: number; hasUnread: boolean; hasPending: boolean };
+  reviews: RequestReviewInfo[];
+}) => {
+  const [responseOpen, setResponseOpen] = useState(false);
+
+  return (
+    <Card className={`transition-colors ${meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : ""}`}>
+      <CardContent className="py-4 px-6 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-primary uppercase tracking-wide">
+              {req.categories?.name || "Sem categoria"}
+              {req.subcategories?.name ? ` • ${req.subcategories.name}` : ""}
+            </p>
+            <p className="font-medium text-foreground mt-1 line-clamp-2">
+              {req.description
+                ? req.description.length > 120
+                  ? req.description.slice(0, 120) + "…"
+                  : req.description
+                : "Sem descrição"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {reviews.length > 0 && (
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 gap-1">
+                <Star className="h-3 w-3 fill-current" />
+                {reviews[0].rating.toFixed(1)} Avaliado
+              </Badge>
+            )}
+            <Badge variant={cfg.variant}>{cfg.label}</Badge>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          {req.location_city && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              {req.location_city}
+            </span>
+          )}
+          {req.urgency === "urgent" && (
+            <span className="text-destructive font-semibold">⚠ Urgente</span>
+          )}
+          <span>
+            {new Date(req.created_at).toLocaleDateString("pt-PT", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+          </span>
+          {meta && meta.responses > 0 && (
+            <span className="flex items-center gap-1 text-foreground font-medium">
+              <MessageCircle className="h-3.5 w-3.5 text-primary" />
+              {meta.responses} {meta.responses === 1 ? "resposta" : "respostas"}
+            </span>
+          )}
+          {meta?.hasUnread && (
+            <span className="flex items-center gap-1 text-primary font-semibold animate-pulse">
+              <Bell className="h-3.5 w-3.5" />
+              Nova mensagem
+            </span>
+          )}
+        </div>
+
+        {/* Business response to review */}
+        {reviews.some((r) => r.businessResponse) && (
+          <Collapsible open={responseOpen} onOpenChange={setResponseOpen}>
+            <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors w-full">
+              <MessageCircle className="h-3.5 w-3.5" />
+              O negócio respondeu à sua avaliação
+              {responseOpen ? <ChevronUp className="h-3 w-3 ml-auto" /> : <ChevronDown className="h-3 w-3 ml-auto" />}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              {reviews
+                .filter((r) => r.businessResponse)
+                .map((r, i) => (
+                  <div key={i} className="bg-muted/50 rounded-lg p-3 border border-border text-sm">
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">
+                      {r.businessName}
+                      {r.businessResponseAt && (
+                        <span className="font-normal ml-2">
+                          {new Date(r.businessResponseAt).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-foreground">{r.businessResponse}</p>
+                  </div>
+                ))}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        <div className="flex justify-end pt-1">
+          <Button asChild size="sm" variant={meta?.hasUnread ? "default" : "outline"}>
+            <Link to={`/pedido/${req.id}`} className="flex items-center gap-1.5">
+              Ver Conversa
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 };
 
 const UserDashboard = () => {
@@ -55,6 +174,7 @@ const UserDashboard = () => {
 
   const requestIds = myRequests.map((r: any) => r.id);
   const { data: requestMeta = {} } = useConsumerRequestsMeta(requestIds);
+  const { data: requestReviews = {} } = useConsumerRequestReviews(requestIds);
 
   const totalUnread = Object.values(requestMeta).filter((m: any) => m.hasUnread).length;
 
@@ -277,71 +397,16 @@ const UserDashboard = () => {
                   const meta = (requestMeta as any)[req.id] as
                     | { responses: number; hasUnread: boolean; hasPending: boolean }
                     | undefined;
+                  const reviews: RequestReviewInfo[] = (requestReviews as Record<string, RequestReviewInfo[]>)[req.id] || [];
 
                   return (
-                    <Card
+                    <RequestCard
                       key={req.id}
-                      className={`transition-colors ${meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : ""}`}
-                    >
-                      <CardContent className="py-4 px-6 space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-primary uppercase tracking-wide">
-                              {req.categories?.name || "Sem categoria"}
-                              {req.subcategories?.name ? ` • ${req.subcategories.name}` : ""}
-                            </p>
-                            <p className="font-medium text-foreground mt-1 line-clamp-2">
-                              {req.description
-                                ? req.description.length > 120
-                                  ? req.description.slice(0, 120) + "…"
-                                  : req.description
-                                : "Sem descrição"}
-                            </p>
-                          </div>
-                          <Badge variant={cfg.variant}>{cfg.label}</Badge>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                          {req.location_city && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {req.location_city}
-                            </span>
-                          )}
-                          {req.urgency === "urgent" && (
-                            <span className="text-destructive font-semibold">⚠ Urgente</span>
-                          )}
-                          <span>
-                            {new Date(req.created_at).toLocaleDateString("pt-PT", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </span>
-                          {meta && meta.responses > 0 && (
-                            <span className="flex items-center gap-1 text-foreground font-medium">
-                              <MessageCircle className="h-3.5 w-3.5 text-primary" />
-                              {meta.responses} {meta.responses === 1 ? "resposta" : "respostas"}
-                            </span>
-                          )}
-                          {meta?.hasUnread && (
-                            <span className="flex items-center gap-1 text-primary font-semibold animate-pulse">
-                              <Bell className="h-3.5 w-3.5" />
-                              Nova mensagem
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex justify-end pt-1">
-                          <Button asChild size="sm" variant={meta?.hasUnread ? "default" : "outline"}>
-                            <Link to={`/pedido/${req.id}`} className="flex items-center gap-1.5">
-                              Ver Conversa
-                              <ArrowRight className="h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      req={req}
+                      cfg={cfg}
+                      meta={meta}
+                      reviews={reviews}
+                    />
                   );
                 })}
               </div>
