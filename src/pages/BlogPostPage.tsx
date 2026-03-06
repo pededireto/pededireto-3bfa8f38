@@ -49,42 +49,28 @@ const BlogPostPage = () => {
   const { data: allPosts = [] } = useBlogPosts();
   const queryClient = useQueryClient();
 
-  // ✅ Increment views + refetch
   useEffect(() => {
     if (!slug) return;
-
     const incrementViews = async () => {
-      const { error } = await supabase.rpc("increment_blog_views", {
-        post_slug: slug,
-      });
-
+      const { error } = await supabase.rpc("increment_blog_views", { post_slug: slug });
       if (error) {
         console.error("Erro ao incrementar views:", error);
         return;
       }
-
       queryClient.invalidateQueries({ queryKey: ["blog-post", slug] });
     };
-
     incrementViews();
   }, [slug, queryClient]);
 
-  // ✅ FUNÇÃO QUE ESTAVA A FALTAR
   const formatDate = (date: string | null) => {
     if (!date) return "";
-    return new Date(date).toLocaleDateString("pt-PT", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
+    return new Date(date).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" });
   };
 
   const currentIndex = allPosts.findIndex((p) => p.slug === slug);
   const prevPost = currentIndex > 0 ? allPosts[currentIndex - 1] : null;
   const nextPost = currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1] : null;
-
   const relatedPosts = post ? allPosts.filter((p) => p.category === post.category && p.slug !== slug).slice(0, 3) : [];
-
   const shareUrl = `https://pededireto.pt/blog/${slug}`;
 
   const handleCopyLink = () => {
@@ -141,11 +127,7 @@ const BlogPostPage = () => {
         <div className="container py-8">
           <article>
             {post.cover_image_url && (
-              <img
-                src={post.cover_image_url}
-                alt={post.title}
-                className="w-full max-h-[400px] object-cover rounded-xl mb-8"
-              />
+              <img src={post.cover_image_url} alt={post.title} className="w-full h-auto rounded-xl mb-8" />
             )}
 
             <Badge className={CATEGORY_COLORS[post.category] || CATEGORY_COLORS.outros} variant="secondary">
@@ -167,16 +149,13 @@ const BlogPostPage = () => {
 
             <div
               className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{
-                __html: renderMarkdown(post.content),
-              }}
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }}
             />
 
             <div className="flex items-center gap-3 mt-10 pt-6 border-t border-border">
               <span className="text-sm font-medium flex items-center gap-1.5">
                 <Share2 className="h-4 w-4" /> Partilhar:
               </span>
-
               <Button variant="outline" size="sm" onClick={handleCopyLink}>
                 <Copy className="h-4 w-4 mr-1" /> Copiar link
               </Button>
