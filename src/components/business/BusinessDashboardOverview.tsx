@@ -335,6 +335,39 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         </div>
       </div>
 
+      {/* Conquistas Widget */}
+      {permissions.canViewProAnalytics && unlockedBadges.length > 0 && (
+        <div className="bg-card rounded-xl p-5 shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Conquistas</span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs p-0 h-auto text-primary"
+              onClick={() => onNavigate?.("badges")}
+            >
+              Ver todas →
+            </Button>
+          </div>
+          <div className="space-y-1.5">
+            {unlockedBadges.slice(0, 3).map((badge) => (
+              <div key={badge.name} className="flex items-center gap-2 text-sm">
+                <span className="text-green-500">✅</span>
+                <span className="text-foreground">{badge.name}</span>
+              </div>
+            ))}
+            {unlockedBadges.length > 3 && (
+              <p className="text-xs text-muted-foreground ml-6">
+                (+{unlockedBadges.length - 3} mais)
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <BusinessSearchPosition
           businessId={business.id}
