@@ -24,7 +24,6 @@ import {
   ReviewsCard,
   BadgesCard,
   MonthlyHistoryCard,
-  BenchmarkingProCard,
 } from "@/components/business/BusinessProWidgets";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
