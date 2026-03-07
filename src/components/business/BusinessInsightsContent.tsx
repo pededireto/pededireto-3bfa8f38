@@ -50,7 +50,7 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
   const { data: reviewsData } = useBusinessReviewsData(isVerified && hasProAccess ? businessId : null);
   const { data: badges } = useBusinessBadges(isVerified && hasProAccess ? businessId : null);
   const { data: monthlyHistory } = useBusinessMonthlyHistory(isVerified && hasProAccess ? businessId : null);
-  const { data: benchmarkingPro } = useBusinessBenchmarkingPro(isVerified && hasProAccess ? businessId : null);
+  const { data: benchmarkData, isLoading: benchmarkLoading } = useBusinessBenchmark(isVerified && hasProAccess ? businessId : null, days);
 
   const { data, isLoading, error } = useBusinessIntelligence(
     isVerified && hasProAccess ? businessId : null,
