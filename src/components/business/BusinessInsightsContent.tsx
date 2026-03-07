@@ -3,6 +3,7 @@ import { Loader2, TrendingUp, Lock } from "lucide-react";
 import { useBusinessIntelligence } from "@/hooks/useBusinessIntelligence";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
+import { useBusinessBenchmark } from "@/hooks/useBusinessBenchmark";
 import {
   useBusinessFavorites,
   useBusinessProfileScore,
@@ -10,11 +11,11 @@ import {
   useBusinessReviewsData,
   useBusinessBadges,
   useBusinessMonthlyHistory,
-  useBusinessBenchmarkingPro,
 } from "@/hooks/useBusinessDashboardPro";
 import DateRangeFilter from "@/components/intelligence/DateRangeFilter";
 import BusinessPerformanceCard from "@/components/intelligence/BusinessPerformanceCard";
 import BusinessBenchmarkCard from "@/components/intelligence/BusinessBenchmarkCard";
+import BenchmarkInsightsPanel from "@/components/intelligence/BenchmarkInsightsPanel";
 import UpgradeAnalyticsCard from "@/components/intelligence/UpgradeAnalyticsCard";
 import {
   FavoritesCard,
@@ -23,7 +24,6 @@ import {
   ReviewsCard,
   BadgesCard,
   MonthlyHistoryCard,
-  BenchmarkingProCard,
 } from "@/components/business/BusinessProWidgets";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -50,7 +50,7 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
   const { data: reviewsData } = useBusinessReviewsData(isVerified && hasProAccess ? businessId : null);
   const { data: badges } = useBusinessBadges(isVerified && hasProAccess ? businessId : null);
   const { data: monthlyHistory } = useBusinessMonthlyHistory(isVerified && hasProAccess ? businessId : null);
-  const { data: benchmarkingPro } = useBusinessBenchmarkingPro(isVerified && hasProAccess ? businessId : null);
+  const { data: benchmarkData, isLoading: benchmarkLoading } = useBusinessBenchmark(isVerified && hasProAccess ? businessId : null, days);
 
   const { data, isLoading, error } = useBusinessIntelligence(
     isVerified && hasProAccess ? businessId : null,
@@ -195,7 +195,7 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
       {/* Benchmarking original + novo PRO */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <BusinessBenchmarkCard businessId={businessId} days={days} />
-        {benchmarkingPro && <BenchmarkingProCard data={benchmarkingPro} />}
+        <BenchmarkInsightsPanel data={benchmarkData} isLoading={benchmarkLoading} />
       </div>
 
     </div>
