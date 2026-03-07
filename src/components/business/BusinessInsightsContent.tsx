@@ -195,7 +195,7 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
       {/* Benchmarking original + novo PRO */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <BusinessBenchmarkCard businessId={businessId} days={days} />
-        {benchmarkingPro && <BenchmarkingProCard data={benchmarkingPro} />}
+        <BenchmarkInsightsPanel data={benchmarkData} isLoading={benchmarkLoading} />
       </div>
 
     </div>
