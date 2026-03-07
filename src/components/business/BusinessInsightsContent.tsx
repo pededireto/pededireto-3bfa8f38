@@ -3,6 +3,7 @@ import { Loader2, TrendingUp, Lock } from "lucide-react";
 import { useBusinessIntelligence } from "@/hooks/useBusinessIntelligence";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
+import { useBusinessBenchmark } from "@/hooks/useBusinessBenchmark";
 import {
   useBusinessFavorites,
   useBusinessProfileScore,
@@ -10,11 +11,11 @@ import {
   useBusinessReviewsData,
   useBusinessBadges,
   useBusinessMonthlyHistory,
-  useBusinessBenchmarkingPro,
 } from "@/hooks/useBusinessDashboardPro";
 import DateRangeFilter from "@/components/intelligence/DateRangeFilter";
 import BusinessPerformanceCard from "@/components/intelligence/BusinessPerformanceCard";
 import BusinessBenchmarkCard from "@/components/intelligence/BusinessBenchmarkCard";
+import BenchmarkInsightsPanel from "@/components/intelligence/BenchmarkInsightsPanel";
 import UpgradeAnalyticsCard from "@/components/intelligence/UpgradeAnalyticsCard";
 import {
   FavoritesCard,
