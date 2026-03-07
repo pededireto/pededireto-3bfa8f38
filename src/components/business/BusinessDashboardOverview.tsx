@@ -123,6 +123,10 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
     trial_ends_at: (business as any).trial_ends_at,
   });
   const plan = plans.find((p) => p.id === business.plan_id);
+  const { data: badges = [] } = useBusinessBadges(
+    permissions.canViewProAnalytics ? business.id : null
+  );
+  const unlockedBadges = badges.filter((b) => b.unlocked);
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["business-analytics", business.id] });
