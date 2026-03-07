@@ -28,6 +28,7 @@ import {
   Clock,
   AlertTriangle as AlertTriangleIcon,
   MessageCircle,
+  Trophy,
 } from "lucide-react";
 
 interface Props {
