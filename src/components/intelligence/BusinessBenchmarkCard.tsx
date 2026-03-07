@@ -134,7 +134,20 @@ const BusinessBenchmarkCard = ({ businessId, days }: BusinessBenchmarkCardProps)
     );
   }
 
-  if (!data) return null;
+  // No data at all OR no views → empty state
+  if (!data || (data.my_stats.views ?? 0) === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <BarChart2 className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Benchmarking</h2>
+        </div>
+        <div className="bg-card rounded-xl p-8 shadow-card text-center">
+          <p className="text-muted-foreground">Ainda sem dados suficientes para comparar</p>
+        </div>
+      </div>
+    );
+  }
 
   const myViews = data.my_stats.views ?? 0;
   const myClicks = data.my_stats.clicks ?? 0;
@@ -144,6 +157,8 @@ const BusinessBenchmarkCard = ({ businessId, days }: BusinessBenchmarkCardProps)
   const subAvgClicks = data.subcategory_stats.avg_clicks ?? 0;
   const cityAvgViews = data.city_stats.avg_views ?? 0;
   const cityAvgClicks = data.city_stats.avg_clicks ?? 0;
+
+  const hasCategoryComparison = (data.category_stats.total_businesses ?? 0) >= 2;
 
   const suggestions = generateSuggestions(data);
 
@@ -174,58 +189,66 @@ const BusinessBenchmarkCard = ({ businessId, days }: BusinessBenchmarkCardProps)
       </div>
 
       {/* Compare bars */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-card rounded-xl p-5 shadow-card space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Tag className="h-3.5 w-3.5 text-blue-500" />
+      {hasCategoryComparison ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-card rounded-xl p-5 shadow-card space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Tag className="h-3.5 w-3.5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold">{data.category_stats.name}</p>
+                <p className="text-xs text-muted-foreground">{data.category_stats.total_businesses} negócios</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-semibold">{data.category_stats.name}</p>
-              <p className="text-xs text-muted-foreground">{data.category_stats.total_businesses} negócios</p>
+            <CompareBar value={myViews} avg={catAvgViews} label="Visualizações" />
+            <CompareBar value={myClicks} avg={catAvgClicks} label="Cliques" />
+            <div className="pt-1 border-t border-border/50">
+              <p className="text-xs text-muted-foreground">Total: <span className="font-medium text-foreground">{data.category_stats.total_views} views · {data.category_stats.total_clicks} cliques</span></p>
             </div>
           </div>
-          <CompareBar value={myViews} avg={catAvgViews} label="Visualizações" />
-          <CompareBar value={myClicks} avg={catAvgClicks} label="Cliques" />
-          <div className="pt-1 border-t border-border/50">
-            <p className="text-xs text-muted-foreground">Total: <span className="font-medium text-foreground">{data.category_stats.total_views} views · {data.category_stats.total_clicks} cliques</span></p>
-          </div>
-        </div>
 
-        <div className="bg-card rounded-xl p-5 shadow-card space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
-              <Tag className="h-3.5 w-3.5 text-purple-500" />
+          <div className="bg-card rounded-xl p-5 shadow-card space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <Tag className="h-3.5 w-3.5 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold">{data.subcategory_stats.name}</p>
+                <p className="text-xs text-muted-foreground">{data.subcategory_stats.total_businesses} negócios</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-semibold">{data.subcategory_stats.name}</p>
-              <p className="text-xs text-muted-foreground">{data.subcategory_stats.total_businesses} negócios</p>
+            <CompareBar value={myViews} avg={subAvgViews} label="Visualizações" />
+            <CompareBar value={myClicks} avg={subAvgClicks} label="Cliques" />
+            <div className="pt-1 border-t border-border/50">
+              <p className="text-xs text-muted-foreground">Total: <span className="font-medium text-foreground">{data.subcategory_stats.total_views} views</span></p>
             </div>
           </div>
-          <CompareBar value={myViews} avg={subAvgViews} label="Visualizações" />
-          <CompareBar value={myClicks} avg={subAvgClicks} label="Cliques" />
-          <div className="pt-1 border-t border-border/50">
-            <p className="text-xs text-muted-foreground">Total: <span className="font-medium text-foreground">{data.subcategory_stats.total_views} views</span></p>
-          </div>
-        </div>
 
-        <div className="bg-card rounded-xl p-5 shadow-card space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-green-500/10 flex items-center justify-center">
-              <MapPin className="h-3.5 w-3.5 text-green-500" />
+          <div className="bg-card rounded-xl p-5 shadow-card space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <MapPin className="h-3.5 w-3.5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold">{data.city_stats.city}</p>
+                <p className="text-xs text-muted-foreground">{data.city_stats.total_businesses} concorrentes diretos</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-semibold">{data.city_stats.city}</p>
-              <p className="text-xs text-muted-foreground">{data.city_stats.total_businesses} concorrentes diretos</p>
+            <CompareBar value={myViews} avg={cityAvgViews} label="Visualizações" />
+            <CompareBar value={myClicks} avg={cityAvgClicks} label="Cliques" />
+            <div className="pt-1 border-t border-border/50">
+              <p className="text-xs text-muted-foreground">Mesma subcategoria e cidade</p>
             </div>
-          </div>
-          <CompareBar value={myViews} avg={cityAvgViews} label="Visualizações" />
-          <CompareBar value={myClicks} avg={cityAvgClicks} label="Cliques" />
-          <div className="pt-1 border-t border-border/50">
-            <p className="text-xs text-muted-foreground">Mesma subcategoria e cidade</p>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-card rounded-xl p-5 shadow-card text-center">
+          <p className="text-sm text-muted-foreground">
+            Ainda a recolher dados da categoria para comparação completa.
+          </p>
+        </div>
+      )}
 
       {/* Sugestões inteligentes */}
       {suggestions.length > 0 && (

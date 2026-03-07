@@ -10,6 +10,7 @@ import { useBusinessPlan } from "@/hooks/useBusinessPlan";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
 import BusinessProAlerts from "@/components/business/BusinessProAlerts";
 import BusinessSearchPosition from "@/components/business/BusinessSearchPosition";
+import { useBusinessBadges } from "@/hooks/useBusinessDashboardPro";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,7 @@ import {
   Clock,
   AlertTriangle as AlertTriangleIcon,
   MessageCircle,
+  Trophy,
 } from "lucide-react";
 
 interface Props {
@@ -121,6 +123,10 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
     trial_ends_at: (business as any).trial_ends_at,
   });
   const plan = plans.find((p) => p.id === business.plan_id);
+  const { data: badges = [] } = useBusinessBadges(
+    permissions.canViewProAnalytics ? business.id : null
+  );
+  const unlockedBadges = badges.filter((b) => b.unlocked);
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["business-analytics", business.id] });
@@ -328,6 +334,39 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
           <p className="text-xs text-muted-foreground mt-1">Não lidas</p>
         </div>
       </div>
+
+      {/* Conquistas Widget */}
+      {permissions.canViewProAnalytics && unlockedBadges.length > 0 && (
+        <div className="bg-card rounded-xl p-5 shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Conquistas</span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs p-0 h-auto text-primary"
+              onClick={() => onNavigate?.("badges")}
+            >
+              Ver todas →
+            </Button>
+          </div>
+          <div className="space-y-1.5">
+            {unlockedBadges.slice(0, 3).map((badge) => (
+              <div key={badge.name} className="flex items-center gap-2 text-sm">
+                <span className="text-green-500">✅</span>
+                <span className="text-foreground">{badge.name}</span>
+              </div>
+            ))}
+            {unlockedBadges.length > 3 && (
+              <p className="text-xs text-muted-foreground ml-6">
+                (+{unlockedBadges.length - 3} mais)
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <BusinessSearchPosition

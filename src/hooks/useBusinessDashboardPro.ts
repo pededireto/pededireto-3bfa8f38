@@ -45,45 +45,15 @@ export const useBusinessProfileScore = (businessId: string | null) => {
 
       const fields = [
         { label: "Nome do negócio", filled: !!data.name, points: 10, tip: "Certifica-te que o nome está correto" },
-        {
-          label: "Descrição",
-          filled: !!data.description,
-          points: 15,
-          tip: "Adiciona uma descrição detalhada para atrair mais clientes",
-        },
+        { label: "Descrição", filled: !!data.description, points: 15, tip: "Adiciona uma descrição detalhada para atrair mais clientes" },
         { label: "Logo / Imagem", filled: !!data.logo_url, points: 15, tip: "Negócios com logo têm 2x mais cliques" },
-        {
-          label: "WhatsApp ou Telefone",
-          filled: !!(data.cta_whatsapp || data.cta_phone),
-          points: 15,
-          tip: "Adiciona pelo menos um contacto direto",
-        },
-        {
-          label: "Email de contacto",
-          filled: !!data.cta_email,
-          points: 5,
-          tip: "Permite que clientes te contactem por email",
-        },
+        { label: "WhatsApp ou Telefone", filled: !!(data.cta_whatsapp || data.cta_phone), points: 15, tip: "Adiciona pelo menos um contacto direto" },
+        { label: "Email de contacto", filled: !!data.cta_email, points: 5, tip: "Permite que clientes te contactem por email" },
         { label: "Website", filled: !!data.cta_website, points: 5, tip: "Liga o teu website para mais credibilidade" },
-        {
-          label: "Horário de funcionamento",
-          filled: !!data.schedule_weekdays,
-          points: 10,
-          tip: "Clientes querem saber quando podes atender",
-        },
-        {
-          label: "Morada pública",
-          filled: !!data.public_address,
-          points: 10,
-          tip: "Ajuda clientes a encontrarem-te no mapa",
-        },
+        { label: "Horário de funcionamento", filled: !!data.schedule_weekdays, points: 10, tip: "Clientes querem saber quando podes atender" },
+        { label: "Morada pública", filled: !!data.public_address, points: 10, tip: "Ajuda clientes a encontrarem-te no mapa" },
         { label: "Cidade", filled: !!data.city, points: 5, tip: "Essencial para aparecer em pesquisas locais" },
-        {
-          label: "Redes sociais",
-          filled: !!(data.facebook_url || data.instagram_url),
-          points: 10,
-          tip: "Aumenta a confiança dos potenciais clientes",
-        },
+        { label: "Redes sociais", filled: !!(data.facebook_url || data.instagram_url), points: 10, tip: "Aumenta a confiança dos potenciais clientes" },
       ];
 
       const score = fields.reduce((acc, f) => acc + (f.filled ? f.points : 0), 0);
@@ -130,14 +100,8 @@ export const useBusinessServiceRequests = (businessId: string | null) => {
 
       if (rows.length === 0) {
         return {
-          total: 0,
-          pending: 0,
-          accepted: 0,
-          rejected: 0,
-          viewed: 0,
-          acceptance_rate: 0,
-          avg_response_hours: null,
-          recent: [],
+          total: 0, pending: 0, accepted: 0, rejected: 0, viewed: 0,
+          acceptance_rate: 0, avg_response_hours: null, recent: [],
         } as ServiceRequestsData;
       }
 
@@ -178,16 +142,7 @@ export const useBusinessServiceRequests = (businessId: string | null) => {
         };
       });
 
-      return {
-        total,
-        pending,
-        accepted,
-        rejected,
-        viewed,
-        acceptance_rate: total > 0 ? Math.round((accepted / total) * 100 * 10) / 10 : 0,
-        avg_response_hours,
-        recent,
-      } as ServiceRequestsData;
+      return { total, pending, accepted, rejected, viewed, acceptance_rate: total > 0 ? Math.round((accepted / total) * 100 * 10) / 10 : 0, avg_response_hours, recent } as ServiceRequestsData;
     },
     enabled: !!businessId,
     staleTime: 2 * 60 * 1000,
@@ -256,53 +211,72 @@ export const useBusinessReviewsData = (businessId: string | null) => {
   });
 };
 
-// ─── Badges ───────────────────────────────────────────────────────────────────
+// ─── Badges (with progress-based unlock) ──────────────────────────────────────
 export interface BadgeData {
   name: string;
   description: string | null;
   icon_url: string | null;
   color: string | null;
-  earned_at: string;
+  earned_at: string | null;
   earned_automatically: boolean;
+  unlocked: boolean;
 }
 
 export const useBusinessBadges = (businessId: string | null) => {
   return useQuery({
     queryKey: ["business-badges", businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_earned_badges")
-        .select("earned_at, earned_automatically, badge_id")
-        .eq("business_id", businessId!)
-        .order("earned_at", { ascending: false });
-
-      if (error) throw error;
-      const rows = Array.isArray(data) ? data : [];
-      if (rows.length === 0) return [] as BadgeData[];
-
-      const badgeIds = rows.map((r: any) => r.badge_id).filter(Boolean);
-      const { data: badgesData } = await supabase
+      // 1. Get all active badges
+      const { data: allBadges, error: badgesErr } = await supabase
         .from("business_badges")
         .select("id, name, description, icon_url, color")
-        .in("id", badgeIds)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      if (badgesErr) throw badgesErr;
+      if (!allBadges || allBadges.length === 0) return [] as BadgeData[];
 
-      const badgeMap = new Map((Array.isArray(badgesData) ? badgesData : []).map((b: any) => [b.id, b]));
+      // 2. Get earned badges
+      const { data: earned, error: earnedErr } = await supabase
+        .from("business_earned_badges")
+        .select("badge_id, earned_at, earned_automatically")
+        .eq("business_id", businessId!);
+      if (earnedErr) throw earnedErr;
+      const earnedMap = new Map((earned || []).map((e) => [e.badge_id, e]));
 
-      return rows
-        .map((r: any) => {
-          const b = badgeMap.get(r.badge_id) as any;
-          if (!b) return null;
-          return {
-            name: b.name,
-            description: b.description ?? null,
-            icon_url: b.icon_url ?? null,
-            color: b.color ?? null,
-            earned_at: r.earned_at,
-            earned_automatically: r.earned_automatically ?? false,
-          };
-        })
-        .filter(Boolean) as BadgeData[];
+      // 3. Get progress
+      const { data: progress, error: progErr } = await supabase
+        .from("business_badge_progress" as any)
+        .select("badge_id, current_value, target_value")
+        .eq("business_id", businessId!);
+      if (progErr) throw progErr;
+      const progressMap = new Map((progress as any[] || []).map((p: any) => [p.badge_id, p]));
+
+      // 4. Merge: unlocked = earned OR (current_value >= target_value)
+      const result: BadgeData[] = allBadges.map((b) => {
+        const e = earnedMap.get(b.id);
+        const p = progressMap.get(b.id);
+        const unlockedByProgress = p && p.target_value > 0 && p.current_value >= p.target_value;
+        const unlocked = !!e || !!unlockedByProgress;
+
+        return {
+          name: b.name,
+          description: b.description ?? null,
+          icon_url: b.icon_url ?? null,
+          color: b.color ?? null,
+          earned_at: e?.earned_at ?? null,
+          earned_automatically: e?.earned_automatically ?? false,
+          unlocked,
+        };
+      });
+
+      // Sort: unlocked first
+      result.sort((a, b) => {
+        if (a.unlocked && !b.unlocked) return -1;
+        if (!a.unlocked && b.unlocked) return 1;
+        return 0;
+      });
+
+      return result;
     },
     enabled: !!businessId,
     staleTime: 10 * 60 * 1000,
@@ -324,7 +298,6 @@ export const useBusinessMonthlyHistory = (businessId: string | null) => {
       const since = new Date();
       since.setMonth(since.getMonth() - 12);
 
-      // ✅ Tabela correcta
       const { data, error } = await supabase
         .from("analytics_events")
         .select("event_type, created_at")
@@ -375,17 +348,10 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
     queryKey: ["business-benchmarking-pro", businessId],
     queryFn: async () => {
       const empty: BenchmarkingData = {
-        posicao_geral: 0,
-        posicao_cidade: 0,
-        views_this_month: 0,
-        leads_this_month: 0,
-        media_views_categoria: 0,
-        media_leads_categoria: 0,
-        media_ctr_categoria: 0,
-        total_negocios_categoria: 0,
+        posicao_geral: 0, posicao_cidade: 0, views_this_month: 0, leads_this_month: 0,
+        media_views_categoria: 0, media_leads_categoria: 0, media_ctr_categoria: 0, total_negocios_categoria: 0,
       };
 
-      // 1. Buscar category_id e city do negócio
       const { data: biz, error: bizError } = await supabase
         .from("businesses")
         .select("category_id, city")
@@ -394,7 +360,6 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
       if (bizError) throw bizError;
       if (!biz?.category_id) return empty;
 
-      // 2. Buscar IDs dos negócios da mesma categoria
       const { data: categoryBusinesses, error: catError } = await supabase
         .from("businesses")
         .select("id, city")
@@ -407,7 +372,6 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
 
       const categoryIds = categoryBizList.map((b: any) => b.id);
 
-      // 3. ✅ Colunas correctas: views_this_month, leads_this_month, conversion_rate_this_month
       const { data: metrics, error: metricsError } = await supabase
         .from("business_analytics_metrics")
         .select("business_id, views_this_month, leads_this_month, conversion_rate_this_month")
@@ -416,31 +380,18 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
 
       const metricsList = Array.isArray(metrics) ? metrics : [];
 
-      // 4. Rankings por views_this_month
-      const sortedGeral = [...metricsList].sort(
-        (a: any, b: any) => (b.views_this_month ?? 0) - (a.views_this_month ?? 0),
-      );
+      const sortedGeral = [...metricsList].sort((a: any, b: any) => (b.views_this_month ?? 0) - (a.views_this_month ?? 0));
       const posicao_geral = sortedGeral.findIndex((m: any) => m.business_id === businessId) + 1;
 
       const cityIds = new Set(categoryBizList.filter((b: any) => b.city === biz.city).map((b: any) => b.id));
       const cityMetrics = metricsList.filter((m: any) => cityIds.has(m.business_id));
-      const sortedCity = [...cityMetrics].sort(
-        (a: any, b: any) => (b.views_this_month ?? 0) - (a.views_this_month ?? 0),
-      );
+      const sortedCity = [...cityMetrics].sort((a: any, b: any) => (b.views_this_month ?? 0) - (a.views_this_month ?? 0));
       const posicao_cidade = sortedCity.findIndex((m: any) => m.business_id === businessId) + 1;
 
-      // 5. Médias da categoria
       const total = metricsList.length;
-      const media_views =
-        total > 0 ? Math.round(metricsList.reduce((s: number, m: any) => s + (m.views_this_month ?? 0), 0) / total) : 0;
-      const media_leads =
-        total > 0 ? Math.round(metricsList.reduce((s: number, m: any) => s + (m.leads_this_month ?? 0), 0) / total) : 0;
-      const media_ctr =
-        total > 0
-          ? Math.round(
-              (metricsList.reduce((s: number, m: any) => s + (m.conversion_rate_this_month ?? 0), 0) / total) * 10,
-            ) / 10
-          : 0;
+      const media_views = total > 0 ? Math.round(metricsList.reduce((s: number, m: any) => s + (m.views_this_month ?? 0), 0) / total) : 0;
+      const media_leads = total > 0 ? Math.round(metricsList.reduce((s: number, m: any) => s + (m.leads_this_month ?? 0), 0) / total) : 0;
+      const media_ctr = total > 0 ? Math.round((metricsList.reduce((s: number, m: any) => s + (m.conversion_rate_this_month ?? 0), 0) / total) * 10) / 10 : 0;
 
       const myMetrics = metricsList.find((m: any) => m.business_id === businessId) as any;
 
