@@ -196,7 +196,7 @@ const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => v
                       : "bg-muted text-foreground rounded-bl-sm"
                   }`}
                 >
-                  {!isBusiness && <p className="text-xs font-semibold mb-1 opacity-70">Consumidor</p>}
+                  {!isBusiness && <p className="text-xs font-semibold mb-1 opacity-70">{consumerDisplayName}</p>}
                   <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                   <p className={`text-xs mt-1 ${isBusiness ? "opacity-70 text-right" : "opacity-50"}`}>
                     {new Date(msg.created_at).toLocaleTimeString("pt-PT", {
