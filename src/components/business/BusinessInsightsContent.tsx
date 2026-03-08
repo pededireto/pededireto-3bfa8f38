@@ -148,6 +148,35 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
     );
   }
 
+  const exportToCSV = () => {
+    if (!data) return;
+    const rows = [
+      ['Métrica', 'Valor', 'Período'],
+      ['Visualizações totais', data.views_total ?? 0, 'Total'],
+      ['Visualizações este mês', data.views_this_month ?? 0, 'Mês actual'],
+      ['Visualizações mês anterior', data.views_last_month ?? 0, 'Mês anterior'],
+      ['Contactos totais', data.leads_total ?? 0, 'Total'],
+      ['Contactos este mês', data.leads_this_month ?? 0, 'Mês actual'],
+      ['Cliques WhatsApp', data.clicks_whatsapp ?? 0, 'Total'],
+      ['Cliques Telefone', data.clicks_phone ?? 0, 'Total'],
+      ['Cliques Email', data.clicks_email ?? 0, 'Total'],
+      ['Cliques Website', data.clicks_website ?? 0, 'Total'],
+      ['Taxa de conversão', (data.conversion_rate ?? 0) + '%', 'Total'],
+      ['Favoritos', data.favorites_count ?? 0, 'Total'],
+      ['Partilhas', data.shares_count ?? 0, 'Total'],
+      ['Hora de pico', (data.most_active_hour ?? '-') + 'h', '-'],
+      ['Dia mais activo', data.most_active_day_of_week ?? '-', '-'],
+    ];
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `insights-${businessId}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-8">
 
@@ -157,7 +186,13 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
           <TrendingUp className="h-5 w-5 text-primary" />
           <h1 className="text-xl font-semibold">Insights PRO</h1>
         </div>
-        <DateRangeFilter days={days} onChange={setDays} />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportToCSV}>
+            <Download className="h-4 w-4 mr-1" />
+            Exportar CSV
+          </Button>
+          <DateRangeFilter days={days} onChange={setDays} />
+        </div>
       </div>
 
       {/* Performance existente (sem alterações) */}
