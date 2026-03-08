@@ -69,6 +69,14 @@ const Header = () => {
           </Link>
 
           <Link
+            to="/pricing"
+            aria-current={isActive("/pricing") ? "page" : undefined}
+            className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+          >
+            Preços
+          </Link>
+
+          <Link
             to="/claim-business"
             aria-current={isActive("/claim-business") ? "page" : undefined}
             className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
