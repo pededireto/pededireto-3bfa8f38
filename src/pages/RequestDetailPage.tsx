@@ -169,6 +169,7 @@ const RequestDetailPage = () => {
           `
           id, description, status, urgency,
           location_city, location_postal_code, created_at,
+          category_id, subcategory_id,
           categories:category_id (name),
           subcategories:subcategory_id (name)
         `,
