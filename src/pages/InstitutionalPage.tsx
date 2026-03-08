@@ -98,6 +98,8 @@ const InstitutionalPage = () => {
           <ConsumersLandingPage />
         ) : slug === "pedebusinesspaginaprincipal" ? (
           <BusinessLandingPage />
+        ) : slug === "quem-somos" ? (
+          <AboutLandingPage />
         ) : (
           <>
             <section className="section-hero py-12">
