@@ -1,14 +1,53 @@
 import { useParams, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useCategory, useCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
+import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SubcategoriesGrid from "@/components/SubcategoriesGrid";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const BASE_URL = "https://pededireto.pt";
+
+const slugify = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+const useCitiesForCategory = (categoryId?: string) =>
+  useQuery({
+    queryKey: ["category-cities", categoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("city")
+        .eq("category_id", categoryId!)
+        .eq("is_active", true)
+        .not("city", "is", null);
+
+      if (error) throw error;
+
+      const cityMap = new Map<string, string>();
+      for (const b of data ?? []) {
+        if (!b.city) continue;
+        const key = slugify(b.city);
+        if (!cityMap.has(key)) cityMap.set(key, b.city);
+      }
+
+      return Array.from(cityMap.entries())
+        .map(([slug, name]) => ({ slug, name }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .slice(0, 12);
+    },
+    enabled: !!categoryId,
+  });
 
 const CategoryPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -16,6 +55,7 @@ const CategoryPage = () => {
   const { data: category, isLoading: categoryLoading } = useCategory(slug);
   const { data: allCategories = [] } = useCategories();
   const { data: subcategories = [], isLoading: subcategoriesLoading } = useSubcategories(category?.id);
+  const { data: cities = [] } = useCitiesForCategory(category?.id);
 
   const currentIndex = allCategories.findIndex((c) => c.slug === slug);
   const prevCategory = currentIndex > 0 ? allCategories[currentIndex - 1] : null;
@@ -137,6 +177,29 @@ const CategoryPage = () => {
             <p className="text-sm text-primary font-medium mb-8">{getContextualMessage()}</p>
           </div>
         </section>
+
+        {/* City Chips */}
+        {cities.length > 0 && (
+          <section className="pb-8">
+            <div className="container">
+              <h2 className="text-lg font-semibold mb-3">
+                {category.name} por cidade
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {cities.map((c) => (
+                  <Link key={c.slug} to={`/categoria/${slug}/cidade/${c.slug}`}>
+                    <Badge
+                      variant="outline"
+                      className="px-3 py-1.5 text-sm cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      {c.name}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Subcategories Grid */}
         <section className="pb-12">

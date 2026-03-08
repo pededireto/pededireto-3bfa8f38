@@ -1,9 +1,10 @@
 import { BusinessWithCategory } from "@/hooks/useBusinesses";
+import { PublicBusinessWithCategory } from "@/hooks/usePublicBusinesses";
 import BusinessCard from "@/components/BusinessCard";
 import { Loader2 } from "lucide-react";
 
 interface BusinessGridProps {
-  businesses: BusinessWithCategory[];
+  businesses: (BusinessWithCategory | PublicBusinessWithCategory)[];
   title?: string;
   subtitle?: string;
   isLoading?: boolean;
