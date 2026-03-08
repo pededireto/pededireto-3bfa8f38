@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BlockRenderer from "@/components/BlockRenderer";
 import ConsumersLandingPage from "@/components/ConsumersLandingPage";
+import BusinessLandingPage from "@/components/BusinessLandingPage";
 import { Loader2 } from "lucide-react";
 import DOMPurify from "dompurify";
 
@@ -94,6 +95,8 @@ const InstitutionalPage = () => {
       <main className="flex-1">
         {slug === "pedediretoconsumidores" ? (
           <ConsumersLandingPage />
+        ) : slug === "pedebusinesspaginaprincipal" ? (
+          <BusinessLandingPage />
         ) : (
           <>
             <section className="section-hero py-12">
