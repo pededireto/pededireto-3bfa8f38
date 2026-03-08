@@ -71,6 +71,7 @@ const SearchPage = () => {
   const businessGroups = result?.businessGroups ?? [];
   const totalFound = result?.totalFound ?? 0;
   const complementaryServices = result?.complementaryServices ?? [];
+  const suggestionGroups = result?.suggestionGroups ?? [];
 
   const firstBusiness = businessGroups[0]?.businesses[0] ?? null;
   const categorySlug = firstBusiness?.category_slug ?? null;
