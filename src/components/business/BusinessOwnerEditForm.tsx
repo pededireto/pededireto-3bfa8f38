@@ -30,6 +30,8 @@ import {
   Trash2,
   Image,
 } from "lucide-react";
+import { useBusinessPlan } from "@/hooks/useBusinessPlan";
+import PlanLockedOverlay from "@/components/business/PlanLockedOverlay";
 
 // ── Parser de horários do Google ──────────────────────────
 const DAY_MAP: Record<string, string> = {
@@ -186,6 +188,7 @@ function Section({
 const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps) => {
   const { toast } = useToast();
   const updateBusiness = useUpdateBusinessOwner();
+  const planInfo = useBusinessPlan(business);
   const syncSubcategories = useSyncBusinessSubcategories();
   const { data: categories = [] } = useCategories();
   const { data: allSubcategories = [] } = useAllSubcategories();
@@ -568,7 +571,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
       </Section>
 
       {/* 4. Presença Digital */}
-      <Section title="Presença Digital" icon={Share2} defaultOpen={false} badge="PRO">
+      <Section title="Presença Digital" icon={Share2} defaultOpen={false} badge={planInfo.isFree ? "START +" : planInfo.isStart ? "START" : "PRO"}>
+        <PlanLockedOverlay locked={planInfo.isFree} requiredPlan="start">
         <div className="space-y-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -704,6 +708,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
             )}
           </div>
         </div>
+        </PlanLockedOverlay>
       </Section>
 
       {/* 5. Administração */}

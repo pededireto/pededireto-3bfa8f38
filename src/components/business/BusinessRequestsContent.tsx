@@ -44,6 +44,7 @@ import {
   Search,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatReviewerName } from "@/lib/utils";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ const matchStatusConfig: Record<
 
 // ─── Sub-componente: Chat de um pedido (com Realtime) ─────────────────────────
 
-const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => void }) => {
+const RequestChat = ({ requestId, consumerDisplayName = "Consumidor", onRead }: { requestId: string; consumerDisplayName?: string; onRead: () => void }) => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -195,7 +196,7 @@ const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => v
                       : "bg-muted text-foreground rounded-bl-sm"
                   }`}
                 >
-                  {!isBusiness && <p className="text-xs font-semibold mb-1 opacity-70">Consumidor</p>}
+                  {!isBusiness && <p className="text-xs font-semibold mb-1 opacity-70">{consumerDisplayName}</p>}
                   <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                   <p className={`text-xs mt-1 ${isBusiness ? "opacity-70 text-right" : "opacity-50"}`}>
                     {new Date(msg.created_at).toLocaleTimeString("pt-PT", {
@@ -436,7 +437,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             {(sr?.consumer_name || profile?.full_name) && (
               <div className="flex items-center gap-2 text-foreground">
                 <User className="h-3.5 w-3.5 text-muted-foreground" />
-                {sr?.consumer_name || profile?.full_name}
+               {profile?.full_name || sr?.consumer_name}
               </div>
             )}
             {(sr?.consumer_email || profile?.email) && (
@@ -463,7 +464,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
               {(sr?.consumer_name || profile?.full_name) && (
                 <div className="flex items-center gap-2 text-foreground">
                   <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  {sr?.consumer_name || profile?.full_name}
+                  {formatReviewerName(profile?.full_name || sr?.consumer_name)}
                 </div>
               )}
               <div className="flex items-center gap-2 text-muted-foreground text-xs mt-1">
@@ -535,7 +536,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
         </div>
 
         {/* Inline chat */}
-        {requestId && chatOpen && isAccepted && <RequestChat requestId={requestId} onRead={handleRead} />}
+        {requestId && chatOpen && isAccepted && <RequestChat requestId={requestId} consumerDisplayName={formatReviewerName(profile?.full_name)} onRead={handleRead} />}
       </div>
     );
   };
