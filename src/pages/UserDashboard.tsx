@@ -241,6 +241,9 @@ const UserDashboard = () => {
         {/* ── F — Activity Timeline ───────────────────────────────── */}
         <ConsumerActivityTimeline userId={user?.id} />
 
+        {/* ── G — Digest Preferences ─────────────────────────────── */}
+        <DigestPreferencesToggle />
+
         {/* ── F — Tabs ───────────────────────────────────────────────── */}
         <Tabs defaultValue="requests" className="w-full">
           <TabsList className="mb-4">
