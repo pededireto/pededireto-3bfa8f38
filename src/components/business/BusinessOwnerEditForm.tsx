@@ -707,6 +707,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
             )}
           </div>
         </div>
+        </PlanLockedOverlay>
       </Section>
 
       {/* 5. Administração */}
