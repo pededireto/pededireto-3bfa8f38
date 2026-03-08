@@ -6868,6 +6868,7 @@ export type Database = {
         }
         Returns: string
       }
+      create_test_users: { Args: never; Returns: undefined }
       detect_best_pattern: {
         Args: { input_text: string }
         Returns: {
