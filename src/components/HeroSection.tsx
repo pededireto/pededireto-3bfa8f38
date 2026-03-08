@@ -32,6 +32,9 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   const heroSubtitle = settings?.hero_subtitle || "Restaurantes, técnicos, lojas e serviços locais. Contacte diretamente — sem intermediários.";
   const mascotUrl = settings?.mascot_url;
   const mascotEnabled = settings?.mascot_enabled === "true";
+  const heroMediaType = settings?.hero_media_type || "image";
+  const heroVideoUrl = settings?.hero_video_url;
+  const youtubeEmbedUrl = heroVideoUrl ? getYouTubeEmbedUrl(heroVideoUrl) : null;
 
   // Rotate placeholder
   useEffect(() => {
