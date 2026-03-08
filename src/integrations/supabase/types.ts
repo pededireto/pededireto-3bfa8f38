@@ -2905,6 +2905,45 @@ export type Database = {
           },
         ]
       }
+      consumer_activity_log: {
+        Row: {
+          created_at: string
+          description: string | null
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string
+          icon: string | null
+          id: string
+          metadata: Json | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type: string
+          icon?: string | null
+          id?: string
+          metadata?: Json | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type?: string
+          icon?: string | null
+          id?: string
+          metadata?: Json | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       consumer_badge_progress: {
         Row: {
           badge_id: string
