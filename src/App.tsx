@@ -18,6 +18,7 @@ import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import SubcategoryPage from "./pages/SubcategoryPage";
 import SubcategoryCityPage from "./pages/SubcategoryCityPage";
+import SeoSubcategoryCityPage from "./pages/SeoSubcategoryCityPage";
 import BusinessPage from "./pages/BusinessPage";
 import InstitutionalPage from "./pages/InstitutionalPage";
 
