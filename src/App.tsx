@@ -18,6 +18,7 @@ import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import SubcategoryPage from "./pages/SubcategoryPage";
 import SubcategoryCityPage from "./pages/SubcategoryCityPage";
+import SeoSubcategoryCityPage from "./pages/SeoSubcategoryCityPage";
 import BusinessPage from "./pages/BusinessPage";
 import InstitutionalPage from "./pages/InstitutionalPage";
 
@@ -143,6 +144,7 @@ const App = () => {
                     <Route path="/blog/:slug" element={<BlogPostPage />} />
                     <Route path="/top/:subcategorySlug/:citySlug" element={<TopRankingPage />} />
                     <Route path="/top/:subcategorySlug" element={<TopRankingPage />} />
+                    <Route path="/s/:subSlug/:citySlug" element={<SeoSubcategoryCityPage />} />
                     <Route path="/p/:slug" element={<BusinessShortUrl />} />
 
                     {/* AUTH */}

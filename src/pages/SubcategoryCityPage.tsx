@@ -119,12 +119,28 @@ const useOtherCitiesForSubcategory = (subcategoryId?: string, currentCity?: stri
 
 /* ── page ────────────────────────────── */
 
-const SubcategoryCityPage = () => {
-  const { categorySlug, subcategorySlug, citySlug } = useParams<{
+interface SubcategoryCityPageProps {
+  overrideCategorySlug?: string;
+  overrideSubcategorySlug?: string;
+  overrideCitySlug?: string;
+  isShortUrl?: boolean;
+}
+
+const SubcategoryCityPage = ({
+  overrideCategorySlug,
+  overrideSubcategorySlug,
+  overrideCitySlug,
+  isShortUrl = false,
+}: SubcategoryCityPageProps = {}) => {
+  const params = useParams<{
     categorySlug: string;
     subcategorySlug: string;
     citySlug: string;
   }>();
+
+  const categorySlug = overrideCategorySlug || params.categorySlug;
+  const subcategorySlug = overrideSubcategorySlug || params.subcategorySlug;
+  const citySlug = overrideCitySlug || params.citySlug;
 
   const cityDisplay = capitalize(citySlug || "");
   const { data: subcategory, isLoading: subLoading } = useSubcategory(subcategorySlug);
@@ -178,7 +194,10 @@ const SubcategoryCityPage = () => {
     ? `${subcategory.description.slice(0, 100).trim()} Encontre ${subcategoryName.toLowerCase()} em ${cityDisplay}. Contacte diretamente, sem intermediários.`
     : `Encontre os melhores ${subcategoryName.toLowerCase()} em ${cityDisplay}. Contacte diretamente, sem intermediários — só no Pede Direto.`;
 
-  const pageUrl = `${BASE_URL}/categoria/${categorySlug}/${subcategorySlug}/cidade/${citySlug}`;
+  const canonicalUrl = `${BASE_URL}/s/${subcategorySlug}/${citySlug}`;
+  const pageUrl = isShortUrl
+    ? canonicalUrl
+    : `${BASE_URL}/categoria/${categorySlug}/${subcategorySlug}/cidade/${citySlug}`;
 
   const itemListSchema = {
     "@context": "https://schema.org",
@@ -234,11 +253,11 @@ const SubcategoryCityPage = () => {
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
-        <link rel="canonical" href={pageUrl} />
+        <link rel="canonical" href={canonicalUrl} />
         <meta property="og:type" content="website" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content={pageUrl} />
+        <meta property="og:url" content={canonicalUrl} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
@@ -285,6 +304,17 @@ const SubcategoryCityPage = () => {
             </p>
           </div>
         </section>
+
+        {/* SEO intro text */}
+        {businesses.length > 0 && (
+          <section className="pb-4">
+            <div className="container">
+              <p className="text-sm text-muted-foreground max-w-3xl">
+                Encontre os melhores {subcategoryName.toLowerCase()} em {cityDisplay}. O Pede Direto lista {businesses.length} profissiona{businesses.length === 1 ? "l verificado" : "is verificados"} em {cityDisplay}, com avaliações reais de clientes, horários e contactos directos. Compare orçamentos e escolha o profissional certo para si.
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Business Grid */}
         {businesses.length > 0 ? (
