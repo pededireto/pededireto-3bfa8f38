@@ -53,6 +53,7 @@ import TopRankingPage from "./pages/TopRankingPage";
 import PricingPage from "./pages/PricingPage";
 import BusinessShortUrl from "./pages/BusinessShortUrl";
 import NotFound from "./pages/NotFound";
+import UnsubscribePage from "./pages/UnsubscribePage";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
 
@@ -223,6 +224,8 @@ const App = () => {
                     {/* SERVICES */}
                     <Route path="/pedir-servico" element={<RequestServicePage />} />
                     <Route path="/upgrade" element={<UpgradePage />} />
+
+                    <Route path="/unsubscribe" element={<UnsubscribePage />} />
 
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />
