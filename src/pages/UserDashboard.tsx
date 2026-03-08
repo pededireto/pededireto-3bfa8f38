@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import ConsumerMetricsBar from "@/components/consumer/ConsumerMetricsBar";
 import ConsumerBadgesSection from "@/components/consumer/ConsumerBadgesSection";
 import ConsumerRequestCard from "@/components/consumer/ConsumerRequestCard";
+import ConsumerActivityTimeline from "@/components/consumer/ConsumerActivityTimeline";
 
 const UserDashboard = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
@@ -232,7 +233,10 @@ const UserDashboard = () => {
         {/* ── D — Badges (Conquistas) ────────────────────────────────── */}
         <ConsumerBadgesSection profileId={profile?.id} />
 
-        {/* ── E — Tabs ───────────────────────────────────────────────── */}
+        {/* ── E — Activity Timeline ───────────────────────────────── */}
+        <ConsumerActivityTimeline userId={user?.id} />
+
+        {/* ── F — Tabs ───────────────────────────────────────────────── */}
         <Tabs defaultValue="requests" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="requests" className="gap-2">
