@@ -9,6 +9,7 @@ import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusinessTopPosition } from "@/hooks/useTopRanking";
+import { useBusinessResponseTime } from "@/hooks/useBusinessResponseTime";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
