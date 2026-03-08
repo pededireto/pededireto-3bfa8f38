@@ -249,6 +249,12 @@ const TopRankingPage = () => {
                             <span className="badge-premium text-[10px] px-1.5 py-0.5">Premium</span>
                           )}
                         </div>
+                        {/* Earned badges */}
+                        {badgesMap.get(biz.id)?.length ? (
+                          <div className="mt-0.5">
+                            <BadgePills badges={badgesMap.get(biz.id)!} max={2} />
+                          </div>
+                        ) : null}
                         {biz.city && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                             <MapPin className="w-3 h-3" />
