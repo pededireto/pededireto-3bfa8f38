@@ -19,6 +19,7 @@ import AnalyticsContent from "@/components/admin/AnalyticsContent";
 import SettingsContent from "@/components/admin/SettingsContent";
 import PagesContent from "@/components/admin/PagesContent";
 import SynonymsContent from "@/components/admin/SynonymsContent";
+import SubcategoryRelationsContent from "@/components/admin/SubcategoryRelationsContent";
 import PlansContent from "@/components/admin/PlansContent";
 import SearchLogsContent from "@/components/admin/SearchLogsContent";
 import AlertsContent from "@/components/admin/AlertsContent";
@@ -61,6 +62,7 @@ const AdminPage = () => {
     if (activeTab === "settings") return <SettingsContent />;
     if (activeTab === "pages") return <PagesContent />;
     if (activeTab === "synonyms") return <SynonymsContent />;
+    if (activeTab === "subcategory-relations") return <SubcategoryRelationsContent />;
     if (activeTab === "plans") return <PlansContent />;
     if (activeTab === "search-logs") return <SearchLogsContent />;
     if (activeTab === "alerts") return <PlatformAlertsContent />;

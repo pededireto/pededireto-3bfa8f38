@@ -62,6 +62,7 @@ export type AdminTab =
   | "settings"
   | "pages"
   | "synonyms"
+  | "subcategory-relations"
   | "team-management"
   | "action-requests"
   | "audit-logs"
@@ -149,6 +150,7 @@ const SIDEBAR_STRUCTURE: Omit<SidebarItem, "badge">[][] = [
     { id: "categories", label: "Categorias", icon: FolderOpen },
     { id: "pages", label: "Páginas", icon: FileText },
     { id: "synonyms", label: "Sinónimos", icon: BookOpen },
+    { id: "subcategory-relations", label: "Relações", icon: Puzzle },
     { id: "homepage", label: "Homepage", icon: Home },
     { id: "blog", label: "Blog", icon: BookOpen },
   ],

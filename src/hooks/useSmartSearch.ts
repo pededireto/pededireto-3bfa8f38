@@ -23,6 +23,14 @@ export interface BusinessGroup {
   businesses: SmartBusiness[];
 }
 
+export interface SuggestionGroup {
+  label: string;
+  subcategorySlug: string;
+  categorySlug: string;
+  relationType: string;
+  businesses: SmartBusiness[];
+}
+
 export interface SmartSearchResult {
   isSmartMatch: boolean;
   isUrgent: boolean;
@@ -33,6 +41,7 @@ export interface SmartSearchResult {
   urgencyLevel: number;
   businesses: SmartBusiness[];
   businessGroups: BusinessGroup[];
+  suggestionGroups: SuggestionGroup[];
   complementaryServices: string[];
   primarySolution: string | null;
   totalFound: number;
@@ -343,6 +352,7 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       let primarySolution: string | null = null;
       let complementaryServices: string[] = [];
       let businessGroups: BusinessGroup[] = [];
+      let suggestionGroups: SuggestionGroup[] = [];
 
       // ── CAMADA 1: Pattern Detection ───────────────────────────────────
       const { data: patternKeywords } = await supabase.from("pattern_keywords").select("keyword, weight, pattern_id");
@@ -584,6 +594,83 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       // ── CAMADA 4: Urgência ────────────────────────────────────────────
       const isUrgent = urgencyLevel >= 4 || URGENCY_WORDS.some((w) => query.includes(normalize(w)));
 
+      // ── CAMADA 5: Sugestões inteligentes (subcategorias relacionadas) ──
+      if (businessGroups.length > 0) {
+        // Collect matched subcategory IDs from results
+        const matchedSubIds = new Set<string>();
+        for (const group of businessGroups) {
+          for (const biz of group.businesses) {
+            if (biz.subcategory_name) {
+              // We need the actual subcategory IDs — fetch from the first group's label
+              break;
+            }
+          }
+        }
+
+        // Find subcategory IDs that matched the search
+        const resolvedLabel = businessGroups[0]?.label;
+        if (resolvedLabel) {
+          const { data: matchedSubs } = await supabase
+            .from("subcategories")
+            .select("id")
+            .or(`name.ilike.%${resolvedLabel}%,slug.ilike.%${resolvedLabel}%`);
+
+          if (matchedSubs && matchedSubs.length > 0) {
+            const subIds = matchedSubs.map((s) => s.id);
+            
+            const { data: relations } = await supabase
+              .from("subcategory_relations" as any)
+              .select(`
+                id, relation_type, priority,
+                related:related_subcategory_id(id, name, slug, category_id, categories:category_id(slug))
+              `)
+              .in("subcategory_id", subIds)
+              .order("priority", { ascending: true })
+              .limit(5);
+
+            if (relations && relations.length > 0) {
+              const suggestionResults = await Promise.all(
+                (relations as any[]).map(async (rel: any) => {
+                  const relSub = rel.related;
+                  if (!relSub?.id) return null;
+
+                  const { data: jd } = await supabase
+                    .from("business_subcategories")
+                    .select("business_id")
+                    .eq("subcategory_id", relSub.id);
+                  const bizIds = (jd || []).map((j: any) => j.business_id);
+                  if (bizIds.length === 0) return null;
+
+                  const { data: biz } = await supabase
+                    .from("businesses")
+                    .select(BIZ_SELECT)
+                    .eq("is_active", true)
+                    .in("id", bizIds)
+                    .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
+                    .limit(10);
+
+                  if (!biz || biz.length === 0) return null;
+
+                  return {
+                    label: relSub.name,
+                    subcategorySlug: relSub.slug,
+                    categorySlug: relSub.categories?.slug ?? "",
+                    relationType: rel.relation_type,
+                    businesses: biz.map(formatBusiness),
+                  } as SuggestionGroup;
+                })
+              );
+
+              suggestionGroups = suggestionResults.filter(Boolean) as SuggestionGroup[];
+              // Also populate complementaryServices from suggestions
+              if (complementaryServices.length === 0) {
+                complementaryServices = suggestionGroups.map((sg) => sg.label);
+              }
+            }
+          }
+        }
+      }
+
       const allBusinesses = businessGroups.flatMap((g) => g.businesses);
       const totalFound = allBusinesses.length;
 
@@ -599,6 +686,7 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         urgencyLevel,
         businesses: allBusinesses,
         businessGroups,
+        suggestionGroups,
         complementaryServices,
         primarySolution,
         totalFound,

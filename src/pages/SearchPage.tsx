@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Search, Loader2, MapPin, Star, ArrowRight, Share2, ChevronDown } from "lucide-react";
+import { Search, Loader2, MapPin, Star, ArrowRight, Share2, ChevronDown, Lightbulb } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,7 @@ const SearchPage = () => {
   const businessGroups = result?.businessGroups ?? [];
   const totalFound = result?.totalFound ?? 0;
   const complementaryServices = result?.complementaryServices ?? [];
+  const suggestionGroups = result?.suggestionGroups ?? [];
 
   const firstBusiness = businessGroups[0]?.businesses[0] ?? null;
   const categorySlug = firstBusiness?.category_slug ?? null;
@@ -275,7 +276,50 @@ const SearchPage = () => {
                   </div>
                 )}
 
-                {/* CTA bottom */}
+                {/* Suggestion groups from related subcategories */}
+                {suggestionGroups.length > 0 && (
+                  <div className="mt-10 space-y-8">
+                    <div className="flex items-center gap-3">
+                      <Lightbulb className="h-5 w-5 text-primary" />
+                      <h2 className="text-lg font-semibold text-foreground">Também pode interessar</h2>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                    {suggestionGroups.map((sg) => {
+                      const isExpanded = expandedGroups.has(`suggestion-${sg.label}`);
+                      const visibleBiz = isExpanded ? sg.businesses : sg.businesses.slice(0, 3);
+                      const hasMore = sg.businesses.length > 3;
+
+                      return (
+                        <div key={sg.label}>
+                          <div className="flex items-center gap-3 mb-4">
+                            <Link
+                              to={`/categoria/${sg.categorySlug}/${sg.subcategorySlug}`}
+                              className="text-base font-medium text-primary hover:underline capitalize"
+                            >
+                              {sg.label}
+                            </Link>
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{sg.businesses.length}</span>
+                            <Badge variant="outline" className="text-xs capitalize">{sg.relationType === 'suggestion' ? 'Sugestão' : sg.relationType === 'complement' ? 'Complementar' : 'Alternativa'}</Badge>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {visibleBiz.map((biz) => (
+                              <SearchResultCard key={biz.id} business={biz} searchTerm={debouncedTerm} cityFilter={cityFilter} isAuthenticated={!!user} />
+                            ))}
+                          </div>
+                          {hasMore && !isExpanded && (
+                            <div className="mt-3 text-center">
+                              <Button variant="outline" size="sm" className="gap-2" onClick={() => toggleGroup(`suggestion-${sg.label}`)}>
+                                <ChevronDown className="h-4 w-4" />
+                                Ver mais {sg.businesses.length - 3} resultados
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {categorySlug && categoryName && (
                   <div className="mt-8 text-center">
                     <Link
