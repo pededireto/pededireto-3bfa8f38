@@ -306,7 +306,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
 
   const handleRead = useCallback(() => {}, []);
 
-  const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado") => {
+  const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado", requestId?: string) => {
     setUpdatingStatus(matchId);
     try {
       const { error } = await supabase
@@ -322,6 +322,15 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             : "O pedido foi recusado.",
       });
       qc.invalidateQueries({ queryKey: ["business-requests"] });
+
+      // P2: Notify consumer via email when business accepts
+      if (newStatus === "aceite" && requestId) {
+        supabase.functions
+          .invoke("notify-consumer", {
+            body: { type: "match_accepted", request_id: requestId, business_id: businessId },
+          })
+          .catch((err) => console.error("notify-consumer error:", err));
+      }
     } catch {
       toast({ title: "Erro ao atualizar pedido", variant: "destructive" });
     } finally {
