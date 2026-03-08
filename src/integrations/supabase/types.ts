@@ -5504,6 +5504,48 @@ export type Database = {
           },
         ]
       }
+      subcategory_relations: {
+        Row: {
+          created_at: string
+          id: string
+          priority: number
+          related_subcategory_id: string
+          relation_type: string
+          subcategory_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          priority?: number
+          related_subcategory_id: string
+          relation_type?: string
+          subcategory_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          priority?: number
+          related_subcategory_id?: string
+          relation_type?: string
+          subcategory_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategory_relations_related_subcategory_id_fkey"
+            columns: ["related_subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subcategory_relations_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suggestions: {
         Row: {
           city_name: string
