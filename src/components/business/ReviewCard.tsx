@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Star, ThumbsUp, ThumbsDown, Flag, MoreVertical, ShieldCheck } from "lucide-react";
+import { Star, ThumbsUp, ThumbsDown, Flag, MoreVertical, ShieldCheck, User } from "lucide-react";
+import { formatReviewerName } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useVoteReviewHelpfulness, useRemoveVote, useFlagReview, useUserVoteForReview, type BusinessReview } from "@/hooks/useBusinessReviews";
 import { Button } from "@/components/ui/button";
