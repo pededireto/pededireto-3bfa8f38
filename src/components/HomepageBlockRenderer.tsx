@@ -9,6 +9,9 @@ import TextBlock from "@/components/TextBlock";
 import PremiumBusinessBlock from "@/components/PremiumBusinessBlock";
 import NewBusinessesBlock from "@/components/NewBusinessesBlock";
 import CategoryAccordion from "@/components/home/CategoryAccordion";
+import PlatformStats from "@/components/PlatformStats";
+import HowItWorks from "@/components/HowItWorks";
+import BusinessCTA from "@/components/BusinessCTA";
 import { useCategories } from "@/hooks/useCategories";
 import { useFeaturedBusinesses } from "@/hooks/useBusinesses";
 
@@ -43,6 +46,12 @@ const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBl
       return <NewBusinessesBlock config={block.config} title={block.title} />;
     case "categorias_accordion":
       return <CategoryAccordion />;
+    case "platform_stats":
+      return <PlatformStats />;
+    case "how_it_works":
+      return <HowItWorks />;
+    case "business_cta":
+      return <BusinessCTA />;
     default:
       return null;
   }
