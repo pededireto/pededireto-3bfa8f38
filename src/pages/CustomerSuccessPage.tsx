@@ -95,10 +95,19 @@ const CustomerSuccessPage = () => {
 
       <div className="container mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 h-auto">
+          <TabsList className="grid w-full grid-cols-6 h-auto">
             <TabsTrigger value="dashboard" className="flex items-center gap-2 py-3">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
+            </TabsTrigger>
+            <TabsTrigger value="alerts" className="flex items-center gap-2 py-3 relative">
+              <ShieldAlert className="h-4 w-4" />
+              <span className="hidden sm:inline">Alertas</span>
+              {(alertCounts?.critical || 0) > 0 && (
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
+                  {alertCounts!.critical}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="tickets" className="flex items-center gap-2 py-3">
               <Ticket className="h-4 w-4" />
@@ -119,6 +128,9 @@ const CustomerSuccessPage = () => {
           </TabsList>
 
           <TabsContent value="dashboard"><CsDashboard /></TabsContent>
+          <TabsContent value="alerts">
+            <PlatformAlertsContent categoryFilter={["request", "review", "consumer"]} />
+          </TabsContent>
           <TabsContent value="tickets">
             <TicketsTable department="cs" creatorRole="cs" />
           </TabsContent>
