@@ -280,6 +280,7 @@ const ProfilePage = () => {
               { key: "email_on_message", label: "Email quando recebe nova mensagem", desc: "Receba email quando um profissional lhe envia uma mensagem." },
               { key: "email_on_badge", label: "Email quando conquista um badge", desc: "Notificação quando desbloqueia uma nova conquista." },
               { key: "email_weekly_summary", label: "Resumo semanal de actividade", desc: "Receba um resumo semanal com a sua actividade na plataforma." },
+              { key: "email_marketing", label: "Comunicações e campanhas", desc: "Receba emails sobre novidades, promoções e campanhas da plataforma." },
             ].map((pref) => (
               <div key={pref.key} className="flex items-start justify-between gap-4 py-2">
                 <div className="flex-1">
