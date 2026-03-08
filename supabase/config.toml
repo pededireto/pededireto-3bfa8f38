@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.unsubscribe-consumer-digest]
 verify_jwt = false
+
+[functions.simulate-bot-activity]
+verify_jwt = false
