@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, LayoutDashboard, Ticket, Building2, BarChart3, LogOut, User, Star } from "lucide-react";
+import { Loader2, LayoutDashboard, Ticket, Building2, BarChart3, LogOut, User, Star, ShieldAlert } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
