@@ -305,6 +305,17 @@ const SubcategoryCityPage = ({
           </div>
         </section>
 
+        {/* SEO intro text */}
+        {businesses.length > 0 && (
+          <section className="pb-4">
+            <div className="container">
+              <p className="text-sm text-muted-foreground max-w-3xl">
+                Encontre os melhores {subcategoryName.toLowerCase()} em {cityDisplay}. O Pede Direto lista {businesses.length} profissiona{businesses.length === 1 ? "l verificado" : "is verificados"} em {cityDisplay}, com avaliações reais de clientes, horários e contactos directos. Compare orçamentos e escolha o profissional certo para si.
+              </p>
+            </div>
+          </section>
+        )}
+
         {/* Business Grid */}
         {businesses.length > 0 ? (
           <section className="py-12">
