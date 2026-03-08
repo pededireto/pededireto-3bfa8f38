@@ -183,18 +183,27 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
             </div>
           </div>
 
-          {mascotEnabled && mascotUrl && (
-            <div className="hidden md:flex justify-center items-center relative" aria-hidden="true">
-              <div className="relative animate-float">
-                <img src={mascotUrl} alt="Mascote do Pede Direto" className="w-72 lg:w-96 drop-shadow-2xl" />
+          {heroMediaType === "video" && youtubeEmbedUrl ? (
+            <div className="hidden md:flex justify-center items-center" aria-hidden="true">
+              <div className="bg-card rounded-2xl shadow-card overflow-hidden w-full max-w-md aspect-video">
+                <iframe
+                  src={youtubeEmbedUrl}
+                  className="w-full h-full"
+                  allowFullScreen
+                  title="Vídeo Pede Direto"
+                />
               </div>
             </div>
-          )}
-
-          {(!mascotEnabled || !mascotUrl) && (
-            <div className="hidden md:flex justify-center items-center relative" aria-hidden="true">
-              <div className="relative animate-float">
-                <img src={pedeDiretoMascot} alt="Logótipo do Pede Direto" className="w-72 lg:w-96 drop-shadow-2xl" />
+          ) : mascotEnabled && mascotUrl ? (
+            <div className="hidden md:flex justify-center items-center" aria-hidden="true">
+              <div className="bg-card rounded-2xl shadow-card p-6 flex items-center justify-center w-full max-w-md">
+                <img src={mascotUrl} alt="Mascote do Pede Direto" className="w-full h-auto max-h-80 object-contain" />
+              </div>
+            </div>
+          ) : (
+            <div className="hidden md:flex justify-center items-center" aria-hidden="true">
+              <div className="bg-card rounded-2xl shadow-card p-6 flex items-center justify-center w-full max-w-md">
+                <img src={pedeDiretoMascot} alt="Logótipo do Pede Direto" className="w-full h-auto max-h-80 object-contain" />
               </div>
             </div>
           )}
