@@ -43,6 +43,7 @@ import PendingClaimsPanel from "@/components/admin/PendingClaimsPanel";
 import EmailHub from "@/components/email/EmailHub";
 import BlogContent from "@/components/admin/BlogContent";
 import PlatformAlertsContent from "@/components/admin/PlatformAlertsContent";
+import NewsletterContent from "@/components/admin/NewsletterContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
