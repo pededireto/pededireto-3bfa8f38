@@ -1,79 +1,81 @@
 
 
-# Plan: Logo + Consumer Dashboard Review Feedback
+## Analysis of the Smart Search Engine
 
-## Task 1 — Add PedeDireto Logo Image Everywhere
+The search engine has 4 layers:
+1. **Pattern Detection** - matches keywords against `pattern_keywords` table (needs score >= 3)
+2. **Synonyms** - matches against `search_synonyms` table
+3. **Direct Fallback** - searches subcategories, categories, business names/descriptions
+4. **Urgency Detection** - flags urgent queries
 
-Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
+### The Problem with "Tive um furo"
 
-### Files to modify (logo replacement):
+When a user types "tive um furo", the current flow:
+1. Normalizes to `"tive um furo"`
+2. Pattern Detection: probably no pattern configured for this, so skipped
+3. Synonyms layer:
+   - `stripIntent("tive um furo")` → **"tive um furo"** (unchanged, because "tive um" is NOT in the intent prefixes list)
+   - `extractKeywords()` → `["tive", "furo"]` (removes "um" as stop word)
+   - Builds candidates: `["tive um furo", "tive um furo", "tive furo", "tive", "furo"]`
+   - Compares each candidate with **exact match** (`normalize(s.termo) === normalize(candidate)`)
+   - Only matches if there's a synonym with termo = "furo" or termo = "tive um furo" exactly
 
-**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
+**Two core problems:**
+1. "tive um/uma" is missing from intent prefixes, so the phrase isn't stripped down to "furo"
+2. Synonym matching is **exact only** — no partial/fuzzy matching for multi-word expressions
+3. No way to map contextual phrases (like "tive um furo") to business categories in the admin
 
-| File | Location | Logo size |
-|------|----------|-----------|
-| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
-| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
-| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
-| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
-| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
-| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
-| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
-| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
-| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
-| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
-| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
-| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
-| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
-| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
-| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
-| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
-| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
+### Proposed Solution
 
-Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
+#### 1. Expand Intent Prefixes
+Add conversational prefixes to `INTENT_PREFIXES` in `useSmartSearch.ts`:
+- "tive um", "tive uma", "tenho um", "tenho uma"
+- "o meu ... não funciona" patterns
+- "parti", "avariou", "estragou" style prefixes
 
----
+This way "tive um furo" → strips to "furo", which can then match a synonym `furo → oficina`.
 
-## Task 2 — Review Feedback on Consumer Dashboard Requests
+#### 2. Upgrade Synonym Matching to Partial/Contains
+Change the synonym lookup from exact match to **contains** matching — if any synonym `termo` appears inside the query, it triggers. This handles phrases like "pneu furado" matching a synonym with termo "furo" or "furado".
 
-### Data model understanding
-- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
-- `request_business_matches` links `request_id` to `business_id`
-- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
-
-### New hook: `useConsumerRequestReviews`
-
-In `src/hooks/useServiceRequests.ts`, add a new hook that:
-1. Takes the list of request IDs
-2. For each request, gets the matched business IDs from `request_business_matches`
-3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
-4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
-
-Implementation approach — a single query that:
-```typescript
-// 1. Get all matches for the user's requests
-const { data: matches } = await supabase
-  .from("request_business_matches")
-  .select("request_id, business_id, businesses(name)")
-  .in("request_id", requestIds);
-
-// 2. Get all reviews by this user
-const { data: reviews } = await supabase
-  .from("business_reviews")
-  .select("business_id, rating, business_response, business_response_at")
-  .eq("user_id", userId);
-
-// 3. Cross-reference: for each match, find if there's a review
+```text
+Current:  normalize(s.termo) === normalize(candidate)  // exact
+Proposed: normalize(candidate).includes(normalize(s.termo)) || normalize(s.termo) === normalize(candidate)
 ```
 
-### UI changes in `src/pages/UserDashboard.tsx`
+With a priority for longer matches first (sort synonyms by `termo` length descending).
 
-In the request card (lines 281-346), after the status Badge, add:
+#### 3. Add "Expression Phrases" Support to Synonyms
+Extend the `search_synonyms` table with an optional `type` column (`word` | `phrase`) so admins can create:
+- **Word synonyms**: `furo → oficina`, `furado → oficina`
+- **Phrase synonyms**: `tive um furo → oficina`, `pneu furado → oficina`
 
-1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
-2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
+Phrase synonyms are checked against the full raw query before keyword extraction.
 
-Visual design:
-- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
-- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
+#### 4. Enhance Admin Synonyms Panel
+Update `SynonymsContent.tsx` to:
+- Add a "Type" selector (Word / Phrase) when creating synonyms
+- Show type badge in the list
+- Add bulk-add support for common expressions (e.g., add "furo", "furado", "pneu furado" all mapping to "oficina" at once)
+- Add a "Test" input field where the admin can type a phrase and see which synonyms would match in real-time
+
+#### 5. Pre-populate Common Expressions
+Insert default synonym mappings for common Portuguese colloquial expressions:
+- "furo" → "oficina"
+- "furado" → "oficina"  
+- "cano rebentou" → "canalizador"
+- "fechadura partida" → "serralheiro"
+- "curto circuito" → "eletricista"
+
+### Files to Change
+
+| File | Change |
+|------|--------|
+| `src/hooks/useSmartSearch.ts` | Add intent prefixes; upgrade synonym matching to partial + phrase-aware |
+| `src/components/admin/SynonymsContent.tsx` | Add type selector, test field, bulk-add |
+| Migration SQL | Add `type` column to `search_synonyms` (default: `'word'`) |
+
+### Summary
+
+The core fix is simple: add "tive um/uma" to intent prefixes so "tive um furo" strips to "furo", and upgrade synonym matching from exact to contains. The admin enhancements give you control to map any colloquial expression to the right business category.
 
