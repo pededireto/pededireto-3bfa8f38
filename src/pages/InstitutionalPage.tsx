@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BlockRenderer from "@/components/BlockRenderer";
+import ConsumersLandingPage from "@/components/ConsumersLandingPage";
 import { Loader2 } from "lucide-react";
 import DOMPurify from "dompurify";
 
@@ -91,23 +92,29 @@ const InstitutionalPage = () => {
 
       <Header />
       <main className="flex-1">
-        <section className="section-hero py-12">
-          <div className="container">
-            <h1 className="text-3xl md:text-4xl font-bold">{page.title}</h1>
-          </div>
-        </section>
-        <section className="py-12">
-          <div className="container max-w-3xl">
-            {page.page_type === "advanced" && page.blocks.length > 0 ? (
-              <BlockRenderer blocks={page.blocks} />
-            ) : page.content ? (
-              <div
-                className="prose prose-lg max-w-none dark:prose-invert"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }}
-              />
-            ) : null}
-          </div>
-        </section>
+        {slug === "pedediretoconsumidores" ? (
+          <ConsumersLandingPage />
+        ) : (
+          <>
+            <section className="section-hero py-12">
+              <div className="container">
+                <h1 className="text-3xl md:text-4xl font-bold">{page.title}</h1>
+              </div>
+            </section>
+            <section className="py-12">
+              <div className="container max-w-3xl">
+                {page.page_type === "advanced" && page.blocks.length > 0 ? (
+                  <BlockRenderer blocks={page.blocks} />
+                ) : page.content ? (
+                  <div
+                    className="prose prose-lg max-w-none dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }}
+                  />
+                ) : null}
+              </div>
+            </section>
+          </>
+        )}
       </main>
       <Footer />
     </div>
