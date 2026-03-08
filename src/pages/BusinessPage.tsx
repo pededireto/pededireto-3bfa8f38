@@ -718,6 +718,9 @@ const BusinessPage = () => {
                     );
                   })()}
                 </div>
+
+                {/* Reviews Section */}
+                <ReviewSection businessId={business.id} businessName={business.name} isOwner={userIsOwner} />
               </div>
 
               {/* Sidebar */}
