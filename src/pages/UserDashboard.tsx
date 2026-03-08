@@ -233,7 +233,10 @@ const UserDashboard = () => {
         {/* ── D — Badges (Conquistas) ────────────────────────────────── */}
         <ConsumerBadgesSection profileId={profile?.id} />
 
-        {/* ── E — Tabs ───────────────────────────────────────────────── */}
+        {/* ── E — Activity Timeline ───────────────────────────────── */}
+        <ConsumerActivityTimeline userId={user?.id} />
+
+        {/* ── F — Tabs ───────────────────────────────────────────────── */}
         <Tabs defaultValue="requests" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="requests" className="gap-2">
