@@ -1,8 +1,10 @@
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useTopRanking } from "@/hooks/useTopRanking";
+import { useBatchPublicBadges } from "@/hooks/usePublicBadges";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import BadgePills from "@/components/BadgePills";
 import { Button } from "@/components/ui/button";
 import { Star, MapPin, ArrowLeft, Trophy, CheckCircle, MessageSquare, UserPlus } from "lucide-react";
 
