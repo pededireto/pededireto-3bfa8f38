@@ -5,6 +5,7 @@ export interface SearchSynonym {
   id: string;
   termo: string;
   equivalente: string;
+  type: string;
   created_at: string;
 }
 
