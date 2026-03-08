@@ -419,7 +419,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleStatusChange(match.id, "recusado")}
+              onClick={() => handleStatusChange(match.id, "recusado", requestId)}
               disabled={updatingStatus === match.id}
               className="flex items-center gap-1.5 text-destructive hover:text-destructive"
             >

@@ -508,6 +508,24 @@ const RequestDetailPage = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
 
+      {/* P7: Welcome banner for newly created requests */}
+      {isNewlyCreated && (
+        <div className="bg-primary/10 border-b border-primary/20">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-start gap-3 max-w-3xl mx-auto">
+              <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+              <div>
+                <h2 className="font-bold text-foreground">Pedido enviado com sucesso!</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Estamos a contactar os melhores profissionais da sua área.
+                  Receberá respostas em breve — normalmente em menos de 2 horas.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Pedido de Ajuda */}
       {showHelpModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
