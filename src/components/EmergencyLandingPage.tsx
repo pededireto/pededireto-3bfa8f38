@@ -301,7 +301,7 @@ const EmergencyLandingPage = () => {
           <Card className="border-destructive/30 bg-destructive/5">
             <CardContent className="p-8">
               <div className="flex items-center gap-2 mb-4">
-                <Info className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <Info className="w-5 h-5 text-destructive" />
                 <h3 className="font-bold text-lg">Importante</h3>
               </div>
               <p className="text-muted-foreground text-sm mb-4">
