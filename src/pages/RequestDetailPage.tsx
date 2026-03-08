@@ -188,13 +188,7 @@ const RequestDetailPage = () => {
     request?.location_city
   );
 
-  // Matches with activity data
-  const matchesViewed = matches.filter((m: any) => m.status !== "enviado").length;
-  const matchesResponded = matches.filter(
-    (m: any) => m.responded_at != null || ["aceite", "recusado", "orcamento_enviado", "em_conversa"].includes(m.status)
-  ).length;
-
-
+  // Query: matches
   const { data: matches = [] } = useQuery({
     queryKey: ["request-matches-detail", id],
     enabled: !!id && !!user,
@@ -203,7 +197,7 @@ const RequestDetailPage = () => {
         .from("request_business_matches" as any)
         .select(
           `
-          id, status, sent_at, responded_at, price_quote,
+          id, status, sent_at, responded_at, price_quote, viewed_at,
           businesses:business_id (id, name, slug)
         `,
         )
@@ -213,6 +207,12 @@ const RequestDetailPage = () => {
       return (data || []) as unknown as Match[];
     },
   });
+
+  // Computed activity data from matches
+  const matchesViewed = matches.filter((m: any) => (m as any).viewed_at != null || m.status !== "enviado").length;
+  const matchesResponded = matches.filter(
+    (m: any) => m.responded_at != null || ["aceite", "recusado", "orcamento_enviado", "em_conversa"].includes(m.status)
+  ).length;
 
   // Query: avaliacoes ja feitas
   const { data: existingRatings = [] } = useQuery({
