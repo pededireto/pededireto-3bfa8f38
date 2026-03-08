@@ -570,7 +570,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
       </Section>
 
       {/* 4. Presença Digital */}
-      <Section title="Presença Digital" icon={Share2} defaultOpen={false} badge="PRO">
+      <Section title="Presença Digital" icon={Share2} defaultOpen={false} badge={planInfo.isFree ? "START +" : planInfo.isStart ? "START" : "PRO"}>
+        <PlanLockedOverlay locked={planInfo.isFree} requiredPlan="start">
         <div className="space-y-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
