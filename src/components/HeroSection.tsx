@@ -7,6 +7,7 @@ import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useAutoSaveSearch } from "@/hooks/useSavedSearches";
 import SearchResults from "@/components/SearchResults";
 import pedeDiretoMascot from "@/assets/pede-direto-mascot.png";
+import { getYouTubeEmbedUrl } from "@/utils/youtube";
 
 interface HeroSectionProps {
   onSearch?: (term: string) => void;
@@ -31,6 +32,9 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   const heroSubtitle = settings?.hero_subtitle || "Restaurantes, técnicos, lojas e serviços locais. Contacte diretamente — sem intermediários.";
   const mascotUrl = settings?.mascot_url;
   const mascotEnabled = settings?.mascot_enabled === "true";
+  const heroMediaType = settings?.hero_media_type || "image";
+  const heroVideoUrl = settings?.hero_video_url;
+  const youtubeEmbedUrl = heroVideoUrl ? getYouTubeEmbedUrl(heroVideoUrl) : null;
 
   // Rotate placeholder
   useEffect(() => {
@@ -179,18 +183,27 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
             </div>
           </div>
 
-          {mascotEnabled && mascotUrl && (
-            <div className="hidden md:flex justify-center items-center relative" aria-hidden="true">
-              <div className="relative animate-float">
-                <img src={mascotUrl} alt="Mascote do Pede Direto" className="w-72 lg:w-96 drop-shadow-2xl" />
+          {heroMediaType === "video" && youtubeEmbedUrl ? (
+            <div className="hidden md:flex justify-center items-center" aria-hidden="true">
+              <div className="bg-card rounded-2xl shadow-card overflow-hidden w-full max-w-md aspect-video">
+                <iframe
+                  src={youtubeEmbedUrl}
+                  className="w-full h-full"
+                  allowFullScreen
+                  title="Vídeo Pede Direto"
+                />
               </div>
             </div>
-          )}
-
-          {(!mascotEnabled || !mascotUrl) && (
-            <div className="hidden md:flex justify-center items-center relative" aria-hidden="true">
-              <div className="relative animate-float">
-                <img src={pedeDiretoMascot} alt="Logótipo do Pede Direto" className="w-72 lg:w-96 drop-shadow-2xl" />
+          ) : mascotEnabled && mascotUrl ? (
+            <div className="hidden md:flex justify-center items-center" aria-hidden="true">
+              <div className="bg-card rounded-2xl shadow-card p-6 flex items-center justify-center w-full max-w-md">
+                <img src={mascotUrl} alt="Mascote do Pede Direto" className="w-full h-auto max-h-80 object-contain" />
+              </div>
+            </div>
+          ) : (
+            <div className="hidden md:flex justify-center items-center" aria-hidden="true">
+              <div className="bg-card rounded-2xl shadow-card p-6 flex items-center justify-center w-full max-w-md">
+                <img src={pedeDiretoMascot} alt="Logótipo do Pede Direto" className="w-full h-auto max-h-80 object-contain" />
               </div>
             </div>
           )}
