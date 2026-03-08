@@ -48,6 +48,7 @@ import UpgradePage from "./pages/UpgradePage";
 import SearchPage from "./pages/SearchPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
+import TopRankingPage from "./pages/TopRankingPage";
 import NotFound from "./pages/NotFound";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
