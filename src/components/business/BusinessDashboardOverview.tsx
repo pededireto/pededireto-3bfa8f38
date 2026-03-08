@@ -162,6 +162,31 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
 
   return (
     <div className="space-y-6">
+      {/* Welcome banner — first visit after onboarding */}
+      {showWelcome && (
+        <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-5 space-y-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-lg font-bold text-foreground">🎉 Bem-vindo à Pede Direto!</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Estamos a verificar os seus dados e o negócio ficará visível em breve.
+                <br />Complete o perfil enquanto isso para aparecer mais acima nos resultados!
+              </p>
+            </div>
+            <button
+              onClick={() => setShowWelcome(false)}
+              className="text-muted-foreground hover:text-foreground p-1"
+              aria-label="Fechar"
+            >
+              ✕
+            </button>
+          </div>
+          <Button size="sm" onClick={() => onNavigate?.("edit")} className="text-sm">
+            Completar perfil agora →
+          </Button>
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">
