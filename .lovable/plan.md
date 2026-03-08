@@ -1,187 +1,79 @@
 
 
-# Cadences Multi-Step com Condições — Plano de Implementação
+# Plan: Logo + Consumer Dashboard Review Feedback
 
-## Estado Actual (Análise Completa)
+## Task 1 — Add PedeDireto Logo Image Everywhere
 
-### Tabelas existentes
+Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
 
-```text
-email_cadences
-├── id, name, description, category, is_active
-├── created_by, created_at, updated_at
-└── Sem campos de métricas
+### Files to modify (logo replacement):
 
-email_cadence_steps
-├── id, cadence_id (FK), template_id (FK)
-├── step_order, delay_days, delay_hours
-└── SEM: condition_type, condition_ref_step_id, channel
+**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
 
-email_cadence_enrollments
-├── id, cadence_id (FK), business_id (FK), user_id
-├── recipient_email, current_step, status
-├── enrolled_at, enrolled_by, completed_at, cancelled_at
-├── pause_on_reply, pause_on_click
-└── SEM: converted_at, paused_reason, paused_at
-```
+| File | Location | Logo size |
+|------|----------|-----------|
+| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
+| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
+| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
+| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
+| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
+| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
+| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
+| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
+| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
+| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
+| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
+| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
+| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
+| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
+| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
+| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
+| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
 
-### Edge Function `process-cadences` — o que faz hoje
-
-1. Busca enrollments `active` com cadences `is_active = true`
-2. Se `pause_on_reply` e existir `replied_at` em email_logs → pausa
-3. Calcula delay cumulativo desde `enrolled_at` para determinar quando enviar
-4. Verifica se já enviou esse step (via email_logs + metadata)
-5. Envia via Resend com `from: geral@pededireto.pt`
-6. Regista em `email_logs` com metadata da cadence
-7. Avança `current_step`; marca `completed` se último step
-
-### Webhook `email-webhook` — o que faz hoje
-
-Recebe eventos Resend (`delivered`, `opened`, `clicked`, `bounced`) e actualiza `email_logs` com `opened_at`, `clicked_at`, `bounced`. Cria notificação para o remetente. **Funciona** mas precisa de estar configurado no Resend dashboard.
-
-### O que FALTA
-
-| Funcionalidade | Existe? | Detalhe |
-|---|---|---|
-| Steps com delay_days | ✅ | Funcional |
-| condition_type por step | ❌ | Não existe coluna |
-| condition_ref_step_id | ❌ | Não existe coluna |
-| channel por step | ❌ | Tudo é email |
-| Tracking opened/clicked | ✅ Parcial | email_logs tem campos, webhook actualiza, mas process-cadences NÃO verifica |
-| Status converted | ❌ | Enrollment só tem active/paused/completed |
-| converted_at / paused_reason | ❌ | Não existem |
-| pause_on_click lógica | ❌ | Campo existe mas ignorado no processamento |
-| Dashboard por step | ❌ | Sem views SQL |
-| Trigger auto-conversão | ❌ | Não existe |
+Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
 
 ---
 
-## Plano de Implementação — 3 Fases
+## Task 2 — Review Feedback on Consumer Dashboard Requests
 
-### FASE 1 — Steps com Condições (DB + Edge Function + UI)
+### Data model understanding
+- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
+- `request_business_matches` links `request_id` to `business_id`
+- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
 
-**Migration SQL:**
-```sql
--- Adicionar campos de condição aos steps
-ALTER TABLE email_cadence_steps
-  ADD COLUMN condition_type TEXT DEFAULT 'always',
-  ADD COLUMN condition_ref_step INTEGER;
+### New hook: `useConsumerRequestReviews`
 
--- Adicionar campos de conversão aos enrollments  
-ALTER TABLE email_cadence_enrollments
-  ADD COLUMN converted_at TIMESTAMPTZ,
-  ADD COLUMN paused_at TIMESTAMPTZ,
-  ADD COLUMN paused_reason TEXT;
+In `src/hooks/useServiceRequests.ts`, add a new hook that:
+1. Takes the list of request IDs
+2. For each request, gets the matched business IDs from `request_business_matches`
+3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
+4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
+
+Implementation approach — a single query that:
+```typescript
+// 1. Get all matches for the user's requests
+const { data: matches } = await supabase
+  .from("request_business_matches")
+  .select("request_id, business_id, businesses(name)")
+  .in("request_id", requestIds);
+
+// 2. Get all reviews by this user
+const { data: reviews } = await supabase
+  .from("business_reviews")
+  .select("business_id, rating, business_response, business_response_at")
+  .eq("user_id", userId);
+
+// 3. Cross-reference: for each match, find if there's a review
 ```
 
-**Edge Function `process-cadences` — actualizar lógica:**
-- Antes de enviar cada step, verificar `condition_type`:
-  - `always` → enviar sempre (comportamento actual)
-  - `if_opened` → verificar se `email_logs` do step referenciado tem `opened_at IS NOT NULL`
-  - `if_not_opened` → verificar `opened_at IS NULL`
-  - `if_clicked` / `if_not_clicked` → mesma lógica com `clicked_at`
-- Se condição não satisfeita → marcar step como `skipped` e avançar
-- Implementar `pause_on_click` (já ignorado)
+### UI changes in `src/pages/UserDashboard.tsx`
 
-**UI — Steps Dialog melhorado:**
-Cada step passa a mostrar:
-- Template selector (já existe)
-- Delay days/hours (já existe)
-- **Novo:** Select "Condição" com opções: Sempre / Se abriu step X / Se NÃO abriu step X / Se clicou step X / Se NÃO clicou step X
-- **Novo:** Select "Step de referência" (lista dos steps anteriores)
+In the request card (lines 281-346), after the status Badge, add:
 
-### FASE 2 — Pausa Automática por Conversão
+1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
+2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
 
-**Migration SQL:**
-```sql
--- Trigger: quando subscription é criada/activada, pausar cadences do negócio
-CREATE OR REPLACE FUNCTION pause_cadence_on_subscription()
-RETURNS TRIGGER AS $$
-BEGIN
-  UPDATE email_cadence_enrollments
-  SET status = 'converted',
-      converted_at = NOW(),
-      paused_reason = 'Subscreveu plano'
-  WHERE business_id = NEW.business_id
-    AND status = 'active';
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_pause_on_subscription
-AFTER INSERT OR UPDATE OF status ON subscriptions
-FOR EACH ROW
-WHEN (NEW.status = 'active')
-EXECUTE FUNCTION pause_cadence_on_subscription();
-```
-
-**Edge Function `email-webhook` — melhorar:**
-- Quando recebe `email.replied` → buscar enrollment via metadata → marcar como `paused` com reason "Respondeu ao email"
-
-### FASE 3 — Dashboard de Performance
-
-**View SQL:**
-```sql
-CREATE VIEW cadence_step_performance AS
-SELECT
-  cs.cadence_id,
-  cs.step_order,
-  cs.id as step_id,
-  et.name as template_name,
-  COUNT(el.id) as sent,
-  COUNT(el.opened_at) as opened,
-  COUNT(el.clicked_at) as clicked,
-  ROUND(COUNT(el.opened_at)::numeric / NULLIF(COUNT(el.id), 0) * 100, 1) as open_rate,
-  ROUND(COUNT(el.clicked_at)::numeric / NULLIF(COUNT(el.id), 0) * 100, 1) as click_rate
-FROM email_cadence_steps cs
-LEFT JOIN email_templates et ON et.id = cs.template_id
-LEFT JOIN email_logs el ON el.template_id = cs.template_id
-  AND el.metadata->>'cadence_id' = cs.cadence_id::text
-  AND (el.metadata->>'step_order')::int = cs.step_order
-GROUP BY cs.cadence_id, cs.step_order, cs.id, et.name
-ORDER BY cs.cadence_id, cs.step_order;
-```
-
-**UI — Painel de performance por cadence:**
-- Tabela com colunas: Step / Template / Enviados / Abertos / % Open / Clicados / % Click
-- Cards resumo: Total enrolled / Activos / Convertidos / Completados
-- Badge por cadence com taxa de conversão
-
----
-
-## Quick Wins (na mesma sessão)
-
-1. **Campanhas — filtros visuais**: Substituir textarea JSON por selects (cidade, categoria, plano) usando os mesmos componentes das Cadences
-2. **Cadences — categorias dinâmicas**: Substituir array `CATEGORIES` hardcoded por `useCategories()` (hook já existe)
-3. **Sugestões — estados**: Migration para adicionar `status` ('nova'|'em_análise'|'processada') com default 'nova'; UI com badge colorido e dropdown inline
-
----
-
-## Sobre CallMeBot
-
-Recomendação: **deixar cair**. CallMeBot só funciona para um número fixo — não serve para comunicação com múltiplos negócios. Quando quiserem WhatsApp a sério, a opção correcta é a **WhatsApp Business API** (via Twilio ou 360dialog). Isso é um projecto separado e mais caro. O sistema de condições que vamos construir já prepara a coluna `channel` para quando isso existir.
-
----
-
-## Ficheiros a modificar/criar
-
-| Ficheiro | Acção |
-|---|---|
-| Migration SQL | ALTER steps + enrollments + view + trigger |
-| `supabase/functions/process-cadences/index.ts` | Adicionar lógica de condições |
-| `supabase/functions/email-webhook/index.ts` | Pausa por reply |
-| `src/components/email/EmailCadencesContent.tsx` | Steps com condições + dashboard + categorias dinâmicas |
-| `src/components/email/EmailCampaignsContent.tsx` | Filtros visuais |
-| `src/components/admin/SuggestionsContent.tsx` | Estados + badges |
-| `src/hooks/useSuggestions.ts` | Update status mutation |
-| `src/hooks/useEmailMarketing.ts` | Hook cadence performance |
-
-## Estimativa de complexidade
-
-- **Fase 1**: Média-alta (migration + edge function + UI)
-- **Fase 2**: Baixa (trigger SQL + pequena alteração no webhook)
-- **Fase 3**: Média (view SQL + componente UI novo)
-- **Quick wins**: Baixa (3 alterações isoladas)
-
-Tudo construído sobre o existente — sem redesign.
+Visual design:
+- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
+- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
 

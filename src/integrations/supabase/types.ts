@@ -3311,12 +3311,15 @@ export type Database = {
           cadence_id: string
           cancelled_at: string | null
           completed_at: string | null
+          converted_at: string | null
           current_step: number | null
           enrolled_at: string | null
           enrolled_by: string | null
           id: string
           pause_on_click: boolean | null
           pause_on_reply: boolean | null
+          paused_at: string | null
+          paused_reason: string | null
           recipient_email: string
           status: string | null
           user_id: string | null
@@ -3326,12 +3329,15 @@ export type Database = {
           cadence_id: string
           cancelled_at?: string | null
           completed_at?: string | null
+          converted_at?: string | null
           current_step?: number | null
           enrolled_at?: string | null
           enrolled_by?: string | null
           id?: string
           pause_on_click?: boolean | null
           pause_on_reply?: boolean | null
+          paused_at?: string | null
+          paused_reason?: string | null
           recipient_email: string
           status?: string | null
           user_id?: string | null
@@ -3341,12 +3347,15 @@ export type Database = {
           cadence_id?: string
           cancelled_at?: string | null
           completed_at?: string | null
+          converted_at?: string | null
           current_step?: number | null
           enrolled_at?: string | null
           enrolled_by?: string | null
           id?: string
           pause_on_click?: boolean | null
           pause_on_reply?: boolean | null
+          paused_at?: string | null
+          paused_reason?: string | null
           recipient_email?: string
           status?: string | null
           user_id?: string | null
@@ -3399,6 +3408,8 @@ export type Database = {
       email_cadence_steps: {
         Row: {
           cadence_id: string
+          condition_ref_step: number | null
+          condition_type: string | null
           delay_days: number
           delay_hours: number | null
           id: string
@@ -3407,6 +3418,8 @@ export type Database = {
         }
         Insert: {
           cadence_id: string
+          condition_ref_step?: number | null
+          condition_type?: string | null
           delay_days?: number
           delay_hours?: number | null
           id?: string
@@ -3415,6 +3428,8 @@ export type Database = {
         }
         Update: {
           cadence_id?: string
+          condition_ref_step?: number | null
+          condition_type?: string | null
           delay_days?: number
           delay_hours?: number | null
           id?: string
@@ -5493,6 +5508,7 @@ export type Database = {
           email: string | null
           id: string
           message: string | null
+          status: string | null
         }
         Insert: {
           city_name: string
@@ -5500,6 +5516,7 @@ export type Database = {
           email?: string | null
           id?: string
           message?: string | null
+          status?: string | null
         }
         Update: {
           city_name?: string
@@ -5507,6 +5524,7 @@ export type Database = {
           email?: string | null
           id?: string
           message?: string | null
+          status?: string | null
         }
         Relationships: []
       }
@@ -6309,6 +6327,28 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "email_cadence_enrollments_cadence_id_fkey"
+            columns: ["cadence_id"]
+            isOneToOne: false
+            referencedRelation: "email_cadences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cadence_step_performance: {
+        Row: {
+          cadence_id: string | null
+          click_rate: number | null
+          clicked: number | null
+          open_rate: number | null
+          opened: number | null
+          sent: number | null
+          step_id: string | null
+          step_order: number | null
+          template_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_cadence_steps_cadence_id_fkey"
             columns: ["cadence_id"]
             isOneToOne: false
             referencedRelation: "email_cadences"

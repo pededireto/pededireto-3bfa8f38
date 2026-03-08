@@ -84,7 +84,6 @@ export const useBulkEnrollInCadence = () => {
       businesses: SegmentBusiness[];
       pause_on_reply?: boolean;
     }) => {
-      // Insert em lotes de 50 para evitar timeout
       const BATCH = 50;
       let enrolled = 0;
       let skipped = 0;
@@ -104,7 +103,6 @@ export const useBulkEnrollInCadence = () => {
 
         if (rows.length === 0) continue;
 
-        // upsert ignorando duplicados
         const { error } = await (supabase as any)
           .from("email_cadence_enrollments")
           .upsert(rows, { onConflict: "cadence_id,recipient_email", ignoreDuplicates: true });
@@ -274,7 +272,15 @@ export const useCadenceSteps = (cadenceId: string | undefined) => {
 export const useAddCadenceStep = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (step: { cadence_id: string; template_id: string; step_order: number; delay_days: number; delay_hours?: number }) => {
+    mutationFn: async (step: {
+      cadence_id: string;
+      template_id: string;
+      step_order: number;
+      delay_days: number;
+      delay_hours?: number;
+      condition_type?: string;
+      condition_ref_step?: number | null;
+    }) => {
       const { error } = await (supabase as any).from("email_cadence_steps").insert(step);
       if (error) throw error;
     },
@@ -317,6 +323,24 @@ export const useEnrollInCadence = () => {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["cadence-enrollments"] }),
+  });
+};
+
+// ─── CADENCE STEP PERFORMANCE ─────────────────────────────
+export const useCadenceStepPerformance = (cadenceId?: string) => {
+  return useQuery({
+    queryKey: ["cadence-step-performance", cadenceId],
+    queryFn: async () => {
+      let query = (supabase as any)
+        .from("cadence_step_performance")
+        .select("*")
+        .order("step_order", { ascending: true });
+      if (cadenceId) query = query.eq("cadence_id", cadenceId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!cadenceId,
   });
 };
 
