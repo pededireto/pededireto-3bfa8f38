@@ -6,6 +6,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Map event types to preference keys
+const EVENT_PREF_MAP: Record<string, string> = {
+  match_accepted: "email_on_response",
+  new_message: "email_on_message",
+  badge_earned: "email_on_badge",
+};
+
+// Default preferences if none exist yet
+const DEFAULT_PREFS = {
+  email_on_response: true,
+  email_on_message: true,
+  email_on_badge: false,
+  email_weekly_summary: false,
+  email_marketing: false,
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -38,6 +54,50 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Request not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get profile id from auth user id (preferences FK → profiles.id)
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("id")
+      .eq("user_id", sr.user_id)
+      .single();
+
+    // ── Check consumer notification preferences ──
+    let preferences = { ...DEFAULT_PREFS };
+
+    if (profile?.id) {
+      const { data: prefs } = await adminClient
+        .from("consumer_notification_preferences")
+        .select("*")
+        .eq("user_id", profile.id)
+        .maybeSingle();
+
+      if (prefs) {
+        preferences = {
+          email_on_response: prefs.email_on_response ?? DEFAULT_PREFS.email_on_response,
+          email_on_message: prefs.email_on_message ?? DEFAULT_PREFS.email_on_message,
+          email_on_badge: prefs.email_on_badge ?? DEFAULT_PREFS.email_on_badge,
+          email_weekly_summary: prefs.email_weekly_summary ?? DEFAULT_PREFS.email_weekly_summary,
+          email_marketing: prefs.email_marketing ?? DEFAULT_PREFS.email_marketing,
+        };
+      } else {
+        // Auto-create default preferences row for this consumer
+        await adminClient
+          .from("consumer_notification_preferences")
+          .insert({ user_id: profile.id });
+        console.log("Created default preferences for profile:", profile.id);
+      }
+    }
+
+    // Check if user wants email for this event type
+    const prefKey = EVENT_PREF_MAP[type];
+    if (prefKey && preferences[prefKey as keyof typeof preferences] === false) {
+      console.log(`Email skipped: user disabled ${prefKey} (event: ${type})`);
+      return new Response(
+        JSON.stringify({ success: true, email: false, reason: "preference_disabled" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
