@@ -10,42 +10,6 @@ import { Button } from "@/components/ui/button";
 
 const BASE_URL = "https://pededireto.pt";
 
-const slugify = (text: string) =>
-  text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-
-const useCitiesForCategory = (categoryId?: string) =>
-  useQuery({
-    queryKey: ["category-cities", categoryId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("city")
-        .eq("category_id", categoryId!)
-        .eq("is_active", true)
-        .not("city", "is", null);
-
-      if (error) throw error;
-
-      const cityMap = new Map<string, string>();
-      for (const b of data ?? []) {
-        if (!b.city) continue;
-        const key = slugify(b.city);
-        if (!cityMap.has(key)) cityMap.set(key, b.city);
-      }
-
-      return Array.from(cityMap.entries())
-        .map(([slug, name]) => ({ slug, name }))
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .slice(0, 12);
-    },
-    enabled: !!categoryId,
-  });
-
 const CategoryPage = () => {
   const { slug } = useParams<{ slug: string }>();
 
