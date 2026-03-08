@@ -33,6 +33,7 @@ const StarRating = ({ rating, count }: { rating: number; count: number }) => (
 const BusinessCard = ({ business }: BusinessCardProps) => {
   const trackEvent = useTrackEvent();
   const navigate = useNavigate();
+  const { data: publicBadges = [] } = useBusinessPublicBadges(business.id);
 
   const stats = (business as any).business_review_stats;
 
