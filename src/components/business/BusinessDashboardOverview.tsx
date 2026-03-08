@@ -260,38 +260,45 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
           />
         </div>
 
-        <div className="bg-card rounded-xl p-5 shadow-card flex flex-col justify-between">
-          <div className="flex items-center gap-3 mb-3">
-            <CreditCard className="h-5 w-5 text-primary" />
-            <span className="text-sm text-muted-foreground">Plano Atual</span>
-          </div>
-          <div>
-            <p className="text-lg font-bold">{plan?.name || "Gratuito"}</p>
-            <Badge variant={business.subscription_status === "active" ? "default" : "secondary"} className="mt-1">
-              {business.subscription_status === "active"
-                ? "Ativo"
-                : business.subscription_status === "expired"
-                  ? "Expirado"
-                  : "Inativo"}
-            </Badge>
-            {subscriptionEndDate && (
-              <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <span>
-                  {daysUntilExpiry !== null && daysUntilExpiry <= 30 ? (
-                    <span className="text-yellow-500 font-medium">Expira em {daysUntilExpiry} dias</span>
-                  ) : (
-                    `Válido até ${subscriptionEndDate}`
-                  )}
-                </span>
-              </div>
-            )}
-            {(permissions.isFreePlan || permissions.isPreview) && (
-              <Button size="sm" className="w-full mt-3 text-xs" onClick={() => onNavigate?.("plan")}>
-                {permissions.isPreview ? "Ativar Plano e Receber Pedidos" : "Melhorar Plano"}
-                <ArrowRight className="h-3 w-3 ml-1" />
-              </Button>
-            )}
+        <div className="space-y-4">
+          <ShareProfileCard
+            slug={business.slug}
+            businessName={business.name}
+          />
+
+          <div className="bg-card rounded-xl p-5 shadow-card flex flex-col justify-between">
+            <div className="flex items-center gap-3 mb-3">
+              <CreditCard className="h-5 w-5 text-primary" />
+              <span className="text-sm text-muted-foreground">Plano Atual</span>
+            </div>
+            <div>
+              <p className="text-lg font-bold">{plan?.name || "Gratuito"}</p>
+              <Badge variant={business.subscription_status === "active" ? "default" : "secondary"} className="mt-1">
+                {business.subscription_status === "active"
+                  ? "Ativo"
+                  : business.subscription_status === "expired"
+                    ? "Expirado"
+                    : "Inativo"}
+              </Badge>
+              {subscriptionEndDate && (
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  <span>
+                    {daysUntilExpiry !== null && daysUntilExpiry <= 30 ? (
+                      <span className="text-yellow-500 font-medium">Expira em {daysUntilExpiry} dias</span>
+                    ) : (
+                      `Válido até ${subscriptionEndDate}`
+                    )}
+                  </span>
+                </div>
+              )}
+              {(permissions.isFreePlan || permissions.isPreview) && (
+                <Button size="sm" className="w-full mt-3 text-xs" onClick={() => onNavigate?.("plan")}>
+                  {permissions.isPreview ? "Ativar Plano e Receber Pedidos" : "Melhorar Plano"}
+                  <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
