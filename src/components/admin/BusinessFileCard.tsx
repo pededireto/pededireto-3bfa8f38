@@ -58,6 +58,7 @@ import {
   EyeOff,
   ExternalLink,
   Image,
+  Award,
   Trash2,
   FlaskConical,
 } from "lucide-react";
