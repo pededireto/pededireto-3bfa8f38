@@ -53,6 +53,7 @@ interface Match {
   sent_at: string;
   responded_at: string | null;
   price_quote: string | null;
+  viewed_at: string | null;
   businesses?: { id: string; name: string; slug: string } | null;
 }
 
