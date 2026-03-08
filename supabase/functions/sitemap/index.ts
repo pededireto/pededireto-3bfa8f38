@@ -160,8 +160,21 @@ Deno.serve(async (req) => {
 `;
   }
 
+  // Top ranking pages — /top/:subcategorySlug — priority 0.8
+  for (const s of subcategories ?? []) {
+    xml += `  <url>
+    <loc>${BASE_URL}/top/${s.slug}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+`;
+  }
+
   // Subcategory + City combinations — priority 0.7
+  // Also build top ranking + city pages (min 3 businesses)
+  const subCityCounts = new Map<string, number>(); // "subSlug/citySlug" -> count
   const seenSubCity = new Set<string>();
+
   for (const bs of businessSubcategories ?? []) {
     const subData = subIdToData.get(bs.subcategory_id);
     if (!subData) continue;
@@ -169,16 +182,34 @@ Deno.serve(async (req) => {
     if (!biz?.city) continue;
 
     const citySlug = slugify(biz.city);
-    const key = `${subData.catSlug}/${subData.slug}/${citySlug}`;
-    if (seenSubCity.has(key)) continue;
-    seenSubCity.add(key);
 
-    xml += `  <url>
+    // Subcategory + City page
+    const key = `${subData.catSlug}/${subData.slug}/${citySlug}`;
+    if (!seenSubCity.has(key)) {
+      seenSubCity.add(key);
+      xml += `  <url>
     <loc>${BASE_URL}/categoria/${subData.catSlug}/${subData.slug}/cidade/${citySlug}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 `;
+    }
+
+    // Count for top ranking + city
+    const topKey = `${subData.slug}/${citySlug}`;
+    subCityCounts.set(topKey, (subCityCounts.get(topKey) || 0) + 1);
+  }
+
+  // Top ranking + city pages (only if >= 3 businesses)
+  for (const [key, count] of subCityCounts) {
+    if (count >= 3) {
+      xml += `  <url>
+    <loc>${BASE_URL}/top/${key}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+`;
+    }
   }
 
   xml += `</urlset>`;
