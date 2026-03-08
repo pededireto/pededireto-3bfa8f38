@@ -71,7 +71,7 @@ const matchStatusConfig: Record<
 
 // ─── Sub-componente: Chat de um pedido (com Realtime) ─────────────────────────
 
-const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => void }) => {
+const RequestChat = ({ requestId, consumerDisplayName = "Consumidor", onRead }: { requestId: string; consumerDisplayName?: string; onRead: () => void }) => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
