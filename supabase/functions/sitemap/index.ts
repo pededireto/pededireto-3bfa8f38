@@ -8,6 +8,14 @@ const corsHeaders = {
 
 const BASE_URL = "https://pededireto.pt";
 
+const slugify = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -41,7 +49,7 @@ Deno.serve(async (req) => {
   // Active businesses
   const { data: businesses } = await supabase
     .from("businesses")
-    .select("slug, updated_at")
+    .select("slug, updated_at, city, category_id")
     .eq("is_active", true);
 
   // Published blog posts
@@ -77,7 +85,9 @@ Deno.serve(async (req) => {
   }
 
   // Categories
+  const catSlugMap = new Map<string, string>();
   for (const c of categories ?? []) {
+    catSlugMap.set(c.slug, c.slug);
     xml += `  <url>
     <loc>${BASE_URL}/categoria/${c.slug}</loc>
     <lastmod>${(c.updated_at || now).split("T")[0]}</lastmod>
@@ -107,6 +117,37 @@ Deno.serve(async (req) => {
     <priority>0.6</priority>
   </url>
 `;
+  }
+
+  // Category + City combinations
+  const catIdToSlug = new Map<string, string>();
+  if (categories && businesses) {
+    // Build category_id → slug map
+    const { data: catsWithId } = await supabase
+      .from("categories")
+      .select("id, slug");
+    for (const c of catsWithId ?? []) {
+      catIdToSlug.set(c.id, c.slug);
+    }
+
+    // Deduplicate category+city combos
+    const seen = new Set<string>();
+    for (const b of businesses) {
+      if (!b.city || !b.category_id) continue;
+      const catSlug = catIdToSlug.get(b.category_id);
+      if (!catSlug) continue;
+      const citySlug = slugify(b.city);
+      const key = `${catSlug}/${citySlug}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      xml += `  <url>
+    <loc>${BASE_URL}/categoria/${catSlug}/cidade/${citySlug}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+`;
+    }
   }
 
   xml += `</urlset>`;
