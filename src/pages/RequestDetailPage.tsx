@@ -41,6 +41,8 @@ interface RequestDetail {
   location_city: string | null;
   location_postal_code: string | null;
   created_at: string;
+  category_id: string | null;
+  subcategory_id: string | null;
   categories?: { name: string } | null;
   subcategories?: { name: string } | null;
 }
