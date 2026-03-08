@@ -111,6 +111,15 @@ const UpgradeBanner = ({
 };
 
 const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    const flag = localStorage.getItem("onboarding_complete");
+    if (flag === "true") {
+      setShowWelcome(true);
+      localStorage.removeItem("onboarding_complete");
+    }
+  }, []);
   const queryClient = useQueryClient();
   const { data: plans = [] } = useCommercialPlans(true);
   const { data: requests = [] } = useBusinessRequests(business.id);
