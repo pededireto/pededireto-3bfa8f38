@@ -153,6 +153,7 @@ export type Database = {
           id: string
           position: number | null
           search_log_id: string | null
+          user_id: string | null
         }
         Insert: {
           business_id?: string | null
@@ -163,6 +164,7 @@ export type Database = {
           id?: string
           position?: number | null
           search_log_id?: string | null
+          user_id?: string | null
         }
         Update: {
           business_id?: string | null
@@ -173,6 +175,7 @@ export type Database = {
           id?: string
           position?: number | null
           search_log_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -2898,6 +2901,140 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "commercial_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consumer_badge_progress: {
+        Row: {
+          badge_id: string
+          current_value: number | null
+          target_value: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          current_value?: number | null
+          target_value: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          current_value?: number | null
+          target_value?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumer_badge_progress_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "consumer_badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumer_badge_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumer_badge_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consumer_badges: {
+        Row: {
+          category: string
+          color: string | null
+          created_at: string | null
+          criteria_type: string
+          criteria_value: number
+          description: string | null
+          display_order: number | null
+          icon: string
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string
+        }
+        Insert: {
+          category?: string
+          color?: string | null
+          created_at?: string | null
+          criteria_type: string
+          criteria_value?: number
+          description?: string | null
+          display_order?: number | null
+          icon?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug: string
+        }
+        Update: {
+          category?: string
+          color?: string | null
+          created_at?: string | null
+          criteria_type?: string
+          criteria_value?: number
+          description?: string | null
+          display_order?: number | null
+          icon?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      consumer_earned_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumer_earned_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "consumer_badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumer_earned_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumer_earned_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_confirmation"
             referencedColumns: ["id"]
           },
         ]
@@ -6550,6 +6687,10 @@ export type Database = {
       }
       compute_badge_progress: {
         Args: { p_business_id: string }
+        Returns: undefined
+      }
+      compute_consumer_badge_progress: {
+        Args: { p_user_id: string }
         Returns: undefined
       }
       create_consumer_support_ticket:
