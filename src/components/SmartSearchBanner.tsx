@@ -73,8 +73,8 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
           </div>
           <div className="mt-4">
             <Button asChild size="sm" variant="default">
-              <Link to="/pedir-servico">
-                Pedir orçamento gratuito
+              <Link to={user ? "/pedir-servico" : `/registar/consumidor?redirect=${encodeURIComponent(location.pathname + location.search)}`}>
+                {user ? "Pedir orçamento gratuito" : "Registar para pedir orçamento"}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
             </Button>
