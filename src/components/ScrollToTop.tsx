@@ -23,7 +23,7 @@ const ScrollToTop = () => {
   return (
     <Button
       size="icon"
-      className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg w-12 h-12 bg-primary text-primary-foreground hover:bg-primary/90"
+      className="fixed bottom-20 right-6 z-50 rounded-full shadow-lg w-12 h-12 bg-primary text-primary-foreground hover:bg-primary/90"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       aria-label="Voltar ao topo"
     >
