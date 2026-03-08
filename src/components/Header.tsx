@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useHeaderPages } from "@/hooks/useNavigationPages";
 import { useAuth } from "@/hooks/useAuth";
 import ThemeToggle from "./ThemeToggle";
+import NotificationBell from "./notifications/NotificationBell";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -77,6 +78,8 @@ const Header = () => {
 
           {user ? (
             <>
+              <NotificationBell targetRole={isAdmin ? "admin" : "consumer"} />
+
               {isAdmin ? (
                 <Link
                   to="/admin"
@@ -177,6 +180,11 @@ const Header = () => {
 
               {user ? (
                 <>
+                  <div className="flex items-center gap-2">
+                    <NotificationBell targetRole={isAdmin ? "admin" : "consumer"} />
+                    <span className="text-lg font-medium text-foreground">Notificações</span>
+                  </div>
+
                   {isAdmin ? (
                     <Link
                       to="/admin"
