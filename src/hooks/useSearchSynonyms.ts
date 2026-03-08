@@ -5,6 +5,7 @@ export interface SearchSynonym {
   id: string;
   termo: string;
   equivalente: string;
+  type: string;
   created_at: string;
 }
 
@@ -27,7 +28,7 @@ export const useCreateSearchSynonym = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (synonym: { termo: string; equivalente: string }) => {
+    mutationFn: async (synonym: { termo: string; equivalente: string; type?: string }) => {
       const { data, error } = await supabase
         .from("search_synonyms")
         .insert(synonym as any)
