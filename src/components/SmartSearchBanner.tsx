@@ -1,8 +1,9 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AlertTriangle, Lightbulb, Search, ArrowRight, MapPin, Zap, FileText, Frown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { SmartSearchResult } from "@/hooks/useSmartSearch";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SmartSearchBannerProps {
   result: SmartSearchResult;
@@ -12,6 +13,8 @@ interface SmartSearchBannerProps {
 
 const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSearchBannerProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const {
     isUrgent,
     isSmartMatch,
@@ -70,8 +73,8 @@ const SmartSearchBanner = ({ result, userCity, onComplementaryClick }: SmartSear
           </div>
           <div className="mt-4">
             <Button asChild size="sm" variant="default">
-              <Link to="/pedir-servico">
-                Pedir orçamento gratuito
+              <Link to={user ? "/pedir-servico" : `/registar/consumidor?redirect=${encodeURIComponent(location.pathname + location.search)}`}>
+                {user ? "Pedir orçamento gratuito" : "Registar para pedir orçamento"}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
             </Button>
