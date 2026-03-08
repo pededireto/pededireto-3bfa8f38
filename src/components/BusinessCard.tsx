@@ -1,12 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { BusinessWithCategory } from "@/hooks/useBusinesses";
+import { PublicBusinessWithCategory } from "@/hooks/usePublicBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
 import { MapPin, Globe, Phone, MessageCircle, ExternalLink, Star as StarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FavoriteButton from "@/components/FavoriteButton";
 
 interface BusinessCardProps {
-  business: BusinessWithCategory;
+  business: BusinessWithCategory | PublicBusinessWithCategory;
 }
 
 const StarRating = ({ rating, count }: { rating: number; count: number }) => (
