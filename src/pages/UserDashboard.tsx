@@ -32,6 +32,7 @@ import ConsumerMetricsBar from "@/components/consumer/ConsumerMetricsBar";
 import ConsumerBadgesSection from "@/components/consumer/ConsumerBadgesSection";
 import ConsumerRequestCard from "@/components/consumer/ConsumerRequestCard";
 import ConsumerActivityTimeline from "@/components/consumer/ConsumerActivityTimeline";
+import ConsumerDashboardInsights from "@/components/consumer/ConsumerDashboardInsights";
 
 const UserDashboard = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
@@ -233,7 +234,10 @@ const UserDashboard = () => {
         {/* ── D — Badges (Conquistas) ────────────────────────────────── */}
         <ConsumerBadgesSection profileId={profile?.id} />
 
-        {/* ── E — Activity Timeline ───────────────────────────────── */}
+        {/* ── E — Dashboard Insights ─────────────────────────────── */}
+        <ConsumerDashboardInsights userId={user?.id} />
+
+        {/* ── F — Activity Timeline ───────────────────────────────── */}
         <ConsumerActivityTimeline userId={user?.id} />
 
         {/* ── F — Tabs ───────────────────────────────────────────────── */}
