@@ -704,6 +704,35 @@ const RequestDetailPage = () => {
           </div>
         </div>
 
+        {/* ── Progress Bar ── */}
+        <Card className="mb-4">
+          <CardContent className="py-4 px-5 space-y-3">
+            <RequestProgressBar
+              data={{
+                requestStatus: request.status,
+                matchesTotal: matches.length,
+                matchesViewed,
+                matchesResponded,
+                hasMessages: messages.length > 0,
+              }}
+            />
+            {matches.length > 0 && (
+              <RequestActivityPulse
+                notified={matches.length}
+                viewed={matchesViewed}
+                responded={matchesResponded}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Social Proof ── */}
+        {socialProof && (socialProof.similarRequests >= 2 || socialProof.avgRating) && (
+          <div className="mb-4 px-1">
+            <RequestSocialProof data={socialProof} city={request.location_city} />
+          </div>
+        )}
+
         {/* ── Banner dinâmico (🔴 vermelho / 🟠 laranja / 🟢 verde) ── */}
         {bannerState !== "none" && (
           <div

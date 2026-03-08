@@ -268,6 +268,7 @@ const BusinessPage = () => {
   const { data: moduleValues = [] } = useBusinessModuleValues(business?.id);
   const { data: publicBadges = [] } = usePublicBadges(business?.id);
   const { data: topPosition } = useBusinessTopPosition(business?.id);
+  const { data: responseTime } = useBusinessResponseTime(business?.id);
 
   const [showSuggestionForm, setShowSuggestionForm] = useState(false);
 
