@@ -44,6 +44,7 @@ import {
   Search,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatReviewerName } from "@/lib/utils";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
