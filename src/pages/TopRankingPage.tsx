@@ -55,6 +55,8 @@ const getCardBg = (position: number) => {
 const TopRankingPage = () => {
   const { subcategorySlug, citySlug } = useParams<{ subcategorySlug: string; citySlug?: string }>();
   const { data, isLoading } = useTopRanking(subcategorySlug, citySlug);
+  const businessIds = (data?.businesses || []).map((b) => b.id);
+  const { data: badgesMap = new Map() } = useBatchPublicBadges(businessIds);
 
   const subcatName = data?.subcategory?.name || "";
   const catName = data?.subcategory?.categories?.name || "";
