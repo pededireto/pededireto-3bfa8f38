@@ -445,7 +445,20 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
             keywordCombos.push(keywords.slice(0, len).join(" "));
           }
           const candidates = [query, strippedTerm, ...keywordCombos].filter(Boolean);
-          const { data: allSynonyms } = await supabase.from("search_synonyms").select("termo, equivalente, type");
+          // Fetch ALL synonyms (bypass default 1000 limit)
+          const allSynonyms: any[] = [];
+          let offset = 0;
+          const PAGE_SIZE = 1000;
+          while (true) {
+            const { data: page } = await supabase
+              .from("search_synonyms")
+              .select("termo, equivalente, type")
+              .range(offset, offset + PAGE_SIZE - 1);
+            if (!page || page.length === 0) break;
+            allSynonyms.push(...page);
+            if (page.length < PAGE_SIZE) break;
+            offset += PAGE_SIZE;
+          }
           const equivalentsFound = new Set<string>();
 
           if (allSynonyms) {
