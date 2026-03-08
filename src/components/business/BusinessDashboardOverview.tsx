@@ -404,6 +404,11 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <BusinessRankingWidget
+          businessId={business.id}
+          onNavigate={onNavigate}
+        />
+
         <BusinessSearchPosition
           businessId={business.id}
           planId={business.plan_id}
