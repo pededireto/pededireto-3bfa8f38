@@ -80,7 +80,8 @@ export type AdminTab =
   | "test-users"
   | "pending-claims"
   | "emails"
-  | "blog";
+  | "blog"
+  | "newsletter";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
