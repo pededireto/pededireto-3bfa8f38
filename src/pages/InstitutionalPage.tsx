@@ -8,6 +8,7 @@ import ConsumersLandingPage from "@/components/ConsumersLandingPage";
 import BusinessLandingPage from "@/components/BusinessLandingPage";
 import AboutLandingPage from "@/components/AboutLandingPage";
 import EmergencyLandingPage from "@/components/EmergencyLandingPage";
+import OffersPartnersLandingPage from "@/components/OffersPartnersLandingPage";
 import { Loader2 } from "lucide-react";
 import DOMPurify from "dompurify";
 
@@ -103,6 +104,8 @@ const InstitutionalPage = () => {
           <AboutLandingPage />
         ) : slug === "gestao" ? (
           <EmergencyLandingPage />
+        ) : slug === "publicidade" ? (
+          <OffersPartnersLandingPage />
         ) : (
           <>
             <section className="section-hero py-12">
