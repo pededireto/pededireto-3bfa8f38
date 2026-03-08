@@ -298,7 +298,7 @@ const EmergencyLandingPage = () => {
       {/* ── Disclaimer ── */}
       <section className="py-12">
         <div className="container max-w-3xl">
-          <Card className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
+          <Card className="border-destructive/30 bg-destructive/5">
             <CardContent className="p-8">
               <div className="flex items-center gap-2 mb-4">
                 <Info className="w-5 h-5 text-amber-600 dark:text-amber-400" />
