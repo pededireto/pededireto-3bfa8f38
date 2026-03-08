@@ -7,6 +7,7 @@ import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useAutoSaveSearch } from "@/hooks/useSavedSearches";
 import SearchResults from "@/components/SearchResults";
 import pedeDiretoMascot from "@/assets/pede-direto-mascot.png";
+import { getYouTubeEmbedUrl } from "@/utils/youtube";
 
 interface HeroSectionProps {
   onSearch?: (term: string) => void;
