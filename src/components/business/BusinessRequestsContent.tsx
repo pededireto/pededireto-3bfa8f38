@@ -536,7 +536,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
         </div>
 
         {/* Inline chat */}
-        {requestId && chatOpen && isAccepted && <RequestChat requestId={requestId} onRead={handleRead} />}
+        {requestId && chatOpen && isAccepted && <RequestChat requestId={requestId} consumerDisplayName={formatReviewerName(profile?.full_name)} onRead={handleRead} />}
       </div>
     );
   };
