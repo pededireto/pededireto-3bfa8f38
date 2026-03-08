@@ -44,6 +44,7 @@ const Index = () => {
         - id necessário para skip link
         - tabIndex=-1 necessário para foco programático em SPA
       */}
+      <StickySearch />
       <main id="main-content" className="flex-1" tabIndex={-1}>
         {useBlocks ? (
           blocks.map((block) => (

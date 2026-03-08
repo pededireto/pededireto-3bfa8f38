@@ -56,6 +56,10 @@ export interface PublicBusinessWithCategory extends PublicBusiness {
     name: string;
     slug: string;
   } | null;
+  business_review_stats?: {
+    average_rating: number;
+    total_reviews: number;
+  } | null;
 }
 
 const PUBLIC_SELECT = `
@@ -70,6 +74,10 @@ const PUBLIC_SELECT = `
     id,
     name,
     slug
+  ),
+  business_review_stats (
+    average_rating,
+    total_reviews
   )
 `;
 

@@ -1,7 +1,7 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
-import { MapPin, Globe, Phone, MessageCircle, ExternalLink, Star } from "lucide-react";
+import { MapPin, Globe, Phone, MessageCircle, ExternalLink, Star as StarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FavoriteButton from "@/components/FavoriteButton";
 
@@ -9,9 +9,29 @@ interface BusinessCardProps {
   business: BusinessWithCategory;
 }
 
+const StarRating = ({ rating, count }: { rating: number; count: number }) => (
+  <div className="flex items-center gap-1.5 mb-3">
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <StarIcon
+          key={star}
+          className="w-4 h-4"
+          fill={star <= Math.round(rating) ? "#f59e0b" : "none"}
+          stroke={star <= Math.round(rating) ? "#f59e0b" : "currentColor"}
+          strokeWidth={1.5}
+        />
+      ))}
+    </div>
+    <span className="text-sm font-semibold text-foreground">{rating.toFixed(1)}</span>
+    <span className="text-xs text-muted-foreground">({count})</span>
+  </div>
+);
+
 const BusinessCard = ({ business }: BusinessCardProps) => {
   const trackEvent = useTrackEvent();
   const navigate = useNavigate();
+
+  const stats = (business as any).business_review_stats;
 
   const handleCtaClick = (type: "whatsapp" | "phone" | "website" | "email" | "app") => {
     trackEvent.mutate({
@@ -48,7 +68,7 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
       {business.is_featured && (
         <div className="absolute top-3 right-3 z-10">
           <span className="badge-featured">
-            <Star className="w-3 h-3" />
+            <StarIcon className="w-3 h-3" />
             Destaque
           </span>
         </div>
@@ -61,7 +81,7 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
         </div>
       )}
 
-      {/* Favorito — stopPropagation para não navegar ao clicar no coração */}
+      {/* Favorito */}
       <div className="absolute top-3 left-3 z-20" onClick={(e) => e.stopPropagation()}>
         <FavoriteButton businessId={business.id} className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-sm" />
       </div>
@@ -98,13 +118,18 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{business.description}</p>
         )}
 
+        {/* Rating Stars */}
+        {stats && stats.total_reviews > 0 && (
+          <StarRating rating={stats.average_rating} count={stats.total_reviews} />
+        )}
+
         {/* Location */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
           {business.alcance === "nacional" ? <Globe className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
           <span className="truncate">{getAlcanceLabel()}</span>
         </div>
 
-        {/* Botões CTA — stopPropagation no wrapper para proteger as ações */}
+        {/* CTA Buttons */}
         <div className="flex flex-wrap gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
           {business.cta_whatsapp && (business as any).show_whatsapp !== false && (
             <Button
