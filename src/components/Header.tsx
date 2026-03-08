@@ -180,6 +180,11 @@ const Header = () => {
 
               {user ? (
                 <>
+                  <div className="flex items-center gap-2">
+                    <NotificationBell targetRole={isAdmin ? "admin" : "consumer"} />
+                    <span className="text-lg font-medium text-foreground">Notificações</span>
+                  </div>
+
                   {isAdmin ? (
                     <Link
                       to="/admin"
