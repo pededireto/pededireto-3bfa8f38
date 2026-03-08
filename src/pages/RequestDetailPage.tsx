@@ -26,6 +26,10 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRequestSocialProof } from "@/hooks/useRequestSocialProof";
+import RequestSocialProof from "@/components/consumer/RequestSocialProof";
+import RequestProgressBar, { type ProgressData } from "@/components/consumer/RequestProgressBar";
+import RequestActivityPulse from "@/components/consumer/RequestActivityPulse";
 
 // --- Tipos ---
 
