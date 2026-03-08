@@ -126,7 +126,12 @@ export const useBusinessReviews = (businessId: string | undefined, filters?: {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as BusinessReview[];
+      // Flatten joined profile name
+      return ((data || []) as any[]).map((r: any) => ({
+        ...r,
+        reviewer_full_name: r.profiles?.full_name || null,
+        profiles: undefined,
+      })) as BusinessReview[];
     },
     enabled: !!businessId,
   });
