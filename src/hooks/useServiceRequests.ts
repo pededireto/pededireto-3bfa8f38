@@ -204,11 +204,15 @@ export const useServiceRequestStats = () => {
   });
 };
 
-// ─── Meta-dados por pedido (respostas + não lidas) ────────────────────────────
+// ─── Meta-dados por pedido (respostas + não lidas + actividade) ───────────────
 export interface RequestMeta {
   responses: number;
   hasUnread: boolean;
   hasPending: boolean;
+  notified: number;
+  viewed: number;
+  responded: number;
+  hasMessages: boolean;
 }
 
 // ─── Review feedback por pedido ───────────────────────────────────────────────
@@ -231,7 +235,6 @@ export const useConsumerRequestReviews = (requestIds: string[]) => {
       } = await supabase.auth.getUser();
       if (!user) return {} as Record<string, RequestReviewInfo[]>;
 
-      // 1. Get all matches for these requests
       const { data: matches, error: matchErr } = await supabase
         .from("request_business_matches" as any)
         .select("request_id, business_id")
@@ -241,7 +244,6 @@ export const useConsumerRequestReviews = (requestIds: string[]) => {
       const allBusinessIds = [...new Set((matches || []).map((m: any) => m.business_id))];
       if (allBusinessIds.length === 0) return {} as Record<string, RequestReviewInfo[]>;
 
-      // 2. Get user's reviews for those businesses
       const { data: reviews, error: revErr } = await supabase
         .from("business_reviews")
         .select("business_id, rating, comment, business_response, business_response_at")
@@ -249,7 +251,6 @@ export const useConsumerRequestReviews = (requestIds: string[]) => {
         .in("business_id", allBusinessIds);
       if (revErr) throw revErr;
 
-      // 3. Get business names
       const { data: businesses } = await supabase
         .from("businesses")
         .select("id, name")
@@ -258,11 +259,9 @@ export const useConsumerRequestReviews = (requestIds: string[]) => {
       const bizNameMap: Record<string, string> = {};
       (businesses || []).forEach((b: any) => { bizNameMap[b.id] = b.name; });
 
-      // 4. Build review map by business_id
       const reviewMap: Record<string, typeof reviews extends (infer T)[] ? T : never> = {};
       (reviews || []).forEach((r: any) => { reviewMap[r.business_id] = r; });
 
-      // 5. Cross-reference: for each match, check if there's a review
       const result: Record<string, RequestReviewInfo[]> = {};
       (matches || []).forEach((m: any) => {
         const rev = reviewMap[m.business_id];
@@ -293,10 +292,10 @@ export const useConsumerRequestsMeta = (requestIds: string[]) => {
       } = await supabase.auth.getUser();
       if (!user) return {} as Record<string, RequestMeta>;
 
-      // Buscar matches (respostas dos negócios)
+      // Buscar matches com detalhes de actividade
       const { data: matches, error: matchError } = await supabase
         .from("request_business_matches" as any)
-        .select("request_id, status")
+        .select("request_id, status, viewed_at, responded_at, first_response_at")
         .in("request_id", requestIds);
       if (matchError) throw matchError;
 
@@ -309,6 +308,16 @@ export const useConsumerRequestsMeta = (requestIds: string[]) => {
         .is("read_at", null);
       if (msgError) throw msgError;
 
+      // Buscar se existem mensagens (para saber se conversa começou)
+      const { data: allMessages, error: allMsgError } = await supabase
+        .from("request_messages" as any)
+        .select("request_id")
+        .in("request_id", requestIds)
+        .limit(500);
+      if (allMsgError) throw allMsgError;
+
+      const messageRequestIds = new Set((allMessages || []).map((m: any) => m.request_id));
+
       // Agregar por request_id
       const meta: Record<string, RequestMeta> = {};
 
@@ -320,6 +329,12 @@ export const useConsumerRequestsMeta = (requestIds: string[]) => {
           responses: reqMatches.length,
           hasUnread: reqUnread.length > 0,
           hasPending: reqMatches.some((m: any) => m.status === "enviado"),
+          notified: reqMatches.length,
+          viewed: reqMatches.filter((m: any) => m.viewed_at != null).length,
+          responded: reqMatches.filter(
+            (m: any) => m.responded_at != null || m.first_response_at != null
+          ).length,
+          hasMessages: messageRequestIds.has(id),
         };
       });
 
