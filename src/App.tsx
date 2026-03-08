@@ -143,6 +143,7 @@ const App = () => {
                     <Route path="/blog/:slug" element={<BlogPostPage />} />
                     <Route path="/top/:subcategorySlug/:citySlug" element={<TopRankingPage />} />
                     <Route path="/top/:subcategorySlug" element={<TopRankingPage />} />
+                    <Route path="/p/:slug" element={<BusinessShortUrl />} />
 
                     {/* AUTH */}
                     <Route path="/login" element={<UserLogin />} />
