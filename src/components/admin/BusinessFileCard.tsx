@@ -1656,6 +1656,13 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         </Section>
       )}
 
+      {/* ── Badges (admin only, editing existing) ── */}
+      {isEditing && isAdmin && business && (
+        <Section title="Badges" icon={Award} defaultOpen={false}>
+          <AdminBadgesPanel businessId={business.id} />
+        </Section>
+      )}
+
       {/* ── Actions ── */}
       <div className="flex justify-end gap-2 pt-4 border-t border-border">
         <Button type="button" variant="outline" onClick={onCancel}>
