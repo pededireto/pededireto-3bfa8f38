@@ -135,6 +135,7 @@ const Footer = () => {
             <ul className="space-y-2 text-foreground/70">
               <li><Link to="/" className="hover:text-primary transition-colors">Início</Link></li>
               <li><Link to="/#categorias" className="hover:text-primary transition-colors">Categorias</Link></li>
+              <li><Link to="/pricing" className="hover:text-primary transition-colors">Preços</Link></li>
               <li><Link to="/blog" className="hover:text-primary transition-colors">Guias & Dicas</Link></li>
               {pages.map((page) => (
                 <li key={page.id}>

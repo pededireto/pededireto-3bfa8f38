@@ -147,6 +147,7 @@ const App = () => {
                     <Route path="/top/:subcategorySlug" element={<TopRankingPage />} />
                     <Route path="/s/:subSlug/:citySlug" element={<SeoSubcategoryCityPage />} />
                     <Route path="/p/:slug" element={<BusinessShortUrl />} />
+                    <Route path="/pricing" element={<PricingPage />} />
 
                     {/* AUTH */}
                     <Route path="/login" element={<UserLogin />} />
