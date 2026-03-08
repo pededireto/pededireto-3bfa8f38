@@ -439,20 +439,42 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         const strippedTerm = stripIntent(query);
         const keywords = extractKeywords(strippedTerm || query);
 
-        if (strippedTerm.length >= 3 || keywords.length > 0) {
+        if (strippedTerm.length >= 2 || keywords.length > 0) {
           const keywordCombos: string[] = [];
           for (let len = keywords.length; len >= 1; len--) {
             keywordCombos.push(keywords.slice(0, len).join(" "));
           }
           const candidates = [query, strippedTerm, ...keywordCombos].filter(Boolean);
-          const { data: allSynonyms } = await supabase.from("search_synonyms").select("termo, equivalente");
+          const { data: allSynonyms } = await supabase.from("search_synonyms").select("termo, equivalente, type");
           const equivalentsFound = new Set<string>();
 
           if (allSynonyms) {
-            for (const candidate of candidates) {
-              if (!candidate || candidate.length < 2) continue;
-              const matches = allSynonyms.filter((s) => normalize(s.termo) === normalize(candidate));
-              matches.forEach((m) => equivalentsFound.add(m.equivalente));
+            // Sort by termo length descending so longer (more specific) phrases match first
+            const sortedSynonyms = [...allSynonyms].sort(
+              (a, b) => (b.termo?.length ?? 0) - (a.termo?.length ?? 0)
+            );
+
+            // Phase 1: Check phrase synonyms against full query first
+            const phraseSynonyms = sortedSynonyms.filter((s) => (s as any).type === "phrase");
+            for (const syn of phraseSynonyms) {
+              const normTermo = normalize(syn.termo);
+              if (normalize(query).includes(normTermo) || normalize(strippedTerm).includes(normTermo)) {
+                equivalentsFound.add(syn.equivalente);
+              }
+            }
+
+            // Phase 2: Check word synonyms with partial matching
+            if (equivalentsFound.size === 0) {
+              const wordSynonyms = sortedSynonyms.filter((s) => (s as any).type !== "phrase");
+              for (const candidate of candidates) {
+                if (!candidate || candidate.length < 2) continue;
+                const normCandidate = normalize(candidate);
+                const matches = wordSynonyms.filter((s) => {
+                  const normTermo = normalize(s.termo);
+                  return normTermo === normCandidate || normCandidate.includes(normTermo);
+                });
+                matches.forEach((m) => equivalentsFound.add(m.equivalente));
+              }
             }
           }
 
