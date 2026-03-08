@@ -3039,6 +3039,48 @@ export type Database = {
           },
         ]
       }
+      consumer_notification_preferences: {
+        Row: {
+          email_on_badge: boolean | null
+          email_on_message: boolean | null
+          email_on_response: boolean | null
+          email_weekly_summary: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          email_on_badge?: boolean | null
+          email_on_message?: boolean | null
+          email_on_response?: boolean | null
+          email_weekly_summary?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          email_on_badge?: boolean | null
+          email_on_message?: boolean | null
+          email_on_response?: boolean | null
+          email_weekly_summary?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumer_notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumer_notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_with_confirmation"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consumer_plans: {
         Row: {
           created_at: string | null
@@ -4439,6 +4481,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          avatar_url: string | null
           city: string | null
           consumer_plan_expires_at: string | null
           consumer_plan_id: string | null
@@ -4454,6 +4497,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          avatar_url?: string | null
           city?: string | null
           consumer_plan_expires_at?: string | null
           consumer_plan_id?: string | null
@@ -4469,6 +4513,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          avatar_url?: string | null
           city?: string | null
           consumer_plan_expires_at?: string | null
           consumer_plan_id?: string | null
