@@ -25,6 +25,7 @@ export interface BusinessReview {
   photos: string[];
   created_at: string;
   updated_at: string;
+  reviewer_full_name?: string | null;
 }
 
 export interface ReviewStats {
