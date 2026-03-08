@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Star, ThumbsUp, ThumbsDown, Flag, MoreVertical, ShieldCheck } from "lucide-react";
+import { Star, ThumbsUp, ThumbsDown, Flag, MoreVertical, ShieldCheck, User } from "lucide-react";
+import { formatReviewerName } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useVoteReviewHelpfulness, useRemoveVote, useFlagReview, useUserVoteForReview, type BusinessReview } from "@/hooks/useBusinessReviews";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,15 @@ export const ReviewCard = ({ review, onEdit, onDelete, showBusinessResponse = tr
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex-1">
+          {/* Reviewer name */}
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <User className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <span className="text-sm font-semibold text-foreground">
+              {formatReviewerName((review as any).reviewer_full_name)}
+            </span>
+          </div>
           {/* Rating */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">

@@ -25,6 +25,7 @@ export interface BusinessReview {
   photos: string[];
   created_at: string;
   updated_at: string;
+  reviewer_full_name?: string | null;
 }
 
 export interface ReviewStats {
@@ -96,7 +97,7 @@ export const useBusinessReviews = (businessId: string | undefined, filters?: {
 
       let query = (supabase as any)
         .from("business_reviews")
-        .select("*")
+        .select("*, profiles:user_id(full_name)")
         .eq("business_id", businessId)
         .eq("moderation_status", "approved");
 
@@ -125,7 +126,12 @@ export const useBusinessReviews = (businessId: string | undefined, filters?: {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as BusinessReview[];
+      // Flatten joined profile name
+      return ((data || []) as any[]).map((r: any) => ({
+        ...r,
+        reviewer_full_name: r.profiles?.full_name || null,
+        profiles: undefined,
+      })) as BusinessReview[];
     },
     enabled: !!businessId,
   });
