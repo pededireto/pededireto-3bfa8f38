@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { useUncontactedCount } from "@/hooks/useExpirationLogs";
 import { usePendingRequestsCount } from "@/hooks/useActionRequests";
 import { usePendingClaimsCount } from "@/hooks/useClaimRequests";
+import { usePlatformAlertsCounts, usePendingReviewsCount } from "@/hooks/usePlatformAlerts";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
