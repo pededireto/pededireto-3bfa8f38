@@ -1119,6 +1119,60 @@ export type Database = {
           },
         ]
       }
+      business_email_preferences: {
+        Row: {
+          business_id: string
+          updated_at: string | null
+          weekly_digest: boolean | null
+        }
+        Insert: {
+          business_id: string
+          updated_at?: string | null
+          weekly_digest?: boolean | null
+        }
+        Update: {
+          business_id?: string
+          updated_at?: string | null
+          weekly_digest?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_email_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_email_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_email_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_email_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_email_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_highlights: {
         Row: {
           business_id: string
@@ -1625,6 +1679,69 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles_with_confirmation"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_ranking_snapshots: {
+        Row: {
+          business_id: string
+          id: string
+          position: number | null
+          score: number
+          snapshot_date: string
+          subcategory_id: string | null
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          position?: number | null
+          score: number
+          snapshot_date?: string
+          subcategory_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          position?: number | null
+          score?: number
+          snapshot_date?: string
+          subcategory_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_ranking_snapshots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_ranking_snapshots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_ranking_snapshots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_ranking_snapshots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_ranking_snapshots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
             referencedColumns: ["id"]
           },
         ]
@@ -6605,6 +6722,7 @@ export type Database = {
         Args: { p_business_id: string; p_user_id: string }
         Returns: undefined
       }
+      save_ranking_snapshots: { Args: never; Returns: undefined }
       search_businesses_and_subcategories: {
         Args: { search_term: string }
         Returns: {
