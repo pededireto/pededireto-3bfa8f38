@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import VideoPlayer from "@/components/business/VideoPlayer";
+import type { PageBlock } from "@/hooks/useInstitutionalPages";
 import {
   Phone,
   AlertTriangle,
@@ -23,7 +25,14 @@ import {
   Building2,
 } from "lucide-react";
 
-const EmergencyLandingPage = () => {
+interface EmergencyLandingPageProps {
+  blocks?: PageBlock[];
+}
+
+const EmergencyLandingPage = ({ blocks = [] }: EmergencyLandingPageProps) => {
+  // Find video blocks from DB (e.g. INEM video)
+  const videoBlocks = blocks.filter((b) => b.type === "video");
+  const textBlocks = blocks.filter((b) => b.type === "text");
   return (
     <div className="min-h-screen">
       {/* ── Emergency Banner ── */}
@@ -265,35 +274,53 @@ const EmergencyLandingPage = () => {
         </div>
       </section>
 
-      {/* ── Mensagem do INEM ── */}
-      <section className="py-16 bg-muted/30">
-        <div className="container max-w-3xl">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">Mensagem do INEM</h2>
-          <Card>
-            <CardContent className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-bold">🏥 Instituto Nacional de Emergência Médica</p>
-                </div>
+      {/* ── Mensagem do INEM (dynamic from DB blocks) ── */}
+      {videoBlocks.length > 0 && (
+        <section className="py-16 bg-muted/30">
+          <div className="container max-w-3xl">
+            {videoBlocks.map((block) => (
+              <div key={block.id} className="mb-8 last:mb-0">
+                {block.title && (
+                  <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">{block.title}</h2>
+                )}
+                <Card>
+                  <CardContent className="p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-primary" />
+                      </div>
+                      <p className="font-bold">🏥 Instituto Nacional de Emergência Médica</p>
+                    </div>
+                    <VideoPlayer url={block.data.url || ""} label={block.title || "Vídeo"} />
+                    <p className="text-xs text-muted-foreground mt-4">
+                      Informação oficial disponibilizada pelo INEM em parceria com o Pede Direto.
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
-              <div className="bg-muted/50 rounded-lg p-6">
-                <div className="flex items-start gap-2">
-                  <span className="text-lg">📋</span>
-                  <p className="text-muted-foreground text-sm italic">
-                    Conteúdo da mensagem do INEM a inserir aqui.
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-4">
-                Informação oficial disponibilizada pelo INEM em parceria com o Pede Direto.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Extra text blocks from DB ── */}
+      {textBlocks.length > 0 && (
+        <section className="py-12">
+          <div className="container max-w-3xl space-y-6">
+            {textBlocks.map((block) => (
+              <Card key={block.id}>
+                <CardContent className="p-8">
+                  {block.title && <h3 className="text-xl font-bold mb-4">{block.title}</h3>}
+                  <div
+                    className="prose prose-sm max-w-none dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: block.data.content || "" }}
+                  />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Disclaimer ── */}
       <section className="py-12">
