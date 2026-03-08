@@ -138,29 +138,6 @@ const CategoryPage = () => {
           </div>
         </section>
 
-        {/* City Chips */}
-        {cities.length > 0 && (
-          <section className="pb-8">
-            <div className="container">
-              <h2 className="text-lg font-semibold mb-3">
-                {category.name} por cidade
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {cities.map((c) => (
-                  <Link key={c.slug} to={`/categoria/${slug}/cidade/${c.slug}`}>
-                    <Badge
-                      variant="outline"
-                      className="px-3 py-1.5 text-sm cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                    >
-                      {c.name}
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* Subcategories Grid */}
         <section className="pb-12">
           <div className="container">
