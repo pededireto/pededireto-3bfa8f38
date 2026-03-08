@@ -3078,6 +3078,24 @@ export type Database = {
           },
         ]
       }
+      consumer_email_preferences: {
+        Row: {
+          updated_at: string | null
+          user_id: string
+          weekly_digest: boolean
+        }
+        Insert: {
+          updated_at?: string | null
+          user_id: string
+          weekly_digest?: boolean
+        }
+        Update: {
+          updated_at?: string | null
+          user_id?: string
+          weekly_digest?: boolean
+        }
+        Relationships: []
+      }
       consumer_notification_preferences: {
         Row: {
           email_marketing: boolean | null

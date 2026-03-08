@@ -33,6 +33,7 @@ import ConsumerBadgesSection from "@/components/consumer/ConsumerBadgesSection";
 import ConsumerRequestCard from "@/components/consumer/ConsumerRequestCard";
 import ConsumerActivityTimeline from "@/components/consumer/ConsumerActivityTimeline";
 import ConsumerDashboardInsights from "@/components/consumer/ConsumerDashboardInsights";
+import DigestPreferencesToggle from "@/components/consumer/DigestPreferencesToggle";
 
 const UserDashboard = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
@@ -239,6 +240,9 @@ const UserDashboard = () => {
 
         {/* ── F — Activity Timeline ───────────────────────────────── */}
         <ConsumerActivityTimeline userId={user?.id} />
+
+        {/* ── G — Digest Preferences ─────────────────────────────── */}
+        <DigestPreferencesToggle />
 
         {/* ── F — Tabs ───────────────────────────────────────────────── */}
         <Tabs defaultValue="requests" className="w-full">
