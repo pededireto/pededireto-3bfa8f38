@@ -39,7 +39,7 @@ const BusinessCTA = () => {
           size="lg"
           className="bg-white text-[hsl(var(--cta))] hover:bg-white/90 font-bold text-base px-8"
         >
-          <Link to="/register/choice">
+          <Link to="/claim-business">
             {buttonText} <ArrowRight className="ml-2 h-5 w-5" />
           </Link>
         </Button>
