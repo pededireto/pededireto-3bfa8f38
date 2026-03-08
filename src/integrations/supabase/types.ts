@@ -6575,6 +6575,7 @@ export type Database = {
         Returns: undefined
       }
       process_followups: { Args: never; Returns: undefined }
+      recalculate_all_ranking_scores: { Args: never; Returns: undefined }
       recalculate_all_scores: { Args: never; Returns: undefined }
       register_business_with_owner: {
         Args: {
