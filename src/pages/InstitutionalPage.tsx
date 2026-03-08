@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BlockRenderer from "@/components/BlockRenderer";
+import ConsumersLandingPage from "@/components/ConsumersLandingPage";
 import { Loader2 } from "lucide-react";
 import DOMPurify from "dompurify";
 
