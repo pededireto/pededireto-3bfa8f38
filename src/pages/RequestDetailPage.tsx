@@ -182,7 +182,19 @@ const RequestDetailPage = () => {
     },
   });
 
-  // Query: matches
+  // Social proof
+  const { data: socialProof } = useRequestSocialProof(
+    request?.subcategory_id,
+    request?.location_city
+  );
+
+  // Matches with activity data
+  const matchesViewed = matches.filter((m: any) => m.status !== "enviado").length;
+  const matchesResponded = matches.filter(
+    (m: any) => m.responded_at != null || ["aceite", "recusado", "orcamento_enviado", "em_conversa"].includes(m.status)
+  ).length;
+
+
   const { data: matches = [] } = useQuery({
     queryKey: ["request-matches-detail", id],
     enabled: !!id && !!user,
