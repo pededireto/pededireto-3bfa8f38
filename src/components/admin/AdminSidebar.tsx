@@ -62,6 +62,7 @@ export type AdminTab =
   | "settings"
   | "pages"
   | "synonyms"
+  | "subcategory-relations"
   | "team-management"
   | "action-requests"
   | "audit-logs"
