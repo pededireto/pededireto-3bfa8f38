@@ -95,6 +95,8 @@ const InstitutionalPage = () => {
       <main className="flex-1">
         {slug === "pedediretoconsumidores" ? (
           <ConsumersLandingPage />
+        ) : slug === "pedebusinesspaginaprincipal" ? (
+          <BusinessLandingPage />
         ) : (
           <>
             <section className="section-hero py-12">
