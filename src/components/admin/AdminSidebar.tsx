@@ -197,13 +197,16 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
   const { data: pendingRequestsCount = 0 } = usePendingRequestsCount();
   const { data: pendingClaimsCount = 0 } = usePendingClaimsCount();
   const { data: unreadTickets = 0 } = useUnreadTicketsCount();
+  const { data: alertCounts } = usePlatformAlertsCounts();
+  const { data: pendingReviewsCount = 0 } = usePendingReviewsCount();
 
   // Badges por index de grupo (corresponde a SIDEBAR_STRUCTURE)
   const badgeMap: Record<AdminTab, number> = {
     "claim-requests": pendingClaimsCount,
     "action-requests": pendingRequestsCount,
     tickets: unreadTickets,
-    alerts: uncontactedCount,
+    alerts: alertCounts?.critical || 0,
+    reviews: pendingReviewsCount,
   } as Record<AdminTab, number>;
 
   // Construir grupos com badges injectados

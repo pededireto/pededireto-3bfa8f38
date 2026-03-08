@@ -14,6 +14,8 @@ import CsMetrics from "@/components/cs/CsMetrics";
 import CsBusinesses from "@/components/cs/CsBusinesses";
 import TicketsTable from "@/components/tickets/TicketsTable";
 import AdminReviewsPanel from "@/components/admin/AdminReviewsPanel";
+import PlatformAlertsContent from "@/components/admin/PlatformAlertsContent";
+import { usePlatformAlertsCounts } from "@/hooks/usePlatformAlerts";
 
 const CustomerSuccessPage = () => {
   const { user, isLoading, isCs, isAdmin, isSuperAdmin } = useAuth();

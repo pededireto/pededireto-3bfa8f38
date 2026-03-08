@@ -62,7 +62,7 @@ const AdminPage = () => {
     if (activeTab === "synonyms") return <SynonymsContent />;
     if (activeTab === "plans") return <PlansContent />;
     if (activeTab === "search-logs") return <SearchLogsContent />;
-    if (activeTab === "alerts") return <AlertsContent />;
+    if (activeTab === "alerts") return <PlatformAlertsContent />;
     if (activeTab === "team-management") return <TeamManagement />;
     if (activeTab === "action-requests") return <ActionRequestsContent />;
     if (activeTab === "audit-logs") return <AuditLogsContent />;
