@@ -24,6 +24,7 @@ import { useCreateAuditLog } from "@/hooks/useAuditLogs";
 import { useContactLogs, useCreateContactLog } from "@/hooks/useContactLogs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import AdminBadgesPanel from "@/components/admin/AdminBadgesPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
