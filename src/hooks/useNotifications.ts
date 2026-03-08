@@ -55,3 +55,55 @@ export const useMarkNotificationRead = () => {
     },
   });
 };
+
+// ─── Consumer / User Notifications ────────────────────────────────────────────
+
+export const useUserNotifications = () => {
+  return useQuery({
+    queryKey: ["user-notifications"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("user_notifications" as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+  });
+};
+
+export const useUnreadUserNotifCount = () => {
+  return useQuery({
+    queryKey: ["user-notifications-unread"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return 0;
+      const { count, error } = await supabase
+        .from("user_notifications" as any)
+        .select("*", { count: "exact", head: true })
+        .eq("is_read", false);
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+};
+
+export const useMarkUserNotifRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { error } = await supabase
+        .from("user_notifications" as any)
+        .update({ is_read: true } as any)
+        .eq("id", notificationId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["user-notifications-unread"] });
+    },
+  });
+};

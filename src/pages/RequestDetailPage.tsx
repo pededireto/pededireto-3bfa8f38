@@ -493,11 +493,10 @@ const RequestDetailPage = () => {
   const hasAcceptedMatch = matches.some((m) => m.status === "aceite");
   const allRefused = matches.length > 0 && matches.every((m) => m.status === "recusado" || m.status === "expirado");
 
+  // P7: Welcome banner for newly created requests (< 60s ago)
+  const isNewlyCreated = request && (Date.now() - new Date(request.created_at).getTime()) < 60000;
+
   // ── Estado do banner ──────────────────────────────────────────────────────
-  // "none"   → sem recusas ou pedido resolvido → não mostrar
-  // "red"    → todos recusaram, sem ticket activo → botão "Pedir Ajuda"
-  // "orange" → ticket aberto, aguarda resposta da equipa
-  // "green"  → admin entrou no caso (assigned / in_progress / waiting_response)
   const bannerState = (() => {
     if (isResolved || !allRefused) return "none";
     if (!activeTicket) return "red";
@@ -508,6 +507,24 @@ const RequestDetailPage = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+
+      {/* P7: Welcome banner for newly created requests */}
+      {isNewlyCreated && (
+        <div className="bg-primary/10 border-b border-primary/20">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-start gap-3 max-w-3xl mx-auto">
+              <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+              <div>
+                <h2 className="font-bold text-foreground">Pedido enviado com sucesso!</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Estamos a contactar os melhores profissionais da sua área.
+                  Receberá respostas em breve — normalmente em menos de 2 horas.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Pedido de Ajuda */}
       {showHelpModal && (

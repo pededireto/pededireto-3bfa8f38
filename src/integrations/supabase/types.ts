@@ -4293,6 +4293,7 @@ export type Database = {
           contact_unlocked: boolean | null
           first_response_at: string | null
           id: string
+          is_national_fallback: boolean | null
           price_quote: string | null
           request_id: string
           responded_at: string | null
@@ -4307,6 +4308,7 @@ export type Database = {
           contact_unlocked?: boolean | null
           first_response_at?: string | null
           id?: string
+          is_national_fallback?: boolean | null
           price_quote?: string | null
           request_id: string
           responded_at?: string | null
@@ -4321,6 +4323,7 @@ export type Database = {
           contact_unlocked?: boolean | null
           first_response_at?: string | null
           id?: string
+          is_national_fallback?: boolean | null
           price_quote?: string | null
           request_id?: string
           responded_at?: string | null
@@ -5564,6 +5567,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_profiles: {
         Row: {

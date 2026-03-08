@@ -306,7 +306,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
 
   const handleRead = useCallback(() => {}, []);
 
-  const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado") => {
+  const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado", requestId?: string) => {
     setUpdatingStatus(matchId);
     try {
       const { error } = await supabase
@@ -322,6 +322,15 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             : "O pedido foi recusado.",
       });
       qc.invalidateQueries({ queryKey: ["business-requests"] });
+
+      // P2: Notify consumer via email when business accepts
+      if (newStatus === "aceite" && requestId) {
+        supabase.functions
+          .invoke("notify-consumer", {
+            body: { type: "match_accepted", request_id: requestId, business_id: businessId },
+          })
+          .catch((err) => console.error("notify-consumer error:", err));
+      }
     } catch {
       toast({ title: "Erro ao atualizar pedido", variant: "destructive" });
     } finally {
@@ -396,7 +405,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
           <div className="flex items-center gap-2 py-1">
             <Button
               size="sm"
-              onClick={() => handleStatusChange(match.id, "aceite")}
+              onClick={() => handleStatusChange(match.id, "aceite", requestId)}
               disabled={updatingStatus === match.id}
               className="flex items-center gap-1.5"
             >
@@ -410,7 +419,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleStatusChange(match.id, "recusado")}
+              onClick={() => handleStatusChange(match.id, "recusado", requestId)}
               disabled={updatingStatus === match.id}
               className="flex items-center gap-1.5 text-destructive hover:text-destructive"
             >

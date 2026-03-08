@@ -64,6 +64,25 @@ const RequestServicePage = () => {
 
     setSubmitting(true);
     try {
+      // P8: Anti-spam — max 3 requests per category in 24h
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from("service_requests" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("category_id", categoryId)
+        .gte("created_at", since);
+
+      if (count && count >= 3) {
+        toast({
+          title: "Limite de pedidos atingido",
+          description: "Já tem pedidos recentes nesta categoria. Consulte os seus pedidos activos antes de criar um novo.",
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+
       // Create service request
       const { data: request, error } = await supabase
         .from("service_requests" as any)
@@ -85,10 +104,30 @@ const RequestServicePage = () => {
       const reqData = request as any;
       if (reqData?.id) {
         await supabase.rpc("match_request_to_businesses", { p_request_id: reqData.id });
-      }
 
-      toast({ title: "Pedido enviado com sucesso!", description: "Irá receber respostas dos profissionais." });
-      navigate("/dashboard");
+        // P1: Invoke notify-business edge function for each match (email + WhatsApp)
+        const { data: matches } = await supabase
+          .from("request_business_matches" as any)
+          .select("business_id")
+          .eq("request_id", reqData.id);
+
+        if (matches && (matches as any[]).length > 0) {
+          for (const match of matches as any[]) {
+            supabase.functions
+              .invoke("notify-business", {
+                body: { type: "novo_match", business_id: match.business_id, request_id: reqData.id },
+              })
+              .catch((err) => console.error("notify-business error:", err));
+          }
+        }
+
+        toast({ title: "Pedido enviado com sucesso!", description: "Irá receber respostas dos profissionais." });
+        // P7: Redirect to request detail page instead of generic dashboard
+        navigate(`/pedido/${reqData.id}`);
+      } else {
+        toast({ title: "Pedido enviado com sucesso!", description: "Irá receber respostas dos profissionais." });
+        navigate("/dashboard");
+      }
     } catch (err: any) {
       toast({ title: "Erro ao enviar pedido", description: err.message, variant: "destructive" });
     } finally {
