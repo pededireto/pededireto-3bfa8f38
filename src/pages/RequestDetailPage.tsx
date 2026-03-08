@@ -26,6 +26,10 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRequestSocialProof } from "@/hooks/useRequestSocialProof";
+import RequestSocialProof from "@/components/consumer/RequestSocialProof";
+import RequestProgressBar, { type ProgressData } from "@/components/consumer/RequestProgressBar";
+import RequestActivityPulse from "@/components/consumer/RequestActivityPulse";
 
 // --- Tipos ---
 
@@ -37,6 +41,8 @@ interface RequestDetail {
   location_city: string | null;
   location_postal_code: string | null;
   created_at: string;
+  category_id: string | null;
+  subcategory_id: string | null;
   categories?: { name: string } | null;
   subcategories?: { name: string } | null;
 }
@@ -47,6 +53,7 @@ interface Match {
   sent_at: string;
   responded_at: string | null;
   price_quote: string | null;
+  viewed_at: string | null;
   businesses?: { id: string; name: string; slug: string } | null;
 }
 
@@ -163,6 +170,7 @@ const RequestDetailPage = () => {
           `
           id, description, status, urgency,
           location_city, location_postal_code, created_at,
+          category_id, subcategory_id,
           categories:category_id (name),
           subcategories:subcategory_id (name)
         `,
@@ -175,6 +183,12 @@ const RequestDetailPage = () => {
     },
   });
 
+  // Social proof
+  const { data: socialProof } = useRequestSocialProof(
+    request?.subcategory_id,
+    request?.location_city
+  );
+
   // Query: matches
   const { data: matches = [] } = useQuery({
     queryKey: ["request-matches-detail", id],
@@ -184,7 +198,7 @@ const RequestDetailPage = () => {
         .from("request_business_matches" as any)
         .select(
           `
-          id, status, sent_at, responded_at, price_quote,
+          id, status, sent_at, responded_at, price_quote, viewed_at,
           businesses:business_id (id, name, slug)
         `,
         )
@@ -194,6 +208,12 @@ const RequestDetailPage = () => {
       return (data || []) as unknown as Match[];
     },
   });
+
+  // Computed activity data from matches
+  const matchesViewed = matches.filter((m: any) => (m as any).viewed_at != null || m.status !== "enviado").length;
+  const matchesResponded = matches.filter(
+    (m: any) => m.responded_at != null || ["aceite", "recusado", "orcamento_enviado", "em_conversa"].includes(m.status)
+  ).length;
 
   // Query: avaliacoes ja feitas
   const { data: existingRatings = [] } = useQuery({
@@ -684,6 +704,35 @@ const RequestDetailPage = () => {
             )}
           </div>
         </div>
+
+        {/* ── Progress Bar ── */}
+        <Card className="mb-4">
+          <CardContent className="py-4 px-5 space-y-3">
+            <RequestProgressBar
+              data={{
+                requestStatus: request.status,
+                matchesTotal: matches.length,
+                matchesViewed,
+                matchesResponded,
+                hasMessages: messages.length > 0,
+              }}
+            />
+            {matches.length > 0 && (
+              <RequestActivityPulse
+                notified={matches.length}
+                viewed={matchesViewed}
+                responded={matchesResponded}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Social Proof ── */}
+        {socialProof && (socialProof.similarRequests >= 2 || socialProof.avgRating) && (
+          <div className="mb-4 px-1">
+            <RequestSocialProof data={socialProof} city={request.location_city} />
+          </div>
+        )}
 
         {/* ── Banner dinâmico (🔴 vermelho / 🟠 laranja / 🟢 verde) ── */}
         {bannerState !== "none" && (

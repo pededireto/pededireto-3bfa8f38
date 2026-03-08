@@ -9,6 +9,7 @@ import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusinessTopPosition } from "@/hooks/useTopRanking";
+import { useBusinessResponseTime } from "@/hooks/useBusinessResponseTime";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -267,6 +268,7 @@ const BusinessPage = () => {
   const { data: moduleValues = [] } = useBusinessModuleValues(business?.id);
   const { data: publicBadges = [] } = usePublicBadges(business?.id);
   const { data: topPosition } = useBusinessTopPosition(business?.id);
+  const { data: responseTime } = useBusinessResponseTime(business?.id);
 
   const [showSuggestionForm, setShowSuggestionForm] = useState(false);
 
@@ -765,6 +767,14 @@ const BusinessPage = () => {
                 <div className="sticky top-24 bg-card rounded-2xl p-6 shadow-card space-y-4">
                   <h3 className="text-xl font-bold">Resolva hoje o seu problema</h3>
                   <p className="text-sm text-muted-foreground">Contacte diretamente — sem intermediários!</p>
+
+                  {/* Response Time Badge */}
+                  {responseTime && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 text-sm font-medium text-primary">
+                      <Zap className="w-4 h-4 shrink-0" />
+                      Responde em média em {responseTime.label}
+                    </div>
+                  )}
                   <div className="space-y-3 pt-2">
                     {sidebarBadges.map((slug) => {
                       const cfg = BADGE_CONFIG[slug];

@@ -15,22 +15,30 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { RequestReviewInfo } from "@/hooks/useServiceRequests";
+import RequestProgressBar, { type ProgressData } from "./RequestProgressBar";
+import RequestActivityPulse from "./RequestActivityPulse";
 
 interface RequestMeta {
   responses: number;
   hasUnread: boolean;
   hasPending: boolean;
+  notified: number;
+  viewed: number;
+  responded: number;
+  hasMessages: boolean;
 }
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  novo: { label: "Novo", variant: "secondary" },
-  em_contacto: { label: "Em Contacto", variant: "outline" },
-  encaminhado: { label: "Encaminhado", variant: "default" },
-  concluido: { label: "Concluído", variant: "default" },
+  aberto: { label: "Aberto", variant: "secondary" },
+  em_conversa: { label: "Em Conversa", variant: "outline" },
+  propostas_recebidas: { label: "Propostas Recebidas", variant: "default" },
+  em_negociacao: { label: "Em Negociação", variant: "outline" },
+  fechado: { label: "Concluído", variant: "default" },
   cancelado: { label: "Cancelado", variant: "destructive" },
+  expirado: { label: "Expirado", variant: "destructive" },
 };
 
-const REPEATABLE_STATUSES = ["concluido", "cancelado"];
+const REPEATABLE_STATUSES = ["fechado", "cancelado", "expirado"];
 
 interface ConsumerRequestCardProps {
   req: any;
@@ -48,7 +56,6 @@ const ConsumerRequestCard = ({ req, meta, reviews }: ConsumerRequestCardProps) =
     navigate("/pedir-servico", {
       state: {
         repeat: {
-          category_id: req.categories ? undefined : undefined, // category resolved by name in form
           description: req.description,
           location_city: req.location_city,
           urgency: req.urgency,
@@ -56,6 +63,16 @@ const ConsumerRequestCard = ({ req, meta, reviews }: ConsumerRequestCardProps) =
       },
     });
   };
+
+  const progressData: ProgressData | null = meta
+    ? {
+        requestStatus: req.status,
+        matchesTotal: meta.notified,
+        matchesViewed: meta.viewed,
+        matchesResponded: meta.responded,
+        hasMessages: meta.hasMessages,
+      }
+    : null;
 
   return (
     <Card
@@ -92,6 +109,22 @@ const ConsumerRequestCard = ({ req, meta, reviews }: ConsumerRequestCardProps) =
           </div>
         </div>
 
+        {/* Progress Bar */}
+        {progressData && (
+          <div className="pt-1">
+            <RequestProgressBar data={progressData} />
+          </div>
+        )}
+
+        {/* Activity Pulse */}
+        {meta && meta.notified > 0 && (
+          <RequestActivityPulse
+            notified={meta.notified}
+            viewed={meta.viewed}
+            responded={meta.responded}
+          />
+        )}
+
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           {req.location_city && (
             <span className="flex items-center gap-1">
@@ -109,12 +142,6 @@ const ConsumerRequestCard = ({ req, meta, reviews }: ConsumerRequestCardProps) =
               year: "numeric",
             })}
           </span>
-          {meta && meta.responses > 0 && (
-            <span className="flex items-center gap-1 text-foreground font-medium">
-              <MessageCircle className="h-3.5 w-3.5 text-primary" />
-              {meta.responses} {meta.responses === 1 ? "resposta" : "respostas"}
-            </span>
-          )}
           {meta?.hasUnread && (
             <span className="flex items-center gap-1 text-primary font-semibold animate-pulse">
               <Bell className="h-3.5 w-3.5" />
