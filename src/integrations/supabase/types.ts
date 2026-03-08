@@ -6654,6 +6654,7 @@ export type Database = {
       }
       auto_escalate_sla_violations: { Args: never; Returns: undefined }
       auto_reject_old_claims: { Args: never; Returns: undefined }
+      award_consumer_badges_daily: { Args: never; Returns: undefined }
       calculate_business_conversion_rate: {
         Args: { bid: string; period?: string }
         Returns: number
