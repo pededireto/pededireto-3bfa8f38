@@ -62,7 +62,7 @@
 
     /* Gradients */
     --gradient-hero: linear-gradient(180deg, hsl(37 40% 96%) 0%, hsl(120 30% 95%) 100%);
-    --gradient-cta: linear-gradient(135deg, hsl(33 100% 50%) 0%, hsl(24 100% 45%) 100%);
+    --gradient-cta: linear-gradient(135deg, hsl(30 80% 50%) 0%, hsl(27 75% 42%) 100%);
     --gradient-featured: linear-gradient(135deg, hsl(123 46% 33%) 0%, hsl(140 40% 38%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(37 40% 97%) 100%);
 
