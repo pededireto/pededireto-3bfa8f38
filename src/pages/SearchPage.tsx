@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Search, Loader2, MapPin, Star, ArrowRight, Share2, ChevronDown } from "lucide-react";
+import { Search, Loader2, MapPin, Star, ArrowRight, Share2, ChevronDown, Lightbulb } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
