@@ -42,6 +42,7 @@ import TestUsersPanel from "@/components/admin/TestUsersPanel";
 import PendingClaimsPanel from "@/components/admin/PendingClaimsPanel";
 import EmailHub from "@/components/email/EmailHub";
 import BlogContent from "@/components/admin/BlogContent";
+import PlatformAlertsContent from "@/components/admin/PlatformAlertsContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -61,7 +62,7 @@ const AdminPage = () => {
     if (activeTab === "synonyms") return <SynonymsContent />;
     if (activeTab === "plans") return <PlansContent />;
     if (activeTab === "search-logs") return <SearchLogsContent />;
-    if (activeTab === "alerts") return <AlertsContent />;
+    if (activeTab === "alerts") return <PlatformAlertsContent />;
     if (activeTab === "team-management") return <TeamManagement />;
     if (activeTab === "action-requests") return <ActionRequestsContent />;
     if (activeTab === "audit-logs") return <AuditLogsContent />;

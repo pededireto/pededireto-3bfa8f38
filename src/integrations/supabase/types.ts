@@ -61,33 +61,51 @@ export type Database = {
       }
       admin_alerts: {
         Row: {
+          action_url: string | null
+          category: string | null
           created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
           id: string
           is_read: boolean | null
           message: string
           metadata: Json | null
+          resolved_at: string | null
+          resolved_by: string | null
           severity: string | null
           title: string
           type: string
           updated_at: string | null
         }
         Insert: {
+          action_url?: string | null
+          category?: string | null
           created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           is_read?: boolean | null
           message: string
           metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           severity?: string | null
           title: string
           type: string
           updated_at?: string | null
         }
         Update: {
+          action_url?: string | null
+          category?: string | null
           created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
           is_read?: boolean | null
           message?: string
           metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           severity?: string | null
           title?: string
           type?: string
@@ -6402,6 +6420,9 @@ export type Database = {
         Args: { bid: string }
         Returns: number
       }
+      check_pending_businesses_48h: { Args: never; Returns: undefined }
+      check_unanswered_24h: { Args: never; Returns: undefined }
+      check_unmatched_requests: { Args: never; Returns: undefined }
       claim_business: {
         Args: { p_business_id: string; p_claim_message?: string }
         Returns: Json

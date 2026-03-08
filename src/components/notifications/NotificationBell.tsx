@@ -17,7 +17,9 @@ import {
   useMarkTicketNotifRead,
   useMarkAllTicketNotifsRead,
 } from "@/hooks/useTickets";
+import { useCriticalAlertsForBell } from "@/hooks/usePlatformAlerts";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRoles } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -43,6 +45,7 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: roles = [] } = useUserRoles();
   const { data: internalNotifications = [] } = useInternalNotifications(targetRole);
   const { data: internalUnread = 0 } = useUnreadInternalCount(targetRole);
   const markInternalRead = useMarkNotificationRead();
@@ -57,7 +60,11 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
   const { data: userUnread = 0 } = useUnreadUserNotifCount();
   const markUserRead = useMarkUserNotifRead();
 
-  const totalUnread = internalUnread + ticketUnread + userUnread;
+  // Platform critical alerts — only for admin/cs roles
+  const isStaff = roles.includes("admin") || roles.includes("super_admin") || roles.includes("cs");
+  const { data: criticalAlerts = [] } = useCriticalAlertsForBell();
+
+  const totalUnread = internalUnread + ticketUnread + userUnread + (isStaff ? criticalAlerts.length : 0);
 
   // Realtime subscription for ticket notifications
   useEffect(() => {
@@ -125,11 +132,30 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
     }
   };
 
+  const handleAlertClick = (alert: any) => {
+    if (alert.action_url) {
+      navigate(alert.action_url);
+      setOpen(false);
+    }
+  };
+
   // Merge and sort all notifications
   const allNotifications = [
     ...internalNotifications.map((n: any) => ({ ...n, source: "internal" })),
     ...ticketNotifications.map((n: any) => ({ ...n, source: "ticket" })),
     ...userNotifications.map((n: any) => ({ ...n, source: "user" })),
+    ...(isStaff
+      ? criticalAlerts.map((a) => ({
+          id: a.id,
+          title: a.title,
+          message: a.message,
+          created_at: a.created_at,
+          is_read: false,
+          source: "platform_alert" as const,
+          action_url: a.action_url,
+          type: a.type,
+        }))
+      : []),
   ]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 30);
@@ -170,14 +196,17 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
                 onClick={() => {
                   if (n.source === "internal") handleInternalClick(n.id, n.is_read);
                   else if (n.source === "ticket") handleTicketClick(n.id, n.is_read);
+                  else if (n.source === "platform_alert") handleAlertClick(n);
                   else handleUserNotifClick(n);
                 }}
                 className={`w-full text-left p-3 hover:bg-secondary/50 transition-colors ${!n.is_read ? "bg-primary/5" : ""}`}
               >
                 <p className="text-sm font-medium text-foreground">
-                  {(n.source === "ticket" || n.source === "user") && TYPE_ICONS[n.type]
-                    ? `${TYPE_ICONS[n.type]} `
-                    : ""}
+                  {n.source === "platform_alert"
+                    ? "🔴 "
+                    : (n.source === "ticket" || n.source === "user") && TYPE_ICONS[n.type]
+                      ? `${TYPE_ICONS[n.type]} `
+                      : ""}
                   {n.title || n.message || "Notificação"}
                 </p>
                 {n.message && n.title && (
@@ -188,6 +217,17 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
                 </p>
               </button>
             ))}
+            {isStaff && criticalAlerts.length > 0 && (
+              <button
+                onClick={() => {
+                  navigate(targetRole === "cs" ? "/cs" : "/admin?tab=alerts");
+                  setOpen(false);
+                }}
+                className="w-full text-center p-2 text-xs text-primary hover:bg-secondary/50 font-medium"
+              >
+                Ver todos os alertas →
+              </button>
+            )}
           </div>
         )}
       </PopoverContent>
