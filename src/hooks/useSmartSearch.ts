@@ -23,6 +23,14 @@ export interface BusinessGroup {
   businesses: SmartBusiness[];
 }
 
+export interface SuggestionGroup {
+  label: string;
+  subcategorySlug: string;
+  categorySlug: string;
+  relationType: string;
+  businesses: SmartBusiness[];
+}
+
 export interface SmartSearchResult {
   isSmartMatch: boolean;
   isUrgent: boolean;
@@ -33,6 +41,7 @@ export interface SmartSearchResult {
   urgencyLevel: number;
   businesses: SmartBusiness[];
   businessGroups: BusinessGroup[];
+  suggestionGroups: SuggestionGroup[];
   complementaryServices: string[];
   primarySolution: string | null;
   totalFound: number;
