@@ -146,4 +146,14 @@ function RenderBlock({ block }: { block: PageBlock }) {
     case "video":
       return <VideoPlayer url={d.url || ""} label={block.title} />;
 
+    case "separator":
+      if (d.style === "space") return <div className="py-6" />;
+      if (d.style === "dots") return <div className="text-center text-2xl text-muted-foreground tracking-[1em] py-4">•••</div>;
+      return <hr className="border-border my-4" />;
+
+    default:
+      return null;
+  }
+}
+
 export default BlockRenderer;
