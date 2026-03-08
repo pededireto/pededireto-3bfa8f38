@@ -1,79 +1,40 @@
 
 
-# Plan: Logo + Consumer Dashboard Review Feedback
+## Plano: Vídeos sempre em embed (nunca abrir nova janela por defeito)
 
-## Task 1 — Add PedeDireto Logo Image Everywhere
+### Problema identificado
 
-Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
+Existem **dois sistemas separados** de rendering de vídeo na plataforma:
 
-### Files to modify (logo replacement):
+1. **`VideoPlayer.tsx`** (usado em BusinessPage e EmergencyLandingPage) — suporta YouTube, Vimeo, Facebook e ficheiros directos, mas faz fallback para **link externo** (abre nova janela) para URLs não reconhecidas ou Instagram.
 
-**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
+2. **`BlockRenderer.tsx`** (usado nas páginas institucionais genéricas) — tem a sua própria função `getEmbedUrl()` que só suporta YouTube e Vimeo, e mostra "URL inválida" para tudo o resto.
 
-| File | Location | Logo size |
-|------|----------|-----------|
-| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
-| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
-| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
-| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
-| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
-| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
-| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
-| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
-| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
-| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
-| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
-| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
-| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
-| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
-| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
-| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
-| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
+O problema: URLs de vídeo válidas (ex: Facebook, ficheiros .mp4, ou até YouTube em formatos não cobertos) acabam a abrir em nova janela ou a falhar, em vez de serem embebidas inline.
 
-Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
+### Solução
 
----
+**Unificar todo o rendering de vídeo no componente `VideoPlayer`**, eliminando código duplicado:
 
-## Task 2 — Review Feedback on Consumer Dashboard Requests
+| Ficheiro | Acção |
+|---|---|
+| `src/components/business/VideoPlayer.tsx` | Alterar o fallback "external": em vez de mostrar apenas um link, tentar primeiro um `<video>` tag genérico como último recurso antes do link externo. O link externo só aparece quando há erro real de carregamento. |
+| `src/components/BlockRenderer.tsx` | Substituir o case `"video"` e a função `getEmbedUrl()` por uso directo do `VideoPlayer`, eliminando duplicação. |
 
-### Data model understanding
-- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
-- `request_business_matches` links `request_id` to `business_id`
-- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
+### Detalhe das alterações
 
-### New hook: `useConsumerRequestReviews`
+**VideoPlayer.tsx** — Melhorar fallback:
+- Para URLs "external" (não reconhecidas), tentar renderizar com `<video>` tag primeiro
+- Só mostrar link externo se o `<video>` falhar (onError)
+- Instagram mantém link externo (não suporta embed de todo)
 
-In `src/hooks/useServiceRequests.ts`, add a new hook that:
-1. Takes the list of request IDs
-2. For each request, gets the matched business IDs from `request_business_matches`
-3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
-4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
+**BlockRenderer.tsx** — Unificar:
+- Importar `VideoPlayer` de `@/components/business/VideoPlayer`
+- No case `"video"`, renderizar `<VideoPlayer url={d.url} />` em vez de iframe manual
+- Remover a função `getEmbedUrl()` (código morto)
 
-Implementation approach — a single query that:
-```typescript
-// 1. Get all matches for the user's requests
-const { data: matches } = await supabase
-  .from("request_business_matches")
-  .select("request_id, business_id, businesses(name)")
-  .in("request_id", requestIds);
-
-// 2. Get all reviews by this user
-const { data: reviews } = await supabase
-  .from("business_reviews")
-  .select("business_id, rating, business_response, business_response_at")
-  .eq("user_id", userId);
-
-// 3. Cross-reference: for each match, find if there's a review
-```
-
-### UI changes in `src/pages/UserDashboard.tsx`
-
-In the request card (lines 281-346), after the status Badge, add:
-
-1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
-2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
-
-Visual design:
-- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
-- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
+### Resultado
+- Vídeos ficam sempre embedded na página (YouTube, Vimeo, Facebook, MP4, WebM)
+- Link externo só aparece como último recurso após falha real
+- Um único componente para toda a plataforma — manutenção simplificada
 
