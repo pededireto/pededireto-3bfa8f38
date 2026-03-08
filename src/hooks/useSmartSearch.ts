@@ -350,6 +350,8 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
       let urgencyLevel = 0;
       let resolvedTerms: string[] = [];
       let primarySolution: string | null = null;
+      let complementaryServices: string[] = [];
+      let businessGroups: BusinessGroup[] = [];
       let suggestionGroups: SuggestionGroup[] = [];
 
       // ── CAMADA 1: Pattern Detection ───────────────────────────────────
