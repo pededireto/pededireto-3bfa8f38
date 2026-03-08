@@ -188,6 +188,7 @@ function Section({
 const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps) => {
   const { toast } = useToast();
   const updateBusiness = useUpdateBusinessOwner();
+  const planInfo = useBusinessPlan(business);
   const syncSubcategories = useSyncBusinessSubcategories();
   const { data: categories = [] } = useCategories();
   const { data: allSubcategories = [] } = useAllSubcategories();

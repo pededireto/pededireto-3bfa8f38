@@ -464,7 +464,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
               {(sr?.consumer_name || profile?.full_name) && (
                 <div className="flex items-center gap-2 text-foreground">
                   <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  {sr?.consumer_name || profile?.full_name}
+                  {formatReviewerName(profile?.full_name || sr?.consumer_name)}
                 </div>
               )}
               <div className="flex items-center gap-2 text-muted-foreground text-xs mt-1">
