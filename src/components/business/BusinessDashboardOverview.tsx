@@ -11,6 +11,7 @@ import BusinessProfileScore from "@/components/business/BusinessProfileScore";
 import BusinessProAlerts from "@/components/business/BusinessProAlerts";
 import BusinessSearchPosition from "@/components/business/BusinessSearchPosition";
 import BusinessRankingWidget from "@/components/business/BusinessRankingWidget";
+import ShareProfileCard from "@/components/business/ShareProfileCard";
 import { useBusinessBadges } from "@/hooks/useBusinessDashboardPro";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
