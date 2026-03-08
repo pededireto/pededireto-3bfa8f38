@@ -417,23 +417,13 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
               <span className="text-sm text-muted-foreground">Estado do Negócio</span>
             </div>
             <Badge variant={business.is_active ? "default" : "secondary"} className="text-sm px-3 py-1">
-              {business.is_active ? "✅ Visível ao público" : "⚠️ Não visível"}
+              {business.is_active ? "✅ Visível ao público" : "🔍 Em verificação"}
             </Badge>
             {!business.is_active && (
-              <>
-                <p className="text-xs text-muted-foreground mt-2">
-                  O teu negócio não está visível nas pesquisas. Contacta o suporte para ativar.
-                </p>
-                <a
-                  href={WHATSAPP_SUPPORT_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xs font-medium transition-colors w-full justify-center"
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  Falar com o Suporte
-                </a>
-              </>
+              <p className="text-xs text-muted-foreground mt-2">
+                Estamos a verificar os seus dados. O negócio ficará visível em breve!
+                Complete o perfil para acelerar o processo.
+              </p>
             )}
           </div>
 
