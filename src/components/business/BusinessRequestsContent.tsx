@@ -405,7 +405,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
           <div className="flex items-center gap-2 py-1">
             <Button
               size="sm"
-              onClick={() => handleStatusChange(match.id, "aceite")}
+              onClick={() => handleStatusChange(match.id, "aceite", requestId)}
               disabled={updatingStatus === match.id}
               className="flex items-center gap-1.5"
             >
