@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.unsubscribe-digest]
 verify_jwt = false
+
+[functions.send-consumer-digest]
+verify_jwt = false
+
+[functions.unsubscribe-consumer-digest]
+verify_jwt = false
