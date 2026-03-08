@@ -132,7 +132,6 @@ const SettingsContent = () => {
             </div>
           </div>
         )}
-        </div>
       </div>
 
       {/* Footer */}
