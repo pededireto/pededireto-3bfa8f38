@@ -17,6 +17,7 @@ import SessionExpiredModal from "@/components/SessionExpiredModal";
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import SubcategoryPage from "./pages/SubcategoryPage";
+import CategoryCityPage from "./pages/CategoryCityPage";
 import BusinessPage from "./pages/BusinessPage";
 import InstitutionalPage from "./pages/InstitutionalPage";
 
