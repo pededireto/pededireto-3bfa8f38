@@ -38,10 +38,10 @@
     --accent: 33 100% 94%;
     --accent-foreground: 33 100% 50%;
 
-    /* CTA — Laranja Ação #FF8C00 */
-    --cta: 33 100% 50%;
+    /* CTA — Laranja Logo (tom quente, menos agressivo) */
+    --cta: 30 80% 50%;
     --cta-foreground: 0 0% 100%;
-    --cta-hover: 24 100% 40%;
+    --cta-hover: 27 75% 42%;
 
     /* Status colors */
     --destructive: 0 72% 51%;
