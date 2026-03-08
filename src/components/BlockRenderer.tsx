@@ -1,6 +1,7 @@
 import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Phone, MessageCircle, Mail } from "lucide-react";
+import VideoPlayer from "@/components/business/VideoPlayer";
 import type { PageBlock } from "@/hooks/useInstitutionalPages";
 
 interface BlockRendererProps {
