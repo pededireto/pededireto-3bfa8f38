@@ -3041,6 +3041,7 @@ export type Database = {
       }
       consumer_notification_preferences: {
         Row: {
+          email_marketing: boolean | null
           email_on_badge: boolean | null
           email_on_message: boolean | null
           email_on_response: boolean | null
@@ -3049,6 +3050,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          email_marketing?: boolean | null
           email_on_badge?: boolean | null
           email_on_message?: boolean | null
           email_on_response?: boolean | null
@@ -3057,6 +3059,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          email_marketing?: boolean | null
           email_on_badge?: boolean | null
           email_on_message?: boolean | null
           email_on_response?: boolean | null
