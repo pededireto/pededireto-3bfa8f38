@@ -13,13 +13,22 @@ export const useSearchSynonyms = () => {
   return useQuery({
     queryKey: ["search-synonyms"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("search_synonyms")
-        .select("*")
-        .order("termo", { ascending: true });
-
-      if (error) throw error;
-      return data as SearchSynonym[];
+      const allData: SearchSynonym[] = [];
+      let offset = 0;
+      const PAGE_SIZE = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from("search_synonyms")
+          .select("*")
+          .order("termo", { ascending: true })
+          .range(offset, offset + PAGE_SIZE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData.push(...(data as SearchSynonym[]));
+        if (data.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+      return allData;
     },
   });
 };
