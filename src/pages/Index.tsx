@@ -13,6 +13,7 @@ import FeaturedCategoriesSection from "@/components/FeaturedCategoriesSection";
 import HomepageBlockRenderer from "@/components/HomepageBlockRenderer";
 import CategoryAccordion from "@/components/home/CategoryAccordion";
 import LatestBlogPosts from "@/components/LatestBlogPosts";
+import StickySearch from "@/components/StickySearch";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,6 +44,7 @@ const Index = () => {
         - id necessário para skip link
         - tabIndex=-1 necessário para foco programático em SPA
       */}
+      <StickySearch />
       <main id="main-content" className="flex-1" tabIndex={-1}>
         {useBlocks ? (
           blocks.map((block) => (

@@ -23,6 +23,7 @@ Deno.serve(async (req) => {
   // Static pages
   const staticPages = [
     { loc: "/", changefreq: "daily", priority: "1.0" },
+    { loc: "/blog", changefreq: "weekly", priority: "0.8" },
     { loc: "/pesquisa", changefreq: "monthly", priority: "0.3" },
   ];
 
@@ -42,6 +43,12 @@ Deno.serve(async (req) => {
     .from("businesses")
     .select("slug, updated_at")
     .eq("is_active", true);
+
+  // Published blog posts
+  const { data: blogPosts } = await supabase
+    .from("blog_posts")
+    .select("slug, updated_at")
+    .eq("is_published", true);
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -87,6 +94,17 @@ Deno.serve(async (req) => {
     <lastmod>${(b.updated_at || now).split("T")[0]}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+`;
+  }
+
+  // Blog posts
+  for (const post of blogPosts ?? []) {
+    xml += `  <url>
+    <loc>${BASE_URL}/blog/${post.slug}</loc>
+    <lastmod>${(post.updated_at || now).split("T")[0]}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
 `;
   }

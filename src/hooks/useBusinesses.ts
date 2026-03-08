@@ -58,6 +58,10 @@ export interface BusinessWithCategory extends Business {
     name: string;
     slug: string;
   } | null;
+  business_review_stats?: {
+    average_rating: number;
+    total_reviews: number;
+  } | null;
 }
 
 const BUSINESS_SELECT = `
@@ -72,6 +76,10 @@ const BUSINESS_SELECT = `
     id,
     name,
     slug
+  ),
+  business_review_stats (
+    average_rating,
+    total_reviews
   )
 `;
 
