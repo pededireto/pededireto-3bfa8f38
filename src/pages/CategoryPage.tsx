@@ -16,7 +16,6 @@ const CategoryPage = () => {
   const { data: category, isLoading: categoryLoading } = useCategory(slug);
   const { data: allCategories = [] } = useCategories();
   const { data: subcategories = [], isLoading: subcategoriesLoading } = useSubcategories(category?.id);
-  const { data: cities = [] } = useCitiesForCategory(category?.id);
 
   const currentIndex = allCategories.findIndex((c) => c.slug === slug);
   const prevCategory = currentIndex > 0 ? allCategories[currentIndex - 1] : null;
