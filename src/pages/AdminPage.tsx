@@ -19,6 +19,7 @@ import AnalyticsContent from "@/components/admin/AnalyticsContent";
 import SettingsContent from "@/components/admin/SettingsContent";
 import PagesContent from "@/components/admin/PagesContent";
 import SynonymsContent from "@/components/admin/SynonymsContent";
+import SubcategoryRelationsContent from "@/components/admin/SubcategoryRelationsContent";
 import PlansContent from "@/components/admin/PlansContent";
 import SearchLogsContent from "@/components/admin/SearchLogsContent";
 import AlertsContent from "@/components/admin/AlertsContent";
