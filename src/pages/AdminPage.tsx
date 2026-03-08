@@ -62,6 +62,7 @@ const AdminPage = () => {
     if (activeTab === "settings") return <SettingsContent />;
     if (activeTab === "pages") return <PagesContent />;
     if (activeTab === "synonyms") return <SynonymsContent />;
+    if (activeTab === "subcategory-relations") return <SubcategoryRelationsContent />;
     if (activeTab === "plans") return <PlansContent />;
     if (activeTab === "search-logs") return <SearchLogsContent />;
     if (activeTab === "alerts") return <PlatformAlertsContent />;
