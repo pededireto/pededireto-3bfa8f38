@@ -8,6 +8,7 @@ import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
 import { useBusinessPlan } from "@/hooks/useBusinessPlan";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
+import OnboardingChecklist from "@/components/business/OnboardingChecklist";
 import BusinessProAlerts from "@/components/business/BusinessProAlerts";
 import BusinessSearchPosition from "@/components/business/BusinessSearchPosition";
 import BusinessRankingWidget from "@/components/business/BusinessRankingWidget";
