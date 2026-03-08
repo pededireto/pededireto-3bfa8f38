@@ -78,11 +78,11 @@ export const useBusinessClaimPermissions = (
 
   if (isPreview) {
     bannerMessage =
-      "O teu negócio está em verificação. Podes explorar o painel — para receber pedidos ativa um plano pago.";
+      "🎉 Negócio registado! Estamos a verificar os seus dados e ficará visível em breve. Complete o perfil enquanto isso!";
     bannerVariant = "warning";
   } else if (isPending) {
     bannerMessage =
-      "O seu pedido está em validação. Aguarde contacto da nossa equipa comercial.";
+      "🎉 Negócio registado! Estamos a verificar os seus dados e ficará visível em breve.";
     bannerVariant = "warning";
   } else if (isRejected) {
     bannerMessage =

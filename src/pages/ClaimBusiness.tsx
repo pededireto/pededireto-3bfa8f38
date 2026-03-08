@@ -168,30 +168,20 @@ const ClaimBusiness = () => {
   };
 
   const handleCreateOrRedirect = async () => {
-    if (!user) {
-      // ✅ FIX: passar os dados preenchidos para a página de registo via state
-      navigate("/register/business", {
-        state: {
-          prefill: {
-            name: newName,
-            city: newCity,
-            categoryId: newCategoryId,
-            // Também guardar no localStorage como fallback (alguns browsers bloqueiam state em redirects)
-          },
-        },
-      });
-      // Guardar também em localStorage como backup
-      localStorage.setItem(
-        "registerBusinessPrefill",
-        JSON.stringify({
+    // Always redirect to the simplified wizard
+    navigate("/register/business", {
+      state: {
+        prefill: {
           name: newName,
           city: newCity,
           categoryId: newCategoryId,
-        }),
-      );
-      return;
-    }
-    await handleCreateNew();
+        },
+      },
+    });
+    localStorage.setItem(
+      "registerBusinessPrefill",
+      JSON.stringify({ name: newName, city: newCity, categoryId: newCategoryId })
+    );
   };
 
   return (

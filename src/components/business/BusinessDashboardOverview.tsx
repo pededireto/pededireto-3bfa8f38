@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
@@ -111,6 +111,15 @@ const UpgradeBanner = ({
 };
 
 const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    const flag = localStorage.getItem("onboarding_complete");
+    if (flag === "true") {
+      setShowWelcome(true);
+      localStorage.removeItem("onboarding_complete");
+    }
+  }, []);
   const queryClient = useQueryClient();
   const { data: plans = [] } = useCommercialPlans(true);
   const { data: requests = [] } = useBusinessRequests(business.id);
@@ -153,6 +162,31 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
 
   return (
     <div className="space-y-6">
+      {/* Welcome banner — first visit after onboarding */}
+      {showWelcome && (
+        <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-5 space-y-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-lg font-bold text-foreground">🎉 Bem-vindo à Pede Direto!</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Estamos a verificar os seus dados e o negócio ficará visível em breve.
+                <br />Complete o perfil enquanto isso para aparecer mais acima nos resultados!
+              </p>
+            </div>
+            <button
+              onClick={() => setShowWelcome(false)}
+              className="text-muted-foreground hover:text-foreground p-1"
+              aria-label="Fechar"
+            >
+              ✕
+            </button>
+          </div>
+          <Button size="sm" onClick={() => onNavigate?.("edit")} className="text-sm">
+            Completar perfil agora →
+          </Button>
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">
@@ -383,23 +417,13 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
               <span className="text-sm text-muted-foreground">Estado do Negócio</span>
             </div>
             <Badge variant={business.is_active ? "default" : "secondary"} className="text-sm px-3 py-1">
-              {business.is_active ? "✅ Visível ao público" : "⚠️ Não visível"}
+              {business.is_active ? "✅ Visível ao público" : "🔍 Em verificação"}
             </Badge>
             {!business.is_active && (
-              <>
-                <p className="text-xs text-muted-foreground mt-2">
-                  O teu negócio não está visível nas pesquisas. Contacta o suporte para ativar.
-                </p>
-                <a
-                  href={WHATSAPP_SUPPORT_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xs font-medium transition-colors w-full justify-center"
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  Falar com o Suporte
-                </a>
-              </>
+              <p className="text-xs text-muted-foreground mt-2">
+                Estamos a verificar os seus dados. O negócio ficará visível em breve!
+                Complete o perfil para acelerar o processo.
+              </p>
             )}
           </div>
 
