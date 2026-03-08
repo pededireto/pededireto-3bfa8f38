@@ -78,6 +78,8 @@ const Header = () => {
 
           {user ? (
             <>
+              <NotificationBell targetRole={isAdmin ? "admin" : "consumer"} />
+
               {isAdmin ? (
                 <Link
                   to="/admin"
