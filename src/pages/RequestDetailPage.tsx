@@ -493,11 +493,10 @@ const RequestDetailPage = () => {
   const hasAcceptedMatch = matches.some((m) => m.status === "aceite");
   const allRefused = matches.length > 0 && matches.every((m) => m.status === "recusado" || m.status === "expirado");
 
+  // P7: Welcome banner for newly created requests (< 60s ago)
+  const isNewlyCreated = request && (Date.now() - new Date(request.created_at).getTime()) < 60000;
+
   // ── Estado do banner ──────────────────────────────────────────────────────
-  // "none"   → sem recusas ou pedido resolvido → não mostrar
-  // "red"    → todos recusaram, sem ticket activo → botão "Pedir Ajuda"
-  // "orange" → ticket aberto, aguarda resposta da equipa
-  // "green"  → admin entrou no caso (assigned / in_progress / waiting_response)
   const bannerState = (() => {
     if (isResolved || !allRefused) return "none";
     if (!activeTicket) return "red";
