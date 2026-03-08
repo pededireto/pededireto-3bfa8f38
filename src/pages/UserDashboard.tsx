@@ -234,7 +234,10 @@ const UserDashboard = () => {
         {/* ── D — Badges (Conquistas) ────────────────────────────────── */}
         <ConsumerBadgesSection profileId={profile?.id} />
 
-        {/* ── E — Activity Timeline ───────────────────────────────── */}
+        {/* ── E — Dashboard Insights ─────────────────────────────── */}
+        <ConsumerDashboardInsights userId={user?.id} />
+
+        {/* ── F — Activity Timeline ───────────────────────────────── */}
         <ConsumerActivityTimeline userId={user?.id} />
 
         {/* ── F — Tabs ───────────────────────────────────────────────── */}
