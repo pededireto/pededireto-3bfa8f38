@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, TrendingUp, Lock } from "lucide-react";
+import { Loader2, TrendingUp, Lock, Download } from "lucide-react";
 import { useBusinessIntelligence } from "@/hooks/useBusinessIntelligence";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";

@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useHeaderPages } from "@/hooks/useNavigationPages";
 import { useAuth } from "@/hooks/useAuth";
 import ThemeToggle from "./ThemeToggle";
+import NotificationBell from "./notifications/NotificationBell";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
