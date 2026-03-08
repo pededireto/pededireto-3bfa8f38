@@ -7,6 +7,7 @@ import BlockRenderer from "@/components/BlockRenderer";
 import ConsumersLandingPage from "@/components/ConsumersLandingPage";
 import BusinessLandingPage from "@/components/BusinessLandingPage";
 import AboutLandingPage from "@/components/AboutLandingPage";
+import EmergencyLandingPage from "@/components/EmergencyLandingPage";
 import { Loader2 } from "lucide-react";
 import DOMPurify from "dompurify";
 
@@ -100,6 +101,8 @@ const InstitutionalPage = () => {
           <BusinessLandingPage />
         ) : slug === "quem-somos" ? (
           <AboutLandingPage />
+        ) : slug === "gestao" ? (
+          <EmergencyLandingPage />
         ) : (
           <>
             <section className="section-hero py-12">
