@@ -34,10 +34,12 @@ Deno.serve(async (req) => {
 
     let processed = 0;
     let sent = 0;
+    let skipped = 0;
 
     for (const enrollment of enrollments || []) {
       processed++;
 
+      // Check pause_on_reply
       if (enrollment.pause_on_reply) {
         const { data: replied } = await adminClient
           .from("email_logs")
@@ -47,7 +49,31 @@ Deno.serve(async (req) => {
           .limit(1);
 
         if (replied && replied.length > 0) {
-          await adminClient.from("email_cadence_enrollments").update({ status: "paused" }).eq("id", enrollment.id);
+          await adminClient.from("email_cadence_enrollments").update({
+            status: "paused",
+            paused_at: new Date().toISOString(),
+            paused_reason: "Respondeu ao email",
+          }).eq("id", enrollment.id);
+          continue;
+        }
+      }
+
+      // Check pause_on_click
+      if (enrollment.pause_on_click) {
+        const { data: clicked } = await adminClient
+          .from("email_logs")
+          .select("id")
+          .eq("recipient_email", enrollment.recipient_email)
+          .not("clicked_at", "is", null)
+          .eq("metadata->>cadence_id", enrollment.cadence_id)
+          .limit(1);
+
+        if (clicked && clicked.length > 0) {
+          await adminClient.from("email_cadence_enrollments").update({
+            status: "paused",
+            paused_at: new Date().toISOString(),
+            paused_reason: "Clicou num link",
+          }).eq("id", enrollment.id);
           continue;
         }
       }
@@ -74,16 +100,79 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Check delay timing
       const enrolledAt = new Date(enrollment.enrolled_at);
-
       let cumulativeDelay = 0;
       for (let i = 0; i <= currentStepIndex; i++) {
         cumulativeDelay += (steps[i].delay_days * 24 * 60 + (steps[i].delay_hours || 0) * 60) * 60 * 1000;
       }
-
       const sendAt = new Date(enrolledAt.getTime() + cumulativeDelay);
       if (new Date() < sendAt) continue;
 
+      // ── CONDITION CHECK ──
+      const conditionType = step.condition_type || "always";
+      const conditionRefStep = step.condition_ref_step;
+
+      if (conditionType !== "always" && conditionRefStep != null) {
+        // Find the referenced step (by step_order)
+        const refStep = steps.find((s: any) => s.step_order === conditionRefStep);
+
+        if (refStep) {
+          // Look for the email_log of the referenced step for this enrollment
+          const { data: refLogs } = await adminClient
+            .from("email_logs")
+            .select("id, opened_at, clicked_at")
+            .eq("recipient_email", enrollment.recipient_email)
+            .eq("template_id", refStep.template_id)
+            .eq("metadata->>cadence_id", enrollment.cadence_id)
+            .eq("metadata->>step_order", String(refStep.step_order))
+            .limit(1);
+
+          const refLog = refLogs?.[0];
+          let conditionMet = false;
+
+          switch (conditionType) {
+            case "if_opened":
+              conditionMet = !!refLog?.opened_at;
+              break;
+            case "if_not_opened":
+              conditionMet = !refLog?.opened_at;
+              break;
+            case "if_clicked":
+              conditionMet = !!refLog?.clicked_at;
+              break;
+            case "if_not_clicked":
+              conditionMet = !refLog?.clicked_at;
+              break;
+            default:
+              conditionMet = true;
+          }
+
+          if (!conditionMet) {
+            // Skip this step and advance
+            skipped++;
+            const nextStep = currentStepIndex + 1;
+            if (nextStep >= steps.length) {
+              await adminClient
+                .from("email_cadence_enrollments")
+                .update({
+                  current_step: nextStep,
+                  status: "completed",
+                  completed_at: new Date().toISOString(),
+                })
+                .eq("id", enrollment.id);
+            } else {
+              await adminClient
+                .from("email_cadence_enrollments")
+                .update({ current_step: nextStep })
+                .eq("id", enrollment.id);
+            }
+            continue;
+          }
+        }
+      }
+
+      // Check if already sent
       const { data: existing } = await adminClient
         .from("email_logs")
         .select("id")
@@ -103,7 +192,7 @@ Deno.serve(async (req) => {
       const template = step.email_templates;
       if (!template) continue;
 
-      // ✅ ENVIO COM GERAL@PEDDIRETO.PT
+      // Send via Resend
       const resendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -163,7 +252,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, processed, sent }), {
+    return new Response(JSON.stringify({ ok: true, processed, sent, skipped }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

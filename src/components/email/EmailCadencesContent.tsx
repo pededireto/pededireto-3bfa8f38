@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Settings, Users, ArrowRight, Search, Filter, CheckCircle2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Settings, Users, ArrowRight, Search, Filter, CheckCircle2, Loader2, ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,30 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   useEmailCadences, useCreateCadence, useCadenceSteps, useAddCadenceStep,
   useDeleteCadenceStep, useCadenceEnrollments, useEnrollInCadence,
   useEmailTemplates, useSegmentPreview, useBulkEnrollInCadence,
+  useCadenceStepPerformance,
 } from "@/hooks/useEmailMarketing";
 import { useToast } from "@/hooks/use-toast";
 import { useCategories } from "@/hooks/useCategories";
-
-// Categorias hardcoded com IDs reais
-const CATEGORIES = [
-  { id: "7be9b065-5e4e-4eee-97c0-7a92b8829ca1", name: "Beleza & Bem-Estar" },
-  { id: "d0e58bd6-2cd0-48b7-8518-716e7122d011", name: "Educação & Apoio Escolar" },
-  { id: "d74f55b2-b96c-4451-8a0e-409309ba8873", name: "Energia & Soluções Energéticas" },
-  { id: "2afceb88-5b3b-402d-8a0d-af93a0f36dec", name: "Formação & Desenvolvimento" },
-  { id: "88d9d15d-4bb0-40eb-91f3-085048bffc48", name: "Lojas" },
-  { id: "e6cc8384-f214-4a64-ae4b-c0b1f0842167", name: "Materiais de Construção" },
-  { id: "bbec8300-0a09-48b3-a1f2-c6ddd5eebf28", name: "Restaurantes" },
-  { id: "3cf5c172-28a7-4028-8dd5-356c2415c17a", name: "Saúde" },
-  { id: "6357fda4-fae2-4926-8432-acaf7ba259ec", name: "Serviços Automóvel" },
-  { id: "3cf5c172-28a7-4028-8dd5-356c2415c17a", name: "Serviços de Mediação" },
-  { id: "c663ff69-949d-41c3-b878-efae6715add3", name: "Serviços de Reparações & Obras" },
-  { id: "6b43085-04c9-45ac-875c-84dfe53194cf", name: "Serviços Profissionais/Empresariais" },
-  { id: "f3b4b65e-79cf-4a2e-a61a-73904c60a898", name: "Transportes & Logística" },
-];
 
 const COMMERCIAL_STATUSES = [
   { value: "", label: "Todos os estados" },
@@ -41,12 +26,21 @@ const COMMERCIAL_STATUSES = [
   { value: "perdido", label: "Perdido" },
 ];
 
+const CONDITION_TYPES = [
+  { value: "always", label: "Sempre (sem condição)" },
+  { value: "if_opened", label: "Se abriu step anterior" },
+  { value: "if_not_opened", label: "Se NÃO abriu step anterior" },
+  { value: "if_clicked", label: "Se clicou step anterior" },
+  { value: "if_not_clicked", label: "Se NÃO clicou step anterior" },
+];
+
 const PAGE_SIZE = 100;
 
 const EmailCadencesContent = () => {
   const { toast } = useToast();
   const { data: cadences = [], isPending } = useEmailCadences();
   const { data: templates = [] } = useEmailTemplates();
+  const { data: categories = [] } = useCategories();
   const createCadence = useCreateCadence();
   const addStep = useAddCadenceStep();
   const deleteStep = useDeleteCadenceStep();
@@ -58,11 +52,15 @@ const EmailCadencesContent = () => {
   const [stepsOpen, setStepsOpen] = useState(false);
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [perfOpen, setPerfOpen] = useState(false);
   const [selectedCadence, setSelectedCadence] = useState<any>(null);
 
   // Forms
   const [form, setForm] = useState({ name: "", description: "", category: "" });
-  const [stepForm, setStepForm] = useState({ template_id: "", delay_days: "0", delay_hours: "0" });
+  const [stepForm, setStepForm] = useState({
+    template_id: "", delay_days: "0", delay_hours: "0",
+    condition_type: "always", condition_ref_step: "",
+  });
   const [enrollForm, setEnrollForm] = useState({ recipient_email: "", pause_on_reply: true });
 
   // Bulk enrollment state
@@ -79,6 +77,7 @@ const EmailCadencesContent = () => {
 
   const { data: steps = [] } = useCadenceSteps(selectedCadence?.id);
   const { data: enrollments = [] } = useCadenceEnrollments(selectedCadence?.id);
+  const { data: perfData = [] } = useCadenceStepPerformance(perfOpen ? selectedCadence?.id : undefined);
 
   const { data: segmentData, isLoading: segmentLoading } = useSegmentPreview(
     {
@@ -92,6 +91,15 @@ const EmailCadencesContent = () => {
   );
 
   const totalPages = segmentData ? Math.ceil(segmentData.total / PAGE_SIZE) : 0;
+
+  // Enrollment summary stats
+  const enrollmentStats = {
+    total: enrollments.length,
+    active: enrollments.filter((e: any) => e.status === "active").length,
+    converted: enrollments.filter((e: any) => e.status === "converted").length,
+    completed: enrollments.filter((e: any) => e.status === "completed").length,
+    paused: enrollments.filter((e: any) => e.status === "paused").length,
+  };
 
   const handleCreate = async () => {
     if (!form.name) { toast({ title: "Nome obrigatório", variant: "destructive" }); return; }
@@ -114,9 +122,11 @@ const EmailCadencesContent = () => {
         step_order: steps.length + 1,
         delay_days: parseInt(stepForm.delay_days) || 0,
         delay_hours: parseInt(stepForm.delay_hours) || 0,
+        condition_type: stepForm.condition_type || "always",
+        condition_ref_step: stepForm.condition_ref_step ? parseInt(stepForm.condition_ref_step) : null,
       });
       toast({ title: "Step adicionado" });
-      setStepForm({ template_id: "", delay_days: "0", delay_hours: "0" });
+      setStepForm({ template_id: "", delay_days: "0", delay_hours: "0", condition_type: "always", condition_ref_step: "" });
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
     }
@@ -191,6 +201,17 @@ const EmailCadencesContent = () => {
     setBulkOpen(true);
   };
 
+  const openPerformance = (cadence: any) => {
+    setSelectedCadence(cadence);
+    setPerfOpen(true);
+  };
+
+  const conditionLabel = (type: string, refStep: number | null) => {
+    if (type === "always" || !type) return null;
+    const label = CONDITION_TYPES.find(c => c.value === type)?.label || type;
+    return refStep != null ? `${label} (#${refStep})` : label;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -215,6 +236,7 @@ const EmailCadencesContent = () => {
                   <Badge variant={c.is_active ? "default" : "secondary"}>{c.is_active ? "Ativa" : "Inativa"}</Badge>
                 </div>
                 {c.description && <p className="text-sm text-muted-foreground">{c.description}</p>}
+                {c.category && <Badge variant="outline" className="text-xs mt-1">{c.category}</Badge>}
               </CardHeader>
               <CardContent className="flex gap-2 flex-wrap">
                 <Button variant="outline" size="sm" onClick={() => { setSelectedCadence(c); setStepsOpen(true); }}>
@@ -226,11 +248,79 @@ const EmailCadencesContent = () => {
                 <Button size="sm" onClick={() => openBulk(c)} className="bg-primary/90 hover:bg-primary">
                   <Filter className="w-3 h-3 mr-1" />Inscrição em Massa
                 </Button>
+                <Button variant="outline" size="sm" onClick={() => openPerformance(c)}>
+                  <BarChart3 className="w-3 h-3 mr-1" />Performance
+                </Button>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      {/* ── PERFORMANCE DIALOG ── */}
+      <Dialog open={perfOpen} onOpenChange={setPerfOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Performance — {selectedCadence?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <Card><CardContent className="p-3 text-center"><p className="text-2xl font-bold">{enrollmentStats.total}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+            <Card><CardContent className="p-3 text-center"><p className="text-2xl font-bold text-primary">{enrollmentStats.active}</p><p className="text-xs text-muted-foreground">Ativos</p></CardContent></Card>
+            <Card><CardContent className="p-3 text-center"><p className="text-2xl font-bold text-green-600">{enrollmentStats.converted}</p><p className="text-xs text-muted-foreground">Convertidos</p></CardContent></Card>
+            <Card><CardContent className="p-3 text-center"><p className="text-2xl font-bold">{enrollmentStats.completed}</p><p className="text-xs text-muted-foreground">Completados</p></CardContent></Card>
+            <Card><CardContent className="p-3 text-center"><p className="text-2xl font-bold text-amber-600">{enrollmentStats.paused}</p><p className="text-xs text-muted-foreground">Pausados</p></CardContent></Card>
+          </div>
+
+          {enrollmentStats.total > 0 && (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                Taxa de conversão: {((enrollmentStats.converted / enrollmentStats.total) * 100).toFixed(1)}%
+              </Badge>
+            </div>
+          )}
+
+          {/* Step performance table */}
+          <div className="bg-card rounded-xl shadow-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Step</TableHead>
+                  <TableHead>Template</TableHead>
+                  <TableHead className="text-right">Enviados</TableHead>
+                  <TableHead className="text-right">Abertos</TableHead>
+                  <TableHead className="text-right">% Open</TableHead>
+                  <TableHead className="text-right">Clicados</TableHead>
+                  <TableHead className="text-right">% Click</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {perfData.length > 0 ? perfData.map((row: any) => (
+                  <TableRow key={row.step_id}>
+                    <TableCell><Badge variant="outline">#{row.step_order}</Badge></TableCell>
+                    <TableCell className="font-medium">{row.template_name || "—"}</TableCell>
+                    <TableCell className="text-right">{row.sent}</TableCell>
+                    <TableCell className="text-right">{row.opened}</TableCell>
+                    <TableCell className="text-right">{row.open_rate}%</TableCell>
+                    <TableCell className="text-right">{row.clicked}</TableCell>
+                    <TableCell className="text-right">{row.click_rate}%</TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Sem dados de performance ainda.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── BULK ENROLLMENT DIALOG ── */}
       <Dialog open={bulkOpen} onOpenChange={(o) => { setBulkOpen(o); if (!o) { setPreviewEnabled(false); setBulkStep("filter"); } }}>
@@ -254,7 +344,7 @@ const EmailCadencesContent = () => {
                     <SelectTrigger><SelectValue placeholder="Todas as categorias" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as categorias</SelectItem>
-                      {CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -381,7 +471,16 @@ const EmailCadencesContent = () => {
           <div className="space-y-4">
             <div className="space-y-2"><Label>Nome *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div className="space-y-2"><Label>Descrição</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Categoria interna</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="ex: cold-outreach, follow-up..." /></div>
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Selecionar categoria" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem categoria</SelectItem>
+                  {categories.map(c => <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
@@ -396,16 +495,23 @@ const EmailCadencesContent = () => {
           <DialogHeader><DialogTitle>Steps de: {selectedCadence?.name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {steps.map((s: any, i: number) => (
-              <div key={s.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
-                <Badge variant="outline" className="shrink-0">#{s.step_order}</Badge>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{s.email_templates?.name || "—"}</p>
-                  <p className="text-xs text-muted-foreground">Delay: {s.delay_days}d {s.delay_hours || 0}h</p>
+              <div key={s.id} className="p-3 border rounded-lg bg-muted/50 space-y-1">
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="shrink-0">#{s.step_order}</Badge>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{s.email_templates?.name || "—"}</p>
+                    <p className="text-xs text-muted-foreground">Delay: {s.delay_days}d {s.delay_hours || 0}h</p>
+                  </div>
+                  {i < steps.length - 1 && <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  <Button variant="ghost" size="icon" onClick={() => deleteStep.mutateAsync({ id: s.id, cadenceId: selectedCadence.id })}>
+                    <Trash2 className="w-3 h-3 text-destructive" />
+                  </Button>
                 </div>
-                {i < steps.length - 1 && <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-                <Button variant="ghost" size="icon" onClick={() => deleteStep.mutateAsync({ id: s.id, cadenceId: selectedCadence.id })}>
-                  <Trash2 className="w-3 h-3 text-destructive" />
-                </Button>
+                {conditionLabel(s.condition_type, s.condition_ref_step) && (
+                  <Badge variant="secondary" className="text-xs">
+                    {conditionLabel(s.condition_type, s.condition_ref_step)}
+                  </Badge>
+                )}
               </div>
             ))}
             <div className="border-t pt-4 space-y-3">
@@ -422,6 +528,34 @@ const EmailCadencesContent = () => {
                 <div className="space-y-1"><Label className="text-xs">Dias</Label><Input type="number" value={stepForm.delay_days} onChange={(e) => setStepForm({ ...stepForm, delay_days: e.target.value })} /></div>
                 <div className="space-y-1"><Label className="text-xs">Horas</Label><Input type="number" value={stepForm.delay_hours} onChange={(e) => setStepForm({ ...stepForm, delay_hours: e.target.value })} /></div>
               </div>
+
+              {/* Condition */}
+              <div className="space-y-2">
+                <Label className="text-xs">Condição para executar</Label>
+                <Select value={stepForm.condition_type} onValueChange={(v) => setStepForm({ ...stepForm, condition_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CONDITION_TYPES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {stepForm.condition_type !== "always" && steps.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Step de referência</Label>
+                  <Select value={stepForm.condition_ref_step} onValueChange={(v) => setStepForm({ ...stepForm, condition_ref_step: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar step" /></SelectTrigger>
+                    <SelectContent>
+                      {steps.map((s: any) => (
+                        <SelectItem key={s.step_order} value={String(s.step_order)}>
+                          Step #{s.step_order} — {s.email_templates?.name || "—"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <Button size="sm" onClick={handleAddStep} disabled={!stepForm.template_id}><Plus className="w-3 h-3 mr-1" />Adicionar</Button>
             </div>
           </div>
@@ -448,7 +582,9 @@ const EmailCadencesContent = () => {
                   {enrollments.map((e: any) => (
                     <div key={e.id} className="flex items-center justify-between text-xs p-2 bg-muted rounded">
                       <span className="truncate">{e.recipient_email}</span>
-                      <Badge variant="outline" className="text-xs">{e.status}</Badge>
+                      <Badge variant={e.status === "converted" ? "default" : "outline"} className={`text-xs ${e.status === "converted" ? "bg-green-600" : ""}`}>
+                        {e.status}
+                      </Badge>
                     </div>
                   ))}
                 </div>

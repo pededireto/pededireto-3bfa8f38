@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     // Find matching log
     const { data: logEntry } = await adminClient
       .from("email_logs")
-      .select("id, sent_by")
+      .select("id, sent_by, metadata")
       .eq("provider_id", providerId)
       .maybeSingle();
 
@@ -76,6 +76,26 @@ Deno.serve(async (req) => {
       .update(updates)
       .eq("id", logEntry.id);
 
+    // ── PAUSE ENROLLMENT ON REPLY ──
+    if (type === "email.replied" || type === "email.reply") {
+      const metadata = logEntry.metadata as Record<string, any> | null;
+      const enrollmentId = metadata?.cadence_enrollment_id;
+
+      if (enrollmentId) {
+        await adminClient
+          .from("email_cadence_enrollments")
+          .update({
+            status: "paused",
+            paused_at: new Date().toISOString(),
+            paused_reason: "Respondeu ao email",
+          })
+          .eq("id", enrollmentId)
+          .eq("status", "active");
+
+        console.log("Paused enrollment due to reply:", enrollmentId);
+      }
+    }
+
     // Notify sender
     if (logEntry.sent_by) {
       const notifType =
@@ -85,6 +105,8 @@ Deno.serve(async (req) => {
           ? "email_opened"
           : type === "email.clicked"
           ? "email_clicked"
+          : type === "email.replied" || type === "email.reply"
+          ? "email_replied"
           : "email_event";
 
       await adminClient.from("email_notifications").insert({
@@ -98,6 +120,8 @@ Deno.serve(async (req) => {
             ? "Email aberto"
             : type === "email.clicked"
             ? "Link clicado"
+            : type === "email.replied" || type === "email.reply"
+            ? "Email respondido"
             : `Evento: ${type}`,
         message: `Provider ID: ${providerId}`,
       });
