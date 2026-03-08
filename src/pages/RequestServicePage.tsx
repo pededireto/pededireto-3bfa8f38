@@ -21,8 +21,12 @@ const BASE_URL = "https://pededireto.pt";
 const RequestServicePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { data: categories = [] } = useAllCategories();
+
+  // Repeat request pre-fill
+  const repeatData = (location.state as any)?.repeat;
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile-check", user?.id],
@@ -47,6 +51,15 @@ const RequestServicePage = () => {
   const [postalCode, setPostalCode] = useState("");
   const [urgency, setUrgency] = useState("normal");
   const [submitting, setSubmitting] = useState(false);
+
+  // Pre-fill from repeat data
+  useEffect(() => {
+    if (repeatData) {
+      if (repeatData.description) setDescription(repeatData.description);
+      if (repeatData.location_city) setCity(repeatData.location_city);
+      if (repeatData.urgency) setUrgency(repeatData.urgency);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: subcategories = [] } = useSubcategories(categoryId || undefined);
 
