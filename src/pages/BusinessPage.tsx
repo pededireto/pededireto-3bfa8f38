@@ -14,6 +14,7 @@ import Footer from "@/components/Footer";
 import FavoriteButton from "@/components/FavoriteButton";
 import ShareButton from "@/components/ShareButton";
 import { UnclaimedBusinessBanner } from "@/components/business/UnclaimedBusinessBanner";
+import { ReviewSection } from "@/components/business/ReviewSection";
 import BusinessNavigation from "@/components/BusinessNavigation";
 import BusinessSuggestionForm from "@/components/BusinessSuggestionForm";
 import { GoogleMapsLink } from "@/components/business/GoogleMapsLink";
@@ -717,6 +718,9 @@ const BusinessPage = () => {
                     );
                   })()}
                 </div>
+
+                {/* Reviews Section */}
+                <ReviewSection businessId={business.id} businessName={business.name} isOwner={userIsOwner} />
               </div>
 
               {/* Sidebar */}

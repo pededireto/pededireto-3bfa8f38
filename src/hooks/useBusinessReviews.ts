@@ -246,7 +246,7 @@ export const useCreateReview = () => {
           title: input.title || null,
           comment: input.comment || null,
           photos: input.photos || [],
-          moderation_status: "approved",
+          moderation_status: input.rating >= 3 ? "approved" : "pending",
         })
         .select()
         .single();

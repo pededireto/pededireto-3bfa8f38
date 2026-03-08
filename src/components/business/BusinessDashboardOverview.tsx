@@ -10,6 +10,7 @@ import { useBusinessPlan } from "@/hooks/useBusinessPlan";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
 import BusinessProAlerts from "@/components/business/BusinessProAlerts";
 import BusinessSearchPosition from "@/components/business/BusinessSearchPosition";
+import BusinessRankingWidget from "@/components/business/BusinessRankingWidget";
 import { useBusinessBadges } from "@/hooks/useBusinessDashboardPro";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -403,6 +404,11 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <BusinessRankingWidget
+          businessId={business.id}
+          onNavigate={onNavigate}
+        />
+
         <BusinessSearchPosition
           businessId={business.id}
           planId={business.plan_id}
