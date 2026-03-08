@@ -190,6 +190,9 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         </div>
       )}
 
+      {/* Onboarding Checklist */}
+      <OnboardingChecklist business={business} onNavigate={(tab) => onNavigate?.(tab)} />
+
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">
