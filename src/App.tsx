@@ -225,6 +225,8 @@ const App = () => {
                     <Route path="/pedir-servico" element={<RequestServicePage />} />
                     <Route path="/upgrade" element={<UpgradePage />} />
 
+                    <Route path="/unsubscribe" element={<UnsubscribePage />} />
+
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
