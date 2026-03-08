@@ -30,6 +30,8 @@ import {
   Trash2,
   Image,
 } from "lucide-react";
+import { useBusinessPlan } from "@/hooks/useBusinessPlan";
+import PlanLockedOverlay from "@/components/business/PlanLockedOverlay";
 
 // ── Parser de horários do Google ──────────────────────────
 const DAY_MAP: Record<string, string> = {
