@@ -194,7 +194,10 @@ const SubcategoryCityPage = ({
     ? `${subcategory.description.slice(0, 100).trim()} Encontre ${subcategoryName.toLowerCase()} em ${cityDisplay}. Contacte diretamente, sem intermediários.`
     : `Encontre os melhores ${subcategoryName.toLowerCase()} em ${cityDisplay}. Contacte diretamente, sem intermediários — só no Pede Direto.`;
 
-  const pageUrl = `${BASE_URL}/categoria/${categorySlug}/${subcategorySlug}/cidade/${citySlug}`;
+  const canonicalUrl = `${BASE_URL}/s/${subcategorySlug}/${citySlug}`;
+  const pageUrl = isShortUrl
+    ? canonicalUrl
+    : `${BASE_URL}/categoria/${categorySlug}/${subcategorySlug}/cidade/${citySlug}`;
 
   const itemListSchema = {
     "@context": "https://schema.org",
