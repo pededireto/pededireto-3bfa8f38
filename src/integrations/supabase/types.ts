@@ -5313,18 +5313,21 @@ export type Database = {
           equivalente: string
           id: string
           termo: string
+          type: string
         }
         Insert: {
           created_at?: string
           equivalente: string
           id?: string
           termo: string
+          type?: string
         }
         Update: {
           created_at?: string
           equivalente?: string
           id?: string
           termo?: string
+          type?: string
         }
         Relationships: []
       }
