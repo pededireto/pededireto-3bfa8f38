@@ -21,6 +21,7 @@ const CustomerSuccessPage = () => {
   const { user, isLoading, isCs, isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const { data: alertCounts } = usePlatformAlertsCounts();
 
   const handleLogout = async () => {
     try {
