@@ -14,20 +14,31 @@ interface HeroSectionProps {
   onSearchChange?: (term: string) => void;
 }
 
+const PLACEHOLDER_WORDS = ["canalizador", "eletricista", "restaurante", "cabeleireiro", "mecânico", "clínica"];
+
 const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionProps) => {
   const navigate = useNavigate();
   const [showResults, setShowResults] = useState(false);
   const [activeDescendant, setActiveDescendant] = useState<string | undefined>();
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const { data: searchResults = [], isLoading: searchLoading } = useSearch(searchTerm);
   const { data: settings } = useSiteSettings();
   const autoSaveSearch = useAutoSaveSearch();
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const heroTitle = settings?.hero_title || "Tem um problema? Nós mostramos quem resolve.";
-  const heroSubtitle = settings?.hero_subtitle || "Restaurantes, serviços, lojas e profissionais — tudo num só sítio.";
+  const heroTitle = settings?.hero_title || "Encontre o profissional certo em segundos";
+  const heroSubtitle = settings?.hero_subtitle || "Restaurantes, técnicos, lojas e serviços locais. Contacte diretamente — sem intermediários.";
   const mascotUrl = settings?.mascot_url;
   const mascotEnabled = settings?.mascot_enabled === "true";
+
+  // Rotate placeholder
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDER_WORDS.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +49,6 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
     }
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -57,6 +67,30 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
     }
   };
 
+  // Split title to highlight keyword
+  const renderTitle = () => {
+    const highlightWord = settings?.hero_highlight_word || "profissional";
+    if (heroTitle.includes(highlightWord)) {
+      const parts = heroTitle.split(highlightWord);
+      return (
+        <>
+          {parts[0]}
+          <span className="text-gradient-primary">{highlightWord}</span>
+          {parts.slice(1).join(highlightWord)}
+        </>
+      );
+    }
+    if (heroTitle.includes("?")) {
+      return (
+        <>
+          {heroTitle.split("?")[0]}?{" "}
+          <span className="text-gradient-primary">{heroTitle.split("?").slice(1).join("?").trim()}</span>
+        </>
+      );
+    }
+    return <span className="text-gradient-primary">{heroTitle}</span>;
+  };
+
   return (
     <section className="section-hero py-12 md:py-20" aria-labelledby="hero-heading">
       <div className="container">
@@ -66,14 +100,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
               id="hero-heading"
               className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-foreground"
             >
-              {heroTitle.includes("?") ? (
-                <>
-                  {heroTitle.split("?")[0]}?{" "}
-                  <span className="text-gradient-primary">{heroTitle.split("?").slice(1).join("?").trim()}</span>
-                </>
-              ) : (
-                <span className="text-gradient-primary">{heroTitle}</span>
-              )}
+              {renderTitle()}
             </h1>
 
             <p className="text-lg md:text-xl text-muted-foreground max-w-lg">{heroSubtitle}</p>
@@ -96,7 +123,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                   id="hero-search"
                   type="text"
                   value={searchTerm}
-                  placeholder="O que procura? (ex: canalizador, pizza, barbearia...)"
+                  placeholder={`Procurar ${PLACEHOLDER_WORDS[placeholderIndex]}...`}
                   className="search-input-hero pl-12 pr-4"
                   aria-autocomplete="list"
                   aria-expanded={showResults}
@@ -122,13 +149,9 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                       searchTerm={searchTerm}
                       onSelect={(result) => {
                         setShowResults(false);
-
                         if (result?.result_name) {
-                          autoSaveSearch.mutate({
-                            searchQuery: result.result_name,
-                          });
+                          autoSaveSearch.mutate({ searchQuery: result.result_name });
                         }
-
                         onSearchChange?.("");
                         inputRef.current?.focus();
                       }}
@@ -141,9 +164,8 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
             {/* CTAs */}
             <div className="flex flex-wrap gap-3">
               <Button className="btn-cta-primary text-base" onClick={scrollToCategorias}>
-                Encontrar quem resolve
+                Pesquisar
               </Button>
-
               <Button variant="outline" className="btn-cta-outline text-base" onClick={scrollToCategorias}>
                 Ver categorias
               </Button>
