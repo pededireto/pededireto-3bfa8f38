@@ -1,79 +1,46 @@
 
 
-# Plan: Logo + Consumer Dashboard Review Feedback
+## Análise: Página "Para Consumidores" - Redesign
 
-## Task 1 — Add PedeDireto Logo Image Everywhere
+### Estado Actual
 
-Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
+A página `/pagina/pedediretoconsumidores` é servida pelo sistema genérico de páginas institucionais (`InstitutionalPage.tsx`), que suporta dois modos:
+- **Simples**: HTML cru renderizado com DOMPurify
+- **Avançada**: Blocos estruturados (text, image, gallery, columns, icon-list, cta-button, contacts, video, separator)
 
-### Files to modify (logo replacement):
+O HTML proposto tem secções complexas (hero com stats, grid de features com badges "Novo", stepper "Como funciona", FAQ accordion, CTAs duplos) que **não são representáveis** com os tipos de bloco existentes. Meter tudo em HTML simples perderia dark mode, responsividade consistente e interactividade (accordion FAQ).
 
-**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
+### Abordagem Proposta
 
-| File | Location | Logo size |
-|------|----------|-----------|
-| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
-| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
-| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
-| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
-| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
-| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
-| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
-| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
-| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
-| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
-| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
-| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
-| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
-| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
-| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
-| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
-| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
+Criar um componente React dedicado `ConsumersLandingPage.tsx` que renderiza a landing page completa usando o design system existente (Tailwind vars, componentes UI, dark mode). No `InstitutionalPage.tsx`, quando o slug é `pedediretoconsumidores`, renderizar este componente em vez do sistema genérico.
 
-Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
+Isto mantém o conteúdo editável via backoffice (meta title, meta description, active/inactive) mas a apresentação visual usa componentes React nativos.
 
----
+### Secções do componente
 
-## Task 2 — Review Feedback on Consumer Dashboard Requests
+1. **Hero** - Título, subtítulo, CTA "Criar conta gratuita", trust badges (grátis, sem cartão, 30s)
+2. **Stats Bar** - 3 métricas (negócios, cidades, categorias) - dados hardcoded inicialmente, podem vir da BD depois
+3. **Categorias** - Grid de chips/tags com emojis
+4. **Features Grid** - 14 cards com ícone, título, descrição, badge "Novo" onde aplicável. Layout 2 colunas mobile, 3 desktop
+5. **Como Funciona** - 4 steps com stepper visual numerado
+6. **Porquê Criar Conta** - 4 cards com ícone + texto
+7. **FAQ** - Accordion com 5 perguntas usando `@radix-ui/react-accordion` existente
+8. **CTA Final** - Bloco de conversão com checklist e botão
 
-### Data model understanding
-- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
-- `request_business_matches` links `request_id` to `business_id`
-- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
+### Implementação técnica
 
-### New hook: `useConsumerRequestReviews`
+- Componente: `src/components/ConsumersLandingPage.tsx`
+- Detecção no `InstitutionalPage.tsx`: `if (slug === 'pedediretoconsumidores') return <ConsumersLandingPage page={page} />`
+- Usa `section-hero`, `card-business`, cores `--primary`, `--accent`/`--cta`, dark mode automático via CSS vars
+- Links CTA apontam para `/registar/consumidor`
+- FAQ usa componente `Accordion` existente
+- SEO mantido via Helmet com dados da BD (meta_title, meta_description)
+- Totalmente responsivo mobile-first
 
-In `src/hooks/useServiceRequests.ts`, add a new hook that:
-1. Takes the list of request IDs
-2. For each request, gets the matched business IDs from `request_business_matches`
-3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
-4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
+### Ficheiros a criar/editar
 
-Implementation approach — a single query that:
-```typescript
-// 1. Get all matches for the user's requests
-const { data: matches } = await supabase
-  .from("request_business_matches")
-  .select("request_id, business_id, businesses(name)")
-  .in("request_id", requestIds);
-
-// 2. Get all reviews by this user
-const { data: reviews } = await supabase
-  .from("business_reviews")
-  .select("business_id, rating, business_response, business_response_at")
-  .eq("user_id", userId);
-
-// 3. Cross-reference: for each match, find if there's a review
-```
-
-### UI changes in `src/pages/UserDashboard.tsx`
-
-In the request card (lines 281-346), after the status Badge, add:
-
-1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
-2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
-
-Visual design:
-- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
-- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
+| Ficheiro | Acção |
+|---|---|
+| `src/components/ConsumersLandingPage.tsx` | Criar - componente completo da landing |
+| `src/pages/InstitutionalPage.tsx` | Editar - detectar slug e renderizar componente dedicado |
 
