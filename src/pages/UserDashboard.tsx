@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import ConsumerMetricsBar from "@/components/consumer/ConsumerMetricsBar";
 import ConsumerBadgesSection from "@/components/consumer/ConsumerBadgesSection";
 import ConsumerRequestCard from "@/components/consumer/ConsumerRequestCard";
+import ConsumerActivityTimeline from "@/components/consumer/ConsumerActivityTimeline";
 
 const UserDashboard = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
