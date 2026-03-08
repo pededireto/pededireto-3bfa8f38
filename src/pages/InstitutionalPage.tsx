@@ -103,7 +103,7 @@ const InstitutionalPage = () => {
         ) : slug === "quem-somos" ? (
           <AboutLandingPage />
         ) : slug === "gestao" ? (
-          <EmergencyLandingPage />
+          <EmergencyLandingPage blocks={page.blocks} />
         ) : slug === "publicidade" ? (
           <OffersPartnersLandingPage />
         ) : (
