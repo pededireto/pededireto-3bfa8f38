@@ -132,7 +132,7 @@ const App = () => {
                     {/* PUBLIC */}
                     <Route path="/" element={<Index />} />
                     <Route path="/categoria/:slug" element={<CategoryPage />} />
-                    <Route path="/categoria/:categorySlug/cidade/:citySlug" element={<CategoryCityPage />} />
+                    <Route path="/categoria/:categorySlug/:subcategorySlug/cidade/:citySlug" element={<SubcategoryCityPage />} />
                     <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
                     <Route path="/negocio/:slug" element={<BusinessPage />} />
                     <Route path="/pagina/:slug" element={<InstitutionalPage />} />
