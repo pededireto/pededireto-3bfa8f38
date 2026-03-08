@@ -44,19 +44,49 @@ Deno.serve(async (req) => {
   // Categories
   const { data: categories } = await supabase
     .from("categories")
-    .select("slug, updated_at");
+    .select("id, slug, updated_at");
+
+  // Subcategories
+  const { data: subcategories } = await supabase
+    .from("subcategories")
+    .select("id, slug, category_id, updated_at")
+    .eq("is_active", true);
 
   // Active businesses
   const { data: businesses } = await supabase
     .from("businesses")
-    .select("slug, updated_at, city, category_id")
+    .select("id, slug, updated_at, city, category_id")
     .eq("is_active", true);
+
+  // Business-subcategory junction
+  const { data: businessSubcategories } = await supabase
+    .from("business_subcategories")
+    .select("business_id, subcategory_id");
 
   // Published blog posts
   const { data: blogPosts } = await supabase
     .from("blog_posts")
     .select("slug, updated_at")
     .eq("is_published", true);
+
+  // Build lookup maps
+  const catIdToSlug = new Map<string, string>();
+  for (const c of categories ?? []) {
+    catIdToSlug.set(c.id, c.slug);
+  }
+
+  const subIdToData = new Map<string, { slug: string; catSlug: string }>();
+  for (const s of subcategories ?? []) {
+    const catSlug = catIdToSlug.get(s.category_id);
+    if (catSlug) {
+      subIdToData.set(s.id, { slug: s.slug, catSlug });
+    }
+  }
+
+  const businessById = new Map<string, { city: string | null }>();
+  for (const b of businesses ?? []) {
+    businessById.set(b.id, { city: b.city });
+  }
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -84,26 +114,37 @@ Deno.serve(async (req) => {
 `;
   }
 
-  // Categories
-  const catSlugMap = new Map<string, string>();
+  // Categories — priority 0.8
   for (const c of categories ?? []) {
-    catSlugMap.set(c.slug, c.slug);
     xml += `  <url>
     <loc>${BASE_URL}/categoria/${c.slug}</loc>
     <lastmod>${(c.updated_at || now).split("T")[0]}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
   </url>
 `;
   }
 
-  // Businesses
+  // Subcategories — priority 0.8
+  for (const s of subcategories ?? []) {
+    const catSlug = catIdToSlug.get(s.category_id);
+    if (!catSlug) continue;
+    xml += `  <url>
+    <loc>${BASE_URL}/categoria/${catSlug}/${s.slug}</loc>
+    <lastmod>${(s.updated_at || now).split("T")[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+`;
+  }
+
+  // Businesses — priority 0.6
   for (const b of businesses ?? []) {
     xml += `  <url>
     <loc>${BASE_URL}/negocio/${b.slug}</loc>
     <lastmod>${(b.updated_at || now).split("T")[0]}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
 `;
   }
@@ -119,35 +160,25 @@ Deno.serve(async (req) => {
 `;
   }
 
-  // Category + City combinations
-  const catIdToSlug = new Map<string, string>();
-  if (categories && businesses) {
-    // Build category_id → slug map
-    const { data: catsWithId } = await supabase
-      .from("categories")
-      .select("id, slug");
-    for (const c of catsWithId ?? []) {
-      catIdToSlug.set(c.id, c.slug);
-    }
+  // Subcategory + City combinations — priority 0.7
+  const seenSubCity = new Set<string>();
+  for (const bs of businessSubcategories ?? []) {
+    const subData = subIdToData.get(bs.subcategory_id);
+    if (!subData) continue;
+    const biz = businessById.get(bs.business_id);
+    if (!biz?.city) continue;
 
-    // Deduplicate category+city combos
-    const seen = new Set<string>();
-    for (const b of businesses) {
-      if (!b.city || !b.category_id) continue;
-      const catSlug = catIdToSlug.get(b.category_id);
-      if (!catSlug) continue;
-      const citySlug = slugify(b.city);
-      const key = `${catSlug}/${citySlug}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
+    const citySlug = slugify(biz.city);
+    const key = `${subData.catSlug}/${subData.slug}/${citySlug}`;
+    if (seenSubCity.has(key)) continue;
+    seenSubCity.add(key);
 
-      xml += `  <url>
-    <loc>${BASE_URL}/categoria/${catSlug}/cidade/${citySlug}</loc>
+    xml += `  <url>
+    <loc>${BASE_URL}/categoria/${subData.catSlug}/${subData.slug}/cidade/${citySlug}</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
 `;
-    }
   }
 
   xml += `</urlset>`;

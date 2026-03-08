@@ -17,7 +17,7 @@ import SessionExpiredModal from "@/components/SessionExpiredModal";
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import SubcategoryPage from "./pages/SubcategoryPage";
-import CategoryCityPage from "./pages/CategoryCityPage";
+import SubcategoryCityPage from "./pages/SubcategoryCityPage";
 import BusinessPage from "./pages/BusinessPage";
 import InstitutionalPage from "./pages/InstitutionalPage";
 
@@ -132,7 +132,7 @@ const App = () => {
                     {/* PUBLIC */}
                     <Route path="/" element={<Index />} />
                     <Route path="/categoria/:slug" element={<CategoryPage />} />
-                    <Route path="/categoria/:categorySlug/cidade/:citySlug" element={<CategoryCityPage />} />
+                    <Route path="/categoria/:categorySlug/:subcategorySlug/cidade/:citySlug" element={<SubcategoryCityPage />} />
                     <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
                     <Route path="/negocio/:slug" element={<BusinessPage />} />
                     <Route path="/pagina/:slug" element={<InstitutionalPage />} />
