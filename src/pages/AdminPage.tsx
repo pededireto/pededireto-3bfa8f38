@@ -42,6 +42,7 @@ import TestUsersPanel from "@/components/admin/TestUsersPanel";
 import PendingClaimsPanel from "@/components/admin/PendingClaimsPanel";
 import EmailHub from "@/components/email/EmailHub";
 import BlogContent from "@/components/admin/BlogContent";
+import PlatformAlertsContent from "@/components/admin/PlatformAlertsContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
