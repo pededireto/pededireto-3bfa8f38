@@ -574,6 +574,27 @@ const BusinessPage = () => {
                     </Link>
                   )}
 
+                  {/* WhatsApp Share CTA */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(`Conheça ${business.name} no Pede Direto 👉 ${BASE_URL}/p/${business.slug}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => {
+                        trackEvent.mutate({
+                          event_type: "view" as any,
+                          business_id: business.id,
+                          category_id: business.category_id || undefined,
+                          city: business.city || undefined,
+                        });
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-[#25D366] hover:bg-[#20BD5A] text-white shadow-sm transition-colors"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Partilhar no WhatsApp
+                    </a>
+                  </div>
+
                   <div className="flex items-center gap-2 text-muted-foreground">
                     {business.alcance === "nacional" ? <Globe className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
                     <span>{getAlcanceLabel()}</span>
