@@ -119,12 +119,28 @@ const useOtherCitiesForSubcategory = (subcategoryId?: string, currentCity?: stri
 
 /* ── page ────────────────────────────── */
 
-const SubcategoryCityPage = () => {
-  const { categorySlug, subcategorySlug, citySlug } = useParams<{
+interface SubcategoryCityPageProps {
+  overrideCategorySlug?: string;
+  overrideSubcategorySlug?: string;
+  overrideCitySlug?: string;
+  isShortUrl?: boolean;
+}
+
+const SubcategoryCityPage = ({
+  overrideCategorySlug,
+  overrideSubcategorySlug,
+  overrideCitySlug,
+  isShortUrl = false,
+}: SubcategoryCityPageProps = {}) => {
+  const params = useParams<{
     categorySlug: string;
     subcategorySlug: string;
     citySlug: string;
   }>();
+
+  const categorySlug = overrideCategorySlug || params.categorySlug;
+  const subcategorySlug = overrideSubcategorySlug || params.subcategorySlug;
+  const citySlug = overrideCitySlug || params.citySlug;
 
   const cityDisplay = capitalize(citySlug || "");
   const { data: subcategory, isLoading: subLoading } = useSubcategory(subcategorySlug);
