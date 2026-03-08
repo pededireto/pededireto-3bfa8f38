@@ -7,7 +7,7 @@ interface VideoPlayerProps {
 }
 
 function getEmbedInfo(url: string): {
-  type: "youtube" | "vimeo" | "facebook" | "direct" | "external";
+  type: "youtube" | "vimeo" | "facebook" | "direct" | "instagram" | "unknown";
   embedUrl: string;
 } {
   // YouTube
@@ -31,9 +31,9 @@ function getEmbedInfo(url: string): {
     };
   }
 
-  // Instagram — não suporta embed, abre externamente
+  // Instagram — não suporta embed via iframe
   if (url.includes("instagram.com")) {
-    return { type: "external", embedUrl: url };
+    return { type: "instagram", embedUrl: url };
   }
 
   // Ficheiro de vídeo directo (mp4, webm, mov, etc.)
@@ -41,8 +41,8 @@ function getEmbedInfo(url: string): {
     return { type: "direct", embedUrl: url };
   }
 
-  // Tudo o resto — abre externamente
-  return { type: "external", embedUrl: url };
+  // Tudo o resto — tentar como vídeo directo primeiro
+  return { type: "unknown", embedUrl: url };
 }
 
 const VideoPlayer = ({ url, label }: VideoPlayerProps) => {
