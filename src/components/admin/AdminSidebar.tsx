@@ -157,6 +157,7 @@ const SIDEBAR_STRUCTURE: Omit<SidebarItem, "badge">[][] = [
     { id: "alerts", label: "Alertas", icon: Bell },
     { id: "suggestions", label: "Sugestões", icon: Lightbulb },
     { id: "emails", label: "Email Marketing", icon: MailPlus },
+    { id: "newsletter", label: "Newsletter", icon: MailPlus },
   ],
   // 8 - sistema
   [

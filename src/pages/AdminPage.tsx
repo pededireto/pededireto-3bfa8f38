@@ -84,6 +84,7 @@ const AdminPage = () => {
     if (activeTab === "pending-claims") return <PendingClaimsPanel />;
     if (activeTab === "emails") return <EmailHub showInbox />;
     if (activeTab === "blog") return <BlogContent />;
+    if (activeTab === "newsletter") return <NewsletterContent />;
 
     if (isLoading) {
       return (
