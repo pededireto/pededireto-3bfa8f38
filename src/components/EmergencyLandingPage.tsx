@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import VideoPlayer from "@/components/business/VideoPlayer";
+import type { PageBlock } from "@/hooks/useInstitutionalPages";
 import {
   Phone,
   AlertTriangle,
@@ -23,7 +25,14 @@ import {
   Building2,
 } from "lucide-react";
 
-const EmergencyLandingPage = () => {
+interface EmergencyLandingPageProps {
+  blocks?: PageBlock[];
+}
+
+const EmergencyLandingPage = ({ blocks = [] }: EmergencyLandingPageProps) => {
+  // Find video blocks from DB (e.g. INEM video)
+  const videoBlocks = blocks.filter((b) => b.type === "video");
+  const textBlocks = blocks.filter((b) => b.type === "text");
   return (
     <div className="min-h-screen">
       {/* ── Emergency Banner ── */}
