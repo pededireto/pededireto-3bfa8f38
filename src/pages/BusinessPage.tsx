@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusinessTopPosition } from "@/hooks/useTopRanking";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -265,6 +266,7 @@ const BusinessPage = () => {
   const { data: activeModules = [] } = useActiveBusinessModules();
   const { data: moduleValues = [] } = useBusinessModuleValues(business?.id);
   const { data: publicBadges = [] } = usePublicBadges(business?.id);
+  const { data: topPosition } = useBusinessTopPosition(business?.id);
 
   const [showSuggestionForm, setShowSuggestionForm] = useState(false);
 
@@ -556,6 +558,20 @@ const BusinessPage = () => {
                         );
                       })}
                     </div>
+                  )}
+
+                  {/* Top ranking badge */}
+                  {topPosition && (
+                    <Link
+                      to={topPosition.citySlug
+                        ? `/top/${topPosition.subcategorySlug}/${topPosition.citySlug}`
+                        : `/top/${topPosition.subcategorySlug}`
+                      }
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold border-2 border-amber-400 dark:border-amber-600 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 shadow-sm hover:bg-amber-200 dark:hover:bg-amber-900/70 transition-colors"
+                    >
+                      <Trophy className="w-3.5 h-3.5" />
+                      #{topPosition.position} {topPosition.subcategoryName}{topPosition.city ? ` em ${topPosition.city}` : ""}
+                    </Link>
                   )}
 
                   <div className="flex items-center gap-2 text-muted-foreground">
