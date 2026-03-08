@@ -6,20 +6,18 @@ import { useHomepageBlocks } from "@/hooks/useHomepageBlocks";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import HeroSection from "@/components/HeroSection";
-import CategoriesGrid from "@/components/CategoriesGrid";
-import FeaturedSection from "@/components/FeaturedSection";
-import SuperHighlightsSection from "@/components/SuperHighlightsSection";
 import FeaturedCategoriesSection from "@/components/FeaturedCategoriesSection";
-import HomepageBlockRenderer from "@/components/HomepageBlockRenderer";
-import CategoryAccordion from "@/components/home/CategoryAccordion";
+import SuperHighlightsSection from "@/components/SuperHighlightsSection";
+import PlatformStats from "@/components/PlatformStats";
+import HowItWorks from "@/components/HowItWorks";
+import BusinessCTA from "@/components/BusinessCTA";
 import LatestBlogPosts from "@/components/LatestBlogPosts";
+import HomepageBlockRenderer from "@/components/HomepageBlockRenderer";
 import StickySearch from "@/components/StickySearch";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
-  const { data: featuredBusinesses = [], isLoading: featuredLoading } = useFeaturedBusinesses();
   const { data: blocks = [] } = useHomepageBlocks();
 
   const useBlocks = blocks.length > 0;
@@ -39,11 +37,6 @@ const Index = () => {
 
       <Header />
 
-      {/* 
-        MAIN LANDMARK
-        - id necessário para skip link
-        - tabIndex=-1 necessário para foco programático em SPA
-      */}
       <StickySearch />
       <main id="main-content" className="flex-1" tabIndex={-1}>
         {useBlocks ? (
@@ -58,17 +51,11 @@ const Index = () => {
         ) : (
           <>
             <HeroSection searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-
-            <SuperHighlightsSection />
-
+            <PlatformStats />
             <FeaturedCategoriesSection />
-
-            <CategoryAccordion />
-
-            <CategoriesGrid categories={categories} isLoading={categoriesLoading} />
-
-            <FeaturedSection businesses={featuredBusinesses} isLoading={featuredLoading} />
-
+            <HowItWorks />
+            <SuperHighlightsSection />
+            <BusinessCTA />
             <LatestBlogPosts />
           </>
         )}

@@ -19,15 +19,19 @@ import { Plus, Pencil, Trash2, Loader2, LayoutDashboard, ArrowUp, ArrowDown } fr
 
 const BLOCK_TYPES = [
   { value: "hero", label: "Hero" },
+  { value: "platform_stats", label: "Números da Plataforma" },
   { value: "categorias", label: "Categorias" },
   { value: "super_destaques", label: "Super Destaques" },
   { value: "destaques", label: "Destaques" },
   { value: "featured_categories", label: "Categorias em Destaque" },
+  { value: "how_it_works", label: "Como Funciona" },
   { value: "negocios_premium", label: "Negócios Premium" },
+  { value: "business_cta", label: "CTA para Negócios" },
   { value: "banner", label: "Banner" },
   { value: "texto", label: "Texto" },
   { value: "personalizado", label: "Personalizado" },
   { value: "novos_negocios", label: "Novos na Plataforma" },
+  { value: "categorias_accordion", label: "Accordion Categorias" },
 ];
 
 const typeLabel = (type: string) => BLOCK_TYPES.find((t) => t.value === type)?.label || type;
