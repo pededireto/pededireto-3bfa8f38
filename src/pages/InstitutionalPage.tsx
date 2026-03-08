@@ -92,23 +92,29 @@ const InstitutionalPage = () => {
 
       <Header />
       <main className="flex-1">
-        <section className="section-hero py-12">
-          <div className="container">
-            <h1 className="text-3xl md:text-4xl font-bold">{page.title}</h1>
-          </div>
-        </section>
-        <section className="py-12">
-          <div className="container max-w-3xl">
-            {page.page_type === "advanced" && page.blocks.length > 0 ? (
-              <BlockRenderer blocks={page.blocks} />
-            ) : page.content ? (
-              <div
-                className="prose prose-lg max-w-none dark:prose-invert"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }}
-              />
-            ) : null}
-          </div>
-        </section>
+        {slug === "pedediretoconsumidores" ? (
+          <ConsumersLandingPage />
+        ) : (
+          <>
+            <section className="section-hero py-12">
+              <div className="container">
+                <h1 className="text-3xl md:text-4xl font-bold">{page.title}</h1>
+              </div>
+            </section>
+            <section className="py-12">
+              <div className="container max-w-3xl">
+                {page.page_type === "advanced" && page.blocks.length > 0 ? (
+                  <BlockRenderer blocks={page.blocks} />
+                ) : page.content ? (
+                  <div
+                    className="prose prose-lg max-w-none dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }}
+                  />
+                ) : null}
+              </div>
+            </section>
+          </>
+        )}
       </main>
       <Footer />
     </div>
