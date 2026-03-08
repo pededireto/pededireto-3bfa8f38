@@ -1,6 +1,7 @@
 import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Phone, MessageCircle, Mail } from "lucide-react";
+import VideoPlayer from "@/components/business/VideoPlayer";
 import type { PageBlock } from "@/hooks/useInstitutionalPages";
 
 interface BlockRendererProps {
@@ -142,21 +143,8 @@ function RenderBlock({ block }: { block: PageBlock }) {
         </div>
       );
 
-    case "video": {
-      const embedUrl = getEmbedUrl(d.url || "");
-      if (!embedUrl) return <p className="text-muted-foreground">URL de vídeo inválida</p>;
-      return (
-        <div className="aspect-video rounded-lg overflow-hidden">
-          <iframe
-            src={embedUrl}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            title="Video"
-          />
-        </div>
-      );
-    }
+    case "video":
+      return <VideoPlayer url={d.url || ""} label={block.title} />;
 
     case "separator":
       if (d.style === "space") return <div className="py-6" />;
@@ -165,27 +153,6 @@ function RenderBlock({ block }: { block: PageBlock }) {
 
     default:
       return null;
-  }
-}
-
-function getEmbedUrl(url: string): string | null {
-  try {
-    const u = new URL(url);
-    // YouTube
-    if (u.hostname.includes("youtube.com") || u.hostname.includes("youtu.be")) {
-      const id = u.hostname.includes("youtu.be")
-        ? u.pathname.slice(1)
-        : u.searchParams.get("v");
-      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
-    }
-    // Vimeo
-    if (u.hostname.includes("vimeo.com")) {
-      const id = u.pathname.split("/").pop();
-      return id ? `https://player.vimeo.com/video/${id}` : null;
-    }
-    return null;
-  } catch {
-    return null;
   }
 }
 

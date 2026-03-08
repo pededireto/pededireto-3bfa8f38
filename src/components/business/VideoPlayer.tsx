@@ -7,7 +7,7 @@ interface VideoPlayerProps {
 }
 
 function getEmbedInfo(url: string): {
-  type: "youtube" | "vimeo" | "facebook" | "direct" | "external";
+  type: "youtube" | "vimeo" | "facebook" | "direct" | "instagram" | "unknown";
   embedUrl: string;
 } {
   // YouTube
@@ -31,9 +31,9 @@ function getEmbedInfo(url: string): {
     };
   }
 
-  // Instagram — não suporta embed, abre externamente
+  // Instagram — não suporta embed via iframe
   if (url.includes("instagram.com")) {
-    return { type: "external", embedUrl: url };
+    return { type: "instagram", embedUrl: url };
   }
 
   // Ficheiro de vídeo directo (mp4, webm, mov, etc.)
@@ -41,12 +41,13 @@ function getEmbedInfo(url: string): {
     return { type: "direct", embedUrl: url };
   }
 
-  // Tudo o resto — abre externamente
-  return { type: "external", embedUrl: url };
+  // Tudo o resto — tentar como vídeo directo primeiro
+  return { type: "unknown", embedUrl: url };
 }
 
 const VideoPlayer = ({ url, label }: VideoPlayerProps) => {
   const [error, setError] = useState(false);
+  const [unknownVideoFailed, setUnknownVideoFailed] = useState(false);
 
   if (!url?.trim()) return null;
 
@@ -100,8 +101,22 @@ const VideoPlayer = ({ url, label }: VideoPlayerProps) => {
         </div>
       )}
 
-      {/* Externo ou erro */}
-      {(type === "external" || error) && (
+      {/* URL desconhecida — tentar como vídeo directo, fallback para link */}
+      {type === "unknown" && !error && !unknownVideoFailed && (
+        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+          <video
+            src={embedUrl}
+            controls
+            className="w-full h-full object-contain"
+            onError={() => setUnknownVideoFailed(true)}
+          >
+            O teu browser não suporta este formato de vídeo.
+          </video>
+        </div>
+      )}
+
+      {/* Instagram ou fallback final (erro real ou vídeo desconhecido que falhou) */}
+      {(type === "instagram" || error || (type === "unknown" && unknownVideoFailed)) && (
         <a
           href={url}
           target="_blank"
