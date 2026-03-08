@@ -143,51 +143,7 @@ function RenderBlock({ block }: { block: PageBlock }) {
         </div>
       );
 
-    case "video": {
-      const embedUrl = getEmbedUrl(d.url || "");
-      if (!embedUrl) return <p className="text-muted-foreground">URL de vídeo inválida</p>;
-      return (
-        <div className="aspect-video rounded-lg overflow-hidden">
-          <iframe
-            src={embedUrl}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            title="Video"
-          />
-        </div>
-      );
-    }
-
-    case "separator":
-      if (d.style === "space") return <div className="py-6" />;
-      if (d.style === "dots") return <div className="text-center text-2xl text-muted-foreground tracking-[1em] py-4">•••</div>;
-      return <hr className="border-border my-4" />;
-
-    default:
-      return null;
-  }
-}
-
-function getEmbedUrl(url: string): string | null {
-  try {
-    const u = new URL(url);
-    // YouTube
-    if (u.hostname.includes("youtube.com") || u.hostname.includes("youtu.be")) {
-      const id = u.hostname.includes("youtu.be")
-        ? u.pathname.slice(1)
-        : u.searchParams.get("v");
-      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
-    }
-    // Vimeo
-    if (u.hostname.includes("vimeo.com")) {
-      const id = u.pathname.split("/").pop();
-      return id ? `https://player.vimeo.com/video/${id}` : null;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+    case "video":
+      return <VideoPlayer url={d.url || ""} label={block.title} />;
 
 export default BlockRenderer;

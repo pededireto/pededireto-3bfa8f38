@@ -47,6 +47,7 @@ function getEmbedInfo(url: string): {
 
 const VideoPlayer = ({ url, label }: VideoPlayerProps) => {
   const [error, setError] = useState(false);
+  const [unknownVideoFailed, setUnknownVideoFailed] = useState(false);
 
   if (!url?.trim()) return null;
 
@@ -100,8 +101,22 @@ const VideoPlayer = ({ url, label }: VideoPlayerProps) => {
         </div>
       )}
 
-      {/* Externo ou erro */}
-      {(type === "external" || error) && (
+      {/* URL desconhecida — tentar como vídeo directo, fallback para link */}
+      {type === "unknown" && !error && !unknownVideoFailed && (
+        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+          <video
+            src={embedUrl}
+            controls
+            className="w-full h-full object-contain"
+            onError={() => setUnknownVideoFailed(true)}
+          >
+            O teu browser não suporta este formato de vídeo.
+          </video>
+        </div>
+      )}
+
+      {/* Instagram ou fallback final (erro real ou vídeo desconhecido que falhou) */}
+      {(type === "instagram" || error || (type === "unknown" && unknownVideoFailed)) && (
         <a
           href={url}
           target="_blank"
