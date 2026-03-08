@@ -1,8 +1,10 @@
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useTopRanking } from "@/hooks/useTopRanking";
+import { useBatchPublicBadges } from "@/hooks/usePublicBadges";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import BadgePills from "@/components/BadgePills";
 import { Button } from "@/components/ui/button";
 import { Star, MapPin, ArrowLeft, Trophy, CheckCircle, MessageSquare, UserPlus } from "lucide-react";
 
@@ -53,6 +55,8 @@ const getCardBg = (position: number) => {
 const TopRankingPage = () => {
   const { subcategorySlug, citySlug } = useParams<{ subcategorySlug: string; citySlug?: string }>();
   const { data, isLoading } = useTopRanking(subcategorySlug, citySlug);
+  const businessIds = (data?.businesses || []).map((b) => b.id);
+  const { data: badgesMap = new Map() } = useBatchPublicBadges(businessIds);
 
   const subcatName = data?.subcategory?.name || "";
   const catName = data?.subcategory?.categories?.name || "";
@@ -245,6 +249,12 @@ const TopRankingPage = () => {
                             <span className="badge-premium text-[10px] px-1.5 py-0.5">Premium</span>
                           )}
                         </div>
+                        {/* Earned badges */}
+                        {badgesMap.get(biz.id)?.length ? (
+                          <div className="mt-0.5">
+                            <BadgePills badges={badgesMap.get(biz.id)!} max={2} />
+                          </div>
+                        ) : null}
                         {biz.city && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                             <MapPin className="w-3 h-3" />

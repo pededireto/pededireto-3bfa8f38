@@ -2,9 +2,11 @@ import { useNavigate } from "react-router-dom";
 import { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { PublicBusinessWithCategory } from "@/hooks/usePublicBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
+import { useBusinessPublicBadges } from "@/hooks/usePublicBadges";
 import { MapPin, Globe, Phone, MessageCircle, ExternalLink, Star as StarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FavoriteButton from "@/components/FavoriteButton";
+import BadgePills from "@/components/BadgePills";
 
 interface BusinessCardProps {
   business: BusinessWithCategory | PublicBusinessWithCategory;
@@ -31,6 +33,7 @@ const StarRating = ({ rating, count }: { rating: number; count: number }) => (
 const BusinessCard = ({ business }: BusinessCardProps) => {
   const trackEvent = useTrackEvent();
   const navigate = useNavigate();
+  const { data: publicBadges = [] } = useBusinessPublicBadges(business.id);
 
   const stats = (business as any).business_review_stats;
 
@@ -110,9 +113,16 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
         )}
 
         {/* Name */}
-        <h3 className="font-bold text-lg mt-1 mb-2 group-hover:text-primary transition-colors line-clamp-1">
+        <h3 className="font-bold text-lg mt-1 mb-1 group-hover:text-primary transition-colors line-clamp-1">
           {business.name}
         </h3>
+
+        {/* Earned Badges */}
+        {publicBadges.length > 0 && (
+          <div className="mb-2">
+            <BadgePills badges={publicBadges} max={2} />
+          </div>
+        )}
 
         {/* Description */}
         {business.description && (
