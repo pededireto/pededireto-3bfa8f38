@@ -24,6 +24,7 @@ import { useCreateAuditLog } from "@/hooks/useAuditLogs";
 import { useContactLogs, useCreateContactLog } from "@/hooks/useContactLogs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import AdminBadgesPanel from "@/components/admin/AdminBadgesPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +59,7 @@ import {
   EyeOff,
   ExternalLink,
   Image,
+  Award,
   Trash2,
   FlaskConical,
 } from "lucide-react";
@@ -1651,6 +1653,13 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </div>
             ));
           })()}
+        </Section>
+      )}
+
+      {/* ── Badges (admin only, editing existing) ── */}
+      {isEditing && isAdmin && business && (
+        <Section title="Badges" icon={Award} defaultOpen={false}>
+          <AdminBadgesPanel businessId={business.id} />
         </Section>
       )}
 

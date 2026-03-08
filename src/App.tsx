@@ -50,6 +50,7 @@ import SearchPage from "./pages/SearchPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
 import TopRankingPage from "./pages/TopRankingPage";
+import PricingPage from "./pages/PricingPage";
 import BusinessShortUrl from "./pages/BusinessShortUrl";
 import NotFound from "./pages/NotFound";
 import StripeSetup from "./pages/admin/StripeSetup";
@@ -146,6 +147,7 @@ const App = () => {
                     <Route path="/top/:subcategorySlug" element={<TopRankingPage />} />
                     <Route path="/s/:subSlug/:citySlug" element={<SeoSubcategoryCityPage />} />
                     <Route path="/p/:slug" element={<BusinessShortUrl />} />
+                    <Route path="/pricing" element={<PricingPage />} />
 
                     {/* AUTH */}
                     <Route path="/login" element={<UserLogin />} />

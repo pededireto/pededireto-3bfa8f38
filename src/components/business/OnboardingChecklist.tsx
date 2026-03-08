@@ -1,0 +1,145 @@
+import { useState, useEffect, useMemo } from "react";
+import { CheckCircle2, Circle, X, Rocket, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import type { BusinessWithCategory } from "@/hooks/useBusinesses";
+import { useBusinessProfileScore } from "@/hooks/useBusinessProfileScore";
+
+interface OnboardingChecklistProps {
+  business: BusinessWithCategory;
+  onNavigate: (tab: string) => void;
+}
+
+const STORAGE_KEY = "onboarding_checklist_dismissed";
+
+const OnboardingChecklist = ({ business, onNavigate }: OnboardingChecklistProps) => {
+  const [dismissed, setDismissed] = useState(true);
+  const { data: scoreData } = useBusinessProfileScore(business.id);
+
+  useEffect(() => {
+    const val = localStorage.getItem(`${STORAGE_KEY}_${business.id}`);
+    setDismissed(val === "true");
+  }, [business.id]);
+
+  const steps = useMemo(() => [
+    {
+      id: "logo",
+      label: "Adicionar logo",
+      done: !!business.logo_url,
+      action: "edit",
+    },
+    {
+      id: "description",
+      label: "Escrever descrição (mín. 50 caracteres)",
+      done: (business.description?.length ?? 0) >= 50,
+      action: "edit",
+    },
+    {
+      id: "whatsapp",
+      label: "Adicionar WhatsApp",
+      done: !!(business as any).whatsapp,
+      action: "edit",
+    },
+    {
+      id: "photos",
+      label: "Adicionar pelo menos 1 foto",
+      done: ((business as any).gallery?.length ?? 0) > 0,
+      action: "edit",
+    },
+    {
+      id: "schedule",
+      label: "Preencher horário",
+      done: !!(business as any).schedule_weekdays,
+      action: "edit",
+    },
+    {
+      id: "subcategory",
+      label: "Escolher subcategoria",
+      done: ((business as any).subcategories?.length ?? 0) > 0,
+      action: "edit",
+    },
+  ], [business]);
+
+  const completedCount = steps.filter((s) => s.done).length;
+  const percentage = Math.round((completedCount / steps.length) * 100);
+  const isComplete = percentage === 100;
+
+  // Don't show if: dismissed, score >= 80, or fully complete
+  if (dismissed) return null;
+  if (scoreData && scoreData.percentage >= 80) return null;
+
+  const handleDismiss = () => {
+    localStorage.setItem(`${STORAGE_KEY}_${business.id}`, "true");
+    setDismissed(true);
+  };
+
+  if (isComplete) {
+    return (
+      <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-5 space-y-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <Rocket className="h-5 w-5 text-primary" />
+            <h3 className="font-bold text-foreground">🎉 Perfil 100% completo!</h3>
+          </div>
+          <button onClick={handleDismiss} className="text-muted-foreground hover:text-foreground p-1" aria-label="Fechar">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Parabéns! O seu perfil está completo. Quer maximizar a sua visibilidade com um plano PRO?
+        </p>
+        <Button size="sm" onClick={() => onNavigate("plan")}>
+          Ver planos PRO <ArrowRight className="h-3.5 w-3.5 ml-1" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 shadow-card space-y-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
+            <Rocket className="h-4 w-4 text-primary" />
+            Complete o seu perfil
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Perfis completos recebem até 3x mais contactos
+          </p>
+        </div>
+        <button onClick={handleDismiss} className="text-muted-foreground hover:text-foreground p-1" aria-label="Dispensar">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Progress value={percentage} className="h-2 flex-1" />
+        <span className="text-sm font-semibold text-primary whitespace-nowrap">{percentage}%</span>
+      </div>
+
+      <div className="space-y-2">
+        {steps.map((step) => (
+          <button
+            key={step.id}
+            onClick={() => !step.done && onNavigate(step.action)}
+            disabled={step.done}
+            className={`flex items-center gap-2.5 w-full text-left text-sm px-3 py-2 rounded-lg transition-colors ${
+              step.done
+                ? "text-muted-foreground bg-muted/30"
+                : "text-foreground hover:bg-primary/5 cursor-pointer"
+            }`}
+          >
+            {step.done ? (
+              <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+            ) : (
+              <Circle className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+            )}
+            <span className={step.done ? "line-through" : ""}>{step.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default OnboardingChecklist;
