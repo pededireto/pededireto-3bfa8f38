@@ -97,7 +97,7 @@ export const useBusinessReviews = (businessId: string | undefined, filters?: {
 
       let query = (supabase as any)
         .from("business_reviews")
-        .select("*")
+        .select("*, profiles:user_id(full_name)")
         .eq("business_id", businessId)
         .eq("moderation_status", "approved");
 
