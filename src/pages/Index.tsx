@@ -13,6 +13,7 @@ import FeaturedCategoriesSection from "@/components/FeaturedCategoriesSection";
 import HomepageBlockRenderer from "@/components/HomepageBlockRenderer";
 import CategoryAccordion from "@/components/home/CategoryAccordion";
 import LatestBlogPosts from "@/components/LatestBlogPosts";
+import StickySearch from "@/components/StickySearch";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
