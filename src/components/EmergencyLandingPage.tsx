@@ -31,6 +31,7 @@ interface EmergencyLandingPageProps {
 }
 
 const EmergencyLandingPage = ({ blocks = [] }: EmergencyLandingPageProps) => {
+  const { user } = useAuth();
   // Find video blocks from DB (e.g. INEM video)
   const videoBlocks = blocks.filter((b) => b.type === "video");
   const textBlocks = blocks.filter((b) => b.type === "text");
