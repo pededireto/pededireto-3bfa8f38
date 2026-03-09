@@ -122,7 +122,9 @@ const EmergencyLandingPage = ({ blocks = [] }: EmergencyLandingPageProps) => {
                 Se precisas de um profissional agora — canalizador, electricista, assistência técnica — submete um pedido de orçamento urgente. O sistema notifica automaticamente os profissionais disponíveis na tua zona.
               </p>
               <Button asChild size="lg" className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                <Link to="/pedir-servico">Pedir ajuda urgente →</Link>
+                <Link to={user ? "/pedir-servico" : "/registar/consumidor"}>
+                  {user ? "Pedir ajuda urgente →" : "Registar para pedir ajuda →"}
+                </Link>
               </Button>
             </CardContent>
           </Card>
