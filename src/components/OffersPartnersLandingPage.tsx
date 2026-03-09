@@ -84,7 +84,7 @@ const OffersPartnersLandingPage = () => {
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                   <Button asChild size="lg">
-                    <a href="https://get.business.bolt.eu/o7qyqr0ammelt.eu/o7qyqr0ammel" target="_blank" rel="noopener noreferrer" className="gap-2">
+                    <a href="https://get.business.bolt.eu/o7qyqr0ammelt.eu/o7qyqr0ammelt.eu/o7qyqr0ammel" target="_blank" rel="noopener noreferrer" className="gap-2">
                       Ativar oferta Bolt Business <ExternalLink className="w-4 h-4" />
                     </a>
                   </Button>
@@ -194,11 +194,10 @@ const OffersPartnersLandingPage = () => {
             Regista o teu negócio ou cria a tua conta e recebe notificação assim que tivermos novas parcerias disponíveis.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild size="lg">
+            <Button asChild size="lg">/consumidor
               <L/consumidorink to="/registar">Criar conta gratuita →</Link>
             </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link to="/registar-negocio">Registar o meu negócio →</Link>
+            <Button asChild variant="outline" size="lgclaim-business <Link to="/registar-negocio">Registar o meu negócio →</Link>
             </Button>
           </div>
         </div>

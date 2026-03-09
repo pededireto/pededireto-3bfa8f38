@@ -370,10 +370,12 @@ const EmergencyLandingPage = ({ blocks = [] }: EmergencyLandingPageProps) => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg">
-              <Link to="/registar">Criar conta gratuita →</Link>
+              <Link to={user ? "/pedir-servico" : "/registar/consumidor"}>
+                {user ? "Pedir ajuda agora →" : "Criar conta gratuita →"}
+              </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link to="/registar-negocio">Registar o meu negócio →</Link>
+              <Link to="/claim-business">Registar o meu negócio →</Link>
             </Button>
           </div>
         </div>
