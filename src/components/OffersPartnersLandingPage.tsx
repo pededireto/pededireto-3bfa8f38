@@ -84,7 +84,7 @@ const OffersPartnersLandingPage = () => {
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                   <Button asChild size="lg">
-                    <a href="https://bolt.eu/business" target="_blank" rel="noopener noreferrer" className="gap-2">
+                    <a href="https://get.business.bolt.eu/o7qyqr0ammel" target="_blank" rel="noopener noreferrer" className="gap-2">
                       Ativar oferta Bolt Business <ExternalLink className="w-4 h-4" />
                     </a>
                   </Button>
