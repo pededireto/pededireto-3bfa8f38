@@ -124,7 +124,7 @@ const ConsumersLandingPage = () => {
             Restaurantes, canalizadores, electricistas, explicadores, fotógrafos — tudo o que precisas, perto de ti, com contacto direto. Sem formulários. Sem esperas.
           </p>
           <div className="pt-2">
-            <Link to="/registar">
+            <Link to="/registar/consumidor">
               <Button size="lg" className="text-base px-8 bg-[hsl(var(--cta))] hover:bg-[hsl(var(--cta-hover))] text-[hsl(var(--cta-foreground))] shadow-[var(--shadow-cta)]">
                 Criar conta gratuita <ArrowRight className="ml-1 h-5 w-5" />
               </Button>
@@ -297,7 +297,7 @@ const ConsumersLandingPage = () => {
               </span>
             ))}
           </div>
-          <Link to="/registar">
+          <Link to="/registar/consumidor">
             <Button size="lg" className="text-base px-8 bg-[hsl(var(--cta))] hover:bg-[hsl(var(--cta-hover))] text-[hsl(var(--cta-foreground))] shadow-[var(--shadow-cta)]">
               Criar a minha conta gratuita <ArrowRight className="ml-1 h-5 w-5" />
             </Button>

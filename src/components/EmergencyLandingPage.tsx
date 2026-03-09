@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ interface EmergencyLandingPageProps {
 }
 
 const EmergencyLandingPage = ({ blocks = [] }: EmergencyLandingPageProps) => {
+  const { user } = useAuth();
   // Find video blocks from DB (e.g. INEM video)
   const videoBlocks = blocks.filter((b) => b.type === "video");
   const textBlocks = blocks.filter((b) => b.type === "text");
@@ -120,7 +122,9 @@ const EmergencyLandingPage = ({ blocks = [] }: EmergencyLandingPageProps) => {
                 Se precisas de um profissional agora — canalizador, electricista, assistência técnica — submete um pedido de orçamento urgente. O sistema notifica automaticamente os profissionais disponíveis na tua zona.
               </p>
               <Button asChild size="lg" className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                <Link to="/pedir-servico">Pedir ajuda urgente →</Link>
+                <Link to={user ? "/pedir-servico" : "/registar/consumidor"}>
+                  {user ? "Pedir ajuda urgente →" : "Registar para pedir ajuda →"}
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -366,10 +370,12 @@ const EmergencyLandingPage = ({ blocks = [] }: EmergencyLandingPageProps) => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg">
-              <Link to="/registar">Criar conta gratuita →</Link>
+              <Link to={user ? "/pedir-servico" : "/registar/consumidor"}>
+                {user ? "Pedir ajuda agora →" : "Criar conta gratuita →"}
+              </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link to="/registar-negocio">Registar o meu negócio →</Link>
+              <Link to="/claim-business">Registar o meu negócio →</Link>
             </Button>
           </div>
         </div>
