@@ -193,11 +193,12 @@ const OffersPartnersLandingPage = () => {
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
             Regista o teu negócio ou cria a tua conta e recebe notificação assim que tivermos novas parcerias disponíveis.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild size="lg">/consumidor
-              <L/consumidorink to="/registar">Criar conta gratuita →</Link>
+           <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild size="lg">
+              <Link to="/registar/consumidor">Criar conta gratuita →</Link>
             </Button>
-            <Button asChild variant="outline" size="lgclaim-business <Link to="/registar-negocio">Registar o meu negócio →</Link>
+            <Button asChild variant="outline" size="lg">
+              <Link to="/claim-business">Registar o meu negócio →</Link>
             </Button>
           </div>
         </div>
