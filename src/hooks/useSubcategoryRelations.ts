@@ -76,3 +76,32 @@ export const useDeleteSubcategoryRelation = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["subcategory-relations"] }),
   });
 };
+
+export const useBulkCreateSubcategoryRelations = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (rows: { subcategory_id: string; related_subcategory_id: string; relation_type: string; priority: number }[]) => {
+      // Count existing before upsert
+      const { count: beforeCount } = await supabase
+        .from("subcategory_relations" as any)
+        .select("id", { count: "exact", head: true });
+
+      const { error } = await supabase
+        .from("subcategory_relations" as any)
+        .upsert(rows as any[], {
+          onConflict: "subcategory_id,related_subcategory_id",
+          ignoreDuplicates: true,
+        });
+      if (error) throw error;
+
+      const { count: afterCount } = await supabase
+        .from("subcategory_relations" as any)
+        .select("id", { count: "exact", head: true });
+
+      const inserted = (afterCount ?? 0) - (beforeCount ?? 0);
+      const skipped = rows.length - inserted;
+      return { inserted, skipped };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["subcategory-relations"] }),
+  });
+};

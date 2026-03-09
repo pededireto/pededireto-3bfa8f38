@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Link2, ArrowRight } from "lucide-react";
+import { Loader2, Plus, Trash2, Link2, ArrowRight, Download, Upload, FileSpreadsheet } from "lucide-react";
+import ImportRelationsDialog from "./ImportRelationsDialog";
+import * as XLSX from "xlsx";
 
 const RELATION_TYPES = [
   { value: "suggestion", label: "Sugestão", description: "Aparece como 'Também pode interessar'" },
@@ -26,8 +28,8 @@ const SubcategoryRelationsContent = () => {
   const [relationType, setRelationType] = useState("suggestion");
   const [priority, setPriority] = useState(1);
   const [filterSource, setFilterSource] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
 
-  // Fetch all subcategories with category names
   const { data: allSubs = [] } = useQuery({
     queryKey: ["all-subcategories-with-cat"],
     queryFn: async () => {
@@ -75,6 +77,41 @@ const SubcategoryRelationsContent = () => {
     }
   };
 
+  // Download template XLSX
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      { subcategoria_origem: "Cabeleireiro & Barbearia", subcategoria_sugerida: "Estética & Unhas", tipo: "suggestion", prioridade: 1 },
+      { subcategoria_origem: "Pizzarias", subcategoria_sugerida: "Hambúrgueres", tipo: "alternative", prioridade: 1 },
+      { subcategoria_origem: "Remodelações & Obras", subcategoria_sugerida: "Canalizadores", tipo: "suggestion", prioridade: 1 },
+    ];
+    const subsRef = [...allSubs]
+      .sort((a, b) => a.categoryName.localeCompare(b.categoryName) || a.name.localeCompare(b.name))
+      .map(s => ({ Nome: s.name, Categoria: s.categoryName, Slug: s.slug }));
+
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(templateData);
+    XLSX.utils.book_append_sheet(wb, ws1, "Template");
+    const ws2 = XLSX.utils.json_to_sheet(subsRef);
+    XLSX.utils.book_append_sheet(wb, ws2, "Subcategorias");
+    XLSX.writeFile(wb, "pededireto-template-relacoes.xlsx");
+  };
+
+  // Export existing relations
+  const handleExport = () => {
+    const typeLabel = (t: string) => t === "suggestion" ? "suggestion" : t === "complement" ? "complement" : "alternative";
+    const exportData = relations.map(r => ({
+      subcategoria_origem: r.subcategory_name,
+      subcategoria_sugerida: r.related_subcategory_name,
+      tipo: typeLabel(r.relation_type),
+      prioridade: r.priority,
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(wb, ws, "Relações");
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `pededireto-relacoes-subcategorias-${date}.xlsx`);
+  };
+
   // Group relations by source subcategory
   const grouped = relations.reduce((acc, rel) => {
     const key = rel.subcategory_name || rel.subcategory_id;
@@ -97,9 +134,22 @@ const SubcategoryRelationsContent = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Subcategorias Relacionadas</h1>
-        <p className="text-muted-foreground">Definir sugestões inteligentes entre subcategorias — quando alguém pesquisa por uma, as relacionadas aparecem como sugestão.</p>
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Subcategorias Relacionadas</h1>
+          <p className="text-muted-foreground">Definir sugestões inteligentes entre subcategorias.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4 mr-1" /> Descarregar Template
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-1" /> Importar CSV/Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={relations.length === 0}>
+            <FileSpreadsheet className="h-4 w-4 mr-1" /> Exportar CSV
+          </Button>
+        </div>
       </div>
 
       {/* How it works */}
@@ -215,6 +265,14 @@ const SubcategoryRelationsContent = () => {
         )}
       </div>
       <p className="text-sm text-muted-foreground text-right">{relations.length} relações</p>
+
+      {/* Import Dialog */}
+      <ImportRelationsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        allSubs={allSubs}
+        existingRelations={relations}
+      />
     </div>
   );
 };
