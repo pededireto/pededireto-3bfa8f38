@@ -93,8 +93,10 @@ const generateSlug = (name: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-function getGalleryLimit(subscriptionPlan: string, isPremium: boolean): number {
-  if (subscriptionPlan === "free" || !subscriptionPlan) return 0;
+// ── CORRIGIDO: usa isAdmin, form.plan_id e form.is_premium em vez de business ──
+function getGalleryLimit(planId: string, isPremium: boolean, isAdmin: boolean): number {
+  if (isAdmin) return 999; // admin sem limite
+  if (!planId) return 0; // sem plano = free = sem galeria
   return isPremium ? 6 : 2;
 }
 
@@ -145,19 +147,16 @@ function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string; 
     }
   }
 
-  // Dias úteis — se todos iguais agrupa, senão lista individualmente
   const wdOpen = WEEKDAYS.filter((d) => schedule[d] && schedule[d] !== "Encerrado");
   const wdClosed = WEEKDAYS.filter((d) => schedule[d] === "Encerrado");
   const wdHours = wdOpen.map((d) => schedule[d]);
   const allSame = wdHours.length > 0 && wdHours.every((h) => h === wdHours[0]);
   const weekdays = allSame ? wdHours[0] : wdOpen.map((d) => `${d} ${schedule[d]}`).join("\n");
 
-  // Fim de semana — só dias com horário (não encerrados)
   const weOpen = WEEKEND.filter((d) => schedule[d] && schedule[d] !== "Encerrado");
   const weClosed = WEEKEND.filter((d) => schedule[d] === "Encerrado");
   const weekend = weOpen.map((d) => `${d} ${schedule[d]}`).join("\n");
 
-  // Dias encerrados — todos os dias com "Encerrado"
   const allClosed = [...wdClosed, ...weClosed];
   const closed = allClosed.length > 0 ? allClosed.join(", ") : "";
 
@@ -462,11 +461,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   const [rawSchedulePaste, setRawSchedulePaste] = useState("");
   const [showPasteBox, setShowPasteBox] = useState(false);
 
-  const galleryLimit = getGalleryLimit(
-    (business as any)?.subscription_plan ?? "free",
-    (business as any)?.is_premium ?? false,
-  );
-
   const [form, setForm] = useState({
     // 1. Identidade
     name: "",
@@ -517,6 +511,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   });
 
   const [moduleValues, setModuleValues] = useState<Record<string, { value: string | null; value_json: any }>>({});
+
+  // ── CORRIGIDO: galleryLimit usa form.plan_id e form.is_premium (valores actuais do form) ──
+  const galleryLimit = getGalleryLimit(form.plan_id, form.is_premium, isAdmin);
 
   useEffect(() => {
     if (business) {
@@ -593,7 +590,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   };
 
   const addImage = () => {
-    if (form.images.length >= galleryLimit) return;
+    if (!isAdmin && form.images.length >= galleryLimit) return;
     setForm((prev) => ({ ...prev, images: [...prev.images, ""] }));
   };
   const updateImage = (index: number, url: string) => {
@@ -1013,7 +1010,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             </p>
           )}
 
-          {/* Caixa de colar do Google */}
           {showPasteBox && (
             <div className="border border-primary/30 bg-primary/5 rounded-lg p-4 space-y-3">
               <Label className="text-sm font-medium">Cola aqui o horário copiado do Google</Label>
@@ -1046,7 +1042,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             </div>
           )}
 
-          {/* 3 campos de horário */}
           <div className={`space-y-3 ${!form.show_schedule ? "opacity-50" : ""}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -1152,7 +1147,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               <div className="flex items-center gap-2">
                 <Label className="text-sm font-medium">Galeria</Label>
                 <span className="text-[11px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
-                  {form.images.filter((u) => u.trim()).length} / {galleryLimit} imagens
+                  {form.images.filter((u) => u.trim()).length} / {isAdmin ? "∞" : galleryLimit} imagens
                 </span>
               </div>
               <VisibilityBadge visible={form.show_gallery} onChange={(v) => set("show_gallery", v)} />
@@ -1193,18 +1188,16 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
                     </Button>
                   </div>
                 ))}
-                {(isAdmin || form.images.length < galleryLimit) && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addImage}
-                    className="w-full border-dashed text-xs mt-1"
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                    Adicionar imagem ({form.images.length}/{isAdmin ? "∞" : galleryLimit})
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addImage}
+                  className="w-full border-dashed text-xs mt-1"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Adicionar imagem ({form.images.length}/{isAdmin ? "∞" : galleryLimit})
+                </Button>
                 <p className="text-[11px] text-muted-foreground">
                   Cola o URL de qualquer imagem pública — Instagram, Facebook, Supabase, ou outro site.
                 </p>
