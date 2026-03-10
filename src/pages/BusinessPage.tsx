@@ -879,7 +879,35 @@ const BusinessPage = () => {
                       );
                     })}
 
-                    {/* CTAs principais */}
+                    {/* CTAs principais — ordem por intenção */}
+                    {ctaBookingUrl && (
+                      <Button
+                        variant="outline"
+                        className="w-full justify-center text-base hover:border-primary hover:text-primary transition-colors"
+                        onClick={() => {
+                          handleCtaClick("website");
+                          trackGA4Lead("booking");
+                          window.open(ctaBookingUrl, "_blank");
+                        }}
+                      >
+                        <CalendarCheck className="w-5 h-5" />
+                        Reservar Agora
+                      </Button>
+                    )}
+                    {ctaOrderUrl && (
+                      <Button
+                        variant="outline"
+                        className="w-full justify-center text-base hover:border-orange-500 hover:text-orange-500 transition-colors"
+                        onClick={() => {
+                          handleCtaClick("website");
+                          trackGA4Lead("order");
+                          window.open(ctaOrderUrl, "_blank");
+                        }}
+                      >
+                        <ShoppingBag className="w-5 h-5" />
+                        Pedir Online
+                      </Button>
+                    )}
                     {business.cta_whatsapp && (business as any).show_whatsapp !== false && (
                       <Button
                         className="btn-cta-whatsapp w-full justify-center text-base"
@@ -932,34 +960,6 @@ const BusinessPage = () => {
                       >
                         <ExternalLink className="w-5 h-5" />
                         Ver Website
-                      </Button>
-                    )}
-                    {ctaBookingUrl && (
-                      <Button
-                        variant="outline"
-                        className="w-full justify-center text-base hover:border-primary hover:text-primary transition-colors"
-                        onClick={() => {
-                          handleCtaClick("website");
-                          trackGA4Lead("booking");
-                          window.open(ctaBookingUrl, "_blank");
-                        }}
-                      >
-                        <CalendarCheck className="w-5 h-5" />
-                        Reservar Agora
-                      </Button>
-                    )}
-                    {ctaOrderUrl && (
-                      <Button
-                        variant="outline"
-                        className="w-full justify-center text-base hover:border-orange-500 hover:text-orange-500 transition-colors"
-                        onClick={() => {
-                          handleCtaClick("website");
-                          trackGA4Lead("order");
-                          window.open(ctaOrderUrl, "_blank");
-                        }}
-                      >
-                        <ShoppingBag className="w-5 h-5" />
-                        Pedir Online
                       </Button>
                     )}
 
