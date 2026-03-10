@@ -503,10 +503,10 @@ const BusinessPage = () => {
                     <div className="aspect-[16/9]">
                       <VideoPlayer url={videoUrl} />
                     </div>
-                    {/* Logo pequeno sobreposto no canto inferior esquerdo */}
+                    {/* Logo pequeno sobreposto no canto inferior direito */}
                     {business.logo_url && (
-                      <div className="absolute bottom-4 left-4 z-10">
-                        <div className="relative w-24 h-24 rounded-xl overflow-hidden flex items-center justify-center drop-shadow-xl">
+                      <div className="absolute bottom-3 right-3 z-10">
+                        <div className="relative w-16 h-16 rounded-lg overflow-hidden flex items-center justify-center drop-shadow-xl">
                           <img src={business.logo_url} alt={business.name} className="w-full h-full object-contain" />
                         </div>
                       </div>
