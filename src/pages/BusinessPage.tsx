@@ -506,7 +506,7 @@ const BusinessPage = () => {
                     {/* Logo pequeno sobreposto no canto inferior esquerdo */}
                     {business.logo_url && (
                       <div className="absolute bottom-4 left-4 z-10">
-                        <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg flex items-center justify-center p-1.5">
+                        <div className="relative w-24 h-24 rounded-xl overflow-hidden flex items-center justify-center drop-shadow-xl">
                           <img src={business.logo_url} alt={business.name} className="w-full h-full object-contain" />
                         </div>
                       </div>
