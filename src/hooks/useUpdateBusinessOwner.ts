@@ -1,7 +1,6 @@
 // Hook especializado para o owner atualizar o seu negócio
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
 interface OwnerBusinessUpdate {
   id: string;
   name: string;
@@ -24,6 +23,8 @@ interface OwnerBusinessUpdate {
   instagram_url?: string | null;
   facebook_url?: string | null;
   other_social_url?: string | null;
+  cta_booking_url?: string | null;
+  cta_order_url?: string | null;
   images?: string[] | null;
   // Visibilidade
   show_whatsapp?: boolean;
@@ -39,7 +40,6 @@ interface OwnerBusinessUpdate {
   // Admin
   is_active?: boolean;
 }
-
 export const useUpdateBusinessOwner = () => {
   const queryClient = useQueryClient();
   return useMutation({
