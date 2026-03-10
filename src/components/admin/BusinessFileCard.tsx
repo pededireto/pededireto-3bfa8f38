@@ -488,6 +488,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     instagram_url: "",
     facebook_url: "",
     other_social_url: "",
+    cta_booking_url: "",
+    cta_order_url: "",
     show_social: true,
     images: [] as string[],
     show_gallery: true,
@@ -540,6 +542,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         instagram_url: (business as any).instagram_url || "",
         facebook_url: (business as any).facebook_url || "",
         other_social_url: (business as any).other_social_url || "",
+        cta_booking_url: (business as any).cta_booking_url || "",
+        cta_order_url: (business as any).cta_order_url || "",
         show_social: (business as any).show_social ?? true,
         images: (business as any).images || [],
         show_gallery: (business as any).show_gallery ?? true,
@@ -707,6 +711,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           instagram_url: form.instagram_url || null,
           facebook_url: form.facebook_url || null,
           other_social_url: form.other_social_url || null,
+          cta_booking_url: (form as any).cta_booking_url || null,
+          cta_order_url: (form as any).cta_order_url || null,
           show_social: form.show_social,
           images: cleanImages.length > 0 ? cleanImages : null,
           show_gallery: form.show_gallery,
@@ -744,6 +750,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           instagram_url: form.instagram_url || null,
           facebook_url: form.facebook_url || null,
           other_social_url: form.other_social_url || null,
+          cta_booking_url: (form as any).cta_booking_url || null,
+          cta_order_url: (form as any).cta_order_url || null,
           show_social: form.show_social,
           images: cleanImages.length > 0 ? cleanImages : null,
           show_gallery: form.show_gallery,
@@ -1138,6 +1146,32 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
                   onChange={(e) => set("other_social_url", e.target.value)}
                   placeholder="LinkedIn, TikTok, YouTube..."
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* ── CTAs de Reserva e Encomenda ── */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <Label className="text-sm font-medium">CTAs de Acção Direta</Label>
+            <p className="text-xs text-muted-foreground">Aparecem como botões de destaque na página pública.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>📅 Reservar Agora</Label>
+                <Input
+                  value={(form as any).cta_booking_url}
+                  onChange={(e) => set("cta_booking_url", e.target.value)}
+                  placeholder="https://... (Google Reserve, TheFork, Calendly...)"
+                />
+                <p className="text-[11px] text-muted-foreground">Ex: Google Reserve, TheFork, Calendly, Doctolib</p>
+              </div>
+              <div className="space-y-2">
+                <Label>🛍️ Pedir Online</Label>
+                <Input
+                  value={(form as any).cta_order_url}
+                  onChange={(e) => set("cta_order_url", e.target.value)}
+                  placeholder="https://... (UberEats, Glovo, sistema próprio...)"
+                />
+                <p className="text-[11px] text-muted-foreground">Ex: UberEats, Glovo, sistema próprio</p>
               </div>
             </div>
           </div>
