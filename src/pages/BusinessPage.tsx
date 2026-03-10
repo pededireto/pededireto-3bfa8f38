@@ -329,7 +329,6 @@ const BusinessPage = () => {
     }
   };
 
-
   const userIsOwner = user?.id === (business as any)?.owner_id;
 
   const pageTitle = business
@@ -565,14 +564,15 @@ const BusinessPage = () => {
                   {/* Top ranking badge */}
                   {topPosition && (
                     <Link
-                      to={topPosition.citySlug
-                        ? `/top/${topPosition.subcategorySlug}/${topPosition.citySlug}`
-                        : `/top/${topPosition.subcategorySlug}`
+                      to={
+                        topPosition.citySlug
+                          ? `/top/${topPosition.subcategorySlug}/${topPosition.citySlug}`
+                          : `/top/${topPosition.subcategorySlug}`
                       }
                       className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold border-2 border-amber-400 dark:border-amber-600 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 shadow-sm hover:bg-amber-200 dark:hover:bg-amber-900/70 transition-colors"
                     >
-                      <Trophy className="w-3.5 h-3.5" />
-                      #{topPosition.position} {topPosition.subcategoryName}{topPosition.city ? ` em ${topPosition.city}` : ""}
+                      <Trophy className="w-3.5 h-3.5" />#{topPosition.position} {topPosition.subcategoryName}
+                      {topPosition.city ? ` em ${topPosition.city}` : ""}
                     </Link>
                   )}
 
