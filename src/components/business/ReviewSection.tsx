@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Star, Plus, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useBusinessReviews, useUserReviewForBusiness, useDeleteReview, useBusinessReviewStats } from "@/hooks/useBusinessReviews";
+import {
+  useBusinessReviews,
+  useUserReviewForBusiness,
+  useDeleteReview,
+  useBusinessReviewStats,
+} from "@/hooks/useBusinessReviews";
 import { ReviewStats } from "./ReviewStats";
 import { ReviewCard } from "./ReviewCard";
 import { ReviewForm } from "./ReviewForm";
@@ -39,14 +44,33 @@ export const ReviewSection = ({ businessId, businessName, isOwner }: ReviewSecti
     minRating: filterType.includes("star") ? parseInt(filterType[0]) : undefined,
   };
 
+  // ── reviews com filtros activos (para a lista) ──
   const { data: reviews = [], isLoading } = useBusinessReviews(businessId, filters);
+
+  // ── reviews sem filtro (para saber se existem reviews no total) ──
+  const { data: allReviews = [] } = useBusinessReviews(businessId, { orderBy: "recent" });
+
   const { data: stats } = useBusinessReviewStats(businessId);
+
+  // ── review do utilizador actual (sem filtro de moderation_status) ──
+  // Isto garante que mesmo com review "pending" o utilizador não vê o botão de avaliar
   const { data: userReview } = useUserReviewForBusiness(businessId);
+
   const deleteReview = useDeleteReview();
 
+  // Utilizador já avaliou se tem qualquer review (aprovada ou pendente)
   const hasUserReview = !!userReview;
+
   const displayedReviews = showAll ? reviews : reviews.slice(0, REVIEWS_LIMIT);
   const hasMore = reviews.length > REVIEWS_LIMIT;
+
+  // Total real de reviews aprovadas (independente do filtro activo)
+  const totalApprovedReviews = stats?.total_reviews ?? allReviews.length;
+  const hasAnyReviews = totalApprovedReviews > 0;
+
+  // Filtros activos produzem resultados?
+  const isFiltered = filterType !== "all" || orderBy !== "recent";
+  const filteredIsEmpty = reviews.length === 0 && hasAnyReviews;
 
   const handleDeleteReview = async (reviewId: string) => {
     if (!confirm("Tem certeza que deseja apagar esta avaliação?")) return;
@@ -63,6 +87,7 @@ export const ReviewSection = ({ businessId, businessName, isOwner }: ReviewSecti
     setShowReviewForm(true);
   };
 
+  // Pode avaliar: autenticado, não é dono, e ainda NÃO tem nenhuma review (nem pending)
   const canReview = !!user && !hasUserReview && !isOwner;
 
   return (
@@ -86,14 +111,12 @@ export const ReviewSection = ({ businessId, businessName, isOwner }: ReviewSecti
         <ReviewStats businessId={businessId} />
       </div>
 
-      {/* CTA for authenticated non-owner users */}
+      {/* CTA para utilizador autenticado que ainda não avaliou */}
       {canReview && (
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 text-center">
           <Star className="w-12 h-12 mx-auto mb-3 text-primary" />
           <h4 className="font-semibold mb-2">Já usou este serviço?</h4>
-          <p className="text-sm text-muted-foreground mb-4">
-            Partilhe a sua experiência e ajude outros clientes!
-          </p>
+          <p className="text-sm text-muted-foreground mb-4">Partilhe a sua experiência e ajude outros clientes!</p>
           <Button onClick={() => setShowReviewForm(true)} className="min-h-[48px] text-base">
             <Plus className="w-4 h-4 mr-2" />
             Escrever Avaliação
@@ -101,8 +124,15 @@ export const ReviewSection = ({ businessId, businessName, isOwner }: ReviewSecti
         </div>
       )}
 
-      {/* User's own review */}
-      {user && hasUserReview && (
+      {/* Review pendente do utilizador — aviso discreto */}
+      {user && hasUserReview && userReview?.moderation_status === "pending" && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+          ⏳ A sua avaliação está a aguardar moderação e será publicada em breve.
+        </div>
+      )}
+
+      {/* Review aprovada do utilizador */}
+      {user && hasUserReview && userReview?.moderation_status === "approved" && (
         <div className="bg-muted/50 border rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-semibold text-sm">A Sua Avaliação</h4>
@@ -119,20 +149,18 @@ export const ReviewSection = ({ businessId, businessName, isOwner }: ReviewSecti
         </div>
       )}
 
-      {/* CTA for unauthenticated */}
-      {!user && (
+      {/* CTA para utilizador não autenticado — só mostra se há reviews ou se é um negócio activo */}
+      {!user && hasAnyReviews && (
         <div className="bg-muted/50 border rounded-lg p-6 text-center">
-          <p className="text-sm text-muted-foreground mb-3">
-            Faça login para deixar uma avaliação
-          </p>
+          <p className="text-sm text-muted-foreground mb-3">Faça login para deixar uma avaliação</p>
           <Link to="/login">
             <Button variant="outline">Entrar</Button>
           </Link>
         </div>
       )}
 
-      {/* Filters */}
-      {reviews.length > 0 && (
+      {/* Filtros — só aparecem se existem reviews */}
+      {hasAnyReviews && (
         <div className="flex items-center gap-4 flex-wrap">
           <Select value={orderBy} onValueChange={(v) => setOrderBy(v as OrderBy)}>
             <SelectTrigger className="w-[200px]">
@@ -158,18 +186,33 @@ export const ReviewSection = ({ businessId, businessName, isOwner }: ReviewSecti
         </div>
       )}
 
-      {/* Reviews list */}
+      {/* Lista de reviews */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : reviews.length === 0 ? (
+      ) : !hasAnyReviews ? (
+        // Empty state REAL — o negócio não tem nenhuma avaliação aprovada
         <div className="text-center py-12 text-muted-foreground">
           <Star className="w-16 h-16 mx-auto mb-4 opacity-20" />
           <p className="font-medium">Ainda sem avaliações.</p>
-          {canReview && (
-            <p className="text-sm mt-1">Seja o primeiro a avaliar!</p>
-          )}
+          {canReview && <p className="text-sm mt-1">Seja o primeiro a avaliar!</p>}
+        </div>
+      ) : filteredIsEmpty ? (
+        // Filtro activo não tem resultados, mas o negócio TEM avaliações
+        <div className="text-center py-8 text-muted-foreground">
+          <p className="text-sm">Nenhuma avaliação corresponde aos filtros seleccionados.</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2"
+            onClick={() => {
+              setFilterType("all");
+              setOrderBy("recent");
+            }}
+          >
+            Limpar filtros
+          </Button>
         </div>
       ) : (
         <div className="space-y-4">
@@ -197,9 +240,7 @@ export const ReviewSection = ({ businessId, businessName, isOwner }: ReviewSecti
       <Dialog open={showReviewForm} onOpenChange={setShowReviewForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingReview ? "Editar Avaliação" : "Escrever Avaliação"}
-            </DialogTitle>
+            <DialogTitle>{editingReview ? "Editar Avaliação" : "Escrever Avaliação"}</DialogTitle>
             <DialogDescription>
               {businessName ? `Avalie a sua experiência com ${businessName}` : "Partilhe a sua experiência"}
             </DialogDescription>
@@ -212,9 +253,7 @@ export const ReviewSection = ({ businessId, businessName, isOwner }: ReviewSecti
               setEditingReview(null);
               toast({
                 title: "Avaliação submetida!",
-                description: editingReview
-                  ? "A sua avaliação foi atualizada."
-                  : "Obrigado pelo feedback!",
+                description: editingReview ? "A sua avaliação foi atualizada." : "Obrigado pelo feedback!",
               });
             }}
             onCancel={() => {
