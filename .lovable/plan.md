@@ -1,79 +1,50 @@
 
 
-# Plan: Logo + Consumer Dashboard Review Feedback
+## Analysis
 
-## Task 1 — Add PedeDireto Logo Image Everywhere
+The current `get_business_benchmark` RPC aggregates data across **all** subcategories of the business simultaneously (via `EXISTS ... IN (SELECT bs2.subcategory_id FROM business_subcategories bs2 WHERE bs2.business_id = b.id)`). Line 84 confirms it picks the **first** subcategory name by `created_at ASC LIMIT 1` for display. There's no way to filter by a single subcategory.
 
-Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
+## Implementation Plan
 
-### Files to modify (logo replacement):
+### 1. New DB function: `get_business_benchmark_v2` (migration)
 
-**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
+Create a new RPC with an additional optional parameter `p_subcategory_id uuid DEFAULT NULL`:
+- When `p_subcategory_id IS NOT NULL`: all subcategory-related filtering uses only that single subcategory ID instead of all business subcategories
+- When `NULL`: falls back to current behavior (all subcategories)
+- The `subcategory_stats.name` returns the name of the selected subcategory
+- Ranking comparisons scope to businesses that share that specific subcategory
 
-| File | Location | Logo size |
-|------|----------|-----------|
-| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
-| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
-| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
-| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
-| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
-| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
-| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
-| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
-| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
-| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
-| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
-| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
-| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
-| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
-| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
-| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
-| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
+This is a copy of `get_business_benchmark` with the CASE logic changed: when `p_subcategory_id` is provided, replace `EXISTS (... bs1.business_id = p_business_id AND bs1.subcategory_id IN (...))` with `EXISTS (SELECT 1 FROM business_subcategories bs2 WHERE bs2.business_id = b.id AND bs2.subcategory_id = p_subcategory_id)`.
 
-Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
+### 2. Update `useBusinessBenchmark.ts`
 
----
+Add optional `subcategoryId` parameter to the hook and pass it to the new RPC. Include it in the query key for proper caching per subcategory.
 
-## Task 2 — Review Feedback on Consumer Dashboard Requests
+### 3. Modify `BusinessBenchmarkCard.tsx`
 
-### Data model understanding
-- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
-- `request_business_matches` links `request_id` to `business_id`
-- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
+- Import `useBusinessSubcategoryIds` and `useAllSubcategories` to get the business's subcategory names
+- Add `selectedSubcategoryId` state, defaulting to the first subcategory
+- Render a `<Select>` dropdown at the top (only when business has 2+ subcategories)
+- Pass `selectedSubcategoryId` to the benchmark hook
+- All data (rankings, compare bars, suggestions) automatically re-render on change
 
-### New hook: `useConsumerRequestReviews`
+### 4. Modify `BusinessInsightsContent.tsx`
 
-In `src/hooks/useServiceRequests.ts`, add a new hook that:
-1. Takes the list of request IDs
-2. For each request, gets the matched business IDs from `request_business_matches`
-3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
-4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
+Pass the selected subcategory down to `BenchmarkInsightsPanel` as well (it receives `benchmarkData` which will already be scoped by the hook).
 
-Implementation approach — a single query that:
-```typescript
-// 1. Get all matches for the user's requests
-const { data: matches } = await supabase
-  .from("request_business_matches")
-  .select("request_id, business_id, businesses(name)")
-  .in("request_id", requestIds);
+### Files to modify
 
-// 2. Get all reviews by this user
-const { data: reviews } = await supabase
-  .from("business_reviews")
-  .select("business_id, rating, business_response, business_response_at")
-  .eq("user_id", userId);
+| File | Action |
+|---|---|
+| Migration SQL | New `get_business_benchmark_v2` function |
+| `src/hooks/useBusinessBenchmark.ts` | Add `subcategoryId` param |
+| `src/components/intelligence/BusinessBenchmarkCard.tsx` | Add subcategory dropdown + state |
+| `src/components/business/BusinessInsightsContent.tsx` | Minor: pass subcategoryId to benchmark hook |
 
-// 3. Cross-reference: for each match, find if there's a review
-```
+### UI Behavior
 
-### UI changes in `src/pages/UserDashboard.tsx`
-
-In the request card (lines 281-346), after the status Badge, add:
-
-1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
-2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
-
-Visual design:
-- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
-- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
+- **1 subcategory**: No dropdown shown, behaves exactly as today
+- **2+ subcategories**: Dropdown appears below the "Benchmarking" header showing `{name}` for each
+- Changing selection re-fetches benchmark data for that specific subcategory
+- All insights, rankings, and compare bars update accordingly
 
