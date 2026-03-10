@@ -42,6 +42,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ZoomIn,
+  Instagram,
+  Facebook,
 } from "lucide-react";
 
 const BASE_URL = "https://pededireto.pt";
@@ -282,6 +284,28 @@ const BusinessPage = () => {
   const sidebarBadges = SIDEBAR_BADGE_SLUGS.filter((s) => badgesBySlug.has(s));
   const ribbonBadges = RIBBON_BADGE_SLUGS.filter((s) => badgesBySlug.has(s));
 
+  // ── Redes sociais ──
+  const instagramUrl = (business as any)?.instagram_url || "";
+  const facebookUrl = (business as any)?.facebook_url || "";
+  const showSocial = (business as any)?.show_social !== false;
+  const hasSocialLinks = showSocial && (instagramUrl || facebookUrl);
+
+  // ── Vídeo VSL ──
+  const videoUrl = (() => {
+    if (!business) return "";
+    // Primeiro tenta campo directo de vídeo no negócio
+    const directVideo = (business as any)?.video_url || "";
+    if (directVideo) return directVideo;
+    // Depois tenta módulos dinâmicos de tipo vídeo
+    const videoModule = activeModules.find((m) => m.type === "video" && m.is_public_default);
+    if (videoModule) {
+      const val = moduleValues.find((v) => v.module_id === videoModule.id);
+      return val?.value || "";
+    }
+    return "";
+  })();
+  const hasVideo = !!videoUrl;
+
   useEffect(() => {
     if (business) {
       trackEvent.mutate({
@@ -471,62 +495,117 @@ const BusinessPage = () => {
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Main Content */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Logo / Hero image */}
-                <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
-                  {business.logo_url ? (
-                    <>
-                      <img
-                        src={business.logo_url}
-                        alt=""
-                        aria-hidden
-                        className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-40 pointer-events-none"
-                      />
-                      <img
-                        src={business.logo_url}
-                        alt={business.name}
-                        className="relative z-10 max-w-full max-h-full object-contain drop-shadow-xl"
-                      />
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                      <span className="text-8xl font-bold text-primary/30">{business.name.charAt(0)}</span>
+                {/* ── HERO: Vídeo VSL (se tiver) ou Banner com logo ── */}
+                {hasVideo ? (
+                  // ── COM VÍDEO: VSL ocupa o hero, logo pequeno sobreposto ──
+                  <div className="relative rounded-2xl overflow-hidden bg-black">
+                    {/* Vídeo principal */}
+                    <div className="aspect-[16/9]">
+                      <VideoPlayer url={videoUrl} />
                     </div>
-                  )}
-                  {ribbonBadges.map((slug) => {
-                    const cfg = BADGE_CONFIG[slug];
-                    if (!cfg) return null;
-                    const Icon = cfg.icon;
-                    return (
-                      <span
-                        key={slug}
-                        className={`absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border-2 shadow-sm backdrop-blur-sm ${cfg.bg} ${cfg.color}`}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                        {cfg.label}
-                      </span>
-                    );
-                  })}
-                  <div className="absolute top-4 right-4 flex gap-2 items-center">
-                    {business.is_featured && (
-                      <span className="badge-featured">
-                        <Star className="w-3 h-3" />
-                        Destaque
-                      </span>
+                    {/* Logo pequeno sobreposto no canto inferior esquerdo */}
+                    {business.logo_url && (
+                      <div className="absolute bottom-4 left-4 z-10">
+                        <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg flex items-center justify-center p-1">
+                          <img src={business.logo_url} alt={business.name} className="w-full h-full object-contain" />
+                        </div>
+                      </div>
                     )}
-                    {business.is_premium && !business.is_featured && <span className="badge-premium">Premium</span>}
-                    <ShareButton
-                      url={pageUrl}
-                      title={business.name}
-                      description={`${business.categories?.name ?? ""} em ${business.city ?? "Portugal"}`}
-                      variant="icon"
-                      className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"
-                    />
-                    <FavoriteButton
-                      businessId={business.id}
-                      className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"
-                    />
+                    {/* Badges e acções no canto superior direito */}
+                    <div className="absolute top-4 right-4 flex gap-2 items-center z-10">
+                      {business.is_featured && (
+                        <span className="badge-featured">
+                          <Star className="w-3 h-3" />
+                          Destaque
+                        </span>
+                      )}
+                      {business.is_premium && !business.is_featured && <span className="badge-premium">Premium</span>}
+                      <ShareButton
+                        url={pageUrl}
+                        title={business.name}
+                        description={`${business.categories?.name ?? ""} em ${business.city ?? "Portugal"}`}
+                        variant="icon"
+                        className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"
+                      />
+                      <FavoriteButton
+                        businessId={business.id}
+                        className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"
+                      />
+                    </div>
+                    {/* Ribbon badges */}
+                    {ribbonBadges.map((slug) => {
+                      const cfg = BADGE_CONFIG[slug];
+                      if (!cfg) return null;
+                      const Icon = cfg.icon;
+                      return (
+                        <span
+                          key={slug}
+                          className={`absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border-2 shadow-sm backdrop-blur-sm z-10 ${cfg.bg} ${cfg.color}`}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          {cfg.label}
+                        </span>
+                      );
+                    })}
                   </div>
-                </div>
+                ) : (
+                  // ── SEM VÍDEO: banner com logo (comportamento original) ──
+                  <div className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-muted flex items-center justify-center">
+                    {business.logo_url ? (
+                      <>
+                        <img
+                          src={business.logo_url}
+                          alt=""
+                          aria-hidden
+                          className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-40 pointer-events-none"
+                        />
+                        <img
+                          src={business.logo_url}
+                          alt={business.name}
+                          className="relative z-10 max-w-full max-h-full object-contain drop-shadow-xl"
+                        />
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                        <span className="text-8xl font-bold text-primary/30">{business.name.charAt(0)}</span>
+                      </div>
+                    )}
+                    {ribbonBadges.map((slug) => {
+                      const cfg = BADGE_CONFIG[slug];
+                      if (!cfg) return null;
+                      const Icon = cfg.icon;
+                      return (
+                        <span
+                          key={slug}
+                          className={`absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border-2 shadow-sm backdrop-blur-sm ${cfg.bg} ${cfg.color}`}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          {cfg.label}
+                        </span>
+                      );
+                    })}
+                    <div className="absolute top-4 right-4 flex gap-2 items-center">
+                      {business.is_featured && (
+                        <span className="badge-featured">
+                          <Star className="w-3 h-3" />
+                          Destaque
+                        </span>
+                      )}
+                      {business.is_premium && !business.is_featured && <span className="badge-premium">Premium</span>}
+                      <ShareButton
+                        url={pageUrl}
+                        title={business.name}
+                        description={`${business.categories?.name ?? ""} em ${business.city ?? "Portugal"}`}
+                        variant="icon"
+                        className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"
+                      />
+                      <FavoriteButton
+                        businessId={business.id}
+                        className="bg-card/80 backdrop-blur-sm hover:bg-card shadow-md"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Galeria principal */}
                 {businessImages.length > 0 && (business as any).show_gallery !== false && (
@@ -710,7 +789,6 @@ const BusinessPage = () => {
                                   {mod.label}
                                 </a>
                               )}
-                              {/* ── TEXTAREA COM PARÁGRAFOS ── */}
                               {(mod.type === "text" || mod.type === "textarea") && v.value && (
                                 <div>
                                   <span className="text-sm font-medium">{mod.label}:</span>
@@ -738,7 +816,10 @@ const BusinessPage = () => {
                                 (business as any).show_gallery !== false &&
                                 Array.isArray(v.value_json) &&
                                 v.value_json.length > 0 && <GalleryGrid images={v.value_json} label={mod.label} />}
-                              {mod.type === "video" && v.value && <VideoPlayer url={v.value} label={mod.label} />}
+                              {/* Vídeo dos módulos dinâmicos: só renderiza se NÃO foi já usado no hero */}
+                              {mod.type === "video" && v.value && !hasVideo && (
+                                <VideoPlayer url={v.value} label={mod.label} />
+                              )}
                               {mod.type === "boolean" && v.value === "true" && (
                                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm">
                                   {mod.label}
@@ -762,7 +843,7 @@ const BusinessPage = () => {
                 <ReviewSection businessId={business.id} businessName={business.name} isOwner={userIsOwner} />
               </div>
 
-              {/* Sidebar */}
+              {/* ── SIDEBAR ── */}
               <div className="lg:col-span-1">
                 <div className="sticky top-24 bg-card rounded-2xl p-6 shadow-card space-y-4">
                   <h3 className="text-xl font-bold">Resolva hoje o seu problema</h3>
@@ -775,6 +856,7 @@ const BusinessPage = () => {
                       Responde em média em {responseTime.label}
                     </div>
                   )}
+
                   <div className="space-y-3 pt-2">
                     {sidebarBadges.map((slug) => {
                       const cfg = BADGE_CONFIG[slug];
@@ -791,6 +873,7 @@ const BusinessPage = () => {
                       );
                     })}
 
+                    {/* CTAs principais */}
                     {business.cta_whatsapp && (business as any).show_whatsapp !== false && (
                       <Button
                         className="btn-cta-whatsapp w-full justify-center text-base"
@@ -844,6 +927,33 @@ const BusinessPage = () => {
                         <ExternalLink className="w-5 h-5" />
                         Ver Website
                       </Button>
+                    )}
+
+                    {/* ── Redes Sociais no painel CTA ── */}
+                    {hasSocialLinks && (
+                      <>
+                        <div className="border-t border-border pt-1" />
+                        {instagramUrl && (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-center text-base hover:border-[#E1306C] hover:text-[#E1306C] transition-colors"
+                            onClick={() => window.open(instagramUrl, "_blank")}
+                          >
+                            <Instagram className="w-5 h-5" />
+                            Ver Instagram
+                          </Button>
+                        )}
+                        {facebookUrl && (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-center text-base hover:border-[#1877F2] hover:text-[#1877F2] transition-colors"
+                            onClick={() => window.open(facebookUrl, "_blank")}
+                          >
+                            <Facebook className="w-5 h-5" />
+                            Ver Facebook
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
