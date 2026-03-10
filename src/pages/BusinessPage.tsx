@@ -44,6 +44,8 @@ import {
   ZoomIn,
   Instagram,
   Facebook,
+  CalendarCheck,
+  ShoppingBag,
 } from "lucide-react";
 
 const BASE_URL = "https://pededireto.pt";
@@ -289,6 +291,10 @@ const BusinessPage = () => {
   const facebookUrl = (business as any)?.facebook_url || "";
   const showSocial = (business as any)?.show_social !== false;
   const hasSocialLinks = showSocial && (instagramUrl || facebookUrl);
+
+  // ── CTAs de acção directa ──
+  const ctaBookingUrl = (business as any)?.cta_booking_url || "";
+  const ctaOrderUrl = (business as any)?.cta_order_url || "";
 
   // ── Vídeo VSL ──
   const videoUrl = (() => {
@@ -926,6 +932,34 @@ const BusinessPage = () => {
                       >
                         <ExternalLink className="w-5 h-5" />
                         Ver Website
+                      </Button>
+                    )}
+                    {ctaBookingUrl && (
+                      <Button
+                        variant="outline"
+                        className="w-full justify-center text-base hover:border-primary hover:text-primary transition-colors"
+                        onClick={() => {
+                          handleCtaClick("website");
+                          trackGA4Lead("booking");
+                          window.open(ctaBookingUrl, "_blank");
+                        }}
+                      >
+                        <CalendarCheck className="w-5 h-5" />
+                        Reservar Agora
+                      </Button>
+                    )}
+                    {ctaOrderUrl && (
+                      <Button
+                        variant="outline"
+                        className="w-full justify-center text-base hover:border-orange-500 hover:text-orange-500 transition-colors"
+                        onClick={() => {
+                          handleCtaClick("website");
+                          trackGA4Lead("order");
+                          window.open(ctaOrderUrl, "_blank");
+                        }}
+                      >
+                        <ShoppingBag className="w-5 h-5" />
+                        Pedir Online
                       </Button>
                     )}
 
