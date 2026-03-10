@@ -13,7 +13,11 @@ function getEmbedInfo(url: string): {
   // YouTube
   const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   if (ytMatch) {
-    return { type: "youtube", embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}` };
+    // ── CORRIGIDO: playsinline=0 força fullscreen nativo no Android/iOS ──
+    return {
+      type: "youtube",
+      embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?playsinline=0&rel=0&modestbranding=1`,
+    };
   }
 
   // Vimeo
@@ -41,7 +45,6 @@ function getEmbedInfo(url: string): {
     return { type: "direct", embedUrl: url };
   }
 
-  // Tudo o resto — tentar como vídeo directo primeiro
   return { type: "unknown", embedUrl: url };
 }
 
@@ -63,9 +66,11 @@ const VideoPlayer = ({ url, label }: VideoPlayerProps) => {
           <iframe
             src={embedUrl}
             className="w-full h-full"
+            // ── CORRIGIDO: fullscreen + orientation para rotação no Android ──
             allowFullScreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
             title={label || "Vídeo"}
+            referrerPolicy="strict-origin-when-cross-origin"
             onError={() => setError(true)}
           />
         </div>
@@ -93,6 +98,7 @@ const VideoPlayer = ({ url, label }: VideoPlayerProps) => {
           <video
             src={embedUrl}
             controls
+            playsInline={false}
             className="w-full h-full object-contain"
             onError={() => setError(true)}
           >
@@ -107,6 +113,7 @@ const VideoPlayer = ({ url, label }: VideoPlayerProps) => {
           <video
             src={embedUrl}
             controls
+            playsInline={false}
             className="w-full h-full object-contain"
             onError={() => setUnknownVideoFailed(true)}
           >
@@ -115,7 +122,7 @@ const VideoPlayer = ({ url, label }: VideoPlayerProps) => {
         </div>
       )}
 
-      {/* Instagram ou fallback final (erro real ou vídeo desconhecido que falhou) */}
+      {/* Instagram ou fallback final */}
       {(type === "instagram" || error || (type === "unknown" && unknownVideoFailed)) && (
         <a
           href={url}
