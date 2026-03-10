@@ -85,19 +85,23 @@ export interface RespondToReviewInput {
 // QUERIES
 // ============================================================================
 
-export const useBusinessReviews = (businessId: string | undefined, filters?: {
-  verified?: boolean;
-  minRating?: number;
-  orderBy?: "recent" | "rating_high" | "rating_low" | "helpful";
-}) => {
+export const useBusinessReviews = (
+  businessId: string | undefined,
+  filters?: {
+    verified?: boolean;
+    minRating?: number;
+    orderBy?: "recent" | "rating_high" | "rating_low" | "helpful";
+  },
+) => {
   return useQuery({
     queryKey: ["business-reviews", businessId, filters],
     queryFn: async () => {
       if (!businessId) return [];
 
+      // ── CORRIGIDO: buscar reviews sem join, depois buscar nomes separadamente ──
       let query = (supabase as any)
         .from("business_reviews")
-        .select("*, profiles:user_id(full_name)")
+        .select("*")
         .eq("business_id", businessId)
         .eq("moderation_status", "approved");
 
@@ -126,11 +130,26 @@ export const useBusinessReviews = (businessId: string | undefined, filters?: {
 
       const { data, error } = await query;
       if (error) throw error;
-      // Flatten joined profile name
-      return ((data || []) as any[]).map((r: any) => ({
+      if (!data || data.length === 0) return [] as BusinessReview[];
+
+      // ── Buscar nomes dos reviewers via profiles.user_id ──
+      const userIds = [...new Set((data as any[]).map((r) => r.user_id).filter(Boolean))];
+      let profileMap: Record<string, string> = {};
+
+      if (userIds.length > 0) {
+        const { data: profiles } = await (supabase as any)
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", userIds);
+
+        if (profiles) {
+          profileMap = Object.fromEntries((profiles as any[]).map((p) => [p.user_id, p.full_name]));
+        }
+      }
+
+      return (data as any[]).map((r) => ({
         ...r,
-        reviewer_full_name: r.profiles?.full_name || null,
-        profiles: undefined,
+        reviewer_full_name: profileMap[r.user_id] || null,
       })) as BusinessReview[];
     },
     enabled: !!businessId,
@@ -204,18 +223,11 @@ export const useUserVoteForReview = (reviewId: string | undefined) => {
 // ALL REVIEWS (for admin/moderation)
 // ============================================================================
 
-export const useAllReviews = (filters?: {
-  status?: string;
-  minRating?: number;
-  search?: string;
-}) => {
+export const useAllReviews = (filters?: { status?: string; minRating?: number; search?: string }) => {
   return useQuery({
     queryKey: ["all-reviews", filters],
     queryFn: async () => {
-      let query = (supabase as any)
-        .from("business_reviews")
-        .select("*")
-        .order("created_at", { ascending: false });
+      let query = (supabase as any).from("business_reviews").select("*").order("created_at", { ascending: false });
 
       if (filters?.status && filters.status !== "all") {
         query = query.eq("moderation_status", filters.status);
@@ -310,10 +322,7 @@ export const useDeleteReview = () => {
         .eq("id", reviewId)
         .single();
 
-      const { error } = await (supabase as any)
-        .from("business_reviews")
-        .delete()
-        .eq("id", reviewId);
+      const { error } = await (supabase as any).from("business_reviews").delete().eq("id", reviewId);
 
       if (error) throw error;
       return review?.business_id as string | undefined;
@@ -345,7 +354,7 @@ export const useVoteReviewHelpfulness = () => {
             user_id: user.id,
             is_helpful: input.is_helpful,
           },
-          { onConflict: "review_id,user_id" }
+          { onConflict: "review_id,user_id" },
         )
         .select()
         .single();
