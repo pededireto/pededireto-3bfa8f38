@@ -6931,6 +6931,14 @@ export type Database = {
         Args: { p_business_id: string; p_days?: number }
         Returns: Json
       }
+      get_business_benchmark_v2: {
+        Args: {
+          p_business_id: string
+          p_days?: number
+          p_subcategory_id?: string
+        }
+        Returns: Json
+      }
       get_business_favorites_count: {
         Args: { business_uuid: string }
         Returns: number
