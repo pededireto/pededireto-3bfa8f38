@@ -42,6 +42,8 @@ const UserDashboard = () => {
   const { data: membership, isLoading: membershipLoading } = useBusinessMembership();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("requests");
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const { data: savedSearches = [], isLoading: searchesLoading } = useSavedSearches();
   const { data: favorites = [], isLoading: favoritesLoading } = useUserFavorites();
