@@ -143,6 +143,285 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      affiliate_commissions: {
+        Row: {
+          affiliate_id: string
+          business_id: string | null
+          commission_amount: number
+          commission_model_id: string | null
+          commission_rate: number
+          commission_type: string
+          created_at: string
+          iban: string | null
+          id: string
+          lead_id: string | null
+          paid_at: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          plan_id: string | null
+          plan_price: number
+          status: string
+        }
+        Insert: {
+          affiliate_id: string
+          business_id?: string | null
+          commission_amount: number
+          commission_model_id?: string | null
+          commission_rate: number
+          commission_type?: string
+          created_at?: string
+          iban?: string | null
+          id?: string
+          lead_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          plan_id?: string | null
+          plan_price: number
+          status?: string
+        }
+        Update: {
+          affiliate_id?: string
+          business_id?: string | null
+          commission_amount?: number
+          commission_model_id?: string | null
+          commission_rate?: number
+          commission_type?: string
+          created_at?: string
+          iban?: string | null
+          id?: string
+          lead_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          plan_id?: string | null
+          plan_price?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_commission_model_id_fkey"
+            columns: ["commission_model_id"]
+            isOneToOne: false
+            referencedRelation: "commission_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_credits: {
+        Row: {
+          amount: number
+          commission_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          commission_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          commission_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_credits_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_commissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_lead_fingerprints: {
+        Row: {
+          field_type: string
+          field_value: string
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          field_type: string
+          field_value: string
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          field_type?: string
+          field_value?: string
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_lead_fingerprints_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_leads: {
+        Row: {
+          affiliate_id: string
+          business_id: string | null
+          business_name: string
+          city: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          contact_website: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          business_id?: string | null
+          business_name: string
+          city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_website?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          business_id?: string | null
+          business_name?: string
+          city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_website?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_leads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_leads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_leads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_leads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_leads_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           business_id: string | null
@@ -2824,7 +3103,11 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          rate: number | null
+          renewal_rate: number | null
           updated_at: string
+          valid_from: string | null
+          valid_until: string | null
         }
         Insert: {
           created_at?: string
@@ -2832,7 +3115,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          rate?: number | null
+          renewal_rate?: number | null
           updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
         }
         Update: {
           created_at?: string
@@ -2840,7 +3127,11 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          rate?: number | null
+          renewal_rate?: number | null
           updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
         }
         Relationships: []
       }
@@ -6867,6 +7158,13 @@ export type Database = {
         Args: { p_request_id: string; p_user_id: string }
         Returns: boolean
       }
+      check_affiliate_lead_duplicate: {
+        Args: { p_email?: string; p_phone?: string; p_website?: string }
+        Returns: {
+          duplicate_field: string
+          is_duplicate: boolean
+        }[]
+      }
       check_and_award_automatic_badges: {
         Args: { bid: string }
         Returns: number
@@ -6889,6 +7187,19 @@ export type Database = {
       compute_consumer_badge_progress: {
         Args: { p_user_id: string }
         Returns: undefined
+      }
+      create_affiliate_lead: {
+        Args: {
+          p_affiliate_id: string
+          p_business_name: string
+          p_city?: string
+          p_contact_email?: string
+          p_contact_phone?: string
+          p_contact_website?: string
+          p_notes?: string
+          p_source?: string
+        }
+        Returns: string
       }
       create_consumer_support_ticket:
         | {
@@ -6931,6 +7242,7 @@ export type Database = {
         }[]
       }
       force_cadence_ready: { Args: { p_cadence_id: string }; Returns: number }
+      generate_affiliate_code: { Args: { p_user_id: string }; Returns: string }
       get_admin_intelligence: { Args: { p_days?: number }; Returns: Json }
       get_all_users_for_onboarding: { Args: never; Returns: Json }
       get_business_benchmark: {
