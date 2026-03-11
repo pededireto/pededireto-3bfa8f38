@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Copy, Check, Users, TrendingUp, DollarSign, Target } from "lucide-react";
 import ActiveCampaignBanner from "./ActiveCampaignBanner";
-import AddLeadModal from "./AddLeadModal";
+import AddLeadFullModal from "./AddLeadFullModal";
 import AffiliateLeadsTable from "./AffiliateLeadsTable";
 import AffiliateCommissionsTable from "./AffiliateCommissionsTable";
 import PayoutRequestModal from "./PayoutRequestModal";
