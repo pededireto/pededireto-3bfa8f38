@@ -127,8 +127,8 @@ const BlogPostPage = () => {
         <div className="container py-8 max-w-3xl mx-auto">
           <article>
             {post.cover_image_url && (
-              <div className="w-full h-72 bg-muted rounded-xl mb-8 flex items-center justify-center overflow-hidden">
-                <img src={post.cover_image_url} alt={post.title} className="max-h-full max-w-full object-contain" />
+              <div className="w-full h-64 md:h-80 overflow-hidden rounded-xl mb-8">
+                <img src={post.cover_image_url} alt={post.title} className="w-full h-full object-cover" />
               </div>
             )}
 
