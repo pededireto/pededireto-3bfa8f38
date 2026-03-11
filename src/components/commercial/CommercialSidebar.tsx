@@ -31,6 +31,7 @@ const sidebarItems: { id: CommercialTab; label: string; icon: React.ElementType 
   { id: "my-requests", label: "Os Meus Pedidos", icon: ClipboardList },
   { id: "claim-requests", label: "Pedidos de Claim", icon: ShieldCheck },
   { id: "emails", label: "Email Marketing", icon: MailPlus },
+  { id: "affiliates", label: "Programa de Afiliados", icon: Handshake },
   { id: "tickets", label: "Tickets", icon: Ticket },
 ];
 

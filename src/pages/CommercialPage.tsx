@@ -35,6 +35,7 @@ const CommercialPage = () => {
     if (activeTab === "claim-requests") return <CommercialClaimRequestsContent />;
     if (activeTab === "tickets") return <TicketsTable department="commercial" creatorRole="commercial" allowedCreateDepartments={["cs", "it_admin"]} />;
     if (activeTab === "emails") return <EmailHub />;
+    if (activeTab === "affiliates") return <AffiliatePortalContent />;
 
     if (isLoading) {
       return (
