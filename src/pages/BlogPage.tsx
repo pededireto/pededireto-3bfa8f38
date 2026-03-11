@@ -1,21 +1,16 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Clock, ArrowRight } from "lucide-react";
+import { Clock, Eye, ArrowLeft, ArrowRight, Share2, Facebook, Copy, MessageCircle } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useBlogPosts } from "@/hooks/useBlogPosts";
+import { useBlogPost, useBlogPosts } from "@/hooks/useBlogPosts";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const CATEGORIES = [
-  { value: "todos", label: "Todos" },
-  { value: "servicos", label: "Serviços" },
-  { value: "obras", label: "Obras" },
-  { value: "negocios", label: "Negócios" },
-  { value: "dicas", label: "Dicas" },
-];
+import { toast } from "@/hooks/use-toast";
 
 const CATEGORY_COLORS: Record<string, string> = {
   servicos: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
@@ -25,131 +20,149 @@ const CATEGORY_COLORS: Record<string, string> = {
   outros: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 };
 
-const ITEMS_PER_PAGE = 10;
+const CATEGORY_LABELS: Record<string, string> = {
+  servicos: "Serviços",
+  obras: "Obras",
+  negocios: "Negócios",
+  dicas: "Dicas",
+  outros: "Outros",
+};
 
-const BlogPage = () => {
-  const [category, setCategory] = useState("todos");
-  const [page, setPage] = useState(1);
-  const { data: posts = [], isPending } = useBlogPosts(category);
+/** Simple markdown-to-HTML renderer (no dependencies) */
+const renderMarkdown = (content: string): string => {
+  return content
+    .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-6 mb-2 text-foreground">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-8 mb-3 text-foreground">$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener noreferrer">$1</a>',
+    )
+    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-muted-foreground">$1</li>')
+    .replace(/^(?!<[hla-z])([\S].+)$/gm, '<p class="text-muted-foreground leading-relaxed mb-3">$1</p>')
+    .replace(/(<li[^>]*>.*<\/li>\n?)+/g, '<ul class="space-y-1 mb-4">$&</ul>');
+};
 
-  const totalPages = Math.ceil(posts.length / ITEMS_PER_PAGE);
-  const paginatedPosts = posts.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+const BlogPostPage = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const { data: post, isPending } = useBlogPost(slug);
+  const { data: allPosts = [] } = useBlogPosts();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!slug) return;
+    const incrementViews = async () => {
+      const { error } = await supabase.rpc("increment_blog_views", { post_slug: slug });
+      if (error) {
+        console.error("Erro ao incrementar views:", error);
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["blog-post", slug] });
+    };
+    incrementViews();
+  }, [slug, queryClient]);
 
   const formatDate = (date: string | null) => {
     if (!date) return "";
     return new Date(date).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" });
   };
 
+  const currentIndex = allPosts.findIndex((p) => p.slug === slug);
+  const prevPost = currentIndex > 0 ? allPosts[currentIndex - 1] : null;
+  const nextPost = currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1] : null;
+  const relatedPosts = post ? allPosts.filter((p) => p.category === post.category && p.slug !== slug).slice(0, 3) : [];
+  const shareUrl = `https://pededireto.pt/blog/${slug}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(shareUrl);
+    toast({ title: "Link copiado!" });
+  };
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container py-10 space-y-6">
+          <Skeleton className="h-64 w-full rounded-xl" />
+          <Skeleton className="h-10 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-96 w-full" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!post) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container py-16 text-center">
+          <h1 className="text-2xl font-bold mb-4">Artigo não encontrado</h1>
+          <Link to="/blog" className="text-primary hover:underline">
+            ← Voltar ao blog
+          </Link>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
-        <title>Guias & Dicas | PedeDireto</title>
-        <meta
-          name="description"
-          content="Tudo o que precisas de saber para contratar profissionais com confiança. Guias práticos, dicas e preços de referência."
-        />
-        <link rel="canonical" href="https://pededireto.pt/blog" />
+        <title>{post.meta_title || post.title} | PedeDireto</title>
+        <meta name="description" content={post.meta_description || post.excerpt || ""} />
+        <link rel="canonical" href={shareUrl} />
+        <meta property="og:title" content={post.title} />
+        <meta property="og:description" content={post.excerpt || ""} />
+        {post.cover_image_url && <meta property="og:image" content={post.cover_image_url} />}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={shareUrl} />
       </Helmet>
 
       <Header />
 
       <main id="main-content" className="flex-1" tabIndex={-1}>
-        {/* Hero */}
-        <section className="bg-gradient-to-br from-primary/10 via-background to-background py-16 md:py-20">
-          <div className="container text-center">
-            <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-4">Guias & Dicas</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Tudo o que precisas de saber para contratar com confiança
-            </p>
-          </div>
-        </section>
+        <div className="container py-8 max-w-3xl mx-auto">
+          <article>
+            {post.cover_image_url && (
+              <div className="w-full h-64 md:h-80 overflow-hidden rounded-xl mb-8">
+                <img src={post.cover_image_url} alt={post.title} className="w-full h-full object-cover" />
+              </div>
+            )}
 
-        {/* Filters */}
-        <div className="container py-6">
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((cat) => (
-              <Button
-                key={cat.value}
-                variant={category === cat.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setCategory(cat.value);
-                  setPage(1);
-                }}
-              >
-                {cat.label}
+            <Badge className={CATEGORY_COLORS[post.category] || CATEGORY_COLORS.outros} variant="secondary">
+              {CATEGORY_LABELS[post.category] || post.category}
+            </Badge>
+
+            <h1 className="text-2xl md:text-4xl font-bold mt-4 mb-4">{post.title}</h1>
+
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-8 pb-6 border-b border-border">
+              <span>{post.author_name}</span>
+              <span>{formatDate(post.published_at)}</span>
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" /> {post.read_time_minutes} min
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Eye className="h-3.5 w-3.5" /> {post.views_count} visualizações
+              </span>
+            </div>
+
+            <div
+              className="prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }}
+            />
+
+            <div className="flex items-center gap-3 mt-10 pt-6 border-t border-border">
+              <span className="text-sm font-medium flex items-center gap-1.5">
+                <Share2 className="h-4 w-4" /> Partilhar:
+              </span>
+              <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                <Copy className="h-4 w-4 mr-1" /> Copiar link
               </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Grid */}
-        <div className="container pb-16">
-          {isPending ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="h-48 w-full rounded-xl" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              ))}
             </div>
-          ) : paginatedPosts.length === 0 ? (
-            <p className="text-center text-muted-foreground py-12">Nenhum artigo encontrado nesta categoria.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedPosts.map((post) => (
-                <Link
-                  key={post.id}
-                  to={`/blog/${post.slug}`}
-                  className="group bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg transition-shadow"
-                >
-                  {post.cover_image_url && (
-                    <div className="w-full h-48 overflow-hidden">
-                      <img
-                        src={post.cover_image_url}
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:opacity-95 transition-opacity duration-300"
-                        loading="lazy"
-                      />
-                    </div>
-                  )}
-                  <div className="p-5 space-y-3">
-                    <Badge className={CATEGORY_COLORS[post.category] || CATEGORY_COLORS.outros} variant="secondary">
-                      {CATEGORIES.find((c) => c.value === post.category)?.label || post.category}
-                    </Badge>
-                    <h2 className="font-bold text-lg text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-                      {post.title}
-                    </h2>
-                    {post.excerpt && <p className="text-sm text-muted-foreground line-clamp-3">{post.excerpt}</p>}
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
-                      <span>{post.author_name}</span>
-                      <span>{formatDate(post.published_at)}</span>
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {post.read_time_minutes} min
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-primary inline-flex items-center gap-1 pt-1">
-                      Ler artigo <ArrowRight className="h-3.5 w-3.5" />
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-10">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <Button key={p} variant={page === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)}>
-                  {p}
-                </Button>
-              ))}
-            </div>
-          )}
+          </article>
         </div>
       </main>
 
@@ -158,4 +171,4 @@ const BlogPage = () => {
   );
 };
 
-export default BlogPage;
+export default BlogPostPage;
