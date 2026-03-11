@@ -173,7 +173,7 @@ const AffiliatePortalContent = ({ showBackButton, backTo = "/dashboard" }: Affil
         </TabsContent>
       </Tabs>
 
-      <AddLeadModal open={addLeadOpen} onOpenChange={setAddLeadOpen} />
+      <AddLeadFullModal open={addLeadOpen} onOpenChange={setAddLeadOpen} />
 
       {payoutModal?.open && user?.id && (
         <PayoutRequestModal
