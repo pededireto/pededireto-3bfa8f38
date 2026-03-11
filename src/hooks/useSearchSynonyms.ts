@@ -70,3 +70,34 @@ export const useDeleteSearchSynonym = () => {
     },
   });
 };
+
+export const useBulkCreateSearchSynonyms = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (rows: { termo: string; equivalente: string; type: string }[]) => {
+      // Count before
+      const { count: before } = await supabase
+        .from("search_synonyms")
+        .select("*", { count: "exact", head: true });
+
+      const { error } = await supabase
+        .from("search_synonyms")
+        .upsert(rows as any[], { onConflict: "termo,equivalente", ignoreDuplicates: true });
+
+      if (error) throw error;
+
+      // Count after
+      const { count: after } = await supabase
+        .from("search_synonyms")
+        .select("*", { count: "exact", head: true });
+
+      const inserted = (after ?? 0) - (before ?? 0);
+      const skipped = rows.length - inserted;
+      return { inserted, skipped };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["search-synonyms"] });
+    },
+  });
+};
