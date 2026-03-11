@@ -35,7 +35,8 @@ export type BusinessTab =
   | "team"
   | "reviews"
   | "edit"
-  | "badges";
+  | "badges"
+  | "affiliates";
 
 interface BusinessSidebarProps {
   businessName: string;
