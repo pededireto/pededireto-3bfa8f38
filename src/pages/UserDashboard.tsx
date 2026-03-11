@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useBusinessMembership } from "@/hooks/useBusinessMembership";
@@ -42,6 +42,8 @@ const UserDashboard = () => {
   const { data: membership, isLoading: membershipLoading } = useBusinessMembership();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("requests");
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const { data: savedSearches = [], isLoading: searchesLoading } = useSavedSearches();
   const { data: favorites = [], isLoading: favoritesLoading } = useUserFavorites();
@@ -235,7 +237,13 @@ const UserDashboard = () => {
         </Link>
 
         {/* ── C2 — CTA Programa de Afiliados ─────────────────────────── */}
-        <Link to="/afiliados" className="block">
+        <div
+          onClick={() => {
+            setActiveTab("affiliates");
+            setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+          }}
+          className="block cursor-pointer"
+        >
           <Card className="bg-gradient-to-r from-accent to-accent/80 hover:opacity-90 transition-opacity cursor-pointer border-primary/20">
             <CardContent className="flex items-center gap-4 py-5 px-6">
               <div className="bg-primary/15 rounded-full p-3">
@@ -248,7 +256,7 @@ const UserDashboard = () => {
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
           </Card>
-        </Link>
+        </div>
 
         {/* ── D — Badges (Conquistas) ────────────────────────────────── */}
         <ConsumerBadgesSection profileId={profile?.id} />
@@ -263,7 +271,7 @@ const UserDashboard = () => {
         <DigestPreferencesToggle />
 
         {/* ── F — Tabs ───────────────────────────────────────────────── */}
-        <Tabs defaultValue="requests" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" ref={tabsRef}>
           <TabsList className="mb-4">
             <TabsTrigger value="requests" className="gap-2">
               <ClipboardList className="h-4 w-4" />
