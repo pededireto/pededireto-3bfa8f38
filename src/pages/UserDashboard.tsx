@@ -26,6 +26,7 @@ import {
   MapPin,
   Store,
   ChevronRight,
+  Handshake,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ConsumerMetricsBar from "@/components/consumer/ConsumerMetricsBar";
