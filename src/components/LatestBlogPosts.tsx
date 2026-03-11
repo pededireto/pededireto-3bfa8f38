@@ -36,16 +36,18 @@ const LatestBlogPosts = () => {
               to={`/blog/${post.slug}`}
               className="group bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg transition-shadow"
             >
-              {post.cover_image_url && (
-                <div className="aspect-video overflow-hidden">
+              <div className="h-[180px] bg-muted flex items-center justify-center overflow-hidden">
+                {post.cover_image_url ? (
                   <img
                     src={post.cover_image_url}
                     alt={post.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     loading="lazy"
                   />
-                </div>
-              )}
+                ) : (
+                  <span className="text-muted-foreground/30 text-3xl">📄</span>
+                )}
+              </div>
               <div className="p-4 space-y-2">
                 <Badge className={CATEGORY_COLORS[post.category] || CATEGORY_COLORS.outros} variant="secondary">
                   {CATEGORY_LABELS[post.category] || post.category}

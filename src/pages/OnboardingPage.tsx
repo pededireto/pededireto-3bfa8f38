@@ -73,6 +73,12 @@ const OnboardingPage = () => {
             <p className="text-muted-foreground mt-1">Gestão de utilizadores e negócios da plataforma</p>
           </div>
 
+          <div className="flex items-center gap-3">
+          {(isAdmin || isSuperAdmin) && (
+            <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
+              ← Admin
+            </Button>
+          )}
           {/* USER MENU */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

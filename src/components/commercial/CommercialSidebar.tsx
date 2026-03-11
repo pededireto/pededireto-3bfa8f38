@@ -34,7 +34,7 @@ const sidebarItems: { id: CommercialTab; label: string; icon: React.ElementType 
 ];
 
 const CommercialSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: CommercialSidebarProps) => {
-  const { signOut } = useAuth();
+  const { signOut, isAdmin, isSuperAdmin } = useAuth();
 
   return (
     <div className="flex flex-col h-full">
