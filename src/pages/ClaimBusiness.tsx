@@ -147,6 +147,7 @@ const ClaimBusiness = () => {
       const { error: claimError } = await claim(selectedBusiness.id);
       if (claimError) throw claimError;
 
+      await createAffiliateClaimAlert(selectedBusiness.id, selectedBusiness.name);
       toast({ title: "Conta criada e negócio reclamado!", description: "O seu pedido está em validação." });
       window.location.href = BUSINESS_DASHBOARD_URL;
     } catch (err: any) {
