@@ -16,7 +16,12 @@ import AffiliateLeadsTable from "./AffiliateLeadsTable";
 import AffiliateCommissionsTable from "./AffiliateCommissionsTable";
 import PayoutRequestModal from "./PayoutRequestModal";
 
-const AffiliatePortalContent = () => {
+interface AffiliatePortalContentProps {
+  showBackButton?: boolean;
+  backTo?: string;
+}
+
+const AffiliatePortalContent = ({ showBackButton, backTo = "/dashboard" }: AffiliatePortalContentProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: code, isLoading: codeLoading } = useAffiliateCode();
