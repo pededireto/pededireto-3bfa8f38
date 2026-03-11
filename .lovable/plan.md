@@ -1,79 +1,91 @@
 
 
-# Plan: Logo + Consumer Dashboard Review Feedback
+## Bug Analysis
 
-## Task 1 — Add PedeDireto Logo Image Everywhere
+### Issue 1: "column `status` of relation `businesses` does not exist"
 
-Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
+The RPC `create_affiliate_lead_with_business` tries to INSERT into columns that **don't exist** in the `businesses` table:
+- `status` → should be `is_active` (boolean, use `false` instead of `'inactive'`)
+- `source` → should be `registration_source`
+- `is_verified` → column doesn't exist at all (remove it)
 
-### Files to modify (logo replacement):
+**Fix**: New migration to recreate the RPC with correct column names.
 
-**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
+### Issue 2: Affiliate referral persistence & account creation
 
-| File | Location | Logo size |
-|------|----------|-----------|
-| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
-| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
-| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
-| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
-| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
-| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
-| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
-| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
-| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
-| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
-| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
-| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
-| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
-| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
-| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
-| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
-| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
+Currently `sessionStorage` loses the ref code when the tab closes. The user wants persistence until:
+- The visitor closes the browser/session
+- The visitor creates a business account or claims a business
 
-Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
+**Changes needed**:
+- Move from `sessionStorage` to `localStorage` for `affiliate_ref` (survives tab closes)
+- When a business is registered (`RegisterBusiness.tsx`) or claimed (`ClaimBusiness.tsx`), read the stored `affiliate_ref` code, resolve it to an `affiliate_id`, and create an `affiliate_leads` record linking the affiliate to the new business
+- Clear `affiliate_ref` from localStorage after consumption
+- For **claims** specifically: instead of auto-creating a lead, send an alert to the admin (insert into `platform_alerts` or a notifications table) flagging the claim as potentially affiliate-sourced, for manual review
+
+### Issue 3: Auto-create consumer account for the lead's business owner
+
+The user wants the RPC to also create an auth account (email + password `123456789p`) and assign `business_owner` role. This is complex and has security implications — Supabase auth account creation from an RPC requires `supabase_admin` role or an Edge Function using the service role key.
+
+**Approach**: Skip auto-account creation in the RPC (it can't create auth users). Instead, the lead form's success screen will show the share link. The business owner will self-register when they visit the link. The affiliate tracking via `localStorage` will ensure attribution.
 
 ---
 
-## Task 2 — Review Feedback on Consumer Dashboard Requests
+## Implementation Plan
 
-### Data model understanding
-- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
-- `request_business_matches` links `request_id` to `business_id`
-- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
+### Part 1: Fix the RPC (Database Migration)
 
-### New hook: `useConsumerRequestReviews`
+New migration to `DROP` and recreate `create_affiliate_lead_with_business` with correct column mapping:
 
-In `src/hooks/useServiceRequests.ts`, add a new hook that:
-1. Takes the list of request IDs
-2. For each request, gets the matched business IDs from `request_business_matches`
-3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
-4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
-
-Implementation approach — a single query that:
-```typescript
-// 1. Get all matches for the user's requests
-const { data: matches } = await supabase
-  .from("request_business_matches")
-  .select("request_id, business_id, businesses(name)")
-  .in("request_id", requestIds);
-
-// 2. Get all reviews by this user
-const { data: reviews } = await supabase
-  .from("business_reviews")
-  .select("business_id, rating, business_response, business_response_at")
-  .eq("user_id", userId);
-
-// 3. Cross-reference: for each match, find if there's a review
+```sql
+INSERT INTO businesses (
+  name, slug, city, cta_phone, cta_email, cta_website,
+  category_id, subcategory_id, description, public_address,
+  schedule_weekdays, schedule_weekend, instagram_url, facebook_url,
+  other_social_url, owner_name, owner_phone, owner_email, nif,
+  is_active, registration_source, logo_url
+) VALUES (
+  ..., false, 'affiliate', p_logo_url
+)
 ```
 
-### UI changes in `src/pages/UserDashboard.tsx`
+### Part 2: Upgrade referral persistence
 
-In the request card (lines 281-346), after the status Badge, add:
+**`src/App.tsx`** — Change `sessionStorage` to `localStorage` in `ReferralTracker`.
 
-1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
-2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
+**`src/pages/RegisterBusiness.tsx`** — After successful business registration:
+1. Read `affiliate_ref` from `localStorage`
+2. If present, call an RPC `link_affiliate_referral` that resolves the code to an affiliate, creates the `affiliate_leads` record, and inserts fingerprints
+3. Clear `localStorage` item
 
-Visual design:
-- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
-- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
+**`src/pages/ClaimBusiness.tsx`** — After successful claim:
+1. Read `affiliate_ref` from `localStorage`
+2. If present, insert a `platform_alerts` record (or use existing notifications) flagging: "Claim via affiliate referral PD-XXXX — review needed"
+3. Clear `localStorage` item
+
+### Part 3: New RPC `link_affiliate_referral`
+
+Database function that:
+- Takes `p_ref_code text`, `p_business_id uuid`
+- Looks up `affiliate_codes` to find the `affiliate_id`
+- Creates an `affiliate_leads` record with `source = 'referral_link'`
+- Creates fingerprints if applicable
+
+### Part 4: Claim alert for admin
+
+Database function or direct insert into `platform_alerts`:
+- `alert_type = 'affiliate_claim_review'`
+- Contains the affiliate code, business name, claimant info
+- Admin can review and manually approve/reject the affiliate commission
+
+---
+
+## Files to Change
+
+| File | Action |
+|---|---|
+| New migration SQL | Fix RPC + create `link_affiliate_referral` |
+| `src/App.tsx` | `sessionStorage` → `localStorage` |
+| `src/pages/RegisterBusiness.tsx` | Call `link_affiliate_referral` after registration |
+| `src/pages/ClaimBusiness.tsx` | Create admin alert on claim with affiliate ref |
 
