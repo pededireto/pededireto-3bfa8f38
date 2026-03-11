@@ -234,6 +234,22 @@ const UserDashboard = () => {
           </Card>
         </Link>
 
+        {/* ── C2 — CTA Programa de Afiliados ─────────────────────────── */}
+        <Link to="/afiliados" className="block">
+          <Card className="bg-gradient-to-r from-accent to-accent/80 hover:opacity-90 transition-opacity cursor-pointer border-primary/20">
+            <CardContent className="flex items-center gap-4 py-5 px-6">
+              <div className="bg-primary/15 rounded-full p-3">
+                <Handshake className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-foreground">🤝 Programa de Afiliados</h3>
+                <p className="text-sm text-muted-foreground">Indica negócios e ganha comissões recorrentes.</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+
         {/* ── D — Badges (Conquistas) ────────────────────────────────── */}
         <ConsumerBadgesSection profileId={profile?.id} />
 
