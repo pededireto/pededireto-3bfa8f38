@@ -1,79 +1,103 @@
 
 
-# Plan: Logo + Consumer Dashboard Review Feedback
+## Analysis of Current State
 
-## Task 1 — Add PedeDireto Logo Image Everywhere
+### What exists:
+1. **Affiliate Portal** (`AffiliatePortalContent.tsx`) — only accessible inside the Commercial dashboard (`/comercial` → tab "affiliates")
+2. **AddLeadModal** — simple form with 6 fields (business_name, phone, email, website, city, notes). **Not connected** to the existing business creation flow (`RegisterBusiness.tsx` / `BusinessOwnerEditForm.tsx`)
+3. **Header** — no reference to the affiliate program anywhere
+4. **Consumer Dashboard** (`/dashboard`) — no affiliate tab
+5. **Business Dashboard** (`/business-dashboard`) — no affiliate tab
+6. **No public landing page** for the affiliate program
 
-Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
-
-### Files to modify (logo replacement):
-
-**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
-
-| File | Location | Logo size |
-|------|----------|-----------|
-| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
-| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
-| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
-| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
-| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
-| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
-| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
-| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
-| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
-| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
-| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
-| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
-| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
-| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
-| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
-| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
-| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
-
-Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
+### What's missing (per user request):
+- **Public landing page** promoting the affiliate program with active campaign display and CTA to register
+- **Affiliate tab** in Consumer Dashboard
+- **Affiliate tab** in Business Dashboard
+- **Back-to-profile button** from affiliate portal
+- **Lead creation connected to business creation flow** — the "Nova Lead" should use the full "Ficha de Cliente" form (Identidade, Presença Pública, Horários, Presença Digital with plan rules, Dados Legais with mandatory Nome do Responsável + Telefone)
 
 ---
 
-## Task 2 — Review Feedback on Consumer Dashboard Requests
+## Implementation Plan
 
-### Data model understanding
-- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
-- `request_business_matches` links `request_id` to `business_id`
-- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
+### 1. Public Affiliate Landing Page (`/afiliados`)
 
-### New hook: `useConsumerRequestReviews`
+New file: `src/pages/AffiliateLandingPage.tsx`
 
-In `src/hooks/useServiceRequests.ts`, add a new hook that:
-1. Takes the list of request IDs
-2. For each request, gets the matched business IDs from `request_business_matches`
-3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
-4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
+- Hero section with program explanation and benefits
+- Active campaign banner (reuse `ActiveCampaignBanner`, or show "no campaign" state)
+- How it works (3 steps: Regista-te → Indica negócios → Ganha comissões)
+- CTA buttons: "Criar conta como Consumidor" → `/registar/consumidor`, "Registar Negócio" → `/register/business`
+- If user already logged in: CTA changes to "Aceder ao Portal de Afiliados" → `/dashboard` (or `/business-dashboard`)
+- Add route in `App.tsx`
 
-Implementation approach — a single query that:
-```typescript
-// 1. Get all matches for the user's requests
-const { data: matches } = await supabase
-  .from("request_business_matches")
-  .select("request_id, business_id, businesses(name)")
-  .in("request_id", requestIds);
+### 2. Header Update
 
-// 2. Get all reviews by this user
-const { data: reviews } = await supabase
-  .from("business_reviews")
-  .select("business_id, rating, business_response, business_response_at")
-  .eq("user_id", userId);
+`src/components/Header.tsx` — add "Afiliados" link in desktop and mobile nav, positioned before "Registar Negócio"
 
-// 3. Cross-reference: for each match, find if there's a review
-```
+### 3. Consumer Dashboard — Affiliate Tab
 
-### UI changes in `src/pages/UserDashboard.tsx`
+`src/pages/UserDashboard.tsx`:
+- Add new tab "Afiliados" (with Handshake icon) to the existing `TabsList`
+- Tab content renders `AffiliatePortalContent`
+- Add "Voltar ao Perfil" button inside AffiliatePortalContent when rendered from dashboards
 
-In the request card (lines 281-346), after the status Badge, add:
+### 4. Business Dashboard — Affiliate Tab
 
-1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
-2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
+`src/pages/BusinessDashboard.tsx` + `src/components/business/BusinessSidebar.tsx`:
+- Add "Afiliados" to the sidebar items (new `BusinessTab` value: `"affiliates"`)
+- Render `AffiliatePortalContent` when active
 
-Visual design:
-- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
-- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
+### 5. Back-to-Profile Navigation
+
+`src/components/affiliate/AffiliatePortalContent.tsx`:
+- Accept optional prop `showBackButton?: boolean` and `backTo?: string`
+- Render a "← Voltar ao meu perfil" link at the top when `showBackButton` is true
+
+### 6. Lead Creation → Full Business Form (Major Change)
+
+This is the biggest piece. Currently `AddLeadModal` is a simple 6-field form. The user wants it to match the "Ficha de Cliente" structure from `BusinessOwnerEditForm.tsx`.
+
+**Approach**: Replace `AddLeadModal` with a new `AddLeadFullModal` that uses a multi-section form mirroring the existing business form structure:
+
+- **Identidade do Negócio** (required): Nome, Categoria, Subcategorias, Cidade, Telefone
+- **Presença Pública** (Free/START fields): Morada, descrição curta, logo
+- **Horários** (Free/START fields): Horário semana/fim-de-semana
+- **Presença Digital** (PRO fields — visible but locked if lead has no paid plan): Website, Instagram, Facebook, vídeo — follows plan rules (can fill but only Free-tier content is shown publicly until plan activation)
+- **Dados Legais e Administrativos**: Nome do Responsável (mandatory), Telefone do Responsável (mandatory), Email, NIF — rest optional
+
+**Flow**:
+1. Affiliate fills the form
+2. Duplicate check runs (phone/email/website)
+3. If no duplicate → create the business via `register_business_with_owner` RPC or a new simplified RPC (since the affiliate is NOT the owner — the business is created as inactive lead)
+4. The `affiliate_leads` record is created with `business_id` pointing to the new business
+5. Business is created with `status = 'inactive'` and `source = 'affiliate'`
+
+**Important**: The affiliate is NOT the owner. The business is created as an inactive listing (lead) that can later be claimed or activated when the real owner subscribes.
+
+**New file**: `src/components/affiliate/AddLeadFullModal.tsx` — large dialog/sheet with collapsible sections matching the Ficha de Cliente layout.
+
+**Modified**: `src/hooks/useAffiliateLeads.ts` — update `useCreateAffiliateLead` to also create the business record and link `business_id`.
+
+### 7. Route Registration
+
+`src/App.tsx`: Add `/afiliados` route (public, no auth required)
+
+### Files Summary
+
+| File | Action |
+|---|---|
+| `src/pages/AffiliateLandingPage.tsx` | **New** — public landing page |
+| `src/components/Header.tsx` | Add "Afiliados" nav link |
+| `src/pages/UserDashboard.tsx` | Add Afiliados tab |
+| `src/pages/BusinessDashboard.tsx` | Add affiliates to renderContent |
+| `src/components/business/BusinessSidebar.tsx` | Add "Afiliados" sidebar item |
+| `src/components/affiliate/AffiliatePortalContent.tsx` | Add back-button prop |
+| `src/components/affiliate/AddLeadFullModal.tsx` | **New** — full business form for lead creation |
+| `src/hooks/useAffiliateLeads.ts` | Update create lead to also create business |
+| `src/App.tsx` | Add `/afiliados` route |
+
+### Complexity: Medium-High
+The landing page, dashboard tabs, and navigation are straightforward. The full business form for lead creation is the complex part — it needs to mirror `BusinessOwnerEditForm` sections while creating an inactive business + affiliate lead atomically.
 
