@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   Target,
   Brain,
+  Handshake as HandshakeIcon,
   Ticket,
   Bot,
   FileCheck,
