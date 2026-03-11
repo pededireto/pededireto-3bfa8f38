@@ -137,6 +137,7 @@ const App = () => {
 
               <BrowserRouter>
                 <RouteTracker />
+                <ReferralTracker />
                 <RouteFocusHandler />
                 <ScrollToTop />
                 <SessionExpiredModal />
