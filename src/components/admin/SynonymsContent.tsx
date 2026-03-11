@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Search, FlaskConical, Zap } from "lucide-react";
+import { Loader2, Plus, Trash2, Search, FlaskConical, Zap, Download, Upload, FileSpreadsheet } from "lucide-react";
+import ImportSynonymsDialog from "./ImportSynonymsDialog";
+import * as XLSX from "xlsx";
 
 const BULK_PRESETS = [
   { label: "Furo / Pneu → Oficina", items: [
@@ -128,6 +130,7 @@ const SynonymsContent = () => {
   const [type, setType] = useState<string>("word");
   const [filter, setFilter] = useState("");
   const [testQuery, setTestQuery] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
 
   const handleAdd = async () => {
     if (!termo.trim() || !equivalente.trim()) return;
@@ -167,6 +170,43 @@ const SynonymsContent = () => {
     }
   };
 
+  // Download template XLSX
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      { termo: "cano rebentou", equivalente: "canalizador", tipo: "phrase" },
+      { termo: "electricista", equivalente: "eletricista", tipo: "word" },
+      { termo: "furo", equivalente: "oficina", tipo: "word" },
+      { termo: "tive um furo", equivalente: "oficina", tipo: "phrase" },
+      { termo: "fechadura partida", equivalente: "serralheiro", tipo: "phrase" },
+    ];
+    const existingRef = synonyms.map(s => ({
+      termo: s.termo,
+      equivalente: s.equivalente,
+      tipo: s.type || "word",
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(templateData);
+    XLSX.utils.book_append_sheet(wb, ws1, "Template");
+    const ws2 = XLSX.utils.json_to_sheet(existingRef);
+    XLSX.utils.book_append_sheet(wb, ws2, "Sinónimos Existentes");
+    XLSX.writeFile(wb, "pededireto-template-sinonimos.xlsx");
+  };
+
+  // Export existing synonyms
+  const handleExport = () => {
+    const exportData = synonyms.map(s => ({
+      termo: s.termo,
+      equivalente: s.equivalente,
+      tipo: s.type || "word",
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(wb, ws, "Sinónimos");
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `pededireto-sinonimos-pesquisa-${date}.xlsx`);
+  };
+
   const filtered = synonyms.filter(
     (s) =>
       !filter ||
@@ -190,10 +230,33 @@ const SynonymsContent = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Sinónimos de Pesquisa</h1>
-        <p className="text-muted-foreground">Gerir equivalências para pesquisa inteligente</p>
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Sinónimos de Pesquisa</h1>
+          <p className="text-muted-foreground">Gerir equivalências para pesquisa inteligente</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4 mr-1" />
+            Descarregar Template
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-1" />
+            Importar CSV/Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={synonyms.length === 0}>
+            <FileSpreadsheet className="h-4 w-4 mr-1" />
+            Exportar CSV
+          </Button>
+        </div>
       </div>
+
+      {/* Import Dialog */}
+      <ImportSynonymsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        existingSynonyms={synonyms}
+      />
 
       {/* Search Simulator */}
       <div className="bg-card rounded-xl p-6 shadow-card border-2 border-dashed border-primary/30">
