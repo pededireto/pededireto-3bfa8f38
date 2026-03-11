@@ -107,6 +107,7 @@ const OnboardingPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+        </div>
       </div>
 
       <div className="container mx-auto p-6">
