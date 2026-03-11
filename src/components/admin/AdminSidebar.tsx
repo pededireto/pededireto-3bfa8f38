@@ -82,7 +82,8 @@ export type AdminTab =
   | "pending-claims"
   | "emails"
   | "blog"
-  | "newsletter";
+  | "newsletter"
+  | "affiliates";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -137,6 +138,7 @@ const SIDEBAR_STRUCTURE: Omit<SidebarItem, "badge">[][] = [
     { id: "revenue", label: "Receita & Crescimento", icon: TrendingUp },
     { id: "commission-models", label: "Modelos Comissão", icon: Coins },
     { id: "commission-audit", label: "Auditoria Comissões", icon: ShieldCheck },
+    { id: "affiliates", label: "Gestão Afiliados", icon: Handshake },
   ],
   // 5 - analytics
   [

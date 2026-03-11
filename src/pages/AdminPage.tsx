@@ -45,6 +45,7 @@ import EmailHub from "@/components/email/EmailHub";
 import BlogContent from "@/components/admin/BlogContent";
 import PlatformAlertsContent from "@/components/admin/PlatformAlertsContent";
 import NewsletterContent from "@/components/admin/NewsletterContent";
+import AffiliateAdminContent from "@/components/admin/AffiliateAdminContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -87,6 +88,7 @@ const AdminPage = () => {
     if (activeTab === "emails") return <EmailHub showInbox />;
     if (activeTab === "blog") return <BlogContent />;
     if (activeTab === "newsletter") return <NewsletterContent />;
+    if (activeTab === "affiliates") return <AffiliateAdminContent />;
 
     if (isLoading) {
       return (
