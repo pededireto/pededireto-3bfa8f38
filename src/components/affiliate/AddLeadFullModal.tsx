@@ -17,7 +17,7 @@ import CityAutocomplete from "@/components/ui/CityAutocomplete";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown, ChevronRight, Building2, Globe, Clock, Share2, Scale,
-  Loader2, AlertTriangle, Lock,
+  Loader2, AlertTriangle, Lock, MessageCircle, Copy, Check, Image,
 } from "lucide-react";
 
 interface Props {
@@ -58,20 +58,16 @@ const AddLeadFullModal = ({ open, onOpenChange }: Props) => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [successState, setSuccessState] = useState<{ slug: string; name: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const [form, setForm] = useState({
-    // Identity
     name: "", description: "", logo_url: "", category_id: "", subcategory_ids: [] as string[],
     city: "", cta_phone: "",
-    // Public Presence
     public_address: "", cta_email: "", cta_website: "",
-    // Schedule
     schedule_weekdays: "", schedule_weekend: "",
-    // Digital Presence (PRO)
     instagram_url: "", facebook_url: "", other_social_url: "",
-    // Legal
     owner_name: "", owner_phone: "", owner_email: "", nif: "",
-    // Notes
     notes: "",
   });
 
@@ -88,13 +84,23 @@ const AddLeadFullModal = ({ open, onOpenChange }: Props) => {
 
   const isValid = form.name.trim().length >= 2 && form.owner_name.trim().length >= 2 && form.owner_phone.trim().length >= 9;
 
+  const resetForm = () => {
+    setForm({
+      name: "", description: "", logo_url: "", category_id: "", subcategory_ids: [],
+      city: "", cta_phone: "", public_address: "", cta_email: "", cta_website: "",
+      schedule_weekdays: "", schedule_weekend: "", instagram_url: "", facebook_url: "",
+      other_social_url: "", owner_name: "", owner_phone: "", owner_email: "", nif: "", notes: "",
+    });
+    setDuplicateError(null);
+    setSuccessState(null);
+  };
+
   const handleSubmit = async () => {
     if (!isValid || !user?.id) return;
     setDuplicateError(null);
     setIsSubmitting(true);
 
     try {
-      // Duplicate check
       const dupResult = await checkDuplicate.mutateAsync({
         phone: form.cta_phone || form.owner_phone || undefined,
         email: form.owner_email || form.cta_email || undefined,
@@ -107,11 +113,12 @@ const AddLeadFullModal = ({ open, onOpenChange }: Props) => {
         return;
       }
 
-      // Create business + lead atomically via RPC
+      const slug = generateSlug(form.name);
+
       const { data, error } = await supabase.rpc("create_affiliate_lead_with_business" as any, {
         p_affiliate_id: user.id,
         p_name: form.name.trim(),
-        p_slug: generateSlug(form.name),
+        p_slug: slug,
         p_city: form.city.trim() || null,
         p_cta_phone: form.cta_phone.trim() || null,
         p_cta_email: form.cta_email.trim() || null,
@@ -130,6 +137,7 @@ const AddLeadFullModal = ({ open, onOpenChange }: Props) => {
         p_owner_email: form.owner_email.trim() || null,
         p_nif: form.nif.trim() || null,
         p_notes: form.notes.trim() || null,
+        p_logo_url: form.logo_url.trim() || null,
       });
 
       if (error) throw error;
@@ -138,14 +146,7 @@ const AddLeadFullModal = ({ open, onOpenChange }: Props) => {
       qc.invalidateQueries({ queryKey: ["affiliate-leads"] });
       qc.invalidateQueries({ queryKey: ["affiliate-stats"] });
 
-      // Reset form
-      setForm({
-        name: "", description: "", logo_url: "", category_id: "", subcategory_ids: [],
-        city: "", cta_phone: "", public_address: "", cta_email: "", cta_website: "",
-        schedule_weekdays: "", schedule_weekend: "", instagram_url: "", facebook_url: "",
-        other_social_url: "", owner_name: "", owner_phone: "", owner_email: "", nif: "", notes: "",
-      });
-      onOpenChange(false);
+      setSuccessState({ slug, name: form.name.trim() });
     } catch (err: any) {
       toast({ title: "Erro ao registar lead", description: err.message, variant: "destructive" });
     } finally {
@@ -153,8 +154,75 @@ const AddLeadFullModal = ({ open, onOpenChange }: Props) => {
     }
   };
 
+  const profileUrl = successState ? `https://pededireto.pt/negocio/${successState.slug}` : "";
+  const whatsappShareUrl = successState
+    ? `https://api.whatsapp.com/send?text=${encodeURIComponent(`Olá! Registei o negócio "${successState.name}" na plataforma Pede Direto. Veja o perfil aqui: ${profileUrl}`)}`
+    : "";
+
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(profileUrl);
+    setCopied(true);
+    toast({ title: "Link copiado!" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleClose = (isOpen: boolean) => {
+    if (!isOpen) {
+      resetForm();
+    }
+    onOpenChange(isOpen);
+  };
+
+  // Success state — show share options
+  if (successState && open) {
+    return (
+      <Sheet open={open} onOpenChange={handleClose}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader className="mb-6">
+            <SheetTitle>✅ Lead Registada!</SheetTitle>
+          </SheetHeader>
+
+          <div className="space-y-6 text-center">
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 space-y-3">
+              <p className="text-lg font-bold text-foreground">{successState.name}</p>
+              <p className="text-sm text-muted-foreground">
+                O perfil foi criado com sucesso. Partilhe o link com o dono do negócio para aumentar a conversão!
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <code className="flex-1 bg-muted rounded-lg px-4 py-2.5 text-sm font-mono truncate text-left">
+                  {profileUrl}
+                </code>
+                <Button variant="outline" size="icon" onClick={handleCopyLink}>
+                  {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              <Button asChild className="w-full gap-2" size="lg">
+                <a href={whatsappShareUrl} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="h-5 w-5" />
+                  Partilhar por WhatsApp
+                </a>
+              </Button>
+
+              <Button variant="outline" className="w-full" onClick={() => { resetForm(); }}>
+                Registar outra Lead
+              </Button>
+
+              <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => handleClose(false)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
         <SheetHeader className="mb-6">
           <SheetTitle>Registar Nova Lead — Ficha de Cliente</SheetTitle>
@@ -171,6 +239,20 @@ const AddLeadFullModal = ({ open, onOpenChange }: Props) => {
               <div className="space-y-2">
                 <Label>Descrição</Label>
                 <Textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={3} placeholder="Breve descrição do negócio..." />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Image className="h-4 w-4 text-muted-foreground" />
+                  Logo / Foto do Negócio
+                </Label>
+                <Input
+                  value={form.logo_url}
+                  onChange={(e) => set("logo_url", e.target.value)}
+                  placeholder="Colar URL da foto (Google, Site, Facebook...)"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Cole o link directo de uma imagem do negócio (Google Maps, Website, Facebook, Instagram). Clique com o botão direito na foto → "Copiar endereço da imagem".
+                </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">

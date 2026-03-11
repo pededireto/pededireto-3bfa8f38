@@ -70,8 +70,8 @@ const AffiliateLandingPage = () => {
                   <div className="flex-1 space-y-1">
                     <h3 className="font-bold text-lg">🎯 Campanha Activa: {campaign.name}</h3>
                     <div className="flex flex-wrap gap-4 text-sm opacity-90">
-                      <span>💰 One-shot: <strong>{(Number(campaign.rate) * 100).toFixed(0)}%</strong></span>
-                      <span>🔄 Renovação: <strong>{(Number(campaign.renewal_rate) * 100).toFixed(0)}%</strong></span>
+                      <span>💰 One-shot: <strong>{Number(campaign.rate) < 1 ? (Number(campaign.rate) * 100).toFixed(0) : Number(campaign.rate).toFixed(0)}%</strong></span>
+                      <span>🔄 Renovação: <strong>{Number(campaign.renewal_rate) < 1 ? (Number(campaign.renewal_rate) * 100).toFixed(0) : Number(campaign.renewal_rate).toFixed(0)}%</strong></span>
                       {campaign.valid_from && (
                         <span>📅 {new Date(campaign.valid_from).toLocaleDateString("pt-PT")} — {campaign.valid_until ? new Date(campaign.valid_until).toLocaleDateString("pt-PT") : "sem fim"}</span>
                       )}
@@ -85,7 +85,14 @@ const AffiliateLandingPage = () => {
               <CardContent className="py-6 px-8">
                 <div className="flex items-center gap-3">
                   <Megaphone className="h-5 w-5 text-muted-foreground" />
-                  <p className="text-muted-foreground">Nenhuma campanha activa de momento. Contacta o administrador.</p>
+                  <div className="flex-1">
+                    <p className="text-muted-foreground">Nenhuma campanha activa de momento.</p>
+                  </div>
+                  <Button asChild variant="outline" size="sm" className="gap-2 flex-shrink-0">
+                    <a href="https://api.whatsapp.com/send?phone=351210203862&text=Gostaria%20de%20saber%20mais%20informa%C3%A7%C3%B5es%20sobre%20o%20programa%20de%20afiliados" target="_blank" rel="noopener noreferrer">
+                      Falar com Admin
+                    </a>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
