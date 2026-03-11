@@ -1,103 +1,79 @@
 
 
-## Analysis Report
+# Plan: Logo + Consumer Dashboard Review Feedback
 
-### PART 1 — BLOG
+## Task 1 — Add PedeDireto Logo Image Everywhere
 
-#### 1.1 — Current State
+Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
 
-**Critical Bug Found**: The `/blog` route (listing page) is broken. `BlogPage.tsx` does NOT contain a listing — it's an exact copy of `BlogPostPage.tsx` (single-post view). Both files export `BlogPostPage`, both use `useParams<{ slug: string }>()`. When `/blog` loads, `slug` is `undefined`, so `useBlogPost(undefined)` is disabled, returns no data, and the page shows "Artigo não encontrado". **This is why the listing is blank** (as visible in the screenshot).
+### Files to modify (logo replacement):
 
-Files involved:
-- `src/pages/BlogPage.tsx` — **BROKEN** (should be listing, is single-post copy)
-- `src/pages/BlogPostPage.tsx` — Single post view (works correctly)
-- `src/hooks/useBlogPosts.ts` — Hooks are correct (`is_published = true`, ordered by `published_at DESC`)
-- `src/components/LatestBlogPosts.tsx` — Homepage widget (works, uses `useFeaturedBlogPosts`)
+**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
 
-The `useBlogPosts` hook (listing) and `useBlogPost` (single) queries are correct. `increment_blog_views` RPC exists in types. Views increment on every page load (no deduplication — increments on reload).
+| File | Location | Logo size |
+|------|----------|-----------|
+| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
+| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
+| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
+| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
+| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
+| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
+| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
+| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
+| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
+| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
+| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
+| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
+| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
+| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
+| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
+| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
+| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
 
-#### 1.2 — Images
-
-**BlogPostPage.tsx (line 129-131)**: Uses `object-cover` inside a fixed `h-64 md:h-80` container — this **crops** images.
-
-**BlogPage.tsx**: Same issue (it's a copy). But since this file needs to be completely rewritten as a listing page, image treatment will be part of the new listing cards.
-
-**LatestBlogPosts.tsx (line 40-47)**: Uses `aspect-video` with `object-cover` — also crops.
-
-`cover_image_url` is a text field — likely external URLs or storage URLs. No standard format enforced.
-
-#### 1.3 — Navigation (prev/next)
-
-**Code exists but is NOT rendered**. Lines 70-72 in both files calculate `prevPost` and `nextPost`, and `relatedPosts` (line 73). But **zero JSX** renders them. The imports `ArrowLeft`, `ArrowRight` are imported but unused.
-
-#### 1.4 — Additional
-
-- **WhatsApp share**: Not implemented. Only "Copiar link" exists. `MessageCircle` is imported but unused.
-- **JSON-LD**: Not implemented. Only basic OG meta tags exist.
-- **Views**: Increments on every load without deduplication (no session/localStorage check).
+Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
 
 ---
 
-### PART 2 — DASHBOARD NAVIGATION
+## Task 2 — Review Feedback on Consumer Dashboard Requests
 
-#### 2.1 — Current State
+### Data model understanding
+- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
+- `request_business_matches` links `request_id` to `business_id`
+- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
 
-Routes confirmed:
-| Dashboard | Route | Access |
-|---|---|---|
-| Admin | `/admin` | `requireAdmin` (admin, super_admin) |
-| CS | `/cs` | `requireCs` (cs, admin, super_admin) |
-| Commercial | `/comercial` | `requireCommercial` (commercial, admin, super_admin) |
-| Onboarding | `/onboarding` | `requireOnboarding` (onboarding, admin, super_admin) |
+### New hook: `useConsumerRequestReviews`
 
-`ProtectedRoute` grants admin/super_admin access to ALL dashboards (lines 40, 52, 60, 68 check `isSuperAdmin` as fallback).
+In `src/hooks/useServiceRequests.ts`, add a new hook that:
+1. Takes the list of request IDs
+2. For each request, gets the matched business IDs from `request_business_matches`
+3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
+4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
 
-**AdminSidebar.tsx has NO links to CS, Commercial, or Onboarding.** The footer only has "Ver site público" and "Sair".
+Implementation approach — a single query that:
+```typescript
+// 1. Get all matches for the user's requests
+const { data: matches } = await supabase
+  .from("request_business_matches")
+  .select("request_id, business_id, businesses(name)")
+  .in("request_id", requestIds);
 
-**CommercialSidebar.tsx has NO link back to Admin.**
+// 2. Get all reviews by this user
+const { data: reviews } = await supabase
+  .from("business_reviews")
+  .select("business_id, rating, business_response, business_response_at")
+  .eq("user_id", userId);
 
-Admin/SuperAdmin CAN access all dashboards by typing the URL — access control works. There's simply no navigation.
+// 3. Cross-reference: for each match, find if there's a review
+```
 
-#### 2.2 — Recommendation
+### UI changes in `src/pages/UserDashboard.tsx`
 
-**Option A (Sidebar)** is the most consistent. The AdminSidebar already uses collapsible groups. Adding a "Dashboards Internos" group at the bottom (before the footer) with 3 external links (using `<Link>` with `<ExternalLink>` icon) is minimal code and follows the existing pattern. The other sidebars (CS, Commercial, Onboarding) should get a "Voltar ao Admin" link in their footer.
+In the request card (lines 281-346), after the status Badge, add:
 
----
+1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
+2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
 
-## Proposed Implementation Plan
-
-### Blog Fix (3 files)
-
-**1. Rewrite `BlogPage.tsx`** — Create a proper listing page:
-- Hero section with title "Guias & Dicas"
-- Category filter tabs (Todos, Serviços, Obras, Negócios, Dicas)
-- Grid of post cards with: fixed 200px image container, `object-contain` on `bg-muted`, category badge, title, excerpt, read time
-- Uses `useBlogPosts(category)` with state for selected category
-- Helmet with SEO meta for `/blog`
-
-**2. Fix `BlogPostPage.tsx`** — Add missing features:
-- Image: change to `max-h-[400px]` container with `object-contain` and `bg-muted`
-- Add prev/next navigation after the share section (the logic already exists, just needs JSX)
-- Add WhatsApp share button
-- Add JSON-LD `<script>` in Helmet
-- Add related posts section (3 cards) below navigation
-- Optional: deduplicate view increment with `sessionStorage`
-
-**3. Fix `LatestBlogPosts.tsx`** — Change image from `object-cover` to `object-contain` with `bg-muted` background for consistency.
-
-### Dashboard Navigation (4 files)
-
-**4. `AdminSidebar.tsx`** — Add a "Dashboards Internos" group at the end of the sidebar nav (before footer) with 3 `<Link>` items to `/cs`, `/comercial`, `/onboarding`. Only visible for admin/super_admin (already available via `useAuth`).
-
-**5-7. `CommercialSidebar.tsx`, CS sidebar, Onboarding sidebar** — Add "← Área Admin" link in footer section for users with admin/super_admin role.
-
-### Complexity Estimate
-
-| Task | Effort |
-|---|---|
-| Rewrite BlogPage.tsx (listing) | Medium — new component |
-| Fix BlogPostPage.tsx (images, nav, share, JSON-LD) | Small-Medium |
-| Fix LatestBlogPosts.tsx images | Trivial |
-| AdminSidebar dashboard links | Small |
-| Back-to-admin links in 3 sidebars | Small |
+Visual design:
+- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
+- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
 

@@ -333,6 +333,41 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
         })}
       </nav>
 
+      {/* Dashboards Internos */}
+      <div className="px-3 pb-1">
+        <button
+          onClick={() => toggleGroup("dashboards")}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+        >
+          <ExternalLink className="h-4 w-4 flex-shrink-0" />
+          <span className="flex-1 text-left">Dashboards</span>
+          {openGroups.includes("dashboards") ? (
+            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+          )}
+        </button>
+        {openGroups.includes("dashboards") && (
+          <div className="ml-3 pl-3 border-l border-sidebar-border/50 mt-0.5 space-y-0.5">
+            {[
+              { to: "/cs", label: "Customer Success", emoji: "🎧" },
+              { to: "/comercial", label: "Comercial", emoji: "💼" },
+              { to: "/onboarding", label: "Onboarding", emoji: "🚀" },
+            ].map((d) => (
+              <Link
+                key={d.to}
+                to={d.to}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              >
+                <span>{d.emoji}</span>
+                <span>{d.label}</span>
+                <ExternalLink className="h-3 w-3 ml-auto opacity-40" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border space-y-2">
         <Link

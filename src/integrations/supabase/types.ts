@@ -2175,7 +2175,9 @@ export type Database = {
           coordinates: Json | null
           created_at: string | null
           cta_app: string | null
+          cta_booking_url: string | null
           cta_email: string | null
+          cta_order_url: string | null
           cta_phone: string | null
           cta_website: string | null
           cta_whatsapp: string | null
@@ -2249,7 +2251,9 @@ export type Database = {
           coordinates?: Json | null
           created_at?: string | null
           cta_app?: string | null
+          cta_booking_url?: string | null
           cta_email?: string | null
+          cta_order_url?: string | null
           cta_phone?: string | null
           cta_website?: string | null
           cta_whatsapp?: string | null
@@ -2323,7 +2327,9 @@ export type Database = {
           coordinates?: Json | null
           created_at?: string | null
           cta_app?: string | null
+          cta_booking_url?: string | null
           cta_email?: string | null
+          cta_order_url?: string | null
           cta_phone?: string | null
           cta_website?: string | null
           cta_whatsapp?: string | null

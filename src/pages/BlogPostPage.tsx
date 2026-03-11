@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Clock, Eye, ArrowLeft, ArrowRight, Share2, Facebook, Copy, MessageCircle } from "lucide-react";
+import { Clock, Eye, ArrowLeft, ArrowRight, Share2, Copy, MessageCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -49,14 +49,19 @@ const BlogPostPage = () => {
   const { data: allPosts = [] } = useBlogPosts();
   const queryClient = useQueryClient();
 
+  // Deduplicated view increment — once per session per slug
   useEffect(() => {
     if (!slug) return;
+    const key = `blog_viewed_${slug}`;
+    if (sessionStorage.getItem(key)) return;
+
     const incrementViews = async () => {
       const { error } = await supabase.rpc("increment_blog_views", { post_slug: slug });
       if (error) {
         console.error("Erro ao incrementar views:", error);
         return;
       }
+      sessionStorage.setItem(key, "1");
       queryClient.invalidateQueries({ queryKey: ["blog-post", slug] });
     };
     incrementViews();
@@ -70,12 +75,21 @@ const BlogPostPage = () => {
   const currentIndex = allPosts.findIndex((p) => p.slug === slug);
   const prevPost = currentIndex > 0 ? allPosts[currentIndex - 1] : null;
   const nextPost = currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1] : null;
-  const relatedPosts = post ? allPosts.filter((p) => p.category === post.category && p.slug !== slug).slice(0, 3) : [];
+  const relatedPosts = post
+    ? allPosts.filter((p) => p.category === post.category && p.slug !== slug).slice(0, 3)
+    : [];
   const shareUrl = `https://pededireto.pt/blog/${slug}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl);
     toast({ title: "Link copiado!" });
+  };
+
+  const handleWhatsApp = () => {
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(`${post?.title || ""} — ${shareUrl}`)}`,
+      "_blank",
+    );
   };
 
   if (isPending) {
@@ -108,6 +122,24 @@ const BlogPostPage = () => {
     );
   }
 
+  // JSON-LD structured data
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.excerpt || post.meta_description || "",
+    image: post.cover_image_url || undefined,
+    author: { "@type": "Person", name: post.author_name },
+    datePublished: post.published_at || post.created_at,
+    dateModified: post.updated_at,
+    publisher: {
+      "@type": "Organization",
+      name: "PedeDireto",
+      url: "https://pededireto.pt",
+    },
+    mainEntityOfPage: shareUrl,
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
@@ -119,15 +151,23 @@ const BlogPostPage = () => {
         {post.cover_image_url && <meta property="og:image" content={post.cover_image_url} />}
         <meta property="og:type" content="article" />
         <meta property="og:url" content={shareUrl} />
+        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
 
       <Header />
 
       <main id="main-content" className="flex-1" tabIndex={-1}>
-        <div className="container py-8">
+        <div className="container py-8 max-w-3xl mx-auto">
           <article>
+            {/* Cover image — max-h-[400px], object-contain, bg-muted */}
             {post.cover_image_url && (
-              <img src={post.cover_image_url} alt={post.title} className="w-full h-auto rounded-xl mb-8" />
+              <div className="max-h-[400px] bg-muted rounded-xl mb-8 flex items-center justify-center overflow-hidden">
+                <img
+                  src={post.cover_image_url}
+                  alt={post.title}
+                  className="max-w-full max-h-[400px] object-contain"
+                />
+              </div>
             )}
 
             <Badge className={CATEGORY_COLORS[post.category] || CATEGORY_COLORS.outros} variant="secondary">
@@ -152,6 +192,7 @@ const BlogPostPage = () => {
               dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }}
             />
 
+            {/* Share buttons */}
             <div className="flex items-center gap-3 mt-10 pt-6 border-t border-border">
               <span className="text-sm font-medium flex items-center gap-1.5">
                 <Share2 className="h-4 w-4" /> Partilhar:
@@ -159,8 +200,86 @@ const BlogPostPage = () => {
               <Button variant="outline" size="sm" onClick={handleCopyLink}>
                 <Copy className="h-4 w-4 mr-1" /> Copiar link
               </Button>
+              <Button variant="outline" size="sm" onClick={handleWhatsApp}>
+                <MessageCircle className="h-4 w-4 mr-1" /> WhatsApp
+              </Button>
             </div>
+
+            {/* Prev / Next navigation */}
+            {(prevPost || nextPost) && (
+              <nav className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-10 pt-6 border-t border-border">
+                {prevPost ? (
+                  <Link
+                    to={`/blog/${prevPost.slug}`}
+                    className="flex items-start gap-2 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group"
+                  >
+                    <ArrowLeft className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground group-hover:text-primary" />
+                    <div>
+                      <span className="text-xs text-muted-foreground">Anterior</span>
+                      <p className="text-sm font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                        {prevPost.title}
+                      </p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div />
+                )}
+                {nextPost ? (
+                  <Link
+                    to={`/blog/${nextPost.slug}`}
+                    className="flex items-start gap-2 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors group text-right sm:flex-row-reverse"
+                  >
+                    <ArrowRight className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground group-hover:text-primary" />
+                    <div>
+                      <span className="text-xs text-muted-foreground">Seguinte</span>
+                      <p className="text-sm font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                        {nextPost.title}
+                      </p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div />
+                )}
+              </nav>
+            )}
           </article>
+
+          {/* Related posts */}
+          {relatedPosts.length > 0 && (
+            <section className="mt-12 pt-8 border-t border-border">
+              <h2 className="text-xl font-bold mb-6">Artigos relacionados</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {relatedPosts.map((rp) => (
+                  <Link
+                    key={rp.id}
+                    to={`/blog/${rp.slug}`}
+                    className="group bg-card rounded-lg border border-border overflow-hidden hover:shadow-md transition-shadow"
+                  >
+                    <div className="h-[120px] bg-muted flex items-center justify-center overflow-hidden">
+                      {rp.cover_image_url ? (
+                        <img
+                          src={rp.cover_image_url}
+                          alt={rp.title}
+                          className="max-w-full max-h-full object-contain"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="text-muted-foreground/30 text-2xl">📄</span>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                        {rp.title}
+                      </p>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                        <Clock className="h-3 w-3" /> {rp.read_time_minutes} min
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </main>
 

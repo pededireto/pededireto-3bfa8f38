@@ -64,7 +64,12 @@ const CustomerSuccessPage = () => {
             <h1 className="text-3xl font-bold">💬 Customer Success</h1>
             <p className="text-muted-foreground mt-1">Suporte e relacionamento com clientes</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {(isAdmin || isSuperAdmin) && (
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
+                ← Admin
+              </Button>
+            )}
             <NotificationBell targetRole="cs" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

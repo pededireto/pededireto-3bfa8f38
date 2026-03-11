@@ -34,7 +34,7 @@ const sidebarItems: { id: CommercialTab; label: string; icon: React.ElementType 
 ];
 
 const CommercialSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: CommercialSidebarProps) => {
-  const { signOut } = useAuth();
+  const { signOut, isAdmin, isSuperAdmin } = useAuth();
 
   return (
     <div className="flex flex-col h-full">
@@ -64,6 +64,12 @@ const CommercialSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: Commerci
       </nav>
 
       <div className="p-4 border-t border-sidebar-border space-y-2">
+        {(isAdmin || isSuperAdmin) && (
+          <Link to="/admin" className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors">
+            <ExternalLink className="h-4 w-4" />
+            ← Área Admin
+          </Link>
+        )}
         <Link to="/" className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors">
           <ExternalLink className="h-4 w-4" />
           Ver site público
