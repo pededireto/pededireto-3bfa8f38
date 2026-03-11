@@ -412,6 +412,11 @@ const UserDashboard = () => {
               </div>
             )}
           </TabsContent>
+
+          {/* ── Afiliados ───────────────────────────────────────────────── */}
+          <TabsContent value="affiliates">
+            <AffiliatePortalContent showBackButton backTo="/dashboard" />
+          </TabsContent>
         </Tabs>
       </main>
 

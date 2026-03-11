@@ -70,6 +70,8 @@ const BusinessDashboard = () => {
         return <BusinessReviewsPanel businessId={business.id} />;
       case "badges":
         return <BadgesTab businessId={business.id} />;
+      case "affiliates":
+        return <AffiliatePortalContent showBackButton backTo="/business-dashboard" />;
       default:
         return null;
     }

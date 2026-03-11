@@ -169,6 +169,7 @@ const App = () => {
                     <Route path="/s/:subSlug/:citySlug" element={<SeoSubcategoryCityPage />} />
                     <Route path="/p/:slug" element={<BusinessShortUrl />} />
                     <Route path="/pricing" element={<PricingPage />} />
+                    <Route path="/afiliados" element={<AffiliateLandingPage />} />
 
                     {/* AUTH */}
                     <Route path="/login" element={<UserLogin />} />
