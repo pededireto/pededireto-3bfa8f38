@@ -63,11 +63,9 @@ import {
   Trash2,
   FlaskConical,
 } from "lucide-react";
-
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
-
 interface BusinessFileCardProps {
   business: BusinessWithCategory | null;
   categories: Category[];
@@ -76,7 +74,6 @@ interface BusinessFileCardProps {
   onSaved: () => void;
   onCancel: () => void;
 }
-
 const commercialStatusLabels: Record<string, string> = {
   nao_contactado: "Não Contactado",
   contactado: "Contactado",
@@ -84,7 +81,6 @@ const commercialStatusLabels: Record<string, string> = {
   cliente: "Cliente",
   perdido: "Perdido",
 };
-
 const generateSlug = (name: string) =>
   name
     .toLowerCase()
@@ -92,14 +88,12 @@ const generateSlug = (name: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-
 // ── CORRIGIDO: usa isAdmin, form.plan_id e form.is_premium em vez de business ──
 function getGalleryLimit(planId: string, isPremium: boolean, isAdmin: boolean): number {
   if (isAdmin) return 999; // admin sem limite
   if (!planId) return 0; // sem plano = free = sem galeria
   return isPremium ? 6 : 2;
 }
-
 // ─────────────────────────────────────────────
 // Parser de horários do Google — MELHORADO
 // ─────────────────────────────────────────────
@@ -122,7 +116,6 @@ const DAY_MAP: Record<string, string> = {
 };
 const WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira"];
 const WEEKEND = ["sábado", "domingo"];
-
 function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string; closed: string } {
   const text = raw.replace(/–|—/g, "-").replace(/\t/g, " ").trim();
   const schedule: Record<string, string> = {};
@@ -146,27 +139,21 @@ function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string; 
       }
     }
   }
-
   const wdOpen = WEEKDAYS.filter((d) => schedule[d] && schedule[d] !== "Encerrado");
   const wdClosed = WEEKDAYS.filter((d) => schedule[d] === "Encerrado");
   const wdHours = wdOpen.map((d) => schedule[d]);
   const allSame = wdHours.length > 0 && wdHours.every((h) => h === wdHours[0]);
   const weekdays = allSame ? wdHours[0] : wdOpen.map((d) => `${d} ${schedule[d]}`).join("\n");
-
   const weOpen = WEEKEND.filter((d) => schedule[d] && schedule[d] !== "Encerrado");
   const weClosed = WEEKEND.filter((d) => schedule[d] === "Encerrado");
   const weekend = weOpen.map((d) => `${d} ${schedule[d]}`).join("\n");
-
   const allClosed = [...wdClosed, ...weClosed];
   const closed = allClosed.length > 0 ? allClosed.join(", ") : "";
-
   return { weekdays, weekend, closed };
 }
-
 // ─────────────────────────────────────────────
 // Sub-components
 // ─────────────────────────────────────────────
-
 function VisibilityBadge({ visible, onChange }: { visible: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
@@ -183,7 +170,6 @@ function VisibilityBadge({ visible, onChange }: { visible: boolean; onChange: (v
     </button>
   );
 }
-
 function Section({
   title,
   icon: Icon,
@@ -223,7 +209,6 @@ function Section({
     </Collapsible>
   );
 }
-
 function ContactHistoryInline({ businessId }: { businessId: string }) {
   const { data: logs = [], isLoading } = useContactLogs(businessId);
   const createLog = useCreateContactLog();
@@ -231,7 +216,6 @@ function ContactHistoryInline({ businessId }: { businessId: string }) {
   const [showForm, setShowForm] = useState(false);
   const [tipo, setTipo] = useState("telefone");
   const [nota, setNota] = useState("");
-
   const tipoIcons: Record<string, React.ElementType> = {
     telefone: Phone,
     email: Mail,
@@ -244,7 +228,6 @@ function ContactHistoryInline({ businessId }: { businessId: string }) {
     whatsapp: "WhatsApp",
     outro: "Outro",
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -256,7 +239,6 @@ function ContactHistoryInline({ businessId }: { businessId: string }) {
       toast({ title: "Erro ao registar contacto", variant: "destructive" });
     }
   };
-
   return (
     <div className="space-y-3">
       {!showForm ? (
@@ -332,21 +314,17 @@ function ContactHistoryInline({ businessId }: { businessId: string }) {
     </div>
   );
 }
-
 // ─────────────────────────────────────────────
 // Trial & Claim Section (admin only)
 // ─────────────────────────────────────────────
-
 function TrialClaimSection({ business }: { business: BusinessWithCategory }) {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-
   const trialEnd = (business as any).trial_ends_at ? new Date((business as any).trial_ends_at) : null;
   const isTrialActive = !!trialEnd && trialEnd > new Date();
   const trialDaysLeft = isTrialActive ? Math.ceil((trialEnd!.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
   const isClaimed = (business as any).is_claimed === true;
-
   const handleActivateTrial = async () => {
     const now = new Date();
     const ends = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
@@ -366,7 +344,6 @@ function TrialClaimSection({ business }: { business: BusinessWithCategory }) {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
     }
   };
-
   const handleCancelTrial = async () => {
     const { error } = await supabase
       .from("businesses")
@@ -379,7 +356,6 @@ function TrialClaimSection({ business }: { business: BusinessWithCategory }) {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
     }
   };
-
   const handleToggleClaimed = async (value: boolean) => {
     const { error } = await supabase
       .from("businesses")
@@ -392,7 +368,6 @@ function TrialClaimSection({ business }: { business: BusinessWithCategory }) {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
     }
   };
-
   return (
     <Section title="Trial & Claim" icon={FlaskConical} defaultOpen={true}>
       <div className="space-y-4">
@@ -405,7 +380,6 @@ function TrialClaimSection({ business }: { business: BusinessWithCategory }) {
             </Badge>
           )}
         </div>
-
         <div className="flex items-center gap-3 flex-wrap">
           {isTrialActive ? (
             <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
@@ -417,7 +391,6 @@ function TrialClaimSection({ business }: { business: BusinessWithCategory }) {
             </Badge>
           )}
         </div>
-
         <div className="flex gap-2">
           {!isTrialActive && (
             <Button type="button" size="sm" onClick={handleActivateTrial}>
@@ -435,16 +408,13 @@ function TrialClaimSection({ business }: { business: BusinessWithCategory }) {
     </Section>
   );
 }
-
 // ─────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────
-
 const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCancel }: BusinessFileCardProps) => {
   const { toast } = useToast();
   const isOwner = mode === "owner";
   const isEditing = !!business;
-
   const updateBusinessAdmin = useUpdateBusiness();
   const updateBusinessOwner = useUpdateBusinessOwner();
   const createBusiness = useCreateBusiness();
@@ -456,11 +426,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   const { data: activeModules = [] } = useActiveBusinessModules();
   const { data: existingModuleValues = [] } = useBusinessModuleValues(business?.id);
   const upsertModuleValues = useUpsertBusinessModuleValues();
-
   // Schedule paste box
   const [rawSchedulePaste, setRawSchedulePaste] = useState("");
   const [showPasteBox, setShowPasteBox] = useState(false);
-
   const [form, setForm] = useState({
     // 1. Identidade
     name: "",
@@ -511,12 +479,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     premium_level: "" as string,
     display_order: 0,
   });
-
   const [moduleValues, setModuleValues] = useState<Record<string, { value: string | null; value_json: any }>>({});
-
   // ── CORRIGIDO: galleryLimit usa form.plan_id e form.is_premium (valores actuais do form) ──
   const galleryLimit = getGalleryLimit(form.plan_id, form.is_premium, isAdmin);
-
   useEffect(() => {
     if (business) {
       setForm({
@@ -564,13 +529,11 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       });
     }
   }, [business]);
-
   useEffect(() => {
     if (editSubcategoryIds && business) {
       setForm((prev) => ({ ...prev, subcategory_ids: editSubcategoryIds }));
     }
   }, [editSubcategoryIds, business]);
-
   useEffect(() => {
     if (existingModuleValues.length > 0) {
       const map: Record<string, { value: string | null; value_json: any }> = {};
@@ -580,10 +543,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       setModuleValues(map);
     }
   }, [existingModuleValues]);
-
   const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
   const filteredSubcategories = allSubcategories.filter((s) => s.category_id === form.category_id);
-
   const toggleSubcategory = (subId: string) => {
     setForm((prev) => ({
       ...prev,
@@ -592,7 +553,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         : [...prev.subcategory_ids, subId],
     }));
   };
-
   const addImage = () => {
     if (!isAdmin && form.images.length >= galleryLimit) return;
     setForm((prev) => ({ ...prev, images: [...prev.images, ""] }));
@@ -605,7 +565,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   const removeImage = (index: number) => {
     setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
   };
-
   // ── Handler do botão "Colar do Google" ──
   const handleFormatSchedule = () => {
     if (!rawSchedulePaste.trim()) return;
@@ -617,7 +576,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     setShowPasteBox(false);
     toast({ title: "✅ Horário organizado automaticamente!" });
   };
-
   const getSubscriptionDates = (planId: string, startDate: string) => {
     if (!planId || !startDate) {
       return {
@@ -649,11 +607,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       subscription_plan: "1_month" as SubscriptionPlan,
     };
   };
-
   // ─── Submit ───────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!isOwner && form.commercial_status === "cliente") {
       const missing: string[] = [];
       if (!form.nif) missing.push("NIF");
@@ -669,7 +625,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         return;
       }
     }
-
     if (!isOwner) {
       const missingModules = activeModules.filter(
         (m) => m.is_required && !moduleValues[m.id]?.value && !moduleValues[m.id]?.value_json,
@@ -683,9 +638,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         return;
       }
     }
-
     const cleanImages = form.images.filter((url) => url.trim() !== "");
-
     try {
       if (isOwner) {
         await updateBusinessOwner.mutateAsync({
@@ -768,9 +721,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           commercial_status: form.commercial_status,
           ...subscriptionData,
         };
-
         let businessId: string;
-
         if (isEditing) {
           await updateBusinessAdmin.mutateAsync({ id: business.id, ...data });
           businessId = business.id;
@@ -793,11 +744,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           businessId = result.id;
           toast({ title: "Negócio criado com sucesso" });
         }
-
         if (form.subcategory_ids.length > 0) {
           await syncSubcategories.mutateAsync({ businessId, subcategoryIds: form.subcategory_ids });
         }
-
         const moduleEntries = Object.entries(moduleValues);
         if (moduleEntries.length > 0) {
           await upsertModuleValues.mutateAsync({
@@ -810,11 +759,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           });
         }
       }
-
       if (form.subcategory_ids.length > 0 && isOwner) {
         await syncSubcategories.mutateAsync({ businessId: business!.id, subcategoryIds: form.subcategory_ids });
       }
-
       onSaved();
     } catch (error: any) {
       toast({
@@ -824,9 +771,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       });
     }
   };
-
   const isLoading = createBusiness.isPending || updateBusinessAdmin.isPending || updateBusinessOwner.isPending;
-
   // ─────────────────────────────────────────────
   // Render
   // ─────────────────────────────────────────────
@@ -886,7 +831,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </div>
       </Section>
-
       {/* ── 2. Presença Pública ── */}
       <Section title="Presença Pública" icon={Globe} badge="Gratuito · START">
         <div className="space-y-4">
@@ -923,7 +867,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </Select>
             </div>
           </div>
-
           {form.category_id && filteredSubcategories.length > 0 && (
             <div className="space-y-2">
               <Label>Subcategorias</Label>
@@ -943,7 +886,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               )}
             </div>
           )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Cidade</Label>
@@ -954,7 +896,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               <Input value={form.zone} onChange={(e) => set("zone", e.target.value)} placeholder="Ex: Grande Lisboa" />
             </div>
           </div>
-
           <div className="space-y-2">
             <Label>Morada pública</Label>
             <Input
@@ -964,7 +905,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             />
             <p className="text-xs text-muted-foreground">Visível ao público na página do negócio.</p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Telefone público</Label>
@@ -979,7 +919,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               <Input type="email" value={form.cta_email} onChange={(e) => set("cta_email", e.target.value)} />
             </div>
           </div>
-
           <div className="space-y-2">
             <Label>Website</Label>
             <Input
@@ -990,7 +929,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </div>
       </Section>
-
       {/* ── 3. Horários ── */}
       <Section title="Horários" icon={Clock} defaultOpen={false} badge="Gratuito · START">
         <div className="space-y-4">
@@ -1011,13 +949,11 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </Button>
             </div>
           </div>
-
           {!form.show_schedule && (
             <p className="text-[11px] text-muted-foreground flex items-center gap-1 bg-muted/30 rounded px-3 py-2">
               <EyeOff className="h-3 w-3" /> Horários guardados mas não visíveis ao público
             </p>
           )}
-
           {showPasteBox && (
             <div className="border border-primary/30 bg-primary/5 rounded-lg p-4 space-y-3">
               <Label className="text-sm font-medium">Cola aqui o horário copiado do Google</Label>
@@ -1049,7 +985,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </div>
             </div>
           )}
-
           <div className={`space-y-3 ${!form.show_schedule ? "opacity-50" : ""}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -1088,7 +1023,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </div>
       </Section>
-
       {/* ── 4. Presença Digital (PRO) ── */}
       <Section title="Presença Digital" icon={Share2} defaultOpen={false} badge="PRO">
         <div className="space-y-6">
@@ -1109,7 +1043,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </p>
             )}
           </div>
-
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">Redes Sociais</Label>
@@ -1149,7 +1082,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </div>
             </div>
           </div>
-
           {/* ── CTAs de Reserva e Encomenda ── */}
           <div className="space-y-3 pt-2 border-t border-border">
             <Label className="text-sm font-medium">CTAs de Acção Direta</Label>
@@ -1175,7 +1107,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </div>
             </div>
           </div>
-
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1186,7 +1117,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </div>
               <VisibilityBadge visible={form.show_gallery} onChange={(v) => set("show_gallery", v)} />
             </div>
-
             {galleryLimit === 0 && !isAdmin ? (
               <p className="text-xs text-muted-foreground bg-muted/30 rounded px-3 py-2">
                 O plano gratuito não inclui galeria. Faz upgrade para START ou PRO para adicionar imagens.
@@ -1240,7 +1170,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </div>
       </Section>
-
       {/* ── 5. Dados Legais e Administrativos ── */}
       <Section
         title="Dados Legais e Administrativos"
@@ -1287,7 +1216,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </div>
       </Section>
-
       {/* ── 6. Estado Comercial (admin only) ── */}
       {!isOwner && (
         <Section title="Estado Comercial e Histórico" icon={Handshake} defaultOpen={true}>
@@ -1323,10 +1251,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           )}
         </Section>
       )}
-
       {/* ── 6B. Trial & Claim (admin only) ── */}
       {!isOwner && isEditing && business && <TrialClaimSection business={business} />}
-
       {/* ── 7. Subscrição e Produto ── */}
       <Section title="Subscrição e Produto" icon={CreditCard} defaultOpen={false}>
         {isOwner ? (
@@ -1414,7 +1340,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
                 </p>
               </div>
             </div>
-
             {form.plan_id && (
               <div className="space-y-2">
                 <Label>Data de início</Label>
@@ -1436,7 +1361,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
                   })()}
               </div>
             )}
-
             {isAdmin && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-border">
                 <div className="space-y-2">
@@ -1467,7 +1391,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         )}
       </Section>
-
       {/* ── 8. Contexto Financeiro (admin only) ── */}
       {!isOwner && (
         <Section title="Contexto Financeiro" icon={DollarSign} defaultOpen={false}>
@@ -1521,7 +1444,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </Section>
       )}
-
       {/* ── 9. Auditoria (admin only) ── */}
       {!isOwner && isAdmin && isEditing && business && (
         <Section title="Auditoria e Alertas" icon={ShieldCheck} defaultOpen={false}>
@@ -1545,7 +1467,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </Section>
       )}
-
       {/* ── 10. Campos Adicionais (admin only) ── */}
       {!isOwner && activeModules.length > 0 && (
         <Section title="Campos Adicionais" icon={Puzzle} defaultOpen={isEditing}>
@@ -1682,14 +1603,12 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           })()}
         </Section>
       )}
-
       {/* ── Badges (admin only, editing existing) ── */}
       {isEditing && isAdmin && business && (
         <Section title="Badges" icon={Award} defaultOpen={false}>
           <AdminBadgesPanel businessId={business.id} />
         </Section>
       )}
-
       {/* ── Actions ── */}
       <div className="flex justify-end gap-2 pt-4 border-t border-border">
         <Button type="button" variant="outline" onClick={onCancel}>
@@ -1703,5 +1622,4 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     </form>
   );
 };
-
 export default BusinessFileCard;
