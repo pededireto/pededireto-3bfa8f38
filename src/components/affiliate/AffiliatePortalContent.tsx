@@ -58,6 +58,12 @@ const AffiliatePortalContent = ({ showBackButton, backTo = "/dashboard" }: Affil
 
   return (
     <div className="space-y-6">
+      {showBackButton && (
+        <Link to={backTo} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Voltar ao meu perfil
+        </Link>
+      )}
+
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">🤝 Programa de Afiliados</h1>
         <p className="text-muted-foreground">Regista negócios e ganha comissões quando subscrevem.</p>
