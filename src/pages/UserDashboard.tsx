@@ -266,6 +266,10 @@ const UserDashboard = () => {
               <Search className="h-4 w-4" />
               Pesquisas
             </TabsTrigger>
+            <TabsTrigger value="affiliates" className="gap-2">
+              <Handshake className="h-4 w-4" />
+              Afiliados
+            </TabsTrigger>
           </TabsList>
 
           {/* ── Pedidos ─────────────────────────────────────────────────── */}
