@@ -17,6 +17,7 @@ import TeamSection from "@/components/business/TeamSection";
 import ClaimStatusBanner from "@/components/business/ClaimStatusBanner";
 import BusinessReviewsPanel from "@/components/business/BusinessReviewsPanel";
 import BadgesTab from "@/components/business/BadgesTab";
+import AffiliatePortalContent from "@/components/affiliate/AffiliatePortalContent";
 
 const BusinessDashboard = () => {
   const [activeTab, setActiveTab] = useState<BusinessTab>("overview");
