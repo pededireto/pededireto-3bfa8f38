@@ -7373,6 +7373,14 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_business_member: { Args: { p_business_id: string }; Returns: boolean }
       is_commercial: { Args: never; Returns: boolean }
+      link_affiliate_referral: {
+        Args: {
+          p_business_id: string
+          p_business_name?: string
+          p_ref_code: string
+        }
+        Returns: string
+      }
       match_request_to_businesses: {
         Args: { p_request_id: string }
         Returns: undefined
