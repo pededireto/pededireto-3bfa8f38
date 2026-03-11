@@ -107,11 +107,11 @@ const BlogPage = () => {
                   className="group bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg transition-shadow"
                 >
                   {post.cover_image_url && (
-                    <div className="w-full">
+                    <div className="w-full h-48 overflow-hidden">
                       <img
                         src={post.cover_image_url}
                         alt={post.title}
-                        className="w-full h-auto object-contain group-hover:opacity-95 transition-opacity duration-300"
+                        className="w-full h-full object-cover group-hover:opacity-95 transition-opacity duration-300"
                         loading="lazy"
                       />
                     </div>
