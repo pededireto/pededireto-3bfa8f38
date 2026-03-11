@@ -53,6 +53,7 @@ import TopRankingPage from "./pages/TopRankingPage";
 import PricingPage from "./pages/PricingPage";
 import BusinessShortUrl from "./pages/BusinessShortUrl";
 import NotFound from "./pages/NotFound";
+import AffiliateLandingPage from "./pages/AffiliateLandingPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
