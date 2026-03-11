@@ -7212,6 +7212,7 @@ export type Database = {
           p_description?: string
           p_facebook_url?: string
           p_instagram_url?: string
+          p_logo_url?: string
           p_name: string
           p_nif?: string
           p_notes?: string
@@ -7223,7 +7224,6 @@ export type Database = {
           p_schedule_weekdays?: string
           p_schedule_weekend?: string
           p_slug: string
-          p_source?: string
           p_subcategory_id?: string
         }
         Returns: string
