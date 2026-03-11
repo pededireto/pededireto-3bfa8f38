@@ -16,6 +16,7 @@ import CommercialCommissionsContent from "@/components/commercial/CommercialComm
 import CommercialClaimRequestsContent from "@/components/commercial/CommercialClaimRequestsContent";
 import TicketsTable from "@/components/tickets/TicketsTable";
 import EmailHub from "@/components/email/EmailHub";
+import AffiliatePortalContent from "@/components/affiliate/AffiliatePortalContent";
 
 const CommercialPage = () => {
   const [activeTab, setActiveTab] = useState<CommercialTab>("dashboard");
