@@ -271,7 +271,7 @@ const UserDashboard = () => {
         <DigestPreferencesToggle />
 
         {/* ── F — Tabs ───────────────────────────────────────────────── */}
-        <Tabs defaultValue="requests" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" ref={tabsRef}>
           <TabsList className="mb-4">
             <TabsTrigger value="requests" className="gap-2">
               <ClipboardList className="h-4 w-4" />
