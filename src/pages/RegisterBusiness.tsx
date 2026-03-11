@@ -210,6 +210,21 @@ const RegisterBusiness = () => {
         await supabase.from("business_subcategories").insert(additionalRows);
       }
 
+      // Link affiliate referral if present
+      const refCode = localStorage.getItem("affiliate_ref");
+      if (refCode && businessId) {
+        try {
+          await supabase.rpc("link_affiliate_referral" as any, {
+            p_ref_code: refCode,
+            p_business_id: businessId,
+            p_business_name: formData.name,
+          });
+        } catch (e) {
+          console.error("Failed to link affiliate referral:", e);
+        }
+        localStorage.removeItem("affiliate_ref");
+      }
+
       // Set flag for welcome banner
       localStorage.setItem("onboarding_complete", "true");
 

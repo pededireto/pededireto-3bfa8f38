@@ -89,7 +89,7 @@ const ReferralTracker = () => {
     const params = new URLSearchParams(location.search);
     const refCode = params.get("ref");
     if (refCode && /^PD-[A-Z0-9]{4}$/.test(refCode)) {
-      sessionStorage.setItem("affiliate_ref", refCode);
+      localStorage.setItem("affiliate_ref", refCode);
     }
   }, [location.search]);
 

@@ -66,6 +66,25 @@ const ClaimBusiness = () => {
     })();
   }, [user, membershipLoading]);
 
+  const createAffiliateClaimAlert = async (businessId: string, businessName: string) => {
+    const refCode = localStorage.getItem("affiliate_ref");
+    if (!refCode) return;
+    try {
+      await (supabase as any).from("admin_alerts").insert({
+        type: "affiliate_claim_review",
+        title: `Claim via afiliado ${refCode}`,
+        message: `O negócio "${businessName}" foi reclamado por um visitante que chegou via link de afiliado (${refCode}). Revise se esta conversão deve ser atribuída ao afiliado.`,
+        severity: "important",
+        category: "affiliates",
+        entity_type: "business",
+        entity_id: businessId,
+      });
+    } catch (e) {
+      console.error("Failed to create affiliate claim alert:", e);
+    }
+    localStorage.removeItem("affiliate_ref");
+  };
+
   const handleClaim = async () => {
     if (!selectedBusiness || !user) return;
     const { error } = await claim(selectedBusiness.id);
@@ -75,6 +94,7 @@ const ClaimBusiness = () => {
         : "Erro ao reclamar negócio. Tenta novamente.";
       toast({ title: "Erro", description: msg, variant: "destructive" });
     } else {
+      await createAffiliateClaimAlert(selectedBusiness.id, selectedBusiness.name);
       toast({
         title: "Pedido enviado!",
         description: "O seu pedido está em validação. Receberá uma notificação em breve.",
