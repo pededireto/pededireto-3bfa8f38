@@ -57,7 +57,7 @@ const AffiliateAdminContent = () => {
 
   const handleApprove = async (id: string) => {
     try {
-      await.(approveCommission as any).mutateAsync(id);
+      await approveCommission.mutateAsync(id);
       toast({ title: "Comissão aprovada" });
     } catch {
       toast({ title: "Erro", variant: "destructive" });
