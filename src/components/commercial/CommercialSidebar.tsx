@@ -15,7 +15,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-export type CommercialTab = "dashboard" | "businesses" | "my-businesses" | "my-commissions" | "my-requests" | "claim-requests" | "tickets" | "emails";
+export type CommercialTab = "dashboard" | "businesses" | "my-businesses" | "my-commissions" | "my-requests" | "claim-requests" | "tickets" | "emails" | "affiliates";
 
 interface CommercialSidebarProps {
   activeTab: CommercialTab;
