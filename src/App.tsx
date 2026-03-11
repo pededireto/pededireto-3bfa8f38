@@ -53,6 +53,7 @@ import TopRankingPage from "./pages/TopRankingPage";
 import PricingPage from "./pages/PricingPage";
 import BusinessShortUrl from "./pages/BusinessShortUrl";
 import NotFound from "./pages/NotFound";
+import AffiliateLandingPage from "./pages/AffiliateLandingPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
@@ -168,6 +169,7 @@ const App = () => {
                     <Route path="/s/:subSlug/:citySlug" element={<SeoSubcategoryCityPage />} />
                     <Route path="/p/:slug" element={<BusinessShortUrl />} />
                     <Route path="/pricing" element={<PricingPage />} />
+                    <Route path="/afiliados" element={<AffiliateLandingPage />} />
 
                     {/* AUTH */}
                     <Route path="/login" element={<UserLogin />} />

@@ -14,6 +14,7 @@ import {
   Edit3,
   Award,
   ChevronDown,
+  Handshake,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,8 @@ export type BusinessTab =
   | "team"
   | "reviews"
   | "edit"
-  | "badges";
+  | "badges"
+  | "affiliates";
 
 interface BusinessSidebarProps {
   businessName: string;
@@ -58,6 +60,7 @@ const allItems: { id: BusinessTab; label: string; icon: React.ElementType }[] = 
   { id: "badges", label: "Caderneta", icon: Award },
   { id: "insights", label: "Insights", icon: TrendingUp },
   { id: "edit", label: "Editar Negócio", icon: Edit3 },
+  { id: "affiliates", label: "Afiliados", icon: Handshake },
   { id: "plan", label: "O Meu Plano", icon: CreditCard },
 ];
 

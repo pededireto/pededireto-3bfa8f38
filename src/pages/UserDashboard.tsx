@@ -26,6 +26,7 @@ import {
   MapPin,
   Store,
   ChevronRight,
+  Handshake,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ConsumerMetricsBar from "@/components/consumer/ConsumerMetricsBar";
@@ -34,6 +35,7 @@ import ConsumerRequestCard from "@/components/consumer/ConsumerRequestCard";
 import ConsumerActivityTimeline from "@/components/consumer/ConsumerActivityTimeline";
 import ConsumerDashboardInsights from "@/components/consumer/ConsumerDashboardInsights";
 import DigestPreferencesToggle from "@/components/consumer/DigestPreferencesToggle";
+import AffiliatePortalContent from "@/components/affiliate/AffiliatePortalContent";
 
 const UserDashboard = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
@@ -264,6 +266,10 @@ const UserDashboard = () => {
               <Search className="h-4 w-4" />
               Pesquisas
             </TabsTrigger>
+            <TabsTrigger value="affiliates" className="gap-2">
+              <Handshake className="h-4 w-4" />
+              Afiliados
+            </TabsTrigger>
           </TabsList>
 
           {/* ── Pedidos ─────────────────────────────────────────────────── */}
@@ -405,6 +411,11 @@ const UserDashboard = () => {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          {/* ── Afiliados ───────────────────────────────────────────────── */}
+          <TabsContent value="affiliates">
+            <AffiliatePortalContent showBackButton backTo="/dashboard" />
           </TabsContent>
         </Tabs>
       </main>

@@ -7201,6 +7201,33 @@ export type Database = {
         }
         Returns: string
       }
+      create_affiliate_lead_with_business: {
+        Args: {
+          p_affiliate_id: string
+          p_category_id?: string
+          p_city?: string
+          p_cta_email?: string
+          p_cta_phone?: string
+          p_cta_website?: string
+          p_description?: string
+          p_facebook_url?: string
+          p_instagram_url?: string
+          p_name: string
+          p_nif?: string
+          p_notes?: string
+          p_other_social_url?: string
+          p_owner_email?: string
+          p_owner_name?: string
+          p_owner_phone?: string
+          p_public_address?: string
+          p_schedule_weekdays?: string
+          p_schedule_weekend?: string
+          p_slug: string
+          p_source?: string
+          p_subcategory_id?: string
+        }
+        Returns: string
+      }
       create_consumer_support_ticket:
         | {
             Args: {

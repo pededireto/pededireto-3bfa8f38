@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAffiliateCode } from "@/hooks/useAffiliateCode";
@@ -11,12 +12,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Copy, Check, Users, TrendingUp, DollarSign, Target } from "lucide-react";
 import ActiveCampaignBanner from "./ActiveCampaignBanner";
-import AddLeadModal from "./AddLeadModal";
+import AddLeadFullModal from "./AddLeadFullModal";
 import AffiliateLeadsTable from "./AffiliateLeadsTable";
 import AffiliateCommissionsTable from "./AffiliateCommissionsTable";
 import PayoutRequestModal from "./PayoutRequestModal";
 
-const AffiliatePortalContent = () => {
+interface AffiliatePortalContentProps {
+  showBackButton?: boolean;
+  backTo?: string;
+}
+
+const AffiliatePortalContent = ({ showBackButton, backTo = "/dashboard" }: AffiliatePortalContentProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: code, isLoading: codeLoading } = useAffiliateCode();
@@ -53,6 +59,12 @@ const AffiliatePortalContent = () => {
 
   return (
     <div className="space-y-6">
+      {showBackButton && (
+        <Link to={backTo} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Voltar ao meu perfil
+        </Link>
+      )}
+
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">🤝 Programa de Afiliados</h1>
         <p className="text-muted-foreground">Regista negócios e ganha comissões quando subscrevem.</p>
@@ -162,7 +174,7 @@ const AffiliatePortalContent = () => {
         </TabsContent>
       </Tabs>
 
-      <AddLeadModal open={addLeadOpen} onOpenChange={setAddLeadOpen} />
+      <AddLeadFullModal open={addLeadOpen} onOpenChange={setAddLeadOpen} />
 
       {payoutModal?.open && user?.id && (
         <PayoutRequestModal
