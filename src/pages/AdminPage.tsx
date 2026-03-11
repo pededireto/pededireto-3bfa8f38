@@ -88,6 +88,7 @@ const AdminPage = () => {
     if (activeTab === "emails") return <EmailHub showInbox />;
     if (activeTab === "blog") return <BlogContent />;
     if (activeTab === "newsletter") return <NewsletterContent />;
+    if (activeTab === "affiliates") return <AffiliateAdminContent />;
 
     if (isLoading) {
       return (
