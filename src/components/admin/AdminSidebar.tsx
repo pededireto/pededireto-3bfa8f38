@@ -82,7 +82,8 @@ export type AdminTab =
   | "pending-claims"
   | "emails"
   | "blog"
-  | "newsletter";
+  | "newsletter"
+  | "affiliates";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
