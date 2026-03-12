@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { safeParseJSON } from "@/utils/safeParseJSON";
 import { useToast } from "@/hooks/use-toast";
 
 export function useStudioGenerate() {
@@ -17,12 +16,12 @@ export function useStudioGenerate() {
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
 
-      const parsed = safeParseJSON(data.content);
-      return parsed;
+      // Edge function now returns already-parsed JSON in data.content
+      return data.content;
     } catch (err: any) {
       toast({
         title: "Erro ao processar",
-        description: err.message || "Erro ao processar resposta. Tenta novamente — a IA pode ocasionalmente gerar JSON malformado.",
+        description: err.message || "Erro ao processar resposta. Tenta novamente.",
         variant: "destructive",
       });
       return null;

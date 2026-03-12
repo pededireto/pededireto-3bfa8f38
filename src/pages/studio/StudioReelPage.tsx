@@ -309,7 +309,7 @@ const StudioReelPage = () => {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {dbCategories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.icon || "📁"} {cat.name}</SelectItem>
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

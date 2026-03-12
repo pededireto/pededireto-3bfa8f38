@@ -7,6 +7,74 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/**
+ * Robust JSON parser — character-by-character scanner that fixes
+ * literal newlines/tabs inside JSON string values produced by LLMs.
+ */
+function safeParseJSON(raw: string): any {
+  // Remove markdown fences
+  let s = raw
+    .replace(/```json\s*/g, "")
+    .replace(/```\s*/g, "")
+    .trim();
+
+  // Extract JSON object or array
+  const iObj = s.indexOf("{");
+  const iArr = s.indexOf("[");
+  let start: number;
+  let end: number;
+
+  if (iObj === -1 && iArr === -1) throw new Error("No JSON found in response");
+
+  if (iArr === -1 || (iObj !== -1 && iObj < iArr)) {
+    start = iObj;
+    end = s.lastIndexOf("}");
+  } else {
+    start = iArr;
+    end = s.lastIndexOf("]");
+  }
+
+  if (end === -1) throw new Error("No JSON found in response");
+  s = s.slice(start, end + 1);
+
+  // Fix unescaped newlines, tabs and carriage returns inside JSON string values
+  let result = "";
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const char = s[i];
+
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      result += char;
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      result += char;
+      continue;
+    }
+
+    if (inString) {
+      if (char === "\n") { result += "\\n"; continue; }
+      if (char === "\r") { result += "\\r"; continue; }
+      if (char === "\t") { result += "\\t"; continue; }
+    }
+
+    result += char;
+  }
+
+  return JSON.parse(result);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -101,16 +169,18 @@ REGRAS OBRIGATÓRIAS PARA OS PROMPTS GROK:
 Analisa a imagem recebida: identifica espaço, pessoas, serviço, ambiente, emoção detectada.
 O roteiro começa EXACTAMENTE nesse frame — nunca assumir um cenário diferente do que está na imagem.
 
+IMPORTANTE: Cada prompt deve ser curto e directo (máximo 3 frases). Não uses newlines dentro dos valores de texto — escreve tudo numa linha contínua.
+
 Responde APENAS com JSON válido, sem markdown, sem texto extra:
 {
-  "analise_imagem": "descrição da imagem: espaço, pessoas, serviço, ambiente, emoção detectada",
+  "analise_imagem": "descrição da imagem em 1 linha",
   "estilo_aplicado": "${estilo}",
   "extensoes": [
-    {"num": 1, "titulo": "Animação — ${toms[0]}", "prompt": "prompt completa em português para Grok"},
-    {"num": 2, "titulo": "${toms[1]} — serviço em acção", "prompt": "prompt completa"},
-    {"num": 3, "titulo": "${toms[2]} — detalhe", "prompt": "prompt completa"},
-    {"num": 4, "titulo": "${toms[3]} — resultado", "prompt": "prompt completa"},
-    {"num": 5, "titulo": "CTA Final — ${nome}", "prompt": "prompt completa com pededireto.pt"}
+    {"num": 1, "titulo": "Animação — ${toms[0]}", "prompt": "prompt completa em português para Grok numa só linha"},
+    {"num": 2, "titulo": "${toms[1]} — serviço em acção", "prompt": "prompt completa numa só linha"},
+    {"num": 3, "titulo": "${toms[2]} — detalhe", "prompt": "prompt completa numa só linha"},
+    {"num": 4, "titulo": "${toms[3]} — resultado", "prompt": "prompt completa numa só linha"},
+    {"num": 5, "titulo": "CTA Final — ${nome}", "prompt": "prompt completa com pededireto.pt numa só linha"}
   ],
   "copy_post": "legenda Instagram PT-PT com emojis, estilo ${estilo}, CTA para pededireto.pt",
   "copy_story": "versão curta 2-3 linhas para story",
@@ -149,7 +219,7 @@ Negócio: ${nome} | Sector: ${sector} | O que mostrar: ${descricao} | Estilo: ${
 ${texto_sobreposto ? "Texto sobreposto: " + texto_sobreposto : ""}
 ${extras ? "Extras: " + extras : ""}
 
-Responde APENAS com JSON válido, sem markdown. Estrutura:
+Responde APENAS com JSON válido, sem markdown. Escreve tudo numa linha contínua sem quebras de linha dentro dos valores. Estrutura:
 {
   "prompt_principal": "prompt completa em inglês para Grok/ChatGPT/Leonardo, formato 9:16 vertical, fotorrealista, cinematográfico, cores profissionais, SEM texto na imagem, máximo 150 palavras",
   "variante_a": "variante com ângulo ou composição diferente, 100 palavras",
@@ -216,9 +286,19 @@ Responde APENAS com JSON válido, sem markdown. Estrutura:
     const aiData = await response.json();
     const rawContent = aiData.choices?.[0]?.message?.content || "";
 
-    return new Response(JSON.stringify({ content: rawContent }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Parse JSON on the server side with the robust parser
+    try {
+      const parsed = safeParseJSON(rawContent);
+      return new Response(JSON.stringify({ content: parsed }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (parseErr) {
+      console.error("JSON parse failed. Raw content:", rawContent);
+      return new Response(
+        JSON.stringify({ error: "A IA gerou uma resposta malformada. Tenta novamente." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
   } catch (e) {
     console.error("studio-generate error:", e);
     return new Response(
