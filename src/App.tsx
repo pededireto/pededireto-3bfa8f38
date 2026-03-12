@@ -58,6 +58,12 @@ import UnsubscribePage from "./pages/UnsubscribePage";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
 
+import StudioLayout from "./pages/studio/StudioLayout";
+import StudioReelPage from "./pages/studio/StudioReelPage";
+import StudioImagePage from "./pages/studio/StudioImagePage";
+import StudioHistoryPage from "./pages/studio/StudioHistoryPage";
+import StudioSettingsPage from "./pages/studio/StudioSettingsPage";
+
 const queryClient = new QueryClient();
 
 /* =========================
@@ -247,6 +253,15 @@ const App = () => {
                     <Route path="/upgrade" element={<UpgradePage />} />
 
                     <Route path="/unsubscribe" element={<UnsubscribePage />} />
+
+                    {/* MARKETING AI STUDIO */}
+                    <Route path="/app" element={<StudioLayout />}>
+                      <Route index element={<StudioReelPage />} />
+                      <Route path="reel" element={<StudioReelPage />} />
+                      <Route path="image" element={<StudioImagePage />} />
+                      <Route path="history" element={<StudioHistoryPage />} />
+                      <Route path="settings" element={<StudioSettingsPage />} />
+                    </Route>
 
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />
