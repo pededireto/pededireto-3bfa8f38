@@ -296,22 +296,22 @@ const StudioReelPage = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Categoria *</label>
-                  <Select value={categoriaKey} onValueChange={(v) => { setCategoriaKey(v); setSubcategoria(""); }}>
+                  <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSubcategoria(""); }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Object.entries(CATEGORIES).map(([key, cat]) => (
-                        <SelectItem key={key} value={key}>{cat.emoji} {cat.label}</SelectItem>
+                      {dbCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.icon || "📁"} {cat.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Subcategoria *</label>
-                  <Select value={subcategoria} onValueChange={setSubcategoria} disabled={!categoriaKey}>
+                  <Select value={subcategoria} onValueChange={setSubcategoria} disabled={!selectedCatId}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {(CATEGORIES[categoriaKey]?.subcategories || []).map((sub) => (
-                        <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                      {dbSubcategories.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
