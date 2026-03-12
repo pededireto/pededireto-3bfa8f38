@@ -330,7 +330,7 @@ const StudioReelPage = () => {
               <Button
                 size="sm"
                 onClick={() => { setStepsDone((p) => ({ ...p, 2: true })); setOpenStep(3); }}
-                disabled={!nome || !cidade || !categoriaKey || !subcategoria}
+                disabled={!nome || !cidade || !selectedCatId || !subcategoria}
               >
                 Confirmar dados
               </Button>
