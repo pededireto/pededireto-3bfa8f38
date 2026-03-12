@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp, Check, Sparkles, Upload, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,22 +11,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useStudioGenerate } from "@/hooks/useStudioGenerate";
 import { useSaveGeneration } from "@/hooks/useGenerations";
+import { useCategories } from "@/hooks/useCategories";
+import { useSubcategories } from "@/hooks/useSubcategories";
+import { useStudioContext } from "@/pages/studio/StudioLayout";
 import CopyButton from "@/components/studio/CopyButton";
 import GrokBox from "@/components/studio/GrokBox";
-
-// ── Data ──
-const CATEGORIES: Record<string, { label: string; emoji: string; subcategories: string[] }> = {
-  obras: { label: "Obras & Reparações", emoji: "🔧", subcategories: ["Canalizador","Eletricista","Pintor","Serralheiro","Pedreiro","Carpinteiro","Remodelações","Telhados","Impermeabilização","Piscinas"] },
-  restauracao: { label: "Restauração", emoji: "🍽️", subcategories: ["Restaurante","Café/Bistrô","Pizzaria","Sushi","Pastelaria","Marisqueira","Churrasqueira","Snack-bar","Hamburgeria","Padaria"] },
-  beleza: { label: "Beleza & Estética", emoji: "💇", subcategories: ["Cabeleireiro","Barbearia","Estética/Unhas","Spa/Massagens","Maquilhagem","Sobrancelhas","Bronzeamento","Depilação","Loja de Cosmética"] },
-  saude: { label: "Saúde & Bem-estar", emoji: "🏥", subcategories: ["Fisioterapeuta","Psicólogo","Nutricionista","Dentista","Clínica Geral","Oftalmologista","Dermatologia","Farmácia","Medicina Estética","Veterinário"] },
-  profissionais: { label: "Profissionais", emoji: "💼", subcategories: ["Advogado","Contabilista","Imobiliária","Mediador de Seguros","Arquitecto","Engenheiro","Consultoria","Gestor de Redes Sociais","Marketing Digital","Fotógrafo"] },
-  transporte: { label: "Transporte", emoji: "🚗", subcategories: ["Mudanças","Reboque","Motorista Particular","Táxi","Rent-a-Car","Courier/Entregas","Mecânico","Automóveis Usados","Pintura Auto"] },
-  comercio: { label: "Comércio", emoji: "🛒", subcategories: ["Loja de Roupa","Calçado","Electrónica","Mobiliário","Bricolage","Livraria","Florista","Joalharia","Supermercado","Talho"] },
-  educacao: { label: "Educação & Formação", emoji: "📚", subcategories: ["Escola de Condução","Centro de Explicações","Academia de Línguas","Fitness/Ginásio","Yoga/Pilates","Artes Marciais","Música","Dança","Culinária"] },
-  tecnologia: { label: "Tecnologia", emoji: "💻", subcategories: ["Reparação de Telemóveis","Informática","Desenvolvimento Web","Software","IT Support","Segurança Electrónica","Impressão 3D"] },
-  eventos: { label: "Eventos & Entretenimento", emoji: "🎉", subcategories: ["Fotógrafo de Eventos","Videógrafo","DJ/Animação","Catering","Espaço de Eventos","Decoração","Casamentos","Team Building"] },
-};
 
 const ESTILOS = [
   { key: "institucional", label: "Institucional", emoji: "🏛️", desc: "Credibilidade e confiança" },
@@ -61,6 +50,12 @@ const TOM_MAP: Record<string, number[]> = {
 const StudioReelPage = () => {
   const { generate, isLoading } = useStudioGenerate();
   const saveGen = useSaveGeneration();
+  const { selectedBusiness } = useStudioContext();
+
+  // DB categories & subcategories
+  const { data: dbCategories = [] } = useCategories();
+  const [selectedCatId, setSelectedCatId] = useState("");
+  const { data: dbSubcategories = [] } = useSubcategories(selectedCatId || undefined);
 
   // Step states
   const [openStep, setOpenStep] = useState(1);
@@ -74,7 +69,6 @@ const StudioReelPage = () => {
   // Step 2
   const [nome, setNome] = useState("");
   const [cidade, setCidade] = useState("");
-  const [categoriaKey, setCategoriaKey] = useState("");
   const [subcategoria, setSubcategoria] = useState("");
   const [servicos, setServicos] = useState("");
   const [diferencial, setDiferencial] = useState("");
@@ -92,6 +86,15 @@ const StudioReelPage = () => {
   const [result, setResult] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
 
+  // Auto-populate from selected business
+  useEffect(() => {
+    if (selectedBusiness) {
+      setNome(selectedBusiness.name || "");
+      setCidade(selectedBusiness.city || "");
+      if (selectedBusiness.category_id) setSelectedCatId(selectedBusiness.category_id);
+    }
+  }, [selectedBusiness]);
+
   // ── Extract ──
   const handleExtract = async () => {
     if (!profileText.trim()) return;
@@ -102,7 +105,9 @@ const StudioReelPage = () => {
 
     setNome(data.nome || "");
     setCidade(data.cidade || "");
-    setCategoriaKey(data.categoria_key || "");
+    // Try to match extracted category_key to a DB category by slug
+    const matchedCat = dbCategories.find((c) => c.slug === data.categoria_key);
+    setSelectedCatId(matchedCat?.id || "");
     setSubcategoria(data.subcategoria || "");
     setServicos(data.servicos || "");
     setDiferencial(data.diferencial || "");
@@ -133,7 +138,7 @@ const StudioReelPage = () => {
 
   // ── Generate ──
   const canGenerate =
-    nome && cidade && categoriaKey && subcategoria && imageBase64 && !generating;
+    nome && cidade && selectedCatId && subcategoria && imageBase64 && !generating;
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
@@ -145,7 +150,7 @@ const StudioReelPage = () => {
     const data = await generate("generate_reel", {
       nome,
       cidade,
-      categoria: CATEGORIES[categoriaKey]?.label || categoriaKey,
+      categoria: dbCategories.find((c) => c.id === selectedCatId)?.name || selectedCatId,
       subcategoria,
       servicos,
       diferencial,
@@ -300,22 +305,22 @@ const StudioReelPage = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Categoria *</label>
-                  <Select value={categoriaKey} onValueChange={(v) => { setCategoriaKey(v); setSubcategoria(""); }}>
+                  <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSubcategoria(""); }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Object.entries(CATEGORIES).map(([key, cat]) => (
-                        <SelectItem key={key} value={key}>{cat.emoji} {cat.label}</SelectItem>
+                      {dbCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.icon || "📁"} {cat.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Subcategoria *</label>
-                  <Select value={subcategoria} onValueChange={setSubcategoria} disabled={!categoriaKey}>
+                  <Select value={subcategoria} onValueChange={setSubcategoria} disabled={!selectedCatId}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {(CATEGORIES[categoriaKey]?.subcategories || []).map((sub) => (
-                        <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                      {dbSubcategories.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -334,7 +339,7 @@ const StudioReelPage = () => {
               <Button
                 size="sm"
                 onClick={() => { setStepsDone((p) => ({ ...p, 2: true })); setOpenStep(3); }}
-                disabled={!nome || !cidade || !categoriaKey || !subcategoria}
+                disabled={!nome || !cidade || !selectedCatId || !subcategoria}
               >
                 Confirmar dados
               </Button>

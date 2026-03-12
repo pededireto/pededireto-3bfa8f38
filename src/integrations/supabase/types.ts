@@ -678,6 +678,81 @@ export type Database = {
           },
         ]
       }
+      business_addons: {
+        Row: {
+          activated_at: string
+          addon_type: string
+          business_id: string
+          created_at: string | null
+          created_by: string | null
+          duration_months: number
+          id: string
+          is_active: boolean
+          is_trial: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          activated_at?: string
+          addon_type?: string
+          business_id: string
+          created_at?: string | null
+          created_by?: string | null
+          duration_months?: number
+          id?: string
+          is_active?: boolean
+          is_trial?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          activated_at?: string
+          addon_type?: string
+          business_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          duration_months?: number
+          id?: string
+          is_active?: boolean
+          is_trial?: boolean
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_addons_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_addons_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_addons_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_addons_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_addons_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_analytics_events: {
         Row: {
           business_id: string
