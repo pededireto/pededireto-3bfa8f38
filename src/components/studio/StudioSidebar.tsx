@@ -1,8 +1,9 @@
 import { useLocation, Link } from "react-router-dom";
-import { Film, ImageIcon, Clock, Settings, Zap, X } from "lucide-react";
+import { Film, ImageIcon, Clock, Settings, Zap, X, AlertTriangle } from "lucide-react";
 import { useGenerations } from "@/hooks/useGenerations";
+import { useBusinessAddon, getAddonStatus } from "@/hooks/useBusinessAddons";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { pt } from "date-fns/locale";
 import logoImg from "@/assets/pede-direto-logo.png";
 
@@ -11,9 +12,11 @@ const navItems = [
   { label: "Gerador de Imagem", icon: ImageIcon, path: "/app/image", emoji: "🖼️" },
 ];
 
-const StudioSidebar = ({ onClose }: { onClose: () => void }) => {
+const StudioSidebar = ({ onClose, selectedBusinessId }: { onClose: () => void; selectedBusinessId?: string }) => {
   const location = useLocation();
   const { data: recentGenerations } = useGenerations(3);
+  const { data: addon } = useBusinessAddon(selectedBusinessId);
+  const addonStatus = getAddonStatus(addon || null);
 
   return (
     <div className="h-full flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -138,13 +141,38 @@ const StudioSidebar = ({ onClose }: { onClose: () => void }) => {
         </div>
       </div>
 
-      {/* Addon pill */}
+      {/* Addon pill — dynamic */}
       <div className="p-3 border-t border-sidebar-border">
-        <div className="px-3 py-2.5 rounded-lg border border-cta/30 bg-cta/5 text-xs text-center">
-          <Zap className="h-3 w-3 inline mr-1 text-cta" />
-          <span className="text-cta font-medium">ADD-ON Activo</span>
-          <span className="text-muted-foreground"> · Marketing AI · Trial 30 dias</span>
-        </div>
+        {addonStatus.status === "expired" ? (
+          <div className="px-3 py-2.5 rounded-lg border border-destructive/30 bg-destructive/10 text-xs text-center">
+            <AlertTriangle className="h-3 w-3 inline mr-1 text-destructive" />
+            <span className="text-destructive font-medium">Subscrição expirada</span>
+            <span className="text-muted-foreground block mt-0.5">Contactar Pede Direto para renovar</span>
+          </div>
+        ) : addonStatus.status === "expiring" ? (
+          <div className="px-3 py-2.5 rounded-lg border border-warning/30 bg-warning/10 text-xs text-center">
+            <AlertTriangle className="h-3 w-3 inline mr-1 text-warning" />
+            <span className="text-warning font-medium">{addonStatus.daysLeft} dias restantes</span>
+            <span className="text-muted-foreground block mt-0.5">Contactar Pede Direto para renovar</span>
+          </div>
+        ) : addon?.is_trial ? (
+          <div className="px-3 py-2.5 rounded-lg border border-cta/30 bg-cta/5 text-xs text-center">
+            <Zap className="h-3 w-3 inline mr-1 text-cta" />
+            <span className="text-cta font-medium">Trial Activo</span>
+            <span className="text-muted-foreground"> · {addonStatus.daysLeft}d restantes</span>
+          </div>
+        ) : addonStatus.status === "active" ? (
+          <div className="px-3 py-2.5 rounded-lg border border-cta/30 bg-cta/5 text-xs text-center">
+            <Zap className="h-3 w-3 inline mr-1 text-cta" />
+            <span className="text-cta font-medium">ADD-ON Activo</span>
+            <span className="text-muted-foreground"> · Expira {addonStatus.expiresAt && format(addonStatus.expiresAt, "dd/MM/yyyy")}</span>
+          </div>
+        ) : (
+          <div className="px-3 py-2.5 rounded-lg border border-border bg-muted/30 text-xs text-center text-muted-foreground">
+            <Zap className="h-3 w-3 inline mr-1" />
+            Sem add-on activo
+          </div>
+        )}
       </div>
     </div>
   );
