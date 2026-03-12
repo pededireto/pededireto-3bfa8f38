@@ -376,6 +376,13 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border space-y-2">
         <Link
+          to="/app/reel"
+          className="flex items-center gap-2 text-sm text-cta hover:text-cta/80 transition-colors font-medium"
+        >
+          <Zap className="h-4 w-4" />
+          Marketing AI Studio
+        </Link>
+        <Link
           to="/"
           className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors"
         >
