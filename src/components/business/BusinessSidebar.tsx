@@ -82,6 +82,8 @@ const BusinessSidebar = ({
   const qc = useQueryClient();
   const { data: unreadNotifications = 0 } = useUnreadNotificationsCount(businessId);
   const { data: unreadRequests = 0 } = useBusinessUnreadRequestsCount(businessId);
+  const { data: addon } = useBusinessAddon(businessId);
+  const addonActive = getAddonStatus(addon || null).status !== "inactive";
 
   // Resolver profiles.id para o switcher
   const [profileId, setProfileId] = useState<string | null>(null);
