@@ -86,6 +86,15 @@ const StudioReelPage = () => {
   const [result, setResult] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
 
+  // Auto-populate from selected business
+  useEffect(() => {
+    if (selectedBusiness) {
+      setNome(selectedBusiness.name || "");
+      setCidade(selectedBusiness.city || "");
+      if (selectedBusiness.category_id) setSelectedCatId(selectedBusiness.category_id);
+    }
+  }, [selectedBusiness]);
+
   // ── Extract ──
   const handleExtract = async () => {
     if (!profileText.trim()) return;
