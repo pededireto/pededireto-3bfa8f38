@@ -254,6 +254,15 @@ const App = () => {
 
                     <Route path="/unsubscribe" element={<UnsubscribePage />} />
 
+                    {/* MARKETING AI STUDIO */}
+                    <Route path="/app" element={<StudioLayout />}>
+                      <Route index element={<StudioReelPage />} />
+                      <Route path="reel" element={<StudioReelPage />} />
+                      <Route path="image" element={<StudioImagePage />} />
+                      <Route path="history" element={<StudioHistoryPage />} />
+                      <Route path="settings" element={<StudioSettingsPage />} />
+                    </Route>
+
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
