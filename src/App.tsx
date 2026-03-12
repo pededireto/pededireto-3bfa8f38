@@ -58,6 +58,12 @@ import UnsubscribePage from "./pages/UnsubscribePage";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
 
+import StudioLayout from "./pages/studio/StudioLayout";
+import StudioReelPage from "./pages/studio/StudioReelPage";
+import StudioImagePage from "./pages/studio/StudioImagePage";
+import StudioHistoryPage from "./pages/studio/StudioHistoryPage";
+import StudioSettingsPage from "./pages/studio/StudioSettingsPage";
+
 const queryClient = new QueryClient();
 
 /* =========================
