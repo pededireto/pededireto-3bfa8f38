@@ -617,9 +617,9 @@ const ReelOutput = ({
       <div className="flex-1 overflow-auto">
         <TabsContent value="extensoes" className="p-4 space-y-4 mt-0">
           {/* Image analysis */}
-          <div className="rounded-xl border border-blue-400/30 bg-blue-500/5 p-4">
+          <div className="rounded-xl border border-ring/30 bg-ring/5 p-4">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-medium text-blue-400">Análise da imagem base</span>
+              <span className="text-xs font-medium text-ring">Análise da imagem base</span>
               <Badge variant="secondary" className="text-[10px]">
                 {ESTILOS.find((e) => e.key === estilo)?.emoji} {estilo}
               </Badge>
