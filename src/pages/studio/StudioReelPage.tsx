@@ -50,6 +50,12 @@ const TOM_MAP: Record<string, number[]> = {
 const StudioReelPage = () => {
   const { generate, isLoading } = useStudioGenerate();
   const saveGen = useSaveGeneration();
+  const { selectedBusiness } = useStudioContext();
+
+  // DB categories & subcategories
+  const { data: dbCategories = [] } = useCategories();
+  const [selectedCatId, setSelectedCatId] = useState("");
+  const { data: dbSubcategories = [] } = useSubcategories(selectedCatId || undefined);
 
   // Step states
   const [openStep, setOpenStep] = useState(1);
@@ -63,7 +69,6 @@ const StudioReelPage = () => {
   // Step 2
   const [nome, setNome] = useState("");
   const [cidade, setCidade] = useState("");
-  const [categoriaKey, setCategoriaKey] = useState("");
   const [subcategoria, setSubcategoria] = useState("");
   const [servicos, setServicos] = useState("");
   const [diferencial, setDiferencial] = useState("");
