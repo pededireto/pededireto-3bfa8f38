@@ -90,6 +90,7 @@ const AdminPage = () => {
     if (activeTab === "blog") return <BlogContent />;
     if (activeTab === "newsletter") return <NewsletterContent />;
     if (activeTab === "affiliates") return <AffiliateAdminContent />;
+    if (activeTab === "marketing-addons") return <BusinessAddonsManager />;
 
     if (isLoading) {
       return (
