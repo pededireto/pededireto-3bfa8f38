@@ -76,8 +76,8 @@ export const useCreateAddon = () => {
       duration_months: number;
       is_trial: boolean;
     }) => {
-      const { data, error } = await supabase
-        .from("business_addons" as any)
+      const { data, error } = await (supabase as any)
+        .from("business_addons")
         .upsert({
           ...params,
           addon_type: params.addon_type || "marketing_ai",
