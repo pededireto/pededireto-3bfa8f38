@@ -100,8 +100,8 @@ export const useDeactivateAddon = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("business_addons" as any)
+      const { error } = await (supabase as any)
+        .from("business_addons")
         .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
