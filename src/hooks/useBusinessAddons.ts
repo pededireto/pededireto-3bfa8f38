@@ -36,15 +36,15 @@ export const useBusinessAddon = (businessId?: string, addonType = "marketing_ai"
     queryKey: ["business-addon", businessId, addonType],
     queryFn: async () => {
       if (!businessId) return null;
-      const { data, error } = await supabase
-        .from("business_addons" as any)
+      const { data, error } = await (supabase as any)
+        .from("business_addons")
         .select("*")
         .eq("business_id", businessId)
         .eq("addon_type", addonType)
         .eq("is_active", true)
         .maybeSingle();
       if (error) throw error;
-      return data as BusinessAddon | null;
+      return (data as unknown) as BusinessAddon | null;
     },
     enabled: !!businessId,
   });
