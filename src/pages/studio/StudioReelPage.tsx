@@ -129,7 +129,7 @@ const StudioReelPage = () => {
 
   // ── Generate ──
   const canGenerate =
-    nome && cidade && categoriaKey && subcategoria && imageBase64 && !generating;
+    nome && cidade && selectedCatId && subcategoria && imageBase64 && !generating;
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
