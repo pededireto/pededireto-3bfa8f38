@@ -15,7 +15,9 @@ import {
   Award,
   ChevronDown,
   Handshake,
+  Zap,
 } from "lucide-react";
+import { useBusinessAddon, getAddonStatus } from "@/hooks/useBusinessAddons";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
@@ -80,6 +82,8 @@ const BusinessSidebar = ({
   const qc = useQueryClient();
   const { data: unreadNotifications = 0 } = useUnreadNotificationsCount(businessId);
   const { data: unreadRequests = 0 } = useBusinessUnreadRequestsCount(businessId);
+  const { data: addon } = useBusinessAddon(businessId);
+  const addonActive = getAddonStatus(addon || null).status !== "inactive";
 
   // Resolver profiles.id para o switcher
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -177,6 +181,20 @@ const BusinessSidebar = ({
             )}
           </button>
         ))}
+
+        {/* Marketing AI Studio — only if addon active */}
+        {addonActive && (
+          <Link
+            to="/app/reel"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            <Zap className="h-5 w-5 text-cta" />
+            Marketing AI
+            <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 border-cta/30 text-cta">
+              AI
+            </Badge>
+          </Link>
+        )}
       </nav>
 
       <div className="p-4 border-t border-sidebar-border space-y-2">
