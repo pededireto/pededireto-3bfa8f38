@@ -15,7 +15,9 @@ import {
   Award,
   ChevronDown,
   Handshake,
+  Zap,
 } from "lucide-react";
+import { useBusinessAddon, getAddonStatus } from "@/hooks/useBusinessAddons";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";

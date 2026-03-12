@@ -15,15 +15,20 @@ export interface BusinessAddon {
   updated_at: string;
 }
 
-function computeExpiresAt(activatedAt: string, durationMonths: number): Date {
-  const d = new Date(activatedAt);
-  d.setMonth(d.getMonth() + durationMonths);
+function computeExpiresAt(addon: BusinessAddon): Date {
+  const d = new Date(addon.activated_at);
+  if (addon.is_trial) {
+    // Trials are always 15 days
+    d.setDate(d.getDate() + 15);
+  } else {
+    d.setMonth(d.getMonth() + addon.duration_months);
+  }
   return d;
 }
 
 export function getAddonStatus(addon: BusinessAddon | null) {
   if (!addon || !addon.is_active) return { status: "inactive" as const, daysLeft: 0, expiresAt: null };
-  const expires = computeExpiresAt(addon.activated_at, addon.duration_months);
+  const expires = computeExpiresAt(addon);
   const now = new Date();
   const daysLeft = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   if (daysLeft <= 0) return { status: "expired" as const, daysLeft: 0, expiresAt: expires };
