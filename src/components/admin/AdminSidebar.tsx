@@ -116,6 +116,7 @@ const SIDEBAR_STRUCTURE: Omit<SidebarItem, "badge">[][] = [
     { id: "claim-requests", label: "Pedidos de Claim", icon: ShieldCheck },
     { id: "pending-claims", label: "Reclamações Comerciais", icon: FileCheck },
     { id: "business-modules", label: "Config. Ficha", icon: Puzzle },
+    { id: "marketing-addons", label: "Marketing AI", icon: Zap },
     { id: "featured", label: "Destaques", icon: Crown },
     { id: "reviews", label: "Avaliações", icon: Star },
   ],
