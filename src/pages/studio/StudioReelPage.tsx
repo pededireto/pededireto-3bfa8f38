@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp, Check, Sparkles, Upload, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,22 +11,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useStudioGenerate } from "@/hooks/useStudioGenerate";
 import { useSaveGeneration } from "@/hooks/useGenerations";
+import { useCategories } from "@/hooks/useCategories";
+import { useSubcategories } from "@/hooks/useSubcategories";
+import { useStudioContext } from "@/pages/studio/StudioLayout";
 import CopyButton from "@/components/studio/CopyButton";
 import GrokBox from "@/components/studio/GrokBox";
-
-// ── Data ──
-const CATEGORIES: Record<string, { label: string; emoji: string; subcategories: string[] }> = {
-  obras: { label: "Obras & Reparações", emoji: "🔧", subcategories: ["Canalizador","Eletricista","Pintor","Serralheiro","Pedreiro","Carpinteiro","Remodelações","Telhados","Impermeabilização","Piscinas"] },
-  restauracao: { label: "Restauração", emoji: "🍽️", subcategories: ["Restaurante","Café/Bistrô","Pizzaria","Sushi","Pastelaria","Marisqueira","Churrasqueira","Snack-bar","Hamburgeria","Padaria"] },
-  beleza: { label: "Beleza & Estética", emoji: "💇", subcategories: ["Cabeleireiro","Barbearia","Estética/Unhas","Spa/Massagens","Maquilhagem","Sobrancelhas","Bronzeamento","Depilação","Loja de Cosmética"] },
-  saude: { label: "Saúde & Bem-estar", emoji: "🏥", subcategories: ["Fisioterapeuta","Psicólogo","Nutricionista","Dentista","Clínica Geral","Oftalmologista","Dermatologia","Farmácia","Medicina Estética","Veterinário"] },
-  profissionais: { label: "Profissionais", emoji: "💼", subcategories: ["Advogado","Contabilista","Imobiliária","Mediador de Seguros","Arquitecto","Engenheiro","Consultoria","Gestor de Redes Sociais","Marketing Digital","Fotógrafo"] },
-  transporte: { label: "Transporte", emoji: "🚗", subcategories: ["Mudanças","Reboque","Motorista Particular","Táxi","Rent-a-Car","Courier/Entregas","Mecânico","Automóveis Usados","Pintura Auto"] },
-  comercio: { label: "Comércio", emoji: "🛒", subcategories: ["Loja de Roupa","Calçado","Electrónica","Mobiliário","Bricolage","Livraria","Florista","Joalharia","Supermercado","Talho"] },
-  educacao: { label: "Educação & Formação", emoji: "📚", subcategories: ["Escola de Condução","Centro de Explicações","Academia de Línguas","Fitness/Ginásio","Yoga/Pilates","Artes Marciais","Música","Dança","Culinária"] },
-  tecnologia: { label: "Tecnologia", emoji: "💻", subcategories: ["Reparação de Telemóveis","Informática","Desenvolvimento Web","Software","IT Support","Segurança Electrónica","Impressão 3D"] },
-  eventos: { label: "Eventos & Entretenimento", emoji: "🎉", subcategories: ["Fotógrafo de Eventos","Videógrafo","DJ/Animação","Catering","Espaço de Eventos","Decoração","Casamentos","Team Building"] },
-};
 
 const ESTILOS = [
   { key: "institucional", label: "Institucional", emoji: "🏛️", desc: "Credibilidade e confiança" },
