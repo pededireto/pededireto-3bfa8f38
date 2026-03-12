@@ -141,7 +141,7 @@ const StudioReelPage = () => {
     const data = await generate("generate_reel", {
       nome,
       cidade,
-      categoria: CATEGORIES[categoriaKey]?.label || categoriaKey,
+      categoria: dbCategories.find((c) => c.id === selectedCatId)?.name || selectedCatId,
       subcategoria,
       servicos,
       diferencial,
