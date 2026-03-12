@@ -54,13 +54,13 @@ export const useAllBusinessAddons = (addonType = "marketing_ai") => {
   return useQuery({
     queryKey: ["business-addons-all", addonType],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_addons" as any)
+      const { data, error } = await (supabase as any)
+        .from("business_addons")
         .select("*, businesses:business_id(name, slug, city)")
         .eq("addon_type", addonType)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as (BusinessAddon & { businesses: { name: string; slug: string; city: string } })[];
+      return (data as unknown) as (BusinessAddon & { businesses: { name: string; slug: string; city: string } })[];
     },
   });
 };
