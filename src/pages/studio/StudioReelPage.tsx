@@ -96,7 +96,9 @@ const StudioReelPage = () => {
 
     setNome(data.nome || "");
     setCidade(data.cidade || "");
-    setCategoriaKey(data.categoria_key || "");
+    // Try to match extracted category_key to a DB category by slug
+    const matchedCat = dbCategories.find((c) => c.slug === data.categoria_key);
+    setSelectedCatId(matchedCat?.id || "");
     setSubcategoria(data.subcategoria || "");
     setServicos(data.servicos || "");
     setDiferencial(data.diferencial || "");
