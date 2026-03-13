@@ -1,79 +1,75 @@
 
 
-# Plan: Logo + Consumer Dashboard Review Feedback
+## Plan: Marketing AI Studio — Fix 0 + Fix A + Melhoria C + Melhoria B
 
-## Task 1 — Add PedeDireto Logo Image Everywhere
+### Overview
+Four changes in order: migrate to Gemini API direct, fix image compression, rebuild Image generator with full creative freedom, rebuild Reel generator without blocking steps.
 
-Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
-
-### Files to modify (logo replacement):
-
-**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
-
-| File | Location | Logo size |
-|------|----------|-----------|
-| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
-| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
-| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
-| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
-| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
-| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
-| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
-| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
-| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
-| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
-| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
-| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
-| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
-| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
-| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
-| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
-| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
-
-Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
+### Pre-requisite: GEMINI_API_KEY Secret
+Before deploying, you need to add the `GEMINI_API_KEY` secret. Get your API key from https://aistudio.google.com/apikey (requires Google Cloud billing — real cost under 10 euros/month). I'll prompt you to add it.
 
 ---
 
-## Task 2 — Review Feedback on Consumer Dashboard Requests
+### Fix 0 — Migrate to Gemini API Direct
 
-### Data model understanding
-- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
-- `request_business_matches` links `request_id` to `business_id`
-- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
+**File**: `supabase/functions/studio-generate/index.ts` (complete rewrite)
 
-### New hook: `useConsumerRequestReviews`
+- Remove all references to `LOVABLE_API_KEY`, `ai.gateway.lovable.dev`, OpenAI-compatible format
+- Add `callGemini()` function using native Gemini API (`generativelanguage.googleapis.com/v1beta`)
+- Model: `gemini-2.5-flash` (fast, cheap, multimodal)
+- Image sent as `inline_data` with `mime_type` + pure base64 (strip data URL prefix)
+- Extract prompt builders into separate functions: `buildReelPrompt()`, `buildImagePrompt()`, `EXTRACT_PROFILE_PROMPT`
+- Keep: `safeParseJSON`, CORS headers, JWT validation via `getClaims()`
 
-In `src/hooks/useServiceRequests.ts`, add a new hook that:
-1. Takes the list of request IDs
-2. For each request, gets the matched business IDs from `request_business_matches`
-3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
-4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
+### Fix A — Image Compression + Undefined Fixes
 
-Implementation approach — a single query that:
-```typescript
-// 1. Get all matches for the user's requests
-const { data: matches } = await supabase
-  .from("request_business_matches")
-  .select("request_id, business_id, businesses(name)")
-  .in("request_id", requestIds);
+**File**: `src/pages/studio/StudioReelPage.tsx`
 
-// 2. Get all reviews by this user
-const { data: reviews } = await supabase
-  .from("business_reviews")
-  .select("business_id, rating, business_response, business_response_at")
-  .eq("user_id", userId);
+- Add `compressImage(file, maxWidth=1024, quality=0.8)` using canvas — reduces 5MB images to ~200KB JPEG
+- All fields in edge function prompts get `|| 'não especificado'` fallbacks (no more "undefined" strings)
+- Add logging: `console.log([studio-generate] action=..., imageSize=... chars)`
 
-// 3. Cross-reference: for each match, find if there's a review
-```
+### Melhoria C — Image Generator: Total Creative Freedom
 
-### UI changes in `src/pages/UserDashboard.tsx`
+**File**: `src/pages/studio/StudioImagePage.tsx` (complete rewrite)
 
-In the request card (lines 281-346), after the status Badge, add:
+- `canGenerate = !generating` — zero required fields, always active
+- New objective pills: Negócio, Produto, Evento, Pessoa/Equipa, Espaço, Outro
+- New fields: `personagens`, `ambiente`, `proporcao` (9:16 / 1:1 / 16:9)
+- All fields optional with helpful placeholders
+- New `buildImagePrompt()` in edge function with creative mode when no context provided
 
-1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
-2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
+### Melhoria B — Reel Generator: No Blocking
 
-Visual design:
-- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
-- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
+**File**: `src/pages/studio/StudioReelPage.tsx` (complete rewrite)
+
+- Remove `stepsUnlocked`, `stepsDone` — no more locked steps
+- **Step 1 (always visible)**: Objective pills (required) + description (optional) + image upload (required)
+- **Step 2 (collapsible, closed by default)**: Business context — AI extraction OR manual fields, all optional
+- **Step 3 (collapsible, closed by default)**: Tone & style with smart defaults per objective
+- `canGenerate = imageBase64 && objectivo && !generating`
+- Smart defaults: changing objective auto-updates toms and estilo (unless user manually changed them)
+- New payload format with individual `tomExt1`...`tomExt5` fields + `objectivo` + `objectivoDescricao`
+
+### Melhoria D — Multi-Category: DEFERRED
+
+Create `docs/multi-category-plan.md` with the technical plan for future implementation.
+
+---
+
+### Files Changed
+
+| File | Action |
+|---|---|
+| `supabase/functions/studio-generate/index.ts` | Complete rewrite — Gemini direct + new prompt builders |
+| `src/pages/studio/StudioReelPage.tsx` | Complete rewrite — 3-step unblocked flow + compression |
+| `src/pages/studio/StudioImagePage.tsx` | Complete rewrite — all optional + new fields |
+| `docs/multi-category-plan.md` | New — deferred multi-category plan |
+
+### Implementation Order
+1. Add GEMINI_API_KEY secret
+2. Rewrite edge function (Fix 0 + Fix A server-side)
+3. Rewrite StudioImagePage (Melhoria C)
+4. Rewrite StudioReelPage (Melhoria B + Fix A client-side)
+5. Create multi-category plan doc
 
