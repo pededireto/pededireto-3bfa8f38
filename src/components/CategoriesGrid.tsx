@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Category } from "@/hooks/useCategories";
 import {
@@ -36,18 +36,9 @@ const iconMap: Record<string, LucideIcon> = {
   Sparkles,
 };
 
-// Padrão bento que se repete a cada 8 cards
-// "wide" = colspan 2, "tall" = rowspan 2, "normal" = 1×1
-const BENTO: Array<"normal" | "tall" | "wide"> = [
-  "wide",
-  "tall",
-  "normal",
-  "normal",
-  "normal",
-  "wide",
-  "normal",
-  "tall",
-];
+// Padrão bento — todos os cards têm aspect-ratio 9:16 (formato Shorts/Reels)
+// "wide" = 2 colunas, "normal" = 1 coluna
+const BENTO: Array<"normal" | "wide"> = ["wide", "normal", "normal", "normal", "normal", "wide"];
 
 // ─── Helpers de média ─────────────────────────────────────────────────────────
 const SUPABASE_VIDEO_BASE = "https://zzkkdgiabsqtagtdhpid.supabase.co/storage/v1/object/public/Video/";
@@ -324,14 +315,13 @@ const CategoryCard = ({
 }: {
   category: Category;
   onOpen: () => void;
-  pattern: "normal" | "tall" | "wide";
+  pattern: "normal" | "wide";
 }) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const IconComponent = iconMap[category.icon || "Briefcase"] || Briefcase;
   const videoUrl = (category as any).video_url ?? null;
   const hasMedia = !!(videoUrl || category.image_url);
   const isWide = pattern === "wide";
-  const isTall = pattern === "tall";
 
   const handleMouseEnter = () => {
     timerRef.current = setTimeout(() => onOpen(), 1500);
@@ -348,7 +338,8 @@ const CategoryCard = ({
       className="group relative overflow-hidden rounded-2xl cursor-pointer shadow-md hover:shadow-xl transition-all duration-300"
       style={{
         gridColumn: isWide ? "span 2" : "span 1",
-        gridRow: isTall ? "span 2" : "span 1",
+        // aspect-ratio 9:16 — wide fica 18:16 (quase quadrado), normal fica portrait
+        aspectRatio: isWide ? "18/16" : "9/16",
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -360,13 +351,10 @@ const CategoryCard = ({
             <CardMedia videoUrl={videoUrl} imageUrl={category.image_url} name={category.name} />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent transition-opacity duration-300 group-hover:from-black/90" />
-          <div
-            className="relative z-10 flex flex-col justify-end h-full p-4"
-            style={{ minHeight: isTall ? "360px" : "180px" }}
-          >
+          <div className="relative z-10 flex flex-col justify-end h-full p-4">
             <h3
               className={`font-semibold text-white drop-shadow-md transition-transform duration-300 group-hover:-translate-y-0.5 ${
-                isWide || isTall ? "text-base md:text-xl" : "text-sm md:text-base"
+                isWide ? "text-base md:text-xl" : "text-sm md:text-base"
               }`}
               style={{ textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}
             >
@@ -375,10 +363,7 @@ const CategoryCard = ({
           </div>
         </>
       ) : (
-        <div
-          className="card-category flex flex-col items-center justify-center h-full"
-          style={{ minHeight: isTall ? "360px" : "180px" }}
-        >
+        <div className="card-category flex flex-col items-center justify-center h-full">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
             <IconComponent className="w-7 h-7 text-primary" />
           </div>
@@ -403,7 +388,7 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
             <h2 className="text-3xl md:text-4xl font-bold mb-3">Encontre por categoria</h2>
             <p className="text-muted-foreground text-lg">Escolha a área de negócio que procura</p>
           </div>
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(4, 1fr)", gridAutoRows: "180px" }}>
+          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
             {[...Array(8)].map((_, i) => {
               const p = BENTO[i];
               return (
@@ -412,7 +397,7 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
                   className="animate-pulse rounded-2xl bg-muted"
                   style={{
                     gridColumn: p === "wide" ? "span 2" : "span 1",
-                    gridRow: p === "tall" ? "span 2" : "span 1",
+                    aspectRatio: p === "wide" ? "18/16" : "9/16",
                   }}
                 />
               );
@@ -433,7 +418,7 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
           </div>
 
           {/* Bento grid — 4 colunas desktop, 2 em mobile */}
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(4, 1fr)", gridAutoRows: "180px" }}>
+          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
             {categories.map((category, index) => (
               <CategoryCard
                 key={category.id}
