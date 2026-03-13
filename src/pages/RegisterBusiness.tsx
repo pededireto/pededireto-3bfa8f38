@@ -83,7 +83,8 @@ const RegisterBusiness = () => {
     city: "",
     email: "",
     password: "",
-    categoryId: "",
+    categoryIds: [],
+    primaryCategoryId: "",
     subcategoryIds: [],
   });
 
