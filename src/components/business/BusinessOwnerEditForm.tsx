@@ -306,7 +306,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     cta_website: "",
     schedule_weekdays: "",
     schedule_weekend: "",
-    show_schedule: false,
+    show_schedule: true,
     cta_whatsapp: "",
     show_whatsapp: false,
     instagram_url: "",
