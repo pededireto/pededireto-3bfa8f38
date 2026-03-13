@@ -23,6 +23,7 @@ const FeaturedContent = ({ businesses }: FeaturedContentProps) => {
   const { toast } = useToast();
   const updateBusiness = useUpdateBusiness();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [suggestionSearch, setSuggestionSearch] = useState("");
 
   const superBusinesses = businesses
     .filter(b => b.is_premium && b.premium_level === "SUPER")
