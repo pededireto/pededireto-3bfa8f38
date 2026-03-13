@@ -172,10 +172,10 @@ Responde APENAS com JSON válido, sem markdown:
     {"num": 2, "titulo": "${p.tomExt2 || "Qualidade"} — desenvolvimento", "prompt": "..."},
     {"num": 3, "titulo": "${p.tomExt3 || "Confiança"} — detalhe", "prompt": "..."},
     {"num": 4, "titulo": "${p.tomExt4 || "Urgência"} — resultado", "prompt": "..."},
-    {"num": 5, "titulo": "CTA Final${p.nome ? " — " + p.nome : ""}", "prompt": "...com pededireto.pt"}
+    {"num": 5, "titulo": "CTA Final${p.nome ? " — " + p.nome : ""}", "prompt": "...com ${p.businessUrl || "pededireto.pt"}"}
   ],
-  "copy_post": "legenda Instagram PT-PT com emojis, objectivo ${p.objectivo || "negócio"}, CTA para pededireto.pt",
-  "copy_story": "versão curta 2-3 linhas para story",
+  "copy_post": "legenda Instagram PT-PT com emojis, objectivo ${p.objectivo || "negócio"}, CTA para ${p.businessUrl || "pededireto.pt"} — usar este link exacto",
+  "copy_story": "versão curta 2-3 linhas para story com CTA para ${p.businessUrl || "pededireto.pt"}",
   "segmentacao": {
     "genero": "...", "idade": "...", "interesses": "...",
     "objetivo": "...", "orcamento_dia": "€X/dia"
