@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Category } from "@/hooks/useCategories";
 import {
@@ -88,11 +88,29 @@ const CardMedia = ({
   className?: string;
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const normalized = videoUrl ? normalizeVideoUrl(videoUrl) : null;
 
+  // Carrega o vídeo via fetch → blob URL, contornando CSP media-src
+  useEffect(() => {
+    if (!normalized || isYouTubeUrl(normalized)) return;
+    let objectUrl: string;
+    fetch(normalized)
+      .then((r) => r.blob())
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+      })
+      .catch(() => {}); // falha silenciosa — mostra imagem de fallback
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [normalized]);
+
+  // Autoplay via IntersectionObserver
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !blobUrl) return;
     const obs = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) video.play().catch(() => {});
@@ -102,9 +120,9 @@ const CardMedia = ({
     );
     obs.observe(video);
     return () => obs.disconnect();
-  }, []);
+  }, [blobUrl]);
 
-  // 1. YouTube
+  // 1. YouTube → iframe (não precisa de blob)
   if (normalized && isYouTubeUrl(normalized)) {
     return (
       <iframe
@@ -117,24 +135,30 @@ const CardMedia = ({
     );
   }
 
-  // 2. mp4 (Supabase ou URL completa)
+  // 2. mp4 via blob URL (Supabase)
   if (normalized) {
+    // Enquanto o blob carrega, mostra imagem se disponível
+    if (!blobUrl) {
+      if (imageUrl) {
+        return <img src={imageUrl} alt={name} className={`w-full h-full object-cover ${className}`} />;
+      }
+      return <div className={`w-full h-full bg-muted ${className}`} />;
+    }
     return (
       <video
         ref={videoRef}
-        src={normalized}
+        src={blobUrl}
         muted
         loop
         playsInline
-        preload="metadata"
         className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${className}`}
         aria-label={name}
       />
     );
   }
 
-  // 3. Imagem URL normal
-  if (imageUrl && !isBase64(imageUrl)) {
+  // 3. Imagem URL normal ou base64
+  if (imageUrl) {
     return (
       <img
         src={imageUrl}
@@ -145,18 +169,6 @@ const CardMedia = ({
     );
   }
 
-  // 4. Imagem base64
-  if (imageUrl && isBase64(imageUrl)) {
-    return (
-      <img
-        src={imageUrl}
-        alt={name}
-        className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${className}`}
-      />
-    );
-  }
-
-  // 5. Fallback
   return null;
 };
 
