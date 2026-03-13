@@ -299,7 +299,10 @@ const RegisterBusiness = () => {
     .map((id) => subcategories.find((s) => s.id === id)?.name)
     .filter(Boolean);
 
-  const selectedCategoryName = categories.find((c) => c.id === formData.categoryId)?.name;
+  const selectedCategoryNames = formData.categoryIds
+    .map((id) => categories.find((c) => c.id === id)?.name)
+    .filter(Boolean);
+  const primaryCategoryName = categories.find((c) => c.id === formData.primaryCategoryId)?.name;
 
   const maskPhone = (phone: string) => {
     if (phone.length < 3) return phone;
