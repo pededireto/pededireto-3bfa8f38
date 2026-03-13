@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Star, Building2, ArrowUp, ArrowDown, Loader2, Crown } from "lucide-react";
-import { useState } from "react";
+import { Star, Building2, ArrowUp, ArrowDown, Loader2, Crown, Search, TrendingUp } from "lucide-react";
+import { useState, useMemo } from "react";
 import FeaturedCategoriesManager from "./FeaturedCategoriesManager";
 
 interface FeaturedContentProps {
@@ -23,6 +23,7 @@ const FeaturedContent = ({ businesses }: FeaturedContentProps) => {
   const { toast } = useToast();
   const updateBusiness = useUpdateBusiness();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [suggestionSearch, setSuggestionSearch] = useState("");
 
   const superBusinesses = businesses
     .filter(b => b.is_premium && b.premium_level === "SUPER")
@@ -36,9 +37,17 @@ const FeaturedContent = ({ businesses }: FeaturedContentProps) => {
     .filter(b => b.is_featured && !b.is_premium)
     .sort((a, b) => a.display_order - b.display_order);
 
-  const nonFeaturedBusinesses = businesses
-    .filter(b => !b.is_featured && !b.is_premium && b.is_active)
-    .slice(0, 10);
+  const suggestedBusinesses = useMemo(() => {
+    let list = businesses
+      .filter(b => !b.is_featured && !b.is_premium && b.is_active);
+    if (suggestionSearch.trim()) {
+      const q = suggestionSearch.toLowerCase();
+      list = list.filter(b => b.name.toLowerCase().includes(q));
+    }
+    return list
+      .sort((a, b) => (b.ranking_score ?? 0) - (a.ranking_score ?? 0))
+      .slice(0, 20);
+  }, [businesses, suggestionSearch]);
 
   const toggleFeatured = async (business: BusinessWithCategory) => {
     setUpdatingId(business.id);
@@ -179,14 +188,26 @@ const FeaturedContent = ({ businesses }: FeaturedContentProps) => {
         </div>
       </div>
 
-      {/* Add to Featured */}
+      {/* Suggestions based on ranking */}
       <div className="bg-card rounded-xl p-6 shadow-card">
-        <h2 className="text-lg font-semibold mb-4">Adicionar aos Destaques</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Sugestões — Melhores da Plataforma</h2>
+        </div>
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Pesquisar negócio por nome..."
+            value={suggestionSearch}
+            onChange={(e) => setSuggestionSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <div className="space-y-2">
-          {nonFeaturedBusinesses.map((business) => (
+          {suggestedBusinesses.map((business) => (
             <div key={business.id} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30">
               {business.logo_url ? (
-                <img src={business.logo_url} alt={business.name} className="w-10 h-10 rounded-lg object-cover" />
+                <img src={business.logo_url} alt={business.name} className="w-10 h-10 rounded-lg object-contain bg-muted" />
               ) : (
                 <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-muted-foreground" />
@@ -196,7 +217,10 @@ const FeaturedContent = ({ businesses }: FeaturedContentProps) => {
                 <h3 className="font-medium truncate">{business.name}</h3>
                 <p className="text-sm text-muted-foreground">{business.categories?.name}</p>
               </div>
-              <div className="flex gap-2">
+              <Badge variant="outline" className="text-xs shrink-0">
+                Score: {(business.ranking_score ?? 0).toFixed(1)}
+              </Badge>
+              <div className="flex gap-2 shrink-0">
                 <Button size="sm" variant="outline" onClick={() => updatePremiumLevel(business, "SUPER")} disabled={updatingId === business.id}>
                   <Crown className="h-4 w-4 mr-1" /> Super
                 </Button>
@@ -206,7 +230,7 @@ const FeaturedContent = ({ businesses }: FeaturedContentProps) => {
               </div>
             </div>
           ))}
-          {nonFeaturedBusinesses.length === 0 && <p className="text-muted-foreground text-center py-4">Sem negócios disponíveis.</p>}
+          {suggestedBusinesses.length === 0 && <p className="text-muted-foreground text-center py-4">Sem negócios encontrados.</p>}
         </div>
       </div>
     </div>
