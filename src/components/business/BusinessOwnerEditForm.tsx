@@ -567,24 +567,26 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         {/* 2. Presença Pública */}
         <Section title="Presença Pública" icon={Globe} badge="Gratuito · START">
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select
-                  value={form.category_id}
-                  onValueChange={(v) => setForm((prev) => ({ ...prev, category_id: v, subcategory_ids: [] }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Categorias</Label>
+                <MultiCategorySelector
+                  selectedCategoryIds={form.category_ids}
+                  primaryCategoryId={form.primary_category_id}
+                  onChange={(ids, primary) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      category_ids: ids,
+                      primary_category_id: primary,
+                      category_id: primary,
+                      // Remove subcategories from removed categories
+                      subcategory_ids: prev.subcategory_ids.filter((subId) => {
+                        const sub = allSubcategories.find((s) => s.id === subId);
+                        return sub && ids.includes(sub.category_id);
+                      }),
+                    }));
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Alcance</Label>
@@ -599,7 +601,6 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
             {form.category_id && filteredSubcategories.length > 0 && (
               <div className="space-y-2">
