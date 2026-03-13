@@ -308,6 +308,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     primary_category_id: "",
     subcategory_ids: [] as string[],
     city: "",
+    city_names: [] as string[],
+    primary_city: "",
     zone: "",
     alcance: "local" as "local" | "nacional" | "hibrido",
     public_address: "",
