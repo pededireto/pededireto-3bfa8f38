@@ -366,6 +366,23 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     }
   }, [business]);
 
+  // Load categories from junction table
+  useEffect(() => {
+    if (businessCategories && businessCategories.length > 0) {
+      const ids = businessCategories.map((bc) => bc.category_id);
+      const primary = businessCategories.find((bc) => bc.is_primary)?.category_id || ids[0] || "";
+      setForm((prev) => ({ ...prev, category_ids: ids, primary_category_id: primary, category_id: primary }));
+    } else if (business?.category_id) {
+      // Fallback for businesses not yet in junction table
+      setForm((prev) => ({
+        ...prev,
+        category_ids: [business.category_id],
+        primary_category_id: business.category_id,
+        category_id: business.category_id,
+      }));
+    }
+  }, [businessCategories, business?.category_id]);
+
   useEffect(() => {
     if (editSubcategoryIds) {
       setForm((prev) => ({ ...prev, subcategory_ids: editSubcategoryIds }));
