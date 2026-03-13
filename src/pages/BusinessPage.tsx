@@ -885,7 +885,7 @@ const BusinessPage = () => {
                         variant="outline"
                         className="w-full justify-center text-base hover:border-primary hover:text-primary transition-colors"
                         onClick={() => {
-                          handleCtaClick("website");
+                          handleCtaClick("reservation");
                           trackGA4Lead("booking");
                           window.open(ctaBookingUrl, "_blank");
                         }}
