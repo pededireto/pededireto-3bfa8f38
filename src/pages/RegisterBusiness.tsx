@@ -186,7 +186,8 @@ const RegisterBusiness = () => {
               name: formData.name,
               city: formData.city,
               cta_phone: formData.phone,
-              category_id: formData.categoryId,
+              category_id: formData.primaryCategoryId,
+              category_ids: formData.categoryIds,
               subcategory_ids: formData.subcategoryIds,
               owner_email: formData.email,
             })
