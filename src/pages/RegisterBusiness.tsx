@@ -107,7 +107,13 @@ const RegisterBusiness = () => {
   }, []);
 
   const { data: categories = [] } = useCategories();
-  const { data: subcategories = [] } = useSubcategories(formData.categoryId || undefined);
+  const { data: allSubcategories = [] } = useAllSubcategories();
+  const syncCategories = useSyncBusinessCategories();
+
+  // Subcategories filtered by ALL selected categories
+  const subcategories = allSubcategories.filter((s) =>
+    formData.categoryIds.includes(s.category_id)
+  );
 
   const updateField = (field: keyof FormData, value: string) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
