@@ -422,6 +422,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   const createBusiness = useCreateBusiness();
   const createAuditLog = useCreateAuditLog();
   const syncSubcategories = useSyncBusinessSubcategories();
+  const { data: businessCities } = useBusinessCityNames(business?.id);
+  const syncCities = useSyncBusinessCities();
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: commercialPlans = [] } = useCommercialPlans(true);
   const { data: editSubcategoryIds } = useBusinessSubcategoryIds(business?.id);
