@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Star, Building2, ArrowUp, ArrowDown, Loader2, Crown } from "lucide-react";
-import { useState } from "react";
+import { Star, Building2, ArrowUp, ArrowDown, Loader2, Crown, Search, TrendingUp } from "lucide-react";
+import { useState, useMemo } from "react";
 import FeaturedCategoriesManager from "./FeaturedCategoriesManager";
 
 interface FeaturedContentProps {
