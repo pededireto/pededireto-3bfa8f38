@@ -236,28 +236,16 @@ Deno.serve(async (req) => {
   }
 
   // SEO short URLs: /s/:subSlug/:citySlug (only if >= 3 businesses)
-  const seenShortUrl = new Set<string>();
-  for (const bs of businessSubcategories ?? []) {
-    const subData = subIdToData.get(bs.subcategory_id);
-    if (!subData) continue;
-    const biz = businessById.get(bs.business_id);
-    if (!biz?.city) continue;
-    const citySlugVal = slugify(biz.city);
-    const shortKey = `${subData.slug}/${citySlugVal}`;
-    if (!seenShortUrl.has(shortKey)) {
-      seenShortUrl.add(shortKey);
-    }
-  }
-
-  // Count businesses per short URL combo
   const shortUrlCounts = new Map<string, number>();
   for (const bs of businessSubcategories ?? []) {
     const subData = subIdToData.get(bs.subcategory_id);
     if (!subData) continue;
-    const biz = businessById.get(bs.business_id);
-    if (!biz?.city) continue;
-    const shortKey = `${subData.slug}/${slugify(biz.city)}`;
-    shortUrlCounts.set(shortKey, (shortUrlCounts.get(shortKey) || 0) + 1);
+    const allCities = businessCitiesMap.get(bs.business_id);
+    if (!allCities || allCities.size === 0) continue;
+    for (const cityName of allCities) {
+      const shortKey = `${subData.slug}/${slugify(cityName)}`;
+      shortUrlCounts.set(shortKey, (shortUrlCounts.get(shortKey) || 0) + 1);
+    }
   }
 
   for (const [key, count] of shortUrlCounts) {
