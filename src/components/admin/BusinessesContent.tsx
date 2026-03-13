@@ -639,7 +639,13 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                     onCheckedChange={toggleSelectAll}
                   />
                 </th>
+                {rankingMode && (
+                  <th className="text-center p-4 font-medium text-muted-foreground w-16">#</th>
+                )}
                 <th className="text-left p-4 font-medium text-muted-foreground">Negócio</th>
+                {rankingMode && (
+                  <th className="text-center p-4 font-medium text-muted-foreground w-24">Score</th>
+                )}
                 <th className="text-left p-4 font-medium text-muted-foreground">Categoria</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Subcategoria</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Cidade</th>
@@ -648,14 +654,22 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
               </tr>
             </thead>
             <tbody>
-              {filteredBusinesses.map((business) => (
-                <tr key={business.id} className="border-t border-border">
+              {filteredBusinesses.map((business, index) => (
+                <tr
+                  key={business.id}
+                  className={`border-t border-border ${rankingMode && index < 3 ? "bg-primary/5" : ""}`}
+                >
                   <td className="p-4">
                     <Checkbox
                       checked={selectedIds.has(business.id)}
                       onCheckedChange={() => toggleSelect(business.id)}
                     />
                   </td>
+                  {rankingMode && (
+                    <td className="p-4 text-center">
+                      {getPositionBadge(index + 1)}
+                    </td>
+                  )}
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       {business.logo_url ? (
@@ -672,6 +686,13 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                       <span className="font-medium">{business.name}</span>
                     </div>
                   </td>
+                  {rankingMode && (
+                    <td className="p-4 text-center">
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {business.ranking_score?.toFixed(1) ?? "—"}
+                      </Badge>
+                    </td>
+                  )}
                   <td className="p-4 text-muted-foreground">{business.categories?.name || "-"}</td>
                   <td className="p-4 text-muted-foreground">{business.subcategories?.name || "-"}</td>
                   <td className="p-4 text-muted-foreground">{business.city || "-"}</td>
@@ -750,7 +771,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
               ))}
               {filteredBusinesses.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={rankingMode ? 9 : 7} className="p-8 text-center text-muted-foreground">
                     Nenhum negócio encontrado.
                   </td>
                 </tr>
