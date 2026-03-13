@@ -1060,6 +1060,73 @@ export type Database = {
         }
         Relationships: []
       }
+      business_categories: {
+        Row: {
+          business_id: string
+          category_id: string
+          created_at: string | null
+          id: string
+          is_primary: boolean
+        }
+        Insert: {
+          business_id: string
+          category_id: string
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean
+        }
+        Update: {
+          business_id?: string
+          category_id?: string
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_claim_history: {
         Row: {
           approved_at: string | null
