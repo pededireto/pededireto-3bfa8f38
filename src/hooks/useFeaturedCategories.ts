@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface FeaturedCategory {
   id: string;
   category_id: string;
-  cover_image_url: string;
+  cover_image_url: string | null;
   display_order: number;
   is_active: boolean;
   created_at: string;
@@ -13,6 +13,8 @@ export interface FeaturedCategory {
     name: string;
     slug: string;
     icon: string | null;
+    image_url: string | null; // ← adicionado
+    video_url: string | null; // ← adicionado
   } | null;
 }
 
@@ -22,14 +24,12 @@ export const useFeaturedCategories = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("featured_categories" as any)
-        .select("*, categories(name, slug, icon)")
+        // ← join expandido para incluir image_url e video_url da tabela categories
+        .select("*, categories(name, slug, icon, image_url, video_url)")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
-
       if (error) throw error;
-      return (data as any[]).filter(
-        (fc: any) => fc.categories !== null
-      ) as FeaturedCategory[];
+      return (data as any[]).filter((fc: any) => fc.categories !== null) as FeaturedCategory[];
     },
   });
 };
@@ -40,9 +40,8 @@ export const useAllFeaturedCategories = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("featured_categories" as any)
-        .select("*, categories(name, slug, icon)")
+        .select("*, categories(name, slug, icon, image_url, video_url)")
         .order("display_order", { ascending: true });
-
       if (error) throw error;
       return data as unknown as FeaturedCategory[];
     },
@@ -52,7 +51,12 @@ export const useAllFeaturedCategories = () => {
 export const useCreateFeaturedCategory = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { category_id: string; cover_image_url: string; display_order: number; is_active: boolean }) => {
+    mutationFn: async (input: {
+      category_id: string;
+      cover_image_url: string;
+      display_order: number;
+      is_active: boolean;
+    }) => {
       const { data, error } = await supabase
         .from("featured_categories" as any)
         .insert(input)
@@ -70,7 +74,15 @@ export const useCreateFeaturedCategory = () => {
 export const useUpdateFeaturedCategory = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; cover_image_url?: string; display_order?: number; is_active?: boolean }) => {
+    mutationFn: async ({
+      id,
+      ...updates
+    }: {
+      id: string;
+      cover_image_url?: string;
+      display_order?: number;
+      is_active?: boolean;
+    }) => {
       const { data, error } = await supabase
         .from("featured_categories" as any)
         .update(updates)
