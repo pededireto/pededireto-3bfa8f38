@@ -129,10 +129,20 @@ const RegisterBusiness = () => {
     });
   };
 
-  // Reset subcategories when category changes
+  // Reset subcategories when categories change — remove subcats from removed categories
   useEffect(() => {
-    setFormData((prev) => ({ ...prev, subcategoryIds: [] }));
-  }, [formData.categoryId]);
+    setFormData((prev) => ({
+      ...prev,
+      subcategoryIds: prev.subcategoryIds.filter((subId) => {
+        const sub = allSubcategories.find((s) => s.id === subId);
+        return sub && prev.categoryIds.includes(sub.category_id);
+      }),
+    }));
+  }, [formData.categoryIds, allSubcategories]);
+
+  const handleCategoriesChange = (categoryIds: string[], primaryCategoryId: string) => {
+    setFormData((prev) => ({ ...prev, categoryIds, primaryCategoryId }));
+  };
 
   // Validation
   const isStep1Valid = () => {
