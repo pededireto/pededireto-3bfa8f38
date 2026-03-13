@@ -3,6 +3,7 @@ import { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { PublicBusinessWithCategory } from "@/hooks/usePublicBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
 import { useBusinessPublicBadges } from "@/hooks/usePublicBadges";
+import { useBusinessCityNames } from "@/hooks/useBusinessCities";
 import { MapPin, Globe, Phone, MessageCircle, ExternalLink, Star as StarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FavoriteButton from "@/components/FavoriteButton";
