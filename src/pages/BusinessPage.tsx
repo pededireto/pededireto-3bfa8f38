@@ -899,7 +899,7 @@ const BusinessPage = () => {
                         variant="outline"
                         className="w-full justify-center text-base hover:border-orange-500 hover:text-orange-500 transition-colors"
                         onClick={() => {
-                          handleCtaClick("website");
+                          handleCtaClick("order");
                           trackGA4Lead("order");
                           window.open(ctaOrderUrl, "_blank");
                         }}
