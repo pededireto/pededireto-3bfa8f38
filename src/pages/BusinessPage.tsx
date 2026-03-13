@@ -572,8 +572,8 @@ const BusinessPage = () => {
                         />
                       </>
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                        <span className="text-8xl font-bold text-primary/30">{business.name.charAt(0)}</span>
+                      <div className="w-full h-full flex items-center justify-center bg-primary/10 p-4">
+                        <span className="text-2xl md:text-4xl font-bold text-primary/30 text-center leading-tight">{business.name}</span>
                       </div>
                     )}
                     {ribbonBadges.map((slug) => {

@@ -99,8 +99,8 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
             className="max-w-full max-h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-primary/10">
-            <span className="text-4xl font-bold text-primary/40">{business.name.charAt(0)}</span>
+          <div className="w-full h-full flex items-center justify-center bg-primary/10 p-3">
+            <span className="text-base font-bold text-primary/40 text-center leading-tight line-clamp-3">{business.name}</span>
           </div>
         )}
       </div>

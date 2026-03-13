@@ -237,7 +237,7 @@ const TopRankingPage = () => {
                         {biz.logo_url ? (
                           <img src={biz.logo_url} alt={biz.name} className="w-full h-full object-contain" />
                         ) : (
-                          <span className="text-lg font-bold text-primary/40">{biz.name.charAt(0)}</span>
+                          <span className="text-xs font-bold text-primary/40 text-center leading-tight line-clamp-2 px-1">{biz.name}</span>
                         )}
                       </div>
 

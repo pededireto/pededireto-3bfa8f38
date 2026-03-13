@@ -357,7 +357,7 @@ function SearchResultCard({ business, searchTerm, cityFilter, isAuthenticated }:
           {business.logo_url ? (
             <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" loading="lazy" />
           ) : (
-            <span className="text-xl font-bold text-primary/40">{business.name.charAt(0)}</span>
+            <span className="text-xs font-bold text-primary/40 text-center leading-tight line-clamp-2 px-1">{business.name}</span>
           )}
         </div>
         <div className="flex-1 min-w-0">
