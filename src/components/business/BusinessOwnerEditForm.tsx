@@ -410,7 +410,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
 
   const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const filteredSubcategories = allSubcategories.filter((s) => s.category_id === form.category_id);
+  const filteredSubcategories = allSubcategories.filter((s) => form.category_ids.includes(s.category_id));
 
   const toggleSubcategory = (subId: string) => {
     setForm((prev) => ({
