@@ -644,8 +644,19 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Cidade</Label>
-                <CityAutocomplete value={form.city} onChange={(v) => set("city", v)} placeholder="Ex: Lisboa" />
+                <Label>Cidades onde opera</Label>
+                <MultiCityInput
+                  cities={form.city_names}
+                  primaryCity={form.primary_city}
+                  onChange={(cities, primary) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      city_names: cities,
+                      primary_city: primary,
+                      city: primary,
+                    }));
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Zona / Região</Label>
