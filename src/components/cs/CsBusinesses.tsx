@@ -274,27 +274,58 @@ const CsBusinesses = () => {
   const [search, setSearch] = useState("");
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive" | "expired">("all");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterSubcategory, setFilterSubcategory] = useState("");
+  const [rankingMode, setRankingMode] = useState(false);
   const { data: businesses = [], isLoading } = useAllBusinesses();
   const { data: plans = [] } = useCommercialPlans(true);
+  const { data: categories = [] } = useCategories();
+  const { data: allSubcategories = [] } = useAllSubcategories();
+  const { data: subMap } = useBusinessSubcategoryMap();
 
   const planMap = new Map(plans.map((p: any) => [p.id, p]));
 
-  const filtered = businesses.filter((b: any) => {
-    const matchSearch = b.name.toLowerCase().includes(search.toLowerCase()) ||
-      b.city?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus =
-      filterStatus === "all" ? true :
-      filterStatus === "active" ? b.is_active && b.subscription_status === "active" :
-      filterStatus === "inactive" ? !b.is_active :
-      b.subscription_status === "expired";
-    return matchSearch && matchStatus;
-  });
+  const filteredSubcategories = useMemo(() => {
+    if (!filterCategory || filterCategory === "all") return allSubcategories;
+    return allSubcategories.filter((s: any) => s.category_id === filterCategory);
+  }, [allSubcategories, filterCategory]);
+
+  const filtered = useMemo(() => {
+    const list = businesses.filter((b: any) => {
+      const matchSearch = b.name.toLowerCase().includes(search.toLowerCase()) ||
+        b.city?.toLowerCase().includes(search.toLowerCase());
+      const matchStatus =
+        filterStatus === "all" ? true :
+        filterStatus === "active" ? b.is_active && b.subscription_status === "active" :
+        filterStatus === "inactive" ? !b.is_active :
+        b.subscription_status === "expired";
+      const matchCategory = !filterCategory || filterCategory === "all" || b.category_id === filterCategory;
+      const matchSubcategory =
+        !filterSubcategory ||
+        filterSubcategory === "all" ||
+        b.subcategory_id === filterSubcategory ||
+        (subMap && subMap.get(b.id)?.includes(filterSubcategory));
+      return matchSearch && matchStatus && matchCategory && matchSubcategory;
+    });
+
+    if (rankingMode) {
+      return [...list].sort((a: any, b: any) => (b.ranking_score ?? 0) - (a.ranking_score ?? 0));
+    }
+    return list;
+  }, [businesses, search, filterStatus, filterCategory, filterSubcategory, subMap, rankingMode]);
+
+  const getPositionBadge = (pos: number) => {
+    if (pos === 1) return <span className="text-lg">🥇</span>;
+    if (pos === 2) return <span className="text-lg">🥈</span>;
+    if (pos === 3) return <span className="text-lg">🥉</span>;
+    return <span className="text-xs font-bold text-muted-foreground">#{pos}</span>;
+  };
 
   return (
     <div className="space-y-4">
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Pesquisar negócio ou cidade..."
@@ -303,6 +334,28 @@ const CsBusinesses = () => {
             className="pl-9"
           />
         </div>
+        <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v); setFilterSubcategory(""); }}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Todas categorias" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas categorias</SelectItem>
+            {categories.map((c: any) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterSubcategory} onValueChange={setFilterSubcategory}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Todas subcategorias" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas subcategorias</SelectItem>
+            {filteredSubcategories.map((s: any) => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex gap-2">
           {(["all", "active", "inactive", "expired"] as const).map(s => (
             <Button
@@ -315,6 +368,15 @@ const CsBusinesses = () => {
               {s === "all" ? "Todos" : s === "active" ? "Activos" : s === "inactive" ? "Inactivos" : "Expirados"}
             </Button>
           ))}
+          <Button
+            size="sm"
+            variant={rankingMode ? "default" : "outline"}
+            onClick={() => setRankingMode(!rankingMode)}
+            className="gap-1 text-xs"
+          >
+            <Trophy className="h-3.5 w-3.5" />
+            Ranking
+          </Button>
         </div>
       </div>
 
