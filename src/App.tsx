@@ -171,6 +171,7 @@ const App = () => {
                     <Route path="/pesquisa" element={<SearchPage />} />
                     <Route path="/blog" element={<BlogPage />} />
                     <Route path="/blog/:slug" element={<BlogPostPage />} />
+                    <Route path="/top" element={<TopIndexPage />} />
                     <Route path="/top/:subcategorySlug/:citySlug" element={<TopRankingPage />} />
                     <Route path="/top/:subcategorySlug" element={<TopRankingPage />} />
                     <Route path="/s/:subSlug/:citySlug" element={<SeoSubcategoryCityPage />} />
