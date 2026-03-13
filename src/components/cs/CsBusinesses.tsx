@@ -1,13 +1,17 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useAllBusinesses } from "@/hooks/useBusinesses";
 import { useBusinessAlerts } from "@/hooks/useBusinessAlerts";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
+import { useCategories } from "@/hooks/useCategories";
+import { useAllSubcategories } from "@/hooks/useSubcategories";
+import { useBusinessSubcategoryMap } from "@/hooks/useBusinessSubcategoryMap";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
 import BusinessInsightsContent from "@/components/business/BusinessInsightsContent";
@@ -15,7 +19,8 @@ import {
   Search, Building2, Eye, MousePointerClick, TrendingUp,
   ChevronRight, X, ExternalLink, ToggleLeft, ToggleRight,
   CalendarPlus, StickyNote, AlertTriangle, Star, MapPin,
-  CreditCard, Loader2, Lightbulb, MessageSquare, BarChart3
+  CreditCard, Loader2, Lightbulb, MessageSquare, BarChart3,
+  Trophy
 } from "lucide-react";
 
 // ─── Ficha de cliente ────────────────────────────────────────────────────────
