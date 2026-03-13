@@ -100,7 +100,8 @@ const RegisterBusiness = () => {
       ...prev,
       name: data.name || prev.name,
       city: data.city || prev.city,
-      categoryId: data.categoryId || prev.categoryId,
+      categoryIds: data.categoryId ? [data.categoryId] : prev.categoryIds,
+      primaryCategoryId: data.categoryId || prev.primaryCategoryId,
     }));
     localStorage.removeItem("registerBusinessPrefill");
   }, []);
