@@ -156,7 +156,7 @@ REGRAS OBRIGATÓRIAS PARA OS PROMPTS GROK:
 4 — VOZ em Português de Portugal — ${p.nome ? `usar "${p.nome}"` : "inferir nome do negócio da imagem"}
 5 — TEXTO NO ECRÃ entre aspas duplas: "TEXTO"
 6 — Cenário contínuo desde a imagem inicial
-7 — EXTENSÃO 5 termina com ${p.nome ? `"${p.nome}" e ` : ""}"pededireto.pt"
+7 — EXTENSÃO 5 termina OBRIGATORIAMENTE com ${p.nome ? `"${p.nome}" e ` : ""}o URL "${p.businessUrl || "pededireto.pt"}" visível no TEXTO NO ECRÃ e mencionado na VOZ.
 
 Analisa a imagem: identifica espaço, pessoas, serviço, ambiente, emoção.
 O roteiro começa EXACTAMENTE nesse frame.
