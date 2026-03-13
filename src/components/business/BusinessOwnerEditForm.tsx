@@ -602,7 +602,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
                 </Select>
               </div>
 
-            {form.category_id && filteredSubcategories.length > 0 && (
+            {form.category_ids.length > 0 && filteredSubcategories.length > 0 && (
               <div className="space-y-2">
                 <Label>Subcategorias</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto border border-border rounded-lg p-3">
