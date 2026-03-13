@@ -449,7 +449,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     schedule_weekdays: "",
     schedule_weekend: "",
     schedule_closed: "",
-    show_schedule: false,
+    show_schedule: true,
     // 4. Presença Digital (PRO)
     cta_whatsapp: "",
     show_whatsapp: false,
@@ -501,7 +501,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         schedule_weekdays: business.schedule_weekdays || "",
         schedule_weekend: business.schedule_weekend || "",
         schedule_closed: (business as any).schedule_closed || "",
-        show_schedule: (business as any).show_schedule ?? false,
+        show_schedule: (business as any).show_schedule ?? true,
         cta_whatsapp: business.cta_whatsapp || "",
         show_whatsapp: (business as any).show_whatsapp ?? false,
         instagram_url: (business as any).instagram_url || "",
