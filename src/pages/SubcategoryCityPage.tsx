@@ -46,7 +46,16 @@ const useSubcategoryCityBusinesses = (subcategoryId?: string, cityName?: string)
 
       const businessIds = junctionData.map((j) => j.business_id);
 
-      // 2. Get businesses filtered by city
+      // 2. Also get businesses that serve this city via business_cities
+      const { data: cityJunction } = await supabase
+        .from("business_cities")
+        .select("business_id")
+        .ilike("city_name", `%${cityName}%`);
+
+      const cityBizIds = new Set((cityJunction || []).map((c) => c.business_id));
+      const subcatBizIds = new Set(businessIds);
+
+      // 3. Get businesses filtered by city (from businesses.city column)
       const { data, error } = await supabase
         .from("businesses")
         .select(`
@@ -64,6 +73,25 @@ const useSubcategoryCityBusinesses = (subcategoryId?: string, cityName?: string)
         .order("display_order", { ascending: true });
 
       if (error) throw error;
+
+      // 4. Also fetch businesses only found in business_cities junction
+      const resultIds = new Set((data || []).map((b: any) => b.id));
+      const missingIds = [...cityBizIds].filter((id) => subcatBizIds.has(id) && !resultIds.has(id));
+
+      if (missingIds.length > 0) {
+        const { data: extra } = await supabase
+          .from("businesses")
+          .select(`
+            *,
+            categories(id, name, slug, icon),
+            subcategories(id, name, slug),
+            business_review_stats(average_rating, total_reviews)
+          `)
+          .eq("is_active", true)
+          .in("id", missingIds);
+        if (extra) return [...(data as unknown as BusinessWithCategory[]), ...(extra as unknown as BusinessWithCategory[])];
+      }
+
       return data as unknown as BusinessWithCategory[];
     },
     enabled: !!subcategoryId && !!cityName,
