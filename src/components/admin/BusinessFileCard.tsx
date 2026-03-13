@@ -497,6 +497,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         subcategory_ids: [],
         alcance: business.alcance || "local",
         city: business.city || "",
+        city_names: [],
+        primary_city: "",
         zone: business.zone || "",
         public_address: (business as any).public_address || "",
         cta_phone: business.cta_phone || "",
