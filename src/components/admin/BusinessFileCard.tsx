@@ -449,7 +449,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     schedule_weekdays: "",
     schedule_weekend: "",
     schedule_closed: "",
-    show_schedule: false,
+    show_schedule: true,
     // 4. Presença Digital (PRO)
     cta_whatsapp: "",
     show_whatsapp: false,
