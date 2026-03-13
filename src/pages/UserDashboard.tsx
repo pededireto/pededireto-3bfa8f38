@@ -358,7 +358,7 @@ const UserDashboard = () => {
                         {biz.logo_url ? (
                           <img src={biz.logo_url} alt={biz.name} className="max-w-full max-h-full object-contain p-2" />
                         ) : (
-                          <span className="text-4xl font-bold text-primary/40">{biz.name?.charAt(0)}</span>
+                          <span className="text-sm font-bold text-primary/40 text-center leading-tight line-clamp-2 px-2">{biz.name}</span>
                         )}
                       </div>
                       <CardContent className="p-4">
