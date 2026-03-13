@@ -37,9 +37,17 @@ const FeaturedContent = ({ businesses }: FeaturedContentProps) => {
     .filter(b => b.is_featured && !b.is_premium)
     .sort((a, b) => a.display_order - b.display_order);
 
-  const nonFeaturedBusinesses = businesses
-    .filter(b => !b.is_featured && !b.is_premium && b.is_active)
-    .slice(0, 10);
+  const suggestedBusinesses = useMemo(() => {
+    let list = businesses
+      .filter(b => !b.is_featured && !b.is_premium && b.is_active);
+    if (suggestionSearch.trim()) {
+      const q = suggestionSearch.toLowerCase();
+      list = list.filter(b => b.name.toLowerCase().includes(q));
+    }
+    return list
+      .sort((a, b) => (b.ranking_score ?? 0) - (a.ranking_score ?? 0))
+      .slice(0, 20);
+  }, [businesses, suggestionSearch]);
 
   const toggleFeatured = async (business: BusinessWithCategory) => {
     setUpdatingId(business.id);
