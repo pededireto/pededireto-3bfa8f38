@@ -50,6 +50,7 @@ import SearchPage from "./pages/SearchPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
 import TopRankingPage from "./pages/TopRankingPage";
+import TopIndexPage from "./pages/TopIndexPage";
 import PricingPage from "./pages/PricingPage";
 import BusinessShortUrl from "./pages/BusinessShortUrl";
 import NotFound from "./pages/NotFound";
