@@ -264,7 +264,7 @@ const AnalyticsContent = () => {
           {/* ── Cliques por Tipo ── */}
           <div className="bg-card rounded-xl p-6 shadow-card">
             <h2 className="text-lg font-semibold mb-4">Cliques por Tipo de Contacto</h2>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <div className="text-center p-4 rounded-lg bg-green-500/10">
                 <MessageCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
                 <p className="text-2xl font-bold">{analytics.clicksBreakdown.whatsapp}</p>
@@ -284,6 +284,26 @@ const AnalyticsContent = () => {
                 <Mail className="h-8 w-8 text-orange-500 mx-auto mb-2" />
                 <p className="text-2xl font-bold">{analytics.clicksBreakdown.email}</p>
                 <p className="text-sm text-muted-foreground">Email</p>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-pink-500/10">
+                <Instagram className="h-8 w-8 text-pink-500 mx-auto mb-2" />
+                <p className="text-2xl font-bold">{analytics.clicksBreakdown.instagram}</p>
+                <p className="text-sm text-muted-foreground">Instagram</p>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-blue-600/10">
+                <Facebook className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                <p className="text-2xl font-bold">{analytics.clicksBreakdown.facebook}</p>
+                <p className="text-sm text-muted-foreground">Facebook</p>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-emerald-500/10">
+                <CalendarCheck className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-2xl font-bold">{analytics.clicksBreakdown.reservation}</p>
+                <p className="text-sm text-muted-foreground">Reservas</p>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-amber-500/10">
+                <ShoppingBag className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+                <p className="text-2xl font-bold">{analytics.clicksBreakdown.order}</p>
+                <p className="text-sm text-muted-foreground">Pedidos Online</p>
               </div>
               <div className="text-center p-4 rounded-lg bg-pink-500/10">
                 <Globe className="h-8 w-8 text-pink-500 mx-auto mb-2" />
