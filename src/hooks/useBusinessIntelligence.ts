@@ -6,6 +6,10 @@ export interface ContactBreakdown {
   click_whatsapp: number;
   click_website: number;
   click_email: number;
+  click_instagram: number;
+  click_facebook: number;
+  click_reservation: number;
+  click_order: number;
 }
 
 export interface BusinessIntelligenceData {
