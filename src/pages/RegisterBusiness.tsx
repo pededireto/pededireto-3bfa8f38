@@ -158,7 +158,7 @@ const RegisterBusiness = () => {
   };
 
   const isStep2Valid = () =>
-    formData.categoryId !== "" && formData.subcategoryIds.length >= 1;
+    formData.categoryIds.length > 0 && formData.primaryCategoryId !== "" && formData.subcategoryIds.length >= 1;
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
