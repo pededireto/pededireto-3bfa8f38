@@ -560,7 +560,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             <SelectItem value="premium">Premium</SelectItem>
           </SelectContent>
         </Select>
-        {/* ✅ NOVO: Dropdown de filtro por cidade */}
+        {/* Dropdown de filtro por cidade */}
         <Select value={filterCity} onValueChange={setFilterCity}>
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Todas as cidades" />
@@ -574,6 +574,29 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             ))}
           </SelectContent>
         </Select>
+        {/* Subcategoria filter */}
+        <Select value={filterSubcategory} onValueChange={setFilterSubcategory}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Todas subcategorias" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas subcategorias</SelectItem>
+            {filteredSubcategories.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {/* Ranking toggle */}
+        <Button
+          variant={rankingMode ? "default" : "outline"}
+          onClick={() => setRankingMode(!rankingMode)}
+          className="gap-2"
+        >
+          <Trophy className="h-4 w-4" />
+          {rankingMode ? "Ranking" : "Ranking"}
+        </Button>
       </div>
 
       {/* BULK ACTIONS BAR */}
