@@ -64,6 +64,11 @@ const normalizeVideoUrl = (url: string): string => {
 };
 
 const getYouTubeEmbedUrl = (url: string): string => {
+  // Shorts: youtube.com/shorts/VIDEO_ID
+  const shortsMatch = url.match(/shorts\/([^?&/]+)/);
+  if (shortsMatch)
+    return `https://www.youtube.com/embed/${shortsMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${shortsMatch[1]}&controls=0&playsinline=1&rel=0`;
+  // Normal: youtube.com/watch?v=ID ou youtu.be/ID
   const match = url.match(/(?:v=|youtu\.be\/)([^&?/]+)/);
   if (match)
     return `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1&loop=1&playlist=${match[1]}&controls=0&playsinline=1&rel=0`;
