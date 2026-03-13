@@ -356,26 +356,50 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     toast({ title: "Exportação concluída", description: `${exportData.length} negócios exportados` });
   };
 
-  // ✅ FILTRO: agora inclui filtro por cidade
-  const filteredBusinesses = businesses.filter((b) => {
-    const matchesSearch =
-      !searchTerm ||
-      b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.categories?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.cta_email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !filterCategory || filterCategory === "all" || b.category_id === filterCategory;
-    const matchesStatus =
-      !filterStatus ||
-      filterStatus === "all" ||
-      (filterStatus === "active" && b.is_active) ||
-      (filterStatus === "inactive" && !b.is_active) ||
-      (filterStatus === "featured" && b.is_featured) ||
-      (filterStatus === "premium" && b.is_premium);
-    // ✅ NOVO: filtro por cidade
-    const matchesCity = !filterCity || filterCity === "all" || b.city?.trim() === filterCity;
-    return matchesSearch && matchesCategory && matchesStatus && matchesCity;
-  });
+  // Subcategorias filtradas pela categoria selecionada
+  const filteredSubcategories = useMemo(() => {
+    if (!filterCategory || filterCategory === "all") return allSubcategories;
+    return allSubcategories.filter((s) => s.category_id === filterCategory);
+  }, [allSubcategories, filterCategory]);
+
+  // ✅ FILTRO: inclui filtro por cidade + subcategoria
+  const filteredBusinesses = useMemo(() => {
+    const list = businesses.filter((b) => {
+      const matchesSearch =
+        !searchTerm ||
+        b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.categories?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.cta_email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !filterCategory || filterCategory === "all" || b.category_id === filterCategory;
+      const matchesStatus =
+        !filterStatus ||
+        filterStatus === "all" ||
+        (filterStatus === "active" && b.is_active) ||
+        (filterStatus === "inactive" && !b.is_active) ||
+        (filterStatus === "featured" && b.is_featured) ||
+        (filterStatus === "premium" && b.is_premium);
+      const matchesCity = !filterCity || filterCity === "all" || b.city?.trim() === filterCity;
+      const matchesSubcategory =
+        !filterSubcategory ||
+        filterSubcategory === "all" ||
+        b.subcategory_id === filterSubcategory ||
+        (subMap && subMap.get(b.id)?.includes(filterSubcategory));
+      return matchesSearch && matchesCategory && matchesStatus && matchesCity && matchesSubcategory;
+    });
+
+    if (rankingMode) {
+      return [...list].sort((a, b) => (b.ranking_score ?? 0) - (a.ranking_score ?? 0));
+    }
+    return list;
+  }, [businesses, searchTerm, filterCategory, filterStatus, filterCity, filterSubcategory, subMap, rankingMode]);
+
+  const getPositionBadge = (pos: number) => {
+    if (pos === 1) return <span className="text-lg">🥇</span>;
+    if (pos === 2) return <span className="text-lg">🥈</span>;
+    if (pos === 3) return <span className="text-lg">🥉</span>;
+    return <span className="text-xs font-bold text-muted-foreground">#{pos}</span>;
+  };
 
   return (
     <div className="space-y-6">
