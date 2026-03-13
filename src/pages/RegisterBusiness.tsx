@@ -34,7 +34,8 @@ interface FormData {
   city: string;
   email: string;
   password: string;
-  categoryId: string;
+  categoryIds: string[];
+  primaryCategoryId: string;
   subcategoryIds: string[];
 }
 
