@@ -270,7 +270,7 @@ serve(async (req) => {
     } else if (action === "generate_reel") {
       const systemPrompt = buildReelPrompt(payload);
       const userMessage = `Frame inicial do vídeo. Objectivo: ${payload.objectivo || "promover o negócio"}. ${payload.objectivoDescricao ? "Descrição: " + payload.objectivoDescricao : ""} ${payload.nome ? "Negócio: " + payload.nome : ""} ${payload.cidade ? "Cidade: " + payload.cidade : ""}`.trim();
-      rawText = await callGemini(systemPrompt, userMessage, payload.imageBase64, payload.imageMimeType || "image/jpeg", 3000);
+      rawText = await callGemini(systemPrompt, userMessage, payload.imageBase64, payload.imageMimeType || "image/jpeg", 4096);
     } else if (action === "generate_image_prompt") {
       const systemPrompt = buildImagePrompt(payload);
       const userText = `Gera prompts de imagem para: ${payload.nome || payload.descricao || "negócio local português"}. Estilo: ${payload.estilo || "local"}. Proporção: ${payload.proporcao || "9:16"}.`;
