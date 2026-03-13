@@ -222,6 +222,15 @@ const RegisterBusiness = () => {
 
       if (rpcError) throw rpcError;
 
+      // Insert categories into junction table (RPC already set businesses.category_id = primaryCategoryId)
+      if (businessId) {
+        await syncCategories.mutateAsync({
+          businessId,
+          categoryIds: formData.categoryIds,
+          primaryCategoryId: formData.primaryCategoryId,
+        });
+      }
+
       // Insert additional subcategories into junction table
       if (businessId && formData.subcategoryIds.length > 1) {
         const additionalRows = formData.subcategoryIds.slice(1).map((subId) => ({
