@@ -82,12 +82,12 @@ const NewBusinessesBlock = ({ config, title }: NewBusinessesBlockProps) => {
               className="group bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300 overflow-hidden border border-primary/20"
             >
               {/* Logo */}
-              <div className="relative h-48 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center overflow-hidden">
+              <div className="relative aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
                 {business.logo_url ? (
                   <img
                     src={business.logo_url}
                     alt={business.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
                   <Building2 className="w-16 h-16 text-primary/30" />
