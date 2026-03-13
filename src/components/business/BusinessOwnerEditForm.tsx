@@ -489,6 +489,15 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         is_active: form.is_active,
       });
 
+      // Sync categories junction table
+      if (form.category_ids.length > 0) {
+        await syncCategories.mutateAsync({
+          businessId: business.id,
+          categoryIds: form.category_ids,
+          primaryCategoryId: form.primary_category_id,
+        });
+      }
+
       if (form.subcategory_ids.length > 0) {
         await syncSubcategories.mutateAsync({
           businessId: business.id,
