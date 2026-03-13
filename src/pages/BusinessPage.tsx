@@ -323,7 +323,7 @@ const BusinessPage = () => {
     }
   }, [business?.id]);
 
-  const handleCtaClick = (type: "whatsapp" | "phone" | "website" | "email" | "app") => {
+  const handleCtaClick = (type: "whatsapp" | "phone" | "website" | "email" | "app" | "instagram" | "facebook" | "reservation" | "order") => {
     if (!business) return;
     trackEvent.mutate({
       event_type: `click_${type}` as any,
