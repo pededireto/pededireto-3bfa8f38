@@ -135,8 +135,18 @@ const StudioReelPage = () => {
       setNome(selectedBusiness.name || "");
       setCidade(selectedBusiness.city || "");
       if (selectedBusiness.category_id) setSelectedCatId(selectedBusiness.category_id);
+      if (selectedBusiness.description && !diferencial) setDiferencial(selectedBusiness.description);
+      // subcategory_id → we need the name, so we'll match from dbSubcategories once they load
     }
   }, [selectedBusiness]);
+
+  // Auto-select subcategory name when subcategories load and business has subcategory_id
+  useEffect(() => {
+    if (selectedBusiness?.subcategory_id && dbSubcategories.length > 0 && !subcategoria) {
+      const match = dbSubcategories.find((s) => s.id === selectedBusiness.subcategory_id);
+      if (match) setSubcategoria(match.name);
+    }
+  }, [selectedBusiness, dbSubcategories]);
 
   // Smart defaults: update toms/estilo when objectivo changes (unless user edited them)
   useEffect(() => {
