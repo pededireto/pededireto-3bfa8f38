@@ -9,6 +9,10 @@ export interface BusinessAnalyticsData {
     whatsapp: number;
     website: number;
     email: number;
+    instagram: number;
+    facebook: number;
+    reservation: number;
+    order: number;
   };
 }
 
