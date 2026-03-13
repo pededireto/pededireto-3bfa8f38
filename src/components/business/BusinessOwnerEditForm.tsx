@@ -287,6 +287,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: editSubcategoryIds } = useBusinessSubcategoryIds(business?.id);
   const { data: businessCategories } = useBusinessCategoryIds(business?.id);
+  const { data: businessCities } = useBusinessCityNames(business?.id);
+  const syncCities = useSyncBusinessCities();
 
   const [rawSchedulePaste, setRawSchedulePaste] = useState("");
   const [showPasteBox, setShowPasteBox] = useState(false);
