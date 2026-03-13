@@ -66,6 +66,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const syncSubcategories = useSyncBusinessSubcategories();
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: commercialPlans = [] } = useCommercialPlans(true);
+  const { data: subMap } = useBusinessSubcategoryMap();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
