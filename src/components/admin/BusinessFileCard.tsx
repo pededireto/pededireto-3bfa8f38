@@ -442,6 +442,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     subcategory_ids: [] as string[],
     alcance: "local" as "local" | "nacional" | "hibrido",
     city: "",
+    city_names: [] as string[],
+    primary_city: "",
     zone: "",
     public_address: "",
     cta_phone: "",
