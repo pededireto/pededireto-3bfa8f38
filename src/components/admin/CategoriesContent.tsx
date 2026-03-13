@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Category, useCreateCategory, useUpdateCategory, useDeleteCategory } from "@/hooks/useCategories";
 import { BusinessWithCategory } from "@/hooks/useBusinesses";
-import { useAllSubcategories, useCreateSubcategory, useUpdateSubcategory, useDeleteSubcategory, Subcategory } from "@/hooks/useSubcategories";
+import {
+  useAllSubcategories,
+  useCreateSubcategory,
+  useUpdateSubcategory,
+  useDeleteSubcategory,
+  Subcategory,
+} from "@/hooks/useSubcategories";
 import { useSubcategoryBusinessCounts } from "@/hooks/useBusinessSubcategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,8 +35,16 @@ const generateSlug = (name: string) => {
 };
 
 const iconOptions = [
-  "UtensilsCrossed", "Wrench", "Store", "Hammer", "Scissors",
-  "Briefcase", "Car", "Home", "Heart", "Sparkles",
+  "UtensilsCrossed",
+  "Wrench",
+  "Store",
+  "Hammer",
+  "Scissors",
+  "Briefcase",
+  "Car",
+  "Home",
+  "Heart",
+  "Sparkles",
 ];
 
 const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) => {
@@ -51,26 +65,59 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [subCategoryParentId, setSubCategoryParentId] = useState<string>("");
 
-  // Category form
+  // Category form — video_url adicionado
   const [catForm, setCatForm] = useState({
-    name: "", slug: "", description: "", icon: "Briefcase", image_url: "",
+    name: "",
+    slug: "",
+    description: "",
+    icon: "Briefcase",
+    image_url: "",
+    video_url: "",
     alcance_default: "local" as "local" | "nacional" | "hibrido",
-    display_order: 0, is_active: true,
+    display_order: 0,
+    is_active: true,
   });
 
-  // Subcategory form
+  // Subcategory form — video_url adicionado
   const [subForm, setSubForm] = useState({
-    name: "", slug: "", description: "", icon: "", image_url: "",
-    category_id: "", display_order: 0, is_active: true,
+    name: "",
+    slug: "",
+    description: "",
+    icon: "",
+    image_url: "",
+    video_url: "",
+    category_id: "",
+    display_order: 0,
+    is_active: true,
   });
 
   const resetCatForm = () => {
-    setCatForm({ name: "", slug: "", description: "", icon: "Briefcase", image_url: "", alcance_default: "local", display_order: 0, is_active: true });
+    setCatForm({
+      name: "",
+      slug: "",
+      description: "",
+      icon: "Briefcase",
+      image_url: "",
+      video_url: "",
+      alcance_default: "local",
+      display_order: 0,
+      is_active: true,
+    });
     setEditingCategory(null);
   };
 
   const resetSubForm = () => {
-    setSubForm({ name: "", slug: "", description: "", icon: "", image_url: "", category_id: "", display_order: 0, is_active: true });
+    setSubForm({
+      name: "",
+      slug: "",
+      description: "",
+      icon: "",
+      image_url: "",
+      video_url: "",
+      category_id: "",
+      display_order: 0,
+      is_active: true,
+    });
     setEditingSubcategory(null);
   };
 
@@ -84,17 +131,22 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
   const openEditCatDialog = (category: Category) => {
     setEditingCategory(category);
     setCatForm({
-      name: category.name, slug: category.slug,
-      description: category.description || "", icon: category.icon || "Briefcase",
-      image_url: category.image_url || "", alcance_default: category.alcance_default,
-      display_order: category.display_order, is_active: category.is_active,
+      name: category.name,
+      slug: category.slug,
+      description: category.description || "",
+      icon: category.icon || "Briefcase",
+      image_url: category.image_url || "",
+      video_url: category.video_url || "",
+      alcance_default: category.alcance_default,
+      display_order: category.display_order,
+      is_active: category.is_active,
     });
     setCatDialogOpen(true);
   };
 
   const openNewSubDialog = (categoryId: string) => {
     resetSubForm();
-    setSubForm(prev => ({ ...prev, category_id: categoryId }));
+    setSubForm((prev) => ({ ...prev, category_id: categoryId }));
     setSubCategoryParentId(categoryId);
     setSubDialogOpen(true);
   };
@@ -102,9 +154,15 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
   const openEditSubDialog = (sub: Subcategory) => {
     setEditingSubcategory(sub);
     setSubForm({
-      name: sub.name, slug: sub.slug, description: sub.description || "",
-      icon: sub.icon || "", image_url: (sub as any).image_url || "", category_id: sub.category_id,
-      display_order: sub.display_order, is_active: sub.is_active,
+      name: sub.name,
+      slug: sub.slug,
+      description: sub.description || "",
+      icon: sub.icon || "",
+      image_url: (sub as any).image_url || "",
+      video_url: (sub as any).video_url || "",
+      category_id: sub.category_id,
+      display_order: sub.display_order,
+      is_active: sub.is_active,
     });
     setSubCategoryParentId(sub.category_id);
     setSubDialogOpen(true);
@@ -113,7 +171,13 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
   const handleCatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const data = { ...catForm, slug: catForm.slug || generateSlug(catForm.name), description: catForm.description || null, image_url: catForm.image_url || null };
+      const data = {
+        ...catForm,
+        slug: catForm.slug || generateSlug(catForm.name),
+        description: catForm.description || null,
+        image_url: catForm.image_url || null,
+        video_url: catForm.video_url || null, // ← novo campo
+      };
       if (editingCategory) {
         await updateCategory.mutateAsync({ id: editingCategory.id, ...data });
         toast({ title: "Categoria atualizada" });
@@ -137,6 +201,7 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
         description: subForm.description || null,
         icon: subForm.icon || null,
         image_url: subForm.image_url || null,
+        video_url: subForm.video_url || null, // ← novo campo
         category_id: subForm.category_id || subCategoryParentId,
       };
       if (editingSubcategory) {
@@ -154,9 +219,13 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
   };
 
   const handleDeleteCat = async (id: string) => {
-    const businessCount = businesses.filter(b => b.category_id === id).length;
+    const businessCount = businesses.filter((b) => b.category_id === id).length;
     if (businessCount > 0) {
-      toast({ title: "Não é possível remover", description: `Tem ${businessCount} negócio(s) associado(s).`, variant: "destructive" });
+      toast({
+        title: "Não é possível remover",
+        description: `Tem ${businessCount} negócio(s) associado(s).`,
+        variant: "destructive",
+      });
       return;
     }
     if (!confirm("Remover esta categoria e suas subcategorias?")) return;
@@ -171,7 +240,11 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
   const handleDeleteSub = async (id: string) => {
     const businessCount = subcategoryBusinessCounts[id] ?? 0;
     if (businessCount > 0) {
-      toast({ title: "Não é possível remover", description: `Tem ${businessCount} negócio(s) associado(s).`, variant: "destructive" });
+      toast({
+        title: "Não é possível remover",
+        description: `Tem ${businessCount} negócio(s) associado(s).`,
+        variant: "destructive",
+      });
       return;
     }
     if (!confirm("Remover esta subcategoria?")) return;
@@ -183,9 +256,9 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
     }
   };
 
-  const getBusinessCount = (categoryId: string) => businesses.filter(b => b.category_id === categoryId).length;
+  const getBusinessCount = (categoryId: string) => businesses.filter((b) => b.category_id === categoryId).length;
   const getSubBusinessCount = (subId: string) => subcategoryBusinessCounts[subId] ?? 0;
-  const getSubcategoriesForCategory = (catId: string) => allSubcategories.filter(s => s.category_id === catId);
+  const getSubcategoriesForCategory = (catId: string) => allSubcategories.filter((s) => s.category_id === catId);
 
   const isCatLoading = createCategory.isPending || updateCategory.isPending;
   const isSubLoading = createSubcategory.isPending || updateSubcategory.isPending;
@@ -199,7 +272,13 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
         </div>
 
         {/* Add Category Dialog */}
-        <Dialog open={catDialogOpen} onOpenChange={(open) => { setCatDialogOpen(open); if (!open) resetCatForm(); }}>
+        <Dialog
+          open={catDialogOpen}
+          onOpenChange={(open) => {
+            setCatDialogOpen(open);
+            if (!open) resetCatForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="btn-cta-primary">
               <Plus className="h-4 w-4 mr-2" />
@@ -213,30 +292,56 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
             <form onSubmit={handleCatSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label>Nome *</Label>
-                <Input value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} required />
+                <Input
+                  value={catForm.name}
+                  onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label>Slug</Label>
-                <Input value={catForm.slug} onChange={(e) => setCatForm({ ...catForm, slug: e.target.value })} placeholder="gerado automaticamente" />
+                <Input
+                  value={catForm.slug}
+                  onChange={(e) => setCatForm({ ...catForm, slug: e.target.value })}
+                  placeholder="gerado automaticamente"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Descrição</Label>
-                <Textarea value={catForm.description} onChange={(e) => setCatForm({ ...catForm, description: e.target.value })} rows={2} placeholder="Ex: Fome? Encontre restaurantes..." />
+                <Textarea
+                  value={catForm.description}
+                  onChange={(e) => setCatForm({ ...catForm, description: e.target.value })}
+                  rows={2}
+                  placeholder="Ex: Fome? Encontre restaurantes..."
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Ícone</Label>
                   <Select value={catForm.icon} onValueChange={(v) => setCatForm({ ...catForm, icon: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-                      {iconOptions.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}
+                      {iconOptions.map((icon) => (
+                        <SelectItem key={icon} value={icon}>
+                          {icon}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Alcance Padrão</Label>
-                  <Select value={catForm.alcance_default} onValueChange={(v: "local" | "nacional" | "hibrido") => setCatForm({ ...catForm, alcance_default: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={catForm.alcance_default}
+                    onValueChange={(v: "local" | "nacional" | "hibrido") =>
+                      setCatForm({ ...catForm, alcance_default: v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="local">Local</SelectItem>
                       <SelectItem value="nacional">Nacional</SelectItem>
@@ -246,19 +351,42 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Imagem (URL externa)</Label>
-                <Input type="url" value={catForm.image_url} onChange={(e) => setCatForm({ ...catForm, image_url: e.target.value })} placeholder="https://exemplo.com/imagem.jpg" />
+                <Label>Imagem (URL)</Label>
+                <Input
+                  type="url"
+                  value={catForm.image_url}
+                  onChange={(e) => setCatForm({ ...catForm, image_url: e.target.value })}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Vídeo (URL YouTube ou Supabase .mp4)</Label>
+                <Input
+                  type="url"
+                  value={catForm.video_url}
+                  onChange={(e) => setCatForm({ ...catForm, video_url: e.target.value })}
+                  placeholder="https://youtube.com/watch?v=... ou https://...mp4"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Quando preenchido, o vídeo substitui a imagem no hero e nas páginas de categoria.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Ordem</Label>
-                <Input type="number" value={catForm.display_order} onChange={(e) => setCatForm({ ...catForm, display_order: parseInt(e.target.value) || 0 })} />
+                <Input
+                  type="number"
+                  value={catForm.display_order}
+                  onChange={(e) => setCatForm({ ...catForm, display_order: parseInt(e.target.value) || 0 })}
+                />
               </div>
               <div className="flex items-center gap-2 pt-2">
                 <Switch checked={catForm.is_active} onCheckedChange={(c) => setCatForm({ ...catForm, is_active: c })} />
                 <Label>Ativa</Label>
               </div>
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setCatDialogOpen(false)}>Cancelar</Button>
+                <Button type="button" variant="outline" onClick={() => setCatDialogOpen(false)}>
+                  Cancelar
+                </Button>
                 <Button type="submit" disabled={isCatLoading}>
                   {isCatLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   {editingCategory ? "Guardar" : "Criar"}
@@ -270,7 +398,13 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
       </div>
 
       {/* Subcategory Dialog */}
-      <Dialog open={subDialogOpen} onOpenChange={(open) => { setSubDialogOpen(open); if (!open) resetSubForm(); }}>
+      <Dialog
+        open={subDialogOpen}
+        onOpenChange={(open) => {
+          setSubDialogOpen(open);
+          if (!open) resetSubForm();
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingSubcategory ? "Editar Subcategoria" : "Nova Subcategoria"}</DialogTitle>
@@ -282,26 +416,55 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
             </div>
             <div className="space-y-2">
               <Label>Slug</Label>
-              <Input value={subForm.slug} onChange={(e) => setSubForm({ ...subForm, slug: e.target.value })} placeholder="gerado automaticamente" />
+              <Input
+                value={subForm.slug}
+                onChange={(e) => setSubForm({ ...subForm, slug: e.target.value })}
+                placeholder="gerado automaticamente"
+              />
             </div>
             <div className="space-y-2">
               <Label>Descrição</Label>
-              <Textarea value={subForm.description} onChange={(e) => setSubForm({ ...subForm, description: e.target.value })} rows={2} placeholder="Texto orientado a problemas..." />
+              <Textarea
+                value={subForm.description}
+                onChange={(e) => setSubForm({ ...subForm, description: e.target.value })}
+                rows={2}
+                placeholder="Texto orientado a problemas..."
+              />
             </div>
             <div className="space-y-2">
-              <Label>Imagem (URL externa)</Label>
-              <Input type="url" value={subForm.image_url} onChange={(e) => setSubForm({ ...subForm, image_url: e.target.value })} placeholder="https://exemplo.com/imagem.jpg" />
+              <Label>Imagem (URL)</Label>
+              <Input
+                type="url"
+                value={subForm.image_url}
+                onChange={(e) => setSubForm({ ...subForm, image_url: e.target.value })}
+                placeholder="https://exemplo.com/imagem.jpg"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Vídeo (URL YouTube ou Supabase .mp4)</Label>
+              <Input
+                type="url"
+                value={subForm.video_url}
+                onChange={(e) => setSubForm({ ...subForm, video_url: e.target.value })}
+                placeholder="https://youtube.com/watch?v=... ou https://...mp4"
+              />
             </div>
             <div className="space-y-2">
               <Label>Ordem</Label>
-              <Input type="number" value={subForm.display_order} onChange={(e) => setSubForm({ ...subForm, display_order: parseInt(e.target.value) || 0 })} />
+              <Input
+                type="number"
+                value={subForm.display_order}
+                onChange={(e) => setSubForm({ ...subForm, display_order: parseInt(e.target.value) || 0 })}
+              />
             </div>
             <div className="flex items-center gap-2 pt-2">
               <Switch checked={subForm.is_active} onCheckedChange={(c) => setSubForm({ ...subForm, is_active: c })} />
               <Label>Ativa</Label>
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setSubDialogOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={() => setSubDialogOpen(false)}>
+                Cancelar
+              </Button>
               <Button type="submit" disabled={isSubLoading}>
                 {isSubLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {editingSubcategory ? "Guardar" : "Criar"}
@@ -338,15 +501,29 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
                 <div className="flex items-center gap-3">
                   <Badge variant="secondary">{getBusinessCount(category.id)} negócios</Badge>
                   <Badge variant="secondary">{subcats.length} subcategorias</Badge>
+                  {category.video_url && (
+                    <Badge variant="secondary" className="bg-primary/10 text-primary text-xs">
+                      🎬 Vídeo
+                    </Badge>
+                  )}
                   {category.is_active ? (
-                    <Badge variant="secondary" className="bg-success/10 text-success">Ativa</Badge>
+                    <Badge variant="secondary" className="bg-success/10 text-success">
+                      Ativa
+                    </Badge>
                   ) : (
-                    <Badge variant="secondary" className="bg-muted text-muted-foreground">Inativa</Badge>
+                    <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                      Inativa
+                    </Badge>
                   )}
                   <Button size="sm" variant="ghost" onClick={() => openEditCatDialog(category)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDeleteCat(category.id)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() => handleDeleteCat(category.id)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -364,7 +541,10 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
                   </div>
                   <div className="space-y-2">
                     {subcats.map((sub) => (
-                      <div key={sub.id} className="flex items-center justify-between p-3 rounded-lg bg-card border border-border">
+                      <div
+                        key={sub.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-card border border-border"
+                      >
                         <div>
                           <span className="font-medium">{sub.name}</span>
                           {sub.description && (
@@ -372,12 +552,28 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">{getSubBusinessCount(sub.id)} negócios</Badge>
-                          {!sub.is_active && <Badge variant="secondary" className="text-xs bg-muted">Inativa</Badge>}
+                          <Badge variant="secondary" className="text-xs">
+                            {getSubBusinessCount(sub.id)} negócios
+                          </Badge>
+                          {(sub as any).video_url && (
+                            <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                              🎬
+                            </Badge>
+                          )}
+                          {!sub.is_active && (
+                            <Badge variant="secondary" className="text-xs bg-muted">
+                              Inativa
+                            </Badge>
+                          )}
                           <Button size="sm" variant="ghost" onClick={() => openEditSubDialog(sub)}>
                             <Pencil className="h-3 w-3" />
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDeleteSub(sub.id)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            onClick={() => handleDeleteSub(sub.id)}
+                          >
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
@@ -393,9 +589,7 @@ const CategoriesContent = ({ categories, businesses }: CategoriesContentProps) =
           );
         })}
         {categories.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            Nenhuma categoria criada ainda.
-          </div>
+          <div className="text-center py-12 text-muted-foreground">Nenhuma categoria criada ainda.</div>
         )}
       </div>
     </div>
