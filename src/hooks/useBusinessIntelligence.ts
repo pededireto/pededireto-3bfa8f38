@@ -65,6 +65,10 @@ export const useBusinessIntelligence = (businessId: string | null | undefined, d
         click_whatsapp: contactsArray.find((c) => c.event_type === "click_whatsapp")?.total ?? 0,
         click_website: contactsArray.find((c) => c.event_type === "click_website")?.total ?? 0,
         click_email: contactsArray.find((c) => c.event_type === "click_email")?.total ?? 0,
+        click_instagram: contactsArray.find((c) => c.event_type === "click_instagram")?.total ?? 0,
+        click_facebook: contactsArray.find((c) => c.event_type === "click_facebook")?.total ?? 0,
+        click_reservation: contactsArray.find((c) => c.event_type === "click_reservation")?.total ?? 0,
+        click_order: contactsArray.find((c) => c.event_type === "click_order")?.total ?? 0,
       };
 
       return {

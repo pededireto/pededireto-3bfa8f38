@@ -37,7 +37,7 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
 
   const stats = (business as any).business_review_stats;
 
-  const handleCtaClick = (type: "whatsapp" | "phone" | "website" | "email" | "app") => {
+  const handleCtaClick = (type: "whatsapp" | "phone" | "website" | "email" | "app" | "instagram" | "facebook" | "reservation" | "order") => {
     trackEvent.mutate({
       event_type: `click_${type}` as any,
       business_id: business.id,

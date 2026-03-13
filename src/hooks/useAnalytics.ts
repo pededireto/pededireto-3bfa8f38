@@ -91,6 +91,10 @@ export const useAnalyticsSummary = (filters: AnalyticsFilters = { period: "30d" 
         website: clicksByType?.filter((e) => e.event_type === "click_website").length || 0,
         email: clicksByType?.filter((e) => e.event_type === "click_email").length || 0,
         app: clicksByType?.filter((e) => e.event_type === "click_app").length || 0,
+        instagram: clicksByType?.filter((e) => e.event_type === "click_instagram").length || 0,
+        facebook: clicksByType?.filter((e) => e.event_type === "click_facebook").length || 0,
+        reservation: clicksByType?.filter((e) => e.event_type === "click_reservation").length || 0,
+        order: clicksByType?.filter((e) => e.event_type === "click_order").length || 0,
       };
 
       // Top categories
