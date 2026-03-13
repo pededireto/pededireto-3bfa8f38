@@ -566,8 +566,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
 
         {/* 2. Presença Pública */}
         <Section title="Presença Pública" icon={Globe} badge="Gratuito · START">
-          <div className="space-y-4">
-            <div className="space-y-4">
+           <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Categorias</Label>
                 <MultiCategorySelector
@@ -579,7 +578,6 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
                       category_ids: ids,
                       primary_category_id: primary,
                       category_id: primary,
-                      // Remove subcategories from removed categories
                       subcategory_ids: prev.subcategory_ids.filter((subId) => {
                         const sub = allSubcategories.find((s) => s.id === subId);
                         return sub && ids.includes(sub.category_id);
@@ -601,7 +599,6 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
                   </SelectContent>
                 </Select>
               </div>
-
             {form.category_ids.length > 0 && filteredSubcategories.length > 0 && (
               <div className="space-y-2">
                 <Label>Subcategorias</Label>
