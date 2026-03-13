@@ -13,6 +13,7 @@ import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
+import { useBusinessSubcategoryMap } from "@/hooks/useBusinessSubcategoryMap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,8 @@ import {
   Pencil,
   Power,
   CheckSquare,
+  Trophy,
+  Medal,
 } from "lucide-react";
 import ContactLogsDialog from "@/components/admin/ContactLogsDialog";
 import BusinessFileCard from "@/components/admin/BusinessFileCard";
