@@ -197,26 +197,30 @@ Deno.serve(async (req) => {
   for (const bs of businessSubcategories ?? []) {
     const subData = subIdToData.get(bs.subcategory_id);
     if (!subData) continue;
-    const biz = businessById.get(bs.business_id);
-    if (!biz?.city) continue;
 
-    const citySlug = slugify(biz.city);
+    // Get all cities for this business (from both columns)
+    const allCities = businessCitiesMap.get(bs.business_id);
+    if (!allCities || allCities.size === 0) continue;
 
-    // Subcategory + City page
-    const key = `${subData.catSlug}/${subData.slug}/${citySlug}`;
-    if (!seenSubCity.has(key)) {
-      seenSubCity.add(key);
-      xml += `  <url>
+    for (const cityName of allCities) {
+      const citySlug = slugify(cityName);
+
+      // Subcategory + City page
+      const key = `${subData.catSlug}/${subData.slug}/${citySlug}`;
+      if (!seenSubCity.has(key)) {
+        seenSubCity.add(key);
+        xml += `  <url>
     <loc>${BASE_URL}/categoria/${subData.catSlug}/${subData.slug}/cidade/${citySlug}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 `;
-    }
+      }
 
-    // Count for top ranking + city
-    const topKey = `${subData.slug}/${citySlug}`;
-    subCityCounts.set(topKey, (subCityCounts.get(topKey) || 0) + 1);
+      // Count for top ranking + city
+      const topKey = `${subData.slug}/${citySlug}`;
+      subCityCounts.set(topKey, (subCityCounts.get(topKey) || 0) + 1);
+    }
   }
 
   // Top ranking + city pages (only if >= 3 businesses)
