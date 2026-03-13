@@ -341,7 +341,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         cta_website: business.cta_website || "",
         schedule_weekdays: business.schedule_weekdays || "",
         schedule_weekend: business.schedule_weekend || "",
-        show_schedule: business.show_schedule ?? false,
+        show_schedule: business.show_schedule ?? true,
         cta_whatsapp: business.cta_whatsapp || "",
         show_whatsapp: business.show_whatsapp ?? false,
         instagram_url: business.instagram_url || "",
