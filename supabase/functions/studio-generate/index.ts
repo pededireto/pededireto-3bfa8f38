@@ -77,7 +77,7 @@ async function callGemini(
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: "user", parts: userParts }],
-    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
+    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7, responseMimeType: "application/json" },
   };
 
   console.log(`[Gemini] model=${model}, hasImage=${!!imageBase64}, imageSize=${imageBase64?.length || 0} chars`);
