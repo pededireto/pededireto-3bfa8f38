@@ -542,6 +542,19 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       setForm((prev) => ({ ...prev, subcategory_ids: editSubcategoryIds }));
     }
   }, [editSubcategoryIds, business]);
+  // Load cities from junction table
+  useEffect(() => {
+    if (businessCities && businessCities.length > 0) {
+      const names = businessCities.map((bc) => bc.city_name);
+      const primary = businessCities.find((bc) => bc.is_primary)?.city_name || names[0] || "";
+      setForm((prev) => ({ ...prev, city_names: names, primary_city: primary, city: primary }));
+    } else if (business?.city) {
+      const parsed = parseCityString(business.city);
+      if (parsed.length > 0) {
+        setForm((prev) => ({ ...prev, city_names: parsed, primary_city: parsed[0], city: parsed[0] }));
+      }
+    }
+  }, [businessCities, business?.city]);
   useEffect(() => {
     if (existingModuleValues.length > 0) {
       const map: Record<string, { value: string | null; value_json: any }> = {};
