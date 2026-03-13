@@ -1127,6 +1127,66 @@ export type Database = {
           },
         ]
       }
+      business_cities: {
+        Row: {
+          business_id: string
+          city_name: string
+          created_at: string | null
+          id: string
+          is_primary: boolean
+        }
+        Insert: {
+          business_id: string
+          city_name: string
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean
+        }
+        Update: {
+          business_id?: string
+          city_name?: string
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_cities_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_cities_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_cities_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_cities_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_cities_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_claim_history: {
         Row: {
           approved_at: string | null
