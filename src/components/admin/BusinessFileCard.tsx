@@ -449,10 +449,10 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     schedule_weekdays: "",
     schedule_weekend: "",
     schedule_closed: "",
-    show_schedule: true,
+    show_schedule: false,
     // 4. Presença Digital (PRO)
     cta_whatsapp: "",
-    show_whatsapp: true,
+    show_whatsapp: false,
     instagram_url: "",
     facebook_url: "",
     other_social_url: "",
@@ -460,7 +460,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     cta_order_url: "",
     show_social: false,
     images: [] as string[],
-    show_gallery: true,
+    show_gallery: false,
     // 5. Dados Legais
     nif: "",
     address: "",
