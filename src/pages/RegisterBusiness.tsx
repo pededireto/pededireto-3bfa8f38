@@ -437,25 +437,15 @@ const RegisterBusiness = () => {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Categoria *</Label>
-                  <Select
-                    value={formData.categoryId}
-                    onValueChange={(v) => updateField("categoryId", v)}
-                  >
-                    <SelectTrigger className="h-12 text-base">
-                      <SelectValue placeholder="Selecionar categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-sm font-medium">Categorias *</Label>
+                  <MultiCategorySelector
+                    selectedCategoryIds={formData.categoryIds}
+                    primaryCategoryId={formData.primaryCategoryId}
+                    onChange={handleCategoriesChange}
+                  />
                 </div>
 
-                {formData.categoryId && (
+                {formData.categoryIds.length > 0 && (
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">
                       Subcategorias * <span className="text-muted-foreground font-normal">(até 3)</span>
@@ -482,29 +472,43 @@ const RegisterBusiness = () => {
                       </div>
                     )}
 
-                    {/* Subcategory list */}
+                    {/* Subcategory list grouped by category */}
                     <div className="border border-border rounded-xl max-h-56 overflow-y-auto divide-y divide-border">
-                      {subcategories.map((sub) => {
-                        const isSelected = formData.subcategoryIds.includes(sub.id);
-                        const isDisabled = !isSelected && formData.subcategoryIds.length >= 3;
+                      {formData.categoryIds.map((catId) => {
+                        const cat = categories.find((c) => c.id === catId);
+                        const catSubs = subcategories.filter((s) => s.category_id === catId);
+                        if (catSubs.length === 0) return null;
                         return (
-                          <button
-                            key={sub.id}
-                            type="button"
-                            onClick={() => !isDisabled && toggleSubcategory(sub.id)}
-                            disabled={isDisabled}
-                            className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between ${
-                              isSelected
-                                ? "bg-primary/10 text-primary font-medium"
-                                : isDisabled
-                                  ? "opacity-40 cursor-not-allowed"
-                                  : "hover:bg-muted"
-                            }`}
-                            title={isDisabled ? "Máximo 3 subcategorias" : undefined}
-                          >
-                            <span>{sub.name}</span>
-                            {isSelected && <CheckCircle className="h-4 w-4 text-primary" />}
-                          </button>
+                          <div key={catId}>
+                            {formData.categoryIds.length > 1 && (
+                              <div className="px-4 py-1.5 bg-muted/50 text-xs font-semibold text-muted-foreground">
+                                {cat?.name}
+                              </div>
+                            )}
+                            {catSubs.map((sub) => {
+                              const isSelected = formData.subcategoryIds.includes(sub.id);
+                              const isDisabled = !isSelected && formData.subcategoryIds.length >= 3;
+                              return (
+                                <button
+                                  key={sub.id}
+                                  type="button"
+                                  onClick={() => !isDisabled && toggleSubcategory(sub.id)}
+                                  disabled={isDisabled}
+                                  className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between ${
+                                    isSelected
+                                      ? "bg-primary/10 text-primary font-medium"
+                                      : isDisabled
+                                        ? "opacity-40 cursor-not-allowed"
+                                        : "hover:bg-muted"
+                                  }`}
+                                  title={isDisabled ? "Máximo 3 subcategorias" : undefined}
+                                >
+                                  <span>{sub.name}</span>
+                                  {isSelected && <CheckCircle className="h-4 w-4 text-primary" />}
+                                </button>
+                              );
+                            })}
+                          </div>
                         );
                       })}
                       {subcategories.length === 0 && (
