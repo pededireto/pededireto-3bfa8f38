@@ -274,6 +274,7 @@ const BusinessPage = () => {
   const { data: publicBadges = [] } = usePublicBadges(business?.id);
   const { data: topPosition } = useBusinessTopPosition(business?.id);
   const { data: responseTime } = useBusinessResponseTime(business?.id);
+  const { data: businessCities = [] } = useBusinessCityNames(business?.id);
 
   const [showSuggestionForm, setShowSuggestionForm] = useState(false);
 
