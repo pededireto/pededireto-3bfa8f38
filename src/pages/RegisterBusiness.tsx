@@ -2,15 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCategories } from "@/hooks/useCategories";
-import { useSubcategories } from "@/hooks/useSubcategories";
+import { useAllSubcategories } from "@/hooks/useSubcategories";
+import { useSyncBusinessCategories } from "@/hooks/useBusinessCategories";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import CityAutocomplete from "@/components/ui/CityAutocomplete";
+import MultiCategorySelector from "@/components/business/MultiCategorySelector";
 import { CheckCircle, Loader2, ArrowLeft, ArrowRight, Phone, MapPin, X, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/pede-direto-logo.png";
@@ -33,7 +34,8 @@ interface FormData {
   city: string;
   email: string;
   password: string;
-  categoryId: string;
+  categoryIds: string[];
+  primaryCategoryId: string;
   subcategoryIds: string[];
 }
 
@@ -81,7 +83,8 @@ const RegisterBusiness = () => {
     city: "",
     email: "",
     password: "",
-    categoryId: "",
+    categoryIds: [],
+    primaryCategoryId: "",
     subcategoryIds: [],
   });
 
@@ -97,13 +100,20 @@ const RegisterBusiness = () => {
       ...prev,
       name: data.name || prev.name,
       city: data.city || prev.city,
-      categoryId: data.categoryId || prev.categoryId,
+      categoryIds: data.categoryId ? [data.categoryId] : prev.categoryIds,
+      primaryCategoryId: data.categoryId || prev.primaryCategoryId,
     }));
     localStorage.removeItem("registerBusinessPrefill");
   }, []);
 
   const { data: categories = [] } = useCategories();
-  const { data: subcategories = [] } = useSubcategories(formData.categoryId || undefined);
+  const { data: allSubcategories = [] } = useAllSubcategories();
+  const syncCategories = useSyncBusinessCategories();
+
+  // Subcategories filtered by ALL selected categories
+  const subcategories = allSubcategories.filter((s) =>
+    formData.categoryIds.includes(s.category_id)
+  );
 
   const updateField = (field: keyof FormData, value: string) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -119,10 +129,20 @@ const RegisterBusiness = () => {
     });
   };
 
-  // Reset subcategories when category changes
+  // Reset subcategories when categories change — remove subcats from removed categories
   useEffect(() => {
-    setFormData((prev) => ({ ...prev, subcategoryIds: [] }));
-  }, [formData.categoryId]);
+    setFormData((prev) => ({
+      ...prev,
+      subcategoryIds: prev.subcategoryIds.filter((subId) => {
+        const sub = allSubcategories.find((s) => s.id === subId);
+        return sub && prev.categoryIds.includes(sub.category_id);
+      }),
+    }));
+  }, [formData.categoryIds, allSubcategories]);
+
+  const handleCategoriesChange = (categoryIds: string[], primaryCategoryId: string) => {
+    setFormData((prev) => ({ ...prev, categoryIds, primaryCategoryId }));
+  };
 
   // Validation
   const isStep1Valid = () => {
@@ -138,7 +158,7 @@ const RegisterBusiness = () => {
   };
 
   const isStep2Valid = () =>
-    formData.categoryId !== "" && formData.subcategoryIds.length >= 1;
+    formData.categoryIds.length > 0 && formData.primaryCategoryId !== "" && formData.subcategoryIds.length >= 1;
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -166,7 +186,8 @@ const RegisterBusiness = () => {
               name: formData.name,
               city: formData.city,
               cta_phone: formData.phone,
-              category_id: formData.categoryId,
+              category_id: formData.primaryCategoryId,
+              category_ids: formData.categoryIds,
               subcategory_ids: formData.subcategoryIds,
               owner_email: formData.email,
             })
@@ -192,7 +213,7 @@ const RegisterBusiness = () => {
           p_slug: slug,
           p_city: formData.city,
           p_cta_phone: formData.phone,
-          p_category_id: formData.categoryId,
+          p_category_id: formData.primaryCategoryId,
           p_subcategory_id: primarySubcategoryId,
           p_owner_email: currentUser?.email || formData.email,
           p_registration_source: "onboarding_wizard",
@@ -200,6 +221,15 @@ const RegisterBusiness = () => {
       );
 
       if (rpcError) throw rpcError;
+
+      // Insert categories into junction table (RPC already set businesses.category_id = primaryCategoryId)
+      if (businessId) {
+        await syncCategories.mutateAsync({
+          businessId,
+          categoryIds: formData.categoryIds,
+          primaryCategoryId: formData.primaryCategoryId,
+        });
+      }
 
       // Insert additional subcategories into junction table
       if (businessId && formData.subcategoryIds.length > 1) {
@@ -269,7 +299,10 @@ const RegisterBusiness = () => {
     .map((id) => subcategories.find((s) => s.id === id)?.name)
     .filter(Boolean);
 
-  const selectedCategoryName = categories.find((c) => c.id === formData.categoryId)?.name;
+  const selectedCategoryNames = formData.categoryIds
+    .map((id) => categories.find((c) => c.id === id)?.name)
+    .filter(Boolean);
+  const primaryCategoryName = categories.find((c) => c.id === formData.primaryCategoryId)?.name;
 
   const maskPhone = (phone: string) => {
     if (phone.length < 3) return phone;
@@ -404,25 +437,15 @@ const RegisterBusiness = () => {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Categoria *</Label>
-                  <Select
-                    value={formData.categoryId}
-                    onValueChange={(v) => updateField("categoryId", v)}
-                  >
-                    <SelectTrigger className="h-12 text-base">
-                      <SelectValue placeholder="Selecionar categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-sm font-medium">Categorias *</Label>
+                  <MultiCategorySelector
+                    selectedCategoryIds={formData.categoryIds}
+                    primaryCategoryId={formData.primaryCategoryId}
+                    onChange={handleCategoriesChange}
+                  />
                 </div>
 
-                {formData.categoryId && (
+                {formData.categoryIds.length > 0 && (
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">
                       Subcategorias * <span className="text-muted-foreground font-normal">(até 3)</span>
@@ -449,29 +472,43 @@ const RegisterBusiness = () => {
                       </div>
                     )}
 
-                    {/* Subcategory list */}
+                    {/* Subcategory list grouped by category */}
                     <div className="border border-border rounded-xl max-h-56 overflow-y-auto divide-y divide-border">
-                      {subcategories.map((sub) => {
-                        const isSelected = formData.subcategoryIds.includes(sub.id);
-                        const isDisabled = !isSelected && formData.subcategoryIds.length >= 3;
+                      {formData.categoryIds.map((catId) => {
+                        const cat = categories.find((c) => c.id === catId);
+                        const catSubs = subcategories.filter((s) => s.category_id === catId);
+                        if (catSubs.length === 0) return null;
                         return (
-                          <button
-                            key={sub.id}
-                            type="button"
-                            onClick={() => !isDisabled && toggleSubcategory(sub.id)}
-                            disabled={isDisabled}
-                            className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between ${
-                              isSelected
-                                ? "bg-primary/10 text-primary font-medium"
-                                : isDisabled
-                                  ? "opacity-40 cursor-not-allowed"
-                                  : "hover:bg-muted"
-                            }`}
-                            title={isDisabled ? "Máximo 3 subcategorias" : undefined}
-                          >
-                            <span>{sub.name}</span>
-                            {isSelected && <CheckCircle className="h-4 w-4 text-primary" />}
-                          </button>
+                          <div key={catId}>
+                            {formData.categoryIds.length > 1 && (
+                              <div className="px-4 py-1.5 bg-muted/50 text-xs font-semibold text-muted-foreground">
+                                {cat?.name}
+                              </div>
+                            )}
+                            {catSubs.map((sub) => {
+                              const isSelected = formData.subcategoryIds.includes(sub.id);
+                              const isDisabled = !isSelected && formData.subcategoryIds.length >= 3;
+                              return (
+                                <button
+                                  key={sub.id}
+                                  type="button"
+                                  onClick={() => !isDisabled && toggleSubcategory(sub.id)}
+                                  disabled={isDisabled}
+                                  className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between ${
+                                    isSelected
+                                      ? "bg-primary/10 text-primary font-medium"
+                                      : isDisabled
+                                        ? "opacity-40 cursor-not-allowed"
+                                        : "hover:bg-muted"
+                                  }`}
+                                  title={isDisabled ? "Máximo 3 subcategorias" : undefined}
+                                >
+                                  <span>{sub.name}</span>
+                                  {isSelected && <CheckCircle className="h-4 w-4 text-primary" />}
+                                </button>
+                              );
+                            })}
+                          </div>
                         );
                       })}
                       {subcategories.length === 0 && (
@@ -543,10 +580,10 @@ const RegisterBusiness = () => {
                   <span>{maskPhone(formData.phone)}</span>
                 </div>
 
-                {/* Category label */}
+                {/* Category labels */}
                 <div className="text-xs text-muted-foreground">
                   <Building2 className="h-3 w-3 inline mr-1" />
-                  {selectedCategoryName}
+                  {selectedCategoryNames.join(" · ")}
                 </div>
               </div>
 

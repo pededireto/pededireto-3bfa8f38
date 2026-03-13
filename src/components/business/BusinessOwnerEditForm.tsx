@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useUpdateBusinessOwner } from "@/hooks/useUpdateBusinessOwner";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
+import { useBusinessCategoryIds, useSyncBusinessCategories } from "@/hooks/useBusinessCategories";
 import { useCategories } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import CityAutocomplete from "@/components/ui/CityAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
+import MultiCategorySelector from "@/components/business/MultiCategorySelector";
 import {
   ChevronDown,
   ChevronRight,
@@ -278,9 +280,11 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   const updateBusiness = useUpdateBusinessOwner();
   const planInfo = useBusinessPlan(business);
   const syncSubcategories = useSyncBusinessSubcategories();
+  const syncCategories = useSyncBusinessCategories();
   const { data: categories = [] } = useCategories();
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: editSubcategoryIds } = useBusinessSubcategoryIds(business?.id);
+  const { data: businessCategories } = useBusinessCategoryIds(business?.id);
 
   const [rawSchedulePaste, setRawSchedulePaste] = useState("");
   const [showPasteBox, setShowPasteBox] = useState(false);
@@ -296,6 +300,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     description: "",
     logo_url: "",
     category_id: "",
+    category_ids: [] as string[],
+    primary_category_id: "",
     subcategory_ids: [] as string[],
     city: "",
     zone: "",
@@ -331,6 +337,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         description: business.description || "",
         logo_url: business.logo_url || "",
         category_id: business.category_id || "",
+        category_ids: [],
+        primary_category_id: "",
         subcategory_ids: [],
         city: business.city || "",
         zone: business.zone || "",
@@ -360,6 +368,23 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     }
   }, [business]);
 
+  // Load categories from junction table
+  useEffect(() => {
+    if (businessCategories && businessCategories.length > 0) {
+      const ids = businessCategories.map((bc) => bc.category_id);
+      const primary = businessCategories.find((bc) => bc.is_primary)?.category_id || ids[0] || "";
+      setForm((prev) => ({ ...prev, category_ids: ids, primary_category_id: primary, category_id: primary }));
+    } else if (business?.category_id) {
+      // Fallback for businesses not yet in junction table
+      setForm((prev) => ({
+        ...prev,
+        category_ids: [business.category_id],
+        primary_category_id: business.category_id,
+        category_id: business.category_id,
+      }));
+    }
+  }, [businessCategories, business?.category_id]);
+
   useEffect(() => {
     if (editSubcategoryIds) {
       setForm((prev) => ({ ...prev, subcategory_ids: editSubcategoryIds }));
@@ -387,7 +412,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
 
   const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const filteredSubcategories = allSubcategories.filter((s) => s.category_id === form.category_id);
+  const filteredSubcategories = allSubcategories.filter((s) => form.category_ids.includes(s.category_id));
 
   const toggleSubcategory = (subId: string) => {
     setForm((prev) => ({
@@ -436,7 +461,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         name: form.name,
         description: form.description || null,
         logo_url: form.logo_url || null,
-        category_id: form.category_id || null,
+        category_id: form.primary_category_id || null,
         subcategory_id: form.subcategory_ids[0] || null,
         city: form.city || null,
         zone: form.zone || null,
@@ -463,6 +488,15 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         owner_email: form.owner_email || null,
         is_active: form.is_active,
       });
+
+      // Sync categories junction table
+      if (form.category_ids.length > 0) {
+        await syncCategories.mutateAsync({
+          businessId: business.id,
+          categoryIds: form.category_ids,
+          primaryCategoryId: form.primary_category_id,
+        });
+      }
 
       if (form.subcategory_ids.length > 0) {
         await syncSubcategories.mutateAsync({
@@ -532,25 +566,25 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
 
         {/* 2. Presença Pública */}
         <Section title="Presença Pública" icon={Globe} badge="Gratuito · START">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select
-                  value={form.category_id}
-                  onValueChange={(v) => setForm((prev) => ({ ...prev, category_id: v, subcategory_ids: [] }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Categorias</Label>
+                <MultiCategorySelector
+                  selectedCategoryIds={form.category_ids}
+                  primaryCategoryId={form.primary_category_id}
+                  onChange={(ids, primary) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      category_ids: ids,
+                      primary_category_id: primary,
+                      category_id: primary,
+                      subcategory_ids: prev.subcategory_ids.filter((subId) => {
+                        const sub = allSubcategories.find((s) => s.id === subId);
+                        return sub && ids.includes(sub.category_id);
+                      }),
+                    }));
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Alcance</Label>
@@ -565,9 +599,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {form.category_id && filteredSubcategories.length > 0 && (
+            {form.category_ids.length > 0 && filteredSubcategories.length > 0 && (
               <div className="space-y-2">
                 <Label>Subcategorias</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto border border-border rounded-lg p-3">
