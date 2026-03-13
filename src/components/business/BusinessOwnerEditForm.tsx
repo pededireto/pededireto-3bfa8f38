@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useUpdateBusinessOwner } from "@/hooks/useUpdateBusinessOwner";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
+import { useBusinessCategoryIds, useSyncBusinessCategories } from "@/hooks/useBusinessCategories";
 import { useCategories } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import CityAutocomplete from "@/components/ui/CityAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
+import MultiCategorySelector from "@/components/business/MultiCategorySelector";
 import {
   ChevronDown,
   ChevronRight,
