@@ -1,79 +1,67 @@
 
 
-# Plan: Logo + Consumer Dashboard Review Feedback
+## Plan: Ranking View in Admin & CS Business Tabs
 
-## Task 1 — Add PedeDireto Logo Image Everywhere
+### What exists now
 
-Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
+- **Admin BusinessesContent.tsx** (717 lines): Table with columns Negócio, Categoria, Subcategoria, Cidade, Estado, Ações. No ranking_score column. Filters: search, category, status, city. No subcategory filter. No sort by ranking.
+- **CS CsBusinesses.tsx** (384 lines): Card list with search and status filter (all/active/inactive/expired). No category/subcategory filters. No ranking info shown.
+- Both components already load businesses with `ranking_score` available (from `useAllBusinesses` / the `businesses` prop which uses `SELECT *`).
 
-### Files to modify (logo replacement):
+### Plan
 
-**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
+#### 1. Admin BusinessesContent — Add ranking view
 
-| File | Location | Logo size |
-|------|----------|-----------|
-| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
-| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
-| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
-| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
-| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
-| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
-| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
-| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
-| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
-| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
-| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
-| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
-| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
-| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
-| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
-| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
-| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
+**File**: `src/components/admin/BusinessesContent.tsx`
 
-Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
+- Add a **toggle** at the top: `[Lista normal]` / `[🏆 Ranking]` — switches between current table and ranking-sorted view
+- In ranking mode:
+  - Sort businesses by `ranking_score` descending (nulls last)
+  - Show position number (#1, #2, #3...) with medal icons for top 3
+  - Add `ranking_score` column to the table
+  - Add **subcategory filter** dropdown (populated from `allSubcategories`, filtered by selected category)
+  - When category or subcategory is selected, positions recalculate within that filter (so #1 in "Canalizadores" is different from #1 overall)
+- Keep all existing filters working alongside ranking view
 
----
+#### 2. CS CsBusinesses — Add ranking + filters
 
-## Task 2 — Review Feedback on Consumer Dashboard Requests
+**File**: `src/components/cs/CsBusinesses.tsx`
 
-### Data model understanding
-- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
-- `request_business_matches` links `request_id` to `business_id`
-- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
+- Add **category** and **subcategory** filter dropdowns (using `useCategories` + `useAllSubcategories`)
+- Add a **ranking toggle** similar to admin: when active, sorts by `ranking_score` desc and shows position badges
+- Show `ranking_score` badge on each business card
+- Subcategory filter needs to check `business_subcategories` junction table — but since we load all businesses client-side already, we can filter by `category_id` directly and for subcategory we need the junction data
 
-### New hook: `useConsumerRequestReviews`
+#### 3. Subcategory filtering challenge
 
-In `src/hooks/useServiceRequests.ts`, add a new hook that:
-1. Takes the list of request IDs
-2. For each request, gets the matched business IDs from `request_business_matches`
-3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
-4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
+The `business_subcategories` junction table links businesses to subcategories, but the current `useAllBusinesses` query doesn't include this data. Two options:
 
-Implementation approach — a single query that:
+**Option A (simpler, chosen)**: When a subcategory is selected, query `business_subcategories` for matching business IDs, then filter the already-loaded list client-side. Use a small helper hook.
+
+**Option B**: Extend the `BUSINESS_SELECT` query — but this changes a shared constant affecting many components.
+
+I'll go with **Option A**: a lightweight `useBusinessSubcategoryMap()` hook that loads all `business_subcategories` rows and builds a `Map<businessId, subcategoryId[]>`.
+
+#### 4. New shared hook
+
+**File**: `src/hooks/useBusinessSubcategoryMap.ts` (new)
+
 ```typescript
-// 1. Get all matches for the user's requests
-const { data: matches } = await supabase
-  .from("request_business_matches")
-  .select("request_id, business_id, businesses(name)")
-  .in("request_id", requestIds);
-
-// 2. Get all reviews by this user
-const { data: reviews } = await supabase
-  .from("business_reviews")
-  .select("business_id, rating, business_response, business_response_at")
-  .eq("user_id", userId);
-
-// 3. Cross-reference: for each match, find if there's a review
+// Returns Map<businessId, subcategoryId[]> for client-side filtering
+const { data: subMap } = useBusinessSubcategoryMap()
+// Filter: subMap.get(business.id)?.includes(selectedSubcatId)
 ```
 
-### UI changes in `src/pages/UserDashboard.tsx`
+### Files changed
 
-In the request card (lines 281-346), after the status Badge, add:
+| File | Action |
+|---|---|
+| `src/hooks/useBusinessSubcategoryMap.ts` | New — loads junction data for filtering |
+| `src/components/admin/BusinessesContent.tsx` | Add ranking toggle, position column, subcategory filter |
+| `src/components/cs/CsBusinesses.tsx` | Add category/subcategory filters, ranking toggle + badges |
 
-1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
-2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
-
-Visual design:
-- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
-- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
+### Implementation order
+1. Create `useBusinessSubcategoryMap` hook
+2. Update Admin BusinessesContent with ranking view + subcategory filter
+3. Update CS CsBusinesses with filters + ranking view
 
