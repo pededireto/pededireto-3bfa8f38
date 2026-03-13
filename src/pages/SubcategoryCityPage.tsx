@@ -113,6 +113,7 @@ const useOtherCitiesForSubcategory = (subcategoryId?: string, currentCity?: stri
 
       const businessIds = junctionData.map((j) => j.business_id);
 
+      // Get cities from businesses.city
       const { data, error } = await supabase
         .from("businesses")
         .select("city")
@@ -122,9 +123,16 @@ const useOtherCitiesForSubcategory = (subcategoryId?: string, currentCity?: stri
 
       if (error) throw error;
 
+      // Also get cities from business_cities junction
+      const { data: cityJunction } = await supabase
+        .from("business_cities")
+        .select("business_id, city_name")
+        .in("business_id", businessIds);
+
       const cityCountMap = new Map<string, { name: string; count: number }>();
       const currentSlug = slugify(currentCity || "");
 
+      // Count from businesses.city
       for (const b of data ?? []) {
         if (!b.city) continue;
         const key = slugify(b.city);
@@ -134,6 +142,23 @@ const useOtherCitiesForSubcategory = (subcategoryId?: string, currentCity?: stri
           existing.count++;
         } else {
           cityCountMap.set(key, { name: b.city, count: 1 });
+        }
+      }
+
+      // Count from business_cities junction (add unique businesses)
+      const businessCityPairs = new Set<string>();
+      for (const b of data ?? []) {
+        if (b.city) businessCityPairs.add(`${slugify(b.city)}`);
+      }
+      for (const cj of cityJunction ?? []) {
+        const key = slugify(cj.city_name);
+        if (key === currentSlug) continue;
+        // Only count if this business wasn't already counted via businesses.city
+        const existing = cityCountMap.get(key);
+        if (existing) {
+          existing.count++;
+        } else {
+          cityCountMap.set(key, { name: cj.city_name, count: 1 });
         }
       }
 
