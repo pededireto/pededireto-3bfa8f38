@@ -1,79 +1,83 @@
 
 
-# Plan: Logo + Consumer Dashboard Review Feedback
+## Plano: Multi-Cidade para Negócios
 
-## Task 1 — Add PedeDireto Logo Image Everywhere
+### Problema
+O campo `businesses.city` é texto livre. Negócios que operam em várias cidades (ex: "Lisboa | Porto | Alentejo | Algarve | Açores | Madeira") criam "mega-cidades" falsas que geram URLs de SEO inválidas como `/top/babysitting/lisboa-porto-alentejo-algarve-acores-madeira`.
 
-Copy the uploaded logo to `src/assets/pede-direto-logo.png`, then replace all text-only "Pede Direto" brand references with the logo image.
+**6 negócios** na base de dados já têm este problema.
 
-### Files to modify (logo replacement):
+### Abordagem — Junction Table `business_cities`
 
-**All locations use the same pattern**: replace the text `<span/h1>Pede Direto</span/h1>` with `<img src={logo} alt="Pede Direto" className="h-8" />` (size varies by context).
+Mesma estratégia da multi-categoria: manter `businesses.city` como cidade primária (backward compatible) + nova junction table.
 
-| File | Location | Logo size |
-|------|----------|-----------|
-| `src/components/Header.tsx` | Line 33-35 (desktop brand link) | h-8 |
-| `src/components/Footer.tsx` | Line 65-67 (footer brand) | h-8 |
-| `src/components/admin/AdminSidebar.tsx` | Line 233-234 (sidebar brand) | h-8 |
-| `src/components/business/BusinessSidebar.tsx` | Line 115-116 (sidebar brand) | h-8 |
-| `src/components/commercial/CommercialSidebar.tsx` | Line 41-42 (sidebar brand) | h-8 |
-| `src/pages/AdminPage.tsx` | Line 118 (mobile header) | h-7 |
-| `src/pages/BusinessDashboard.tsx` | Line 79 (mobile header) | h-7 |
-| `src/pages/CommercialPage.tsx` | Line 54 (mobile header) | h-7 |
-| `src/pages/CustomerSuccessPage.tsx` | CS header area | h-8 |
-| `src/pages/UserLogin.tsx` | Line 94-95 (login form) | h-10 |
-| `src/pages/AdminLogin.tsx` | Line 87-88 | h-10 |
-| `src/pages/UserRegister.tsx` | Line 98-99 | h-10 |
-| `src/pages/AdminRegister.tsx` | Line 81-82 | h-10 |
-| `src/pages/RegisterChoice.tsx` | Line 12-13 | h-10 |
-| `src/pages/ForgotPassword.tsx` | Line 48-49 | h-10 |
-| `src/pages/ResetPassword.tsx` | Line 80-81 | h-10 |
-| `src/pages/ClaimBusiness.tsx` | Line 201-202 | h-10 |
+### Passo 1 — Migration SQL
 
-Each file will import the logo: `import logo from "@/assets/pede-direto-logo.png";`
-
----
-
-## Task 2 — Review Feedback on Consumer Dashboard Requests
-
-### Data model understanding
-- `business_reviews` links via `business_id` + `user_id` (no `request_id`)
-- `request_business_matches` links `request_id` to `business_id`
-- So for each request, we find matched businesses, then check if the consumer left a review for any of those businesses
-
-### New hook: `useConsumerRequestReviews`
-
-In `src/hooks/useServiceRequests.ts`, add a new hook that:
-1. Takes the list of request IDs
-2. For each request, gets the matched business IDs from `request_business_matches`
-3. Fetches the user's reviews from `business_reviews` where `user_id = auth.uid()`
-4. Returns a map: `Record<requestId, { rating: number, businessResponse: string | null, businessResponseAt: string | null, businessName: string }[]>`
-
-Implementation approach — a single query that:
-```typescript
-// 1. Get all matches for the user's requests
-const { data: matches } = await supabase
-  .from("request_business_matches")
-  .select("request_id, business_id, businesses(name)")
-  .in("request_id", requestIds);
-
-// 2. Get all reviews by this user
-const { data: reviews } = await supabase
-  .from("business_reviews")
-  .select("business_id, rating, business_response, business_response_at")
-  .eq("user_id", userId);
-
-// 3. Cross-reference: for each match, find if there's a review
+```sql
+CREATE TABLE public.business_cities (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+  city_name   TEXT NOT NULL,
+  is_primary  BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(business_id, city_name)
+);
+-- RLS: leitura pública, escrita owner/admin
+-- Trigger: sync is_primary → businesses.city
+-- Backfill: para cada negócio, split city por "|" ou "," e inserir cada cidade
+-- Os 6 negócios problemáticos: cidade primária = primeira da lista
 ```
 
-### UI changes in `src/pages/UserDashboard.tsx`
+O trigger `sync_primary_city` actualiza `businesses.city` com apenas a cidade primária sempre que `is_primary = true` é definido, mantendo backward compatibility com todas as views, RPCs, sitemap e SEO pages.
 
-In the request card (lines 281-346), after the status Badge, add:
+### Passo 2 — Backfill + limpeza dos 6 negócios
 
-1. **If user reviewed a matched business**: Show a gold badge `★ X.X Avaliado`
-2. **If business responded**: Show a small notification line below with the business response text (collapsible), similar to how it appears in the business dashboard screenshot (green "A sua resposta:" block)
+Na mesma migration:
+1. Inserir uma entrada por negócio existente (os que têm cidade simples)
+2. Para os 6 com separadores: split, trim, inserir cada cidade, marcar a primeira como primária
+3. Actualizar `businesses.city` dos 6 para conter apenas a cidade primária
 
-Visual design:
-- Badge: `<Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">★ {rating} Avaliado</Badge>`
-- Response block: A small card with "O negócio respondeu à sua avaliação" header and the response text below, styled like the business dashboard review cards
+### Passo 3 — Consumo nos filtros de cidade
+
+Alterar os hooks que filtram por cidade (`useBusinesses`, `useTopRanking`, `SubcategoryCityPage`, `sitemap`) para também consultar `business_cities`:
+- Um negócio aparece numa cidade se `business_cities.city_name ilike '%cidade%'` OU `businesses.city ilike '%cidade%'` OU `alcance = 'nacional'`
+- Isto garante que "Baby Sisters" aparece nos rankings de Lisboa, Porto, Alentejo, etc. separadamente
+
+### Passo 4 — UI na página pública
+
+Em `BusinessPage.tsx`, se o negócio tem múltiplas cidades em `business_cities`, mostrar "Atende em Lisboa, Porto, Alentejo, ..." em vez da mega-string actual.
+
+### Passo 5 — UI no Admin (BusinessFileCard) e Owner (BusinessOwnerEditForm)
+
+Componente `MultiCityInput`:
+- Campo de texto onde se escreve cidades separadas por vírgula ou `|`
+- Ao perder o foco ou ao guardar: split automático, cada cidade vira uma pill removível
+- Primeira cidade = primária (pode ser reordenada)
+- Ao guardar: sync para `business_cities`
+
+### Passo 6 — Sitemap e SEO pages
+
+O sitemap já usa `slugify(biz.city)` — com a junction table, cada cidade gera uma entrada separada no sitemap em vez de uma mega-slug.
+
+### Ficheiros a criar/alterar
+
+| Ficheiro | Acção |
+|---|---|
+| `supabase/migrations/...` | Junction table + trigger + backfill |
+| `src/hooks/useBusinessCities.ts` | Novo — CRUD multi-cidade |
+| `src/components/business/MultiCityInput.tsx` | Novo — UI pills de cidades |
+| `src/pages/BusinessPage.tsx` | Mostrar cidades separadas |
+| `src/components/BusinessCard.tsx` | Mostrar cidades separadas |
+| `src/components/admin/BusinessFileCard.tsx` | Multi-city input |
+| `src/components/business/BusinessOwnerEditForm.tsx` | Multi-city input |
+| `src/hooks/useTopRanking.ts` | Consultar junction table |
+| `src/pages/SubcategoryCityPage.tsx` | Consultar junction table |
+| `src/hooks/useBusinesses.ts` | Consultar junction table |
+| `supabase/functions/sitemap/index.ts` | Gerar URLs por cidade |
+
+### Riscos
+
+- **Nulo**: `businesses.city` mantém-se, todas as views/RPCs continuam a funcionar
+- **Baixo**: O sitemap pode gerar mais URLs (positivo para SEO)
+- **Backfill**: Apenas 6 negócios afectados, migração simples
 
