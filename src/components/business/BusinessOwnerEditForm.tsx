@@ -312,7 +312,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     instagram_url: "",
     facebook_url: "",
     other_social_url: "",
-    show_social: true,
+    show_social: false,
     images: [] as string[],
     show_gallery: true,
     // Dados Legais
