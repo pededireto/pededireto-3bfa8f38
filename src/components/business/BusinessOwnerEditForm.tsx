@@ -528,10 +528,19 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         });
       }
 
-      if (form.city.trim()) {
+      // Sync cities junction table
+      if (form.city_names.length > 0) {
+        await syncCities.mutateAsync({
+          businessId: business.id,
+          cities: form.city_names,
+          primaryCity: form.primary_city,
+        });
+      }
+
+      if (form.primary_city.trim()) {
         await (supabase as any)
           .from("cities")
-          .upsert({ name: form.city.trim() }, { onConflict: "name", ignoreDuplicates: true });
+          .upsert({ name: form.primary_city.trim() }, { onConflict: "name", ignoreDuplicates: true });
       }
 
       toast({ title: "✅ Negócio atualizado com sucesso!" });
