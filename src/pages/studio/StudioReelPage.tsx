@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, Check, Sparkles, Upload, Loader2, Lock } from "lucide-react";
+import { ChevronDown, ChevronUp, Sparkles, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +7,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useStudioGenerate } from "@/hooks/useStudioGenerate";
 import { useSaveGeneration } from "@/hooks/useGenerations";
@@ -16,6 +15,16 @@ import { useSubcategories } from "@/hooks/useSubcategories";
 import { useStudioContext } from "@/pages/studio/StudioLayout";
 import CopyButton from "@/components/studio/CopyButton";
 import GrokBox from "@/components/studio/GrokBox";
+
+// ── Constants ──
+
+const OBJECTIVOS = [
+  { key: "negocio", label: "Negócio", emoji: "🏪" },
+  { key: "produto", label: "Produto", emoji: "📦" },
+  { key: "evento", label: "Evento", emoji: "🎉" },
+  { key: "promocao", label: "Promoção", emoji: "💥" },
+  { key: "outro", label: "Outro", emoji: "🎯" },
+];
 
 const ESTILOS = [
   { key: "institucional", label: "Institucional", emoji: "🏛️", desc: "Credibilidade e confiança" },
@@ -39,48 +48,82 @@ const TOMS_PER_EXT = [
   { options: ["CTA directo", "Convite", "Marca"], color: "text-purple-400" },
 ];
 
-const TOM_MAP: Record<string, number[]> = {
-  emocional: [0, 0, 0, 0, 0],
-  institucional: [1, 0, 1, 2, 2],
-  urgente: [2, 1, 2, 0, 0],
-  proximidade: [0, 1, 0, 1, 1],
+const DEFAULT_TOMS: Record<string, number[]> = {
+  negocio:  [0, 0, 0, 0, 0],
+  produto:  [2, 1, 2, 0, 0],
+  evento:   [2, 0, 0, 0, 1],
+  promocao: [0, 1, 2, 1, 0],
+  outro:    [0, 0, 0, 0, 0],
 };
 
+const DEFAULT_ESTILO: Record<string, string> = {
+  negocio:  "institucional",
+  produto:  "produto",
+  evento:   "historia",
+  promocao: "promocao",
+  outro:    "institucional",
+};
+
+// ── Image compression utility ──
+
+function compressImage(file: File, maxWidth = 1024, quality = 0.8): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement("canvas");
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const ratio = Math.min(maxWidth / img.width, maxWidth / img.height, 1);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Falha ao processar a imagem"));
+    };
+    img.src = url;
+  });
+}
+
 // ── Page ──
+
 const StudioReelPage = () => {
-  const { generate, isLoading } = useStudioGenerate();
+  const { generate } = useStudioGenerate();
   const saveGen = useSaveGeneration();
   const { selectedBusiness } = useStudioContext();
 
-  // DB categories & subcategories
   const { data: dbCategories = [] } = useCategories();
   const [selectedCatId, setSelectedCatId] = useState("");
   const { data: dbSubcategories = [] } = useSubcategories(selectedCatId || undefined);
 
-  // Step states
-  const [openStep, setOpenStep] = useState(1);
-  const [stepsUnlocked, setStepsUnlocked] = useState({ 2: false, 3: false, 4: false });
-  const [stepsDone, setStepsDone] = useState({ 1: false, 2: false, 3: false, 4: false });
+  // Step 1 — Objective & Image (required)
+  const [objectivo, setObjectivo] = useState("");
+  const [objectivoDescricao, setObjectivoDescricao] = useState("");
+  const [imageBase64, setImageBase64] = useState("");
+  const [imageMimeType, setImageMimeType] = useState("image/jpeg");
+  const [imageName, setImageName] = useState("");
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // Step 1
+  // Step 2 — Business context (optional, collapsible)
+  const [step2Open, setStep2Open] = useState(false);
   const [profileText, setProfileText] = useState("");
   const [extracting, setExtracting] = useState(false);
-
-  // Step 2
   const [nome, setNome] = useState("");
   const [cidade, setCidade] = useState("");
   const [subcategoria, setSubcategoria] = useState("");
   const [servicos, setServicos] = useState("");
   const [diferencial, setDiferencial] = useState("");
 
-  // Step 3
-  const [toms, setToms] = useState([0, 0, 0, 0, 0]);
+  // Step 3 — Tone & style (optional, collapsible)
+  const [step3Open, setStep3Open] = useState(false);
+  const [toms, setToms] = useState<number[]>(DEFAULT_TOMS["negocio"]);
   const [estilo, setEstilo] = useState("institucional");
-
-  // Step 4
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
-  const [imageName, setImageName] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [userChangedToms, setUserChangedToms] = useState(false);
+  const [userChangedEstilo, setUserChangedEstilo] = useState(false);
 
   // Output
   const [result, setResult] = useState<any>(null);
@@ -95,6 +138,13 @@ const StudioReelPage = () => {
     }
   }, [selectedBusiness]);
 
+  // Smart defaults: update toms/estilo when objectivo changes (unless user edited them)
+  useEffect(() => {
+    if (!objectivo) return;
+    if (!userChangedToms) setToms(DEFAULT_TOMS[objectivo] || DEFAULT_TOMS["negocio"]);
+    if (!userChangedEstilo) setEstilo(DEFAULT_ESTILO[objectivo] || "institucional");
+  }, [objectivo, userChangedToms, userChangedEstilo]);
+
   // ── Extract ──
   const handleExtract = async () => {
     if (!profileText.trim()) return;
@@ -105,40 +155,51 @@ const StudioReelPage = () => {
 
     setNome(data.nome || "");
     setCidade(data.cidade || "");
-    // Try to match extracted category_key to a DB category by slug
     const matchedCat = dbCategories.find((c) => c.slug === data.categoria_key);
     setSelectedCatId(matchedCat?.id || "");
     setSubcategoria(data.subcategoria || "");
     setServicos(data.servicos || "");
     setDiferencial(data.diferencial || "");
-    setEstilo(data.estilo_sugerido || "institucional");
-
-    const tomMap = TOM_MAP[data.tom_sugerido] || [0, 0, 0, 0, 0];
-    setToms(tomMap);
-
-    setStepsDone((p) => ({ ...p, 1: true }));
-    setStepsUnlocked({ 2: true, 3: true, 4: true });
-    setOpenStep(2);
+    if (data.estilo_sugerido && !userChangedEstilo) setEstilo(data.estilo_sugerido);
   };
 
-  // ── Image upload ──
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── Image upload with compression ──
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return;
+    if (file.size > 10 * 1024 * 1024) return; // 10MB limit
 
     setImageName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImageBase64(reader.result as string);
-      setStepsDone((p) => ({ ...p, 4: true }));
-    };
-    reader.readAsDataURL(file);
+    // Show preview immediately
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreviewUrl(previewUrl);
+
+    try {
+      const { base64, mimeType } = await compressImage(file);
+      setImageBase64(base64);
+      setImageMimeType(mimeType);
+    } catch {
+      // Fallback to raw data URL if compression fails
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        setImageBase64(dataUrl.split(",")[1]);
+        setImageMimeType("image/jpeg");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearImage = () => {
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImageBase64("");
+    setImageMimeType("image/jpeg");
+    setImageName("");
+    setImagePreviewUrl("");
   };
 
   // ── Generate ──
-  const canGenerate =
-    nome && cidade && selectedCatId && subcategoria && imageBase64 && !generating;
+  const canGenerate = imageBase64 && objectivo && !generating;
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
@@ -146,167 +207,180 @@ const StudioReelPage = () => {
     setResult(null);
 
     const tomLabels = toms.map((sel, i) => TOMS_PER_EXT[i].options[sel]);
+    const catLabel = dbCategories.find((c) => c.id === selectedCatId)?.name || "";
 
     const data = await generate("generate_reel", {
-      nome,
-      cidade,
-      categoria: dbCategories.find((c) => c.id === selectedCatId)?.name || selectedCatId,
-      subcategoria,
-      servicos,
-      diferencial,
-      estilo,
-      estilo_descricao: ESTILO_DESC[estilo] || "",
-      toms: tomLabels,
+      objectivo: OBJECTIVOS.find((o) => o.key === objectivo)?.label || objectivo,
+      objectivoDescricao: objectivoDescricao || "",
       imageBase64,
+      imageMimeType,
+      nome: nome || "",
+      cidade: cidade || "",
+      categoria: catLabel,
+      subcategoria: subcategoria || "",
+      servicos: servicos || "",
+      diferencial: diferencial || "",
+      tomExt1: tomLabels[0],
+      tomExt2: tomLabels[1],
+      tomExt3: tomLabels[2],
+      tomExt4: tomLabels[3],
+      tomExt5: tomLabels[4],
+      estilo,
+      estiloDesc: ESTILO_DESC[estilo] || "",
     });
 
     setGenerating(false);
     if (!data) return;
-
     setResult(data);
+
     saveGen.mutate({
       type: "reel",
-      title: `${nome} · ${subcategoria}`,
-      subtitle: `${cidade} · ${estilo}`,
+      title: `${nome || objectivo} · ${subcategoria || cidade || "reel"}`,
+      subtitle: `${estilo} · ${objectivo}`,
       data,
     });
   };
-
-  // ── Step Header ──
-  const StepHeader = ({
-    num,
-    title,
-    preview,
-    isOpen,
-    isDone,
-    isLocked,
-    onClick,
-  }: {
-    num: number;
-    title: string;
-    preview?: string;
-    isOpen: boolean;
-    isDone: boolean;
-    isLocked: boolean;
-    onClick: () => void;
-  }) => (
-    <button
-      onClick={isLocked ? undefined : onClick}
-      className={cn(
-        "w-full flex items-center gap-3 p-4 rounded-xl transition-all text-left",
-        isLocked && "opacity-50 cursor-not-allowed",
-        isDone && !isOpen && "border border-primary/30 bg-primary/5",
-        isOpen && "bg-muted/50",
-        !isLocked && !isOpen && !isDone && "hover:bg-muted/30"
-      )}
-    >
-      <div
-        className={cn(
-          "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",
-          isDone ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-        )}
-      >
-        {isDone ? <Check className="h-4 w-4" /> : isLocked ? <Lock className="h-3.5 w-3.5" /> : num}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="font-display font-semibold text-sm">{title}</div>
-        {preview && !isOpen && (
-          <div className="text-xs text-muted-foreground truncate">{preview}</div>
-        )}
-      </div>
-      {!isLocked && (isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />)}
-    </button>
-  );
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6 max-w-[1400px]">
       {/* ═══ LEFT: Form ═══ */}
       <div className="space-y-3">
-        {/* STEP 1 */}
-        <div className="rounded-xl border border-border bg-card">
-          <StepHeader
-            num={1}
-            title="Perfil do negócio"
-            preview={stepsDone[1] ? `✓ Dados extraídos — ${nome} · ${cidade}` : undefined}
-            isOpen={openStep === 1}
-            isDone={stepsDone[1]}
-            isLocked={false}
-            onClick={() => setOpenStep(openStep === 1 ? 0 : 1)}
-          />
-          {openStep === 1 && (
-            <div className="px-4 pb-4 space-y-3">
-              {/* Future integration field (disabled) */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex gap-2">
-                    <Input
-                      disabled
-                      placeholder="🔗 ID do negócio Pede Direto"
-                      className="opacity-50"
-                    />
-                    <Button disabled variant="outline" size="sm">
-                      Sincronizar
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Integração directa com a plataforma Pede Direto em breve. Por agora, cola o texto do perfil manualmente.
-                </TooltipContent>
-              </Tooltip>
+        {/* STEP 1 — Objective & Image (always visible) */}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
+            <p className="text-sm font-display font-semibold">O que queres promover?</p>
+          </div>
 
-              <Textarea
-                value={profileText}
-                onChange={(e) => setProfileText(e.target.value)}
-                rows={6}
-                placeholder="Cola aqui o texto completo do perfil: nome, descrição, serviços, localização, horário, diferenciais..."
-                className="resize-none"
-              />
-              <Button
-                onClick={handleExtract}
-                disabled={!profileText.trim() || extracting}
-                variant="outline"
-                className="border-primary/40 hover:bg-primary/10"
-              >
-                {extracting ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4 mr-2" />
+          {/* Objective pills */}
+          <div className="flex flex-wrap gap-2">
+            {OBJECTIVOS.map((o) => (
+              <button
+                key={o.key}
+                onClick={() => setObjectivo(o.key)}
+                className={cn(
+                  "px-3 py-2 rounded-lg text-sm border transition-all flex items-center gap-1.5",
+                  objectivo === o.key
+                    ? "bg-primary/10 border-primary text-primary font-medium"
+                    : "border-border hover:border-primary/30"
                 )}
-                {extracting ? "A extrair..." : "✦ Extrair dados com IA"}
-              </Button>
-            </div>
-          )}
+              >
+                <span>{o.emoji}</span>
+                <span>{o.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Descreve brevemente o que queres comunicar (opcional)</label>
+            <Textarea
+              value={objectivoDescricao}
+              onChange={(e) => setObjectivoDescricao(e.target.value)}
+              rows={2}
+              className="resize-none"
+              placeholder="Ex: lançamento do novo menu de verão, promoção 2x1 este fim-de-semana, inauguração da nova loja..."
+            />
+          </div>
+
+          {/* Image upload */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Imagem inicial do vídeo *</label>
+            <p className="text-[10px] text-muted-foreground mb-2">O vídeo começa exactamente neste frame</p>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+            {!imageBase64 ? (
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="w-full border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center gap-2 hover:border-primary/30 transition-colors"
+              >
+                <Upload className="h-6 w-6 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Clica para carregar a imagem base</span>
+                <span className="text-[10px] text-muted-foreground">JPG, PNG, WEBP — máx 10MB — comprimida automaticamente</span>
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <img
+                  src={imagePreviewUrl || `data:${imageMimeType};base64,${imageBase64}`}
+                  alt="Preview"
+                  className="w-full max-h-48 object-contain rounded-lg"
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground truncate flex-1">{imageName}</span>
+                  <Button variant="outline" size="sm" onClick={clearImage}>Trocar imagem</Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* STEP 2 */}
+        {/* STEP 2 — Business context (optional, collapsible) */}
         <div className="rounded-xl border border-border bg-card">
-          <StepHeader
-            num={2}
-            title="Confirmar dados extraídos"
-            preview={nome ? `${nome} · ${cidade} · ${subcategoria}` : undefined}
-            isOpen={openStep === 2}
-            isDone={stepsDone[2]}
-            isLocked={!stepsUnlocked[2]}
-            onClick={() => setOpenStep(openStep === 2 ? 0 : 2)}
-          />
-          {openStep === 2 && stepsUnlocked[2] && (
-            <div className="px-4 pb-4 space-y-3">
+          <button
+            onClick={() => setStep2Open(!step2Open)}
+            className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/30 transition-colors rounded-xl"
+          >
+            <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">2</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-display font-semibold text-sm">Dados do negócio</span>
+                <Badge variant="secondary" className="text-[10px]">OPCIONAL</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">Enriquece o roteiro — quanto mais contexto, melhor o resultado</p>
+            </div>
+            {step2Open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
+
+          {step2Open && (
+            <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Cola o perfil completo e extrai automaticamente</label>
+                <Textarea
+                  value={profileText}
+                  onChange={(e) => setProfileText(e.target.value)}
+                  rows={4}
+                  placeholder="Cola aqui o texto do perfil: nome, descrição, serviços, localização..."
+                  className="resize-none"
+                />
+                <Button
+                  onClick={handleExtract}
+                  disabled={!profileText.trim() || extracting}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 border-primary/40 hover:bg-primary/10"
+                >
+                  {extracting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  {extracting ? "A extrair..." : "✦ Extrair com IA"}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[10px] text-muted-foreground">ou preenche manualmente</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Nome do negócio *</label>
-                  <Input value={nome} onChange={(e) => setNome(e.target.value)} />
+                  <label className="text-xs text-muted-foreground mb-1 block">Nome do negócio</label>
+                  <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Taberna do Borges" />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Cidade *</label>
-                  <Input value={cidade} onChange={(e) => setCidade(e.target.value)} />
+                  <label className="text-xs text-muted-foreground mb-1 block">Cidade</label>
+                  <Input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Ex: Porto" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Categoria *</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">Categoria</label>
                   <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSubcategoria(""); }}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                     <SelectContent>
                       {dbCategories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
@@ -315,9 +389,9 @@ const StudioReelPage = () => {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Subcategoria *</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">Subcategoria</label>
                   <Select value={subcategoria} onValueChange={setSubcategoria} disabled={!selectedCatId}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                     <SelectContent>
                       {dbSubcategories.map((sub) => (
                         <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
@@ -329,37 +403,35 @@ const StudioReelPage = () => {
 
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Serviços principais</label>
-                <Input value={servicos} onChange={(e) => setServicos(e.target.value)} />
+                <Input value={servicos} onChange={(e) => setServicos(e.target.value)} placeholder="Ex: menu executivo, brunch, eventos privados..." />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Diferencial do negócio</label>
-                <Textarea value={diferencial} onChange={(e) => setDiferencial(e.target.value)} rows={2} className="resize-none" />
+                <label className="text-xs text-muted-foreground mb-1 block">Diferencial / O que nos torna especiais</label>
+                <Textarea value={diferencial} onChange={(e) => setDiferencial(e.target.value)} rows={2} className="resize-none" placeholder="Ex: vista panorâmica, chef premiado, ambiente familiar..." />
               </div>
-
-              <Button
-                size="sm"
-                onClick={() => { setStepsDone((p) => ({ ...p, 2: true })); setOpenStep(3); }}
-                disabled={!nome || !cidade || !selectedCatId || !subcategoria}
-              >
-                Confirmar dados
-              </Button>
             </div>
           )}
         </div>
 
-        {/* STEP 3 */}
+        {/* STEP 3 — Tone & Style (optional, collapsible) */}
         <div className="rounded-xl border border-border bg-card">
-          <StepHeader
-            num={3}
-            title="Tom de voz por extensão"
-            preview={stepsDone[3] ? `Estilo: ${estilo}` : undefined}
-            isOpen={openStep === 3}
-            isDone={stepsDone[3]}
-            isLocked={!stepsUnlocked[3]}
-            onClick={() => setOpenStep(openStep === 3 ? 0 : 3)}
-          />
-          {openStep === 3 && stepsUnlocked[3] && (
-            <div className="px-4 pb-4 space-y-4">
+          <button
+            onClick={() => setStep3Open(!step3Open)}
+            className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/30 transition-colors rounded-xl"
+          >
+            <div className="w-7 h-7 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">3</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-display font-semibold text-sm">Tom & estilo</span>
+                <Badge variant="secondary" className="text-[10px]">OPCIONAL</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">A IA aplica defaults baseados no objectivo seleccionado</p>
+            </div>
+            {step3Open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
+
+          {step3Open && (
+            <div className="px-4 pb-4 space-y-4 border-t border-border pt-3">
               <p className="text-xs text-muted-foreground">
                 Cada extensão do vídeo tem um tom diferente — a narrativa cresce ao longo dos 30s.
               </p>
@@ -375,7 +447,10 @@ const StudioReelPage = () => {
                       {ext.options.map((opt, oi) => (
                         <button
                           key={opt}
-                          onClick={() => setToms((p) => { const n = [...p]; n[i] = oi; return n; })}
+                          onClick={() => {
+                            setToms((p) => { const n = [...p]; n[i] = oi; return n; });
+                            setUserChangedToms(true);
+                          }}
                           className={cn(
                             "px-2.5 py-1 rounded-md text-xs transition-colors border",
                             toms[i] === oi
@@ -397,7 +472,7 @@ const StudioReelPage = () => {
                   {ESTILOS.map((e) => (
                     <button
                       key={e.key}
-                      onClick={() => setEstilo(e.key)}
+                      onClick={() => { setEstilo(e.key); setUserChangedEstilo(true); }}
                       className={cn(
                         "p-3 rounded-xl border text-left transition-all",
                         estilo === e.key
@@ -412,65 +487,6 @@ const StudioReelPage = () => {
                   ))}
                 </div>
               </div>
-
-              <Button
-                size="sm"
-                onClick={() => { setStepsDone((p) => ({ ...p, 3: true })); setOpenStep(4); }}
-              >
-                Confirmar tom e estilo
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* STEP 4 */}
-        <div className="rounded-xl border border-border bg-card">
-          <StepHeader
-            num={4}
-            title="Imagem inicial do vídeo"
-            preview={stepsDone[4] ? `✓ Imagem carregada — ${imageName}` : undefined}
-            isOpen={openStep === 4}
-            isDone={stepsDone[4]}
-            isLocked={!stepsUnlocked[4]}
-            onClick={() => setOpenStep(openStep === 4 ? 0 : 4)}
-          />
-          {openStep === 4 && stepsUnlocked[4] && (
-            <div className="px-4 pb-4">
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={handleImageUpload}
-              />
-              {!imageBase64 ? (
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="w-full border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center gap-2 hover:border-primary/30 transition-colors"
-                >
-                  <span className="text-3xl">🎬</span>
-                  <span className="text-sm text-muted-foreground text-center">
-                    Clica para carregar a imagem base<br />
-                    <span className="text-xs">Foto da galeria ou gerada no Gerador de Imagem</span>
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">JPG, PNG, WEBP — máx 5MB</span>
-                </button>
-              ) : (
-                <div className="space-y-2">
-                  <img
-                    src={imageBase64}
-                    alt="Preview"
-                    className="w-full max-h-48 object-contain rounded-lg"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { setImageBase64(null); setImageName(""); setStepsDone((p) => ({ ...p, 4: false })); }}
-                  >
-                    Trocar imagem
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -491,6 +507,14 @@ const StudioReelPage = () => {
             "✦ Analisar Imagem + Gerar 5 Extensões"
           )}
         </Button>
+
+        {!canGenerate && !generating && (
+          <p className="text-[10px] text-muted-foreground text-center">
+            {!objectivo && !imageBase64 ? "Selecciona um objectivo e carrega uma imagem para começar" :
+             !objectivo ? "Selecciona o que queres promover" :
+             !imageBase64 ? "Carrega a imagem inicial do vídeo" : ""}
+          </p>
+        )}
       </div>
 
       {/* ═══ RIGHT: Output ═══ */}
@@ -511,8 +535,8 @@ const StudioReelPage = () => {
             <div>
               <span className="text-4xl block mb-3">🎬</span>
               <p className="text-sm text-muted-foreground">
-                Preenche os passos e carrega uma imagem.<br />
-                A IA analisa o frame e gera 5 extensões Grok prontas a copiar.
+                Selecciona o objectivo, carrega uma imagem e clica em gerar.<br />
+                Os dados do negócio e o tom são opcionais.
               </p>
             </div>
           </div>
@@ -523,6 +547,7 @@ const StudioReelPage = () => {
 };
 
 // ── Output Panel ──
+
 const EXT_COLORS = ["bg-cta", "bg-primary", "bg-blue-500", "bg-warning", "bg-purple-500"];
 
 const ReelOutput = ({
@@ -548,7 +573,7 @@ const ReelOutput = ({
     doc.text("PEDE DIRETO — Marketing AI Studio", margin, y);
     y += 8;
     doc.setFontSize(11);
-    doc.text(`Script Reel 30s · ${nome} · ${cidade}`, margin, y);
+    doc.text(`Script Reel 30s · ${nome || "Reel"} · ${cidade || ""}`, margin, y);
     y += 6;
     doc.text(`Gerado em ${new Date().toLocaleString("pt-PT")}`, margin, y);
     y += 12;
@@ -608,7 +633,7 @@ const ReelOutput = ({
 
     doc.setFontSize(8);
     doc.text("pededireto.pt", margin, 285);
-    doc.save(`reel-${nome.toLowerCase().replace(/\s+/g, "-")}.pdf`);
+    doc.save(`reel-${(nome || "reel").toLowerCase().replace(/\s+/g, "-")}.pdf`);
   };
 
   return (
@@ -621,7 +646,6 @@ const ReelOutput = ({
 
       <div className="flex-1 overflow-auto">
         <TabsContent value="extensoes" className="p-4 space-y-4 mt-0">
-          {/* Image analysis */}
           <div className="rounded-xl border border-ring/30 bg-ring/5 p-4">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs font-medium text-ring">Análise da imagem base</span>
@@ -632,7 +656,6 @@ const ReelOutput = ({
             <p className="text-xs text-muted-foreground">{result.analise_imagem}</p>
           </div>
 
-          {/* Extensions */}
           {(result.extensoes || []).map((ext: any, i: number) => (
             <div
               key={ext.num}
@@ -649,7 +672,6 @@ const ReelOutput = ({
             </div>
           ))}
 
-          {/* Workflow */}
           <div className="rounded-xl border border-border bg-muted/30 p-4">
             <p className="text-xs font-semibold mb-2">📋 Como usar no Grok:</p>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
@@ -674,22 +696,16 @@ const ReelOutput = ({
             <div className="rounded-xl border border-border bg-muted/30 p-4">
               <p className="text-sm whitespace-pre-wrap">{result.copy_post}</p>
             </div>
-            <div className="mt-2">
-              <CopyButton text={result.copy_post || ""} />
-            </div>
+            <div className="mt-2"><CopyButton text={result.copy_post || ""} /></div>
           </div>
           <div>
             <p className="text-xs font-semibold mb-2">Versão Story</p>
             <div className="rounded-xl border border-border bg-muted/30 p-4">
               <p className="text-sm whitespace-pre-wrap">{result.copy_story}</p>
             </div>
-            <div className="mt-2">
-              <CopyButton text={result.copy_story || ""} />
-            </div>
+            <div className="mt-2"><CopyButton text={result.copy_story || ""} /></div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExportPDF}>
-            ⬇ Exportar PDF
-          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportPDF}>⬇ Exportar PDF</Button>
         </TabsContent>
 
         <TabsContent value="segmentacao" className="p-4 space-y-4 mt-0">
@@ -710,9 +726,7 @@ const ReelOutput = ({
                     )}
                   >
                     <p className="text-[10px] text-muted-foreground uppercase">{item.label}</p>
-                    <p className={cn("text-sm font-medium", item.highlight && "text-cta")}>
-                      {item.value}
-                    </p>
+                    <p className={cn("text-sm font-medium", item.highlight && "text-cta")}>{item.value}</p>
                   </div>
                 ))}
               </div>
@@ -721,7 +735,6 @@ const ReelOutput = ({
                 <p className="text-sm">{result.segmentacao.interesses}</p>
               </div>
 
-              {/* 6 day plan */}
               <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
                 <p className="text-xs font-semibold">Plano de teste 6 dias:</p>
                 <div className="text-xs text-muted-foreground space-y-1">
