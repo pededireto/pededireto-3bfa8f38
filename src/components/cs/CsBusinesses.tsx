@@ -395,16 +395,21 @@ const CsBusinesses = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((business: any) => {
+          {filtered.map((business: any, index: number) => {
             const plan = planMap.get(business.plan_id);
             const isFreePlan = !business.plan_id || business.plan_id === "543e0ec3-21ba-4223-bb7a-6375341349b4";
             return (
               <div
                 key={business.id}
-                className="bg-card rounded-xl border border-border hover:border-primary/30 transition-all cursor-pointer"
+                className={`bg-card rounded-xl border border-border hover:border-primary/30 transition-all cursor-pointer ${rankingMode && index < 3 ? "border-primary/20 bg-primary/5" : ""}`}
                 onClick={() => setSelectedBusiness(business)}
               >
                 <div className="flex items-center gap-4 p-4">
+                  {rankingMode && (
+                    <div className="flex-shrink-0 w-8 text-center">
+                      {getPositionBadge(index + 1)}
+                    </div>
+                  )}
                   {business.logo_url
                     ? <img src={business.logo_url} alt="" className="h-10 w-10 rounded-lg object-contain border border-border flex-shrink-0" />
                     : <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0">{business.name[0]}</div>
@@ -417,6 +422,11 @@ const CsBusinesses = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {rankingMode && (
+                      <Badge variant="outline" className="text-xs font-mono hidden sm:flex">
+                        {business.ranking_score?.toFixed(1) ?? "—"}
+                      </Badge>
+                    )}
                     <Badge variant={business.is_active ? "default" : "secondary"} className="text-xs hidden sm:flex">
                       {business.is_active ? "Activo" : "Inactivo"}
                     </Badge>
