@@ -73,7 +73,7 @@ export const useAnalyticsSummary = (filters: AnalyticsFilters = { period: "30d" 
       let clicksQuery = supabase
         .from("analytics_events")
         .select("*", { count: "exact", head: true })
-        .in("event_type", ["click_whatsapp", "click_phone", "click_website", "click_email", "click_app"]);
+        .in("event_type", ["click_whatsapp", "click_phone", "click_website", "click_email", "click_app", "click_instagram", "click_facebook", "click_reservation", "click_order"]);
       clicksQuery = buildBase(clicksQuery);
       const { count: totalClicks } = await clicksQuery;
 
@@ -81,7 +81,7 @@ export const useAnalyticsSummary = (filters: AnalyticsFilters = { period: "30d" 
       let clicksByTypeQuery = supabase
         .from("analytics_events")
         .select("event_type")
-        .in("event_type", ["click_whatsapp", "click_phone", "click_website", "click_email", "click_app"]);
+        .in("event_type", ["click_whatsapp", "click_phone", "click_website", "click_email", "click_app", "click_instagram", "click_facebook", "click_reservation", "click_order"]);
       clicksByTypeQuery = buildBase(clicksByTypeQuery);
       const { data: clicksByType } = await clicksByTypeQuery;
 
