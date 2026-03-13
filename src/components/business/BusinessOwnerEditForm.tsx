@@ -300,6 +300,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     description: "",
     logo_url: "",
     category_id: "",
+    category_ids: [] as string[],
+    primary_category_id: "",
     subcategory_ids: [] as string[],
     city: "",
     zone: "",
