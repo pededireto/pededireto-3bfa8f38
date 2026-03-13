@@ -23,6 +23,10 @@ import {
   Building2,
   Search,
   X,
+  Instagram,
+  Facebook,
+  CalendarCheck,
+  ShoppingBag,
 } from "lucide-react";
 
 // ─── Filtros ────────────────────────────────────────────────────────────────
