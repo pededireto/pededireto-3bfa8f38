@@ -580,10 +580,10 @@ const RegisterBusiness = () => {
                   <span>{maskPhone(formData.phone)}</span>
                 </div>
 
-                {/* Category label */}
+                {/* Category labels */}
                 <div className="text-xs text-muted-foreground">
                   <Building2 className="h-3 w-3 inline mr-1" />
-                  {selectedCategoryName}
+                  {selectedCategoryNames.join(" · ")}
                 </div>
               </div>
 
