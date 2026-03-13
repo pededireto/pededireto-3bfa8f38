@@ -349,13 +349,25 @@ const BusinessPage = () => {
 
   const getAlcanceLabel = () => {
     if (!business) return "";
+    const cityNames = businessCities.length > 1
+      ? businessCities.map((c) => c.city_name).join(", ")
+      : null;
+
     switch (business.alcance) {
       case "nacional":
         return "Entrega em todo o país";
       case "local":
-        return business.city ? `Atende em ${business.city}` : "Atendimento local";
+        return cityNames
+          ? `Atende em ${cityNames}`
+          : business.city
+          ? `Atende em ${business.city}`
+          : "Atendimento local";
       case "hibrido":
-        return business.city ? `${business.city} + envios nacionais` : "Local + envios nacionais";
+        return cityNames
+          ? `${cityNames} + envios nacionais`
+          : business.city
+          ? `${business.city} + envios nacionais`
+          : "Local + envios nacionais";
       default:
         return "";
     }
