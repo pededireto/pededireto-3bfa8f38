@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { useSearch } from "@/hooks/useSearch";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useAutoSaveSearch } from "@/hooks/useSavedSearches";
-import { useCategories } from "@/hooks/useCategories";
 import SearchResults from "@/components/SearchResults";
+import pedeDiretoMascot from "@/assets/pede-direto-mascot.png";
+import { getYouTubeEmbedUrl } from "@/utils/youtube";
 
 interface HeroSectionProps {
   onSearch?: (term: string) => void;
@@ -15,122 +16,7 @@ interface HeroSectionProps {
 }
 
 const PLACEHOLDER_WORDS = ["canalizador", "eletricista", "restaurante", "cabeleireiro", "mecânico", "clínica"];
-
 const POPULAR_CITIES = ["Lisboa", "Porto", "Braga", "Coimbra", "Setúbal", "Faro", "Évora", "Aveiro", "Viseu", "Leiria"];
-
-// Detect if URL is YouTube
-const isYouTubeUrl = (url: string) => url.includes("youtube.com") || url.includes("youtu.be");
-
-// Get YouTube embed URL
-const getYouTubeEmbedUrl = (url: string): string => {
-  const match = url.match(/(?:v=|youtu\.be\/)([^&?/]+)/);
-  if (match)
-    return `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1&loop=1&playlist=${match[1]}&controls=0&showinfo=0`;
-  return url;
-};
-
-// Detect base64
-const isBase64 = (url: string) => url.startsWith("data:");
-
-// Split array into N columns for masonry
-function splitIntoColumns<T>(arr: T[], cols: number): T[][] {
-  const columns: T[][] = Array.from({ length: cols }, () => []);
-  arr.forEach((item, i) => columns[i % cols].push(item));
-  return columns;
-}
-
-// Single masonry cell — image or video
-const MasonryCell = ({
-  name,
-  imageUrl,
-  videoUrl,
-  slug,
-}: {
-  name: string;
-  imageUrl: string | null;
-  videoUrl: string | null;
-  slug: string;
-}) => {
-  const [hovered, setHovered] = useState(false);
-  const navigate = useNavigate();
-
-  const hasVideo = !!videoUrl;
-  const isYT = hasVideo && isYouTubeUrl(videoUrl!);
-  const isMp4 = hasVideo && !isYT;
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-xl cursor-pointer group"
-      style={{ marginBottom: "8px" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={() => navigate(`/top/${slug}`)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && navigate(`/top/${slug}`)}
-      aria-label={`Ver top ${name}`}
-    >
-      {/* Media */}
-      <div className="relative w-full" style={{ paddingBottom: "75%" }}>
-        <div className="absolute inset-0">
-          {/* Video (mp4 / Supabase) */}
-          {isMp4 && <video src={videoUrl!} autoPlay muted loop playsInline className="w-full h-full object-cover" />}
-
-          {/* Video (YouTube iframe) */}
-          {isYT && (
-            <iframe
-              src={getYouTubeEmbedUrl(videoUrl!)}
-              className="w-full h-full"
-              frameBorder="0"
-              allow="autoplay; muted"
-              title={name}
-            />
-          )}
-
-          {/* Image fallback */}
-          {!hasVideo && imageUrl && !isBase64(imageUrl) && (
-            <img
-              src={imageUrl}
-              alt={name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              loading="lazy"
-            />
-          )}
-
-          {/* Base64 image fallback */}
-          {!hasVideo && imageUrl && isBase64(imageUrl) && (
-            <img
-              src={imageUrl}
-              alt={name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-          )}
-
-          {/* No media fallback */}
-          {!hasVideo && !imageUrl && (
-            <div className="w-full h-full bg-gradient-to-br from-primary/60 to-primary/20 flex items-center justify-center">
-              <span className="text-3xl font-bold text-white/40">{name.charAt(0)}</span>
-            </div>
-          )}
-
-          {/* Overlay on hover */}
-          <div
-            className={`absolute inset-0 bg-black transition-opacity duration-300 flex items-end p-3 ${
-              hovered ? "opacity-70" : "opacity-0"
-            }`}
-          />
-          <div
-            className={`absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 ${
-              hovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-            }`}
-          >
-            <p className="text-white text-xs font-semibold leading-tight drop-shadow-lg truncate">{name.trim()}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionProps) => {
   const navigate = useNavigate();
@@ -142,7 +28,6 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
 
   const { data: searchResults = [], isLoading: searchLoading } = useSearch(searchTerm);
   const { data: settings } = useSiteSettings();
-  const { data: categories = [] } = useCategories();
   const autoSaveSearch = useAutoSaveSearch();
 
   const searchRef = useRef<HTMLDivElement>(null);
@@ -151,6 +36,11 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
 
   const heroTitle = settings?.hero_title || "Tem um Problema?\nNós Mostramos quem Resolve";
   const heroSubtitle = settings?.hero_subtitle || "Restaurantes, serviços, lojas e profissionais — tudo num só sítio.";
+  const mascotUrl = settings?.mascot_url;
+  const mascotEnabled = settings?.mascot_enabled === "true";
+  const heroMediaType = settings?.hero_media_type || "image";
+  const heroVideoUrl = settings?.hero_video_url;
+  const youtubeEmbedUrl = heroVideoUrl ? getYouTubeEmbedUrl(heroVideoUrl) : null;
 
   // Rotate placeholder
   useEffect(() => {
@@ -189,21 +79,6 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
     setShowCityDropdown(false);
   };
 
-  // Build masonry items from categories (cycle if < 12)
-  const masonryItems = (() => {
-    const cats = categories.filter((c) => c.image_url || (c as any).video_url);
-    if (cats.length === 0) return categories.slice(0, 12);
-    // repeat until we have ~12
-    const result = [];
-    while (result.length < 12) {
-      result.push(...cats);
-    }
-    return result.slice(0, 12);
-  })();
-
-  const columns = splitIntoColumns(masonryItems, 3);
-
-  // Render title with line break support
   const renderTitle = () => {
     const lines = heroTitle.split("\n");
     if (lines.length > 1) {
@@ -230,52 +105,10 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   };
 
   return (
-    <section
-      className="relative overflow-hidden bg-background"
-      style={{ minHeight: "calc(100vh - 64px)" }}
-      aria-labelledby="hero-heading"
-    >
-      {/* ── MASONRY BACKGROUND ── */}
-      <div
-        className="absolute inset-0 flex gap-2 p-2 opacity-20 pointer-events-none select-none"
-        aria-hidden="true"
-        style={{ filter: "blur(0px)" }}
-      >
-        {columns.map((col, ci) => (
-          <div key={ci} className="flex-1 flex flex-col gap-2">
-            {col.map((cat, ri) => (
-              <div
-                key={`${cat.id}-${ri}`}
-                className="relative overflow-hidden rounded-xl bg-muted"
-                style={{ paddingBottom: ri % 2 === 0 ? "120%" : "75%" }}
-              >
-                <div className="absolute inset-0">
-                  {cat.image_url && !isBase64(cat.image_url) && (
-                    <img src={cat.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                  )}
-                  {cat.image_url && isBase64(cat.image_url) && (
-                    <img src={cat.image_url} alt="" className="w-full h-full object-cover" />
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-
-      {/* ── OVERLAY GRADIENT ── */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(var(--background-rgb, 255,255,255), 0.97) 0%, rgba(var(--background-rgb, 255,255,255), 0.85) 50%, rgba(var(--background-rgb, 255,255,255), 0.75) 100%)",
-        }}
-      />
-
-      {/* ── CONTENT ── */}
-      <div className="relative z-10 container py-16 md:py-24">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          {/* LEFT — text + search */}
+    <section className="section-hero py-12 md:py-20" aria-labelledby="hero-heading">
+      <div className="container">
+        <div className="grid md:grid-cols-2 gap-8 items-center">
+          {/* LEFT — texto + pesquisa */}
           <div className="space-y-6">
             <h1
               id="hero-heading"
@@ -288,7 +121,6 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
 
             {/* Search box */}
             <form onSubmit={handleSubmit} className="space-y-2 max-w-lg" role="search">
-              {/* Main search input */}
               <div className="relative" ref={searchRef}>
                 <Search
                   aria-hidden="true"
@@ -333,9 +165,8 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                 )}
               </div>
 
-              {/* City filter row */}
+              {/* Filtro de cidade */}
               <div className="flex items-center gap-2 flex-wrap">
-                {/* City dropdown */}
                 <div className="relative" ref={cityRef}>
                   <button
                     type="button"
@@ -385,7 +216,6 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                   )}
                 </div>
 
-                {/* Active city pill */}
                 {selectedCity && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                     <MapPin className="h-3 w-3" />
@@ -402,7 +232,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                 )}
               </div>
 
-              {/* CTA buttons */}
+              {/* CTAs */}
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button type="submit" className="btn-cta-primary text-base">
                   Pesquisar
@@ -429,28 +259,30 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
             </div>
           </div>
 
-          {/* RIGHT — interactive masonry grid */}
-          <div className="hidden md:flex gap-2 max-h-[520px] overflow-hidden" aria-hidden="true">
-            {columns.map((col, ci) => (
-              <div
-                key={ci}
-                className="flex-1 flex flex-col gap-2"
-                style={{
-                  transform: `translateY(${ci % 2 === 0 ? "0px" : "-24px"})`,
-                }}
-              >
-                {col.map((cat, ri) => (
-                  <MasonryCell
-                    key={`${cat.id}-${ri}`}
-                    name={cat.name}
-                    imageUrl={cat.image_url}
-                    videoUrl={(cat as any).video_url ?? null}
-                    slug={cat.slug}
-                  />
-                ))}
+          {/* RIGHT — vídeo / mascote / logótipo (original) */}
+          {heroMediaType === "video" && youtubeEmbedUrl ? (
+            <div className="hidden md:flex justify-center items-center" aria-hidden="true">
+              <div className="bg-card rounded-2xl shadow-card overflow-hidden w-full max-w-md aspect-video">
+                <iframe src={youtubeEmbedUrl} className="w-full h-full" allowFullScreen title="Vídeo Pede Direto" />
               </div>
-            ))}
-          </div>
+            </div>
+          ) : mascotEnabled && mascotUrl ? (
+            <div className="hidden md:flex justify-center items-center" aria-hidden="true">
+              <div className="bg-card rounded-2xl shadow-card p-6 flex items-center justify-center w-full max-w-md">
+                <img src={mascotUrl} alt="Mascote do Pede Direto" className="w-full h-auto max-h-80 object-contain" />
+              </div>
+            </div>
+          ) : (
+            <div className="hidden md:flex justify-center items-center" aria-hidden="true">
+              <div className="bg-card rounded-2xl shadow-card p-6 flex items-center justify-center w-full max-w-md">
+                <img
+                  src={pedeDiretoMascot}
+                  alt="Logótipo do Pede Direto"
+                  className="w-full h-auto max-h-80 object-contain"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
