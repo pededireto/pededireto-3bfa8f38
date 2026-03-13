@@ -524,7 +524,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters — Row 1 */}
       <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -535,8 +535,8 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             className="pl-10"
           />
         </div>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-48">
+        <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v); setFilterSubcategory(""); }}>
+          <SelectTrigger className="w-44">
             <SelectValue placeholder="Todas categorias" />
           </SelectTrigger>
           <SelectContent>
@@ -548,35 +548,8 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             ))}
           </SelectContent>
         </Select>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Todos estados" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos estados</SelectItem>
-            <SelectItem value="active">Ativos</SelectItem>
-            <SelectItem value="inactive">Inativos</SelectItem>
-            <SelectItem value="featured">Destaques</SelectItem>
-            <SelectItem value="premium">Premium</SelectItem>
-          </SelectContent>
-        </Select>
-        {/* Dropdown de filtro por cidade */}
-        <Select value={filterCity} onValueChange={setFilterCity}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Todas as cidades" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as cidades</SelectItem>
-            {availableCities.map((city) => (
-              <SelectItem key={city} value={city}>
-                {city}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {/* Subcategoria filter */}
         <Select value={filterSubcategory} onValueChange={setFilterSubcategory}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-44">
             <SelectValue placeholder="Todas subcategorias" />
           </SelectTrigger>
           <SelectContent>
@@ -588,14 +561,38 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             ))}
           </SelectContent>
         </Select>
-        {/* Ranking toggle */}
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Todos estados" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos estados</SelectItem>
+            <SelectItem value="active">Ativos</SelectItem>
+            <SelectItem value="inactive">Inativos</SelectItem>
+            <SelectItem value="featured">Destaques</SelectItem>
+            <SelectItem value="premium">Premium</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterCity} onValueChange={setFilterCity}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Todas cidades" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas cidades</SelectItem>
+            {availableCities.map((city) => (
+              <SelectItem key={city} value={city}>
+                {city}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
           variant={rankingMode ? "default" : "outline"}
           onClick={() => setRankingMode(!rankingMode)}
           className="gap-2"
         >
           <Trophy className="h-4 w-4" />
-          {rankingMode ? "Ranking" : "Ranking"}
+          Ranking
         </Button>
       </div>
 
