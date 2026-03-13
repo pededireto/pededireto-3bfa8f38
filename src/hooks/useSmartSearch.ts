@@ -581,6 +581,46 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
             businessGroups = [{ label: termToSearch, businesses: byText.map(formatBusiness) }];
           }
         }
+
+        // ── CAMADA 3b: Busca por cidade ──────────────────────────────────
+        if (businessGroups.length === 0) {
+          const termToSearch = resolvedTerms[0] ?? normalizedTerm;
+          // Search by businesses.city
+          const { data: byCity } = await supabase
+            .from("businesses")
+            .select(BIZ_SELECT)
+            .eq("is_active", true)
+            .ilike("city", `%${termToSearch}%`)
+            .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
+            .limit(50);
+
+          // Also search by business_cities junction table
+          const { data: cityJunction } = await supabase
+            .from("business_cities")
+            .select("business_id")
+            .ilike("city_name", `%${termToSearch}%`);
+
+          const junctionBizIds = (cityJunction || []).map((c: any) => c.business_id);
+          const existingIds = new Set((byCity || []).map((b: any) => b.id));
+          const missingIds = junctionBizIds.filter((id: string) => !existingIds.has(id));
+
+          let extraBiz: any[] = [];
+          if (missingIds.length > 0) {
+            const { data } = await supabase
+              .from("businesses")
+              .select(BIZ_SELECT)
+              .eq("is_active", true)
+              .in("id", missingIds)
+              .order(BIZ_ORDER.column, { ascending: BIZ_ORDER.ascending })
+              .limit(50);
+            extraBiz = data || [];
+          }
+
+          const allCityBiz = [...(byCity || []), ...extraBiz];
+          if (allCityBiz.length > 0) {
+            businessGroups = [{ label: `Negócios em ${termToSearch.charAt(0).toUpperCase() + termToSearch.slice(1)}`, businesses: allCityBiz.map(formatBusiness) }];
+          }
+        }
       }
 
       // ── Filtro soft de cidade ─────────────────────────────────────────
