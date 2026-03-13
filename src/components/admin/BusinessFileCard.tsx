@@ -768,6 +768,14 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         if (form.subcategory_ids.length > 0) {
           await syncSubcategories.mutateAsync({ businessId, subcategoryIds: form.subcategory_ids });
         }
+        // Sync cities junction table
+        if (form.city_names.length > 0) {
+          await syncCities.mutateAsync({
+            businessId,
+            cities: form.city_names,
+            primaryCity: form.primary_city,
+          });
+        }
         const moduleEntries = Object.entries(moduleValues);
         if (moduleEntries.length > 0) {
           await upsertModuleValues.mutateAsync({
