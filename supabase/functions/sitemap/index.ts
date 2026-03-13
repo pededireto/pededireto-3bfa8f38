@@ -63,6 +63,11 @@ Deno.serve(async (req) => {
     .from("business_subcategories")
     .select("business_id, subcategory_id");
 
+  // Business-cities junction (multi-city support)
+  const { data: businessCities } = await supabase
+    .from("business_cities")
+    .select("business_id, city_name");
+
   // Published blog posts
   const { data: blogPosts } = await supabase
     .from("blog_posts")
@@ -80,6 +85,20 @@ Deno.serve(async (req) => {
     const catSlug = catIdToSlug.get(s.category_id);
     if (catSlug) {
       subIdToData.set(s.id, { slug: s.slug, catSlug });
+    }
+  }
+
+  // Build business -> all cities map (from both businesses.city and business_cities)
+  const businessCitiesMap = new Map<string, Set<string>>();
+  for (const b of businesses ?? []) {
+    const cities = new Set<string>();
+    if (b.city) cities.add(b.city);
+    businessCitiesMap.set(b.id, cities);
+  }
+  for (const bc of businessCities ?? []) {
+    const cities = businessCitiesMap.get(bc.business_id);
+    if (cities) {
+      cities.add(bc.city_name);
     }
   }
 
