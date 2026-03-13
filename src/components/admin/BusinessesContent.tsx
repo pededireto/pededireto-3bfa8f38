@@ -73,6 +73,8 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const [filterStatus, setFilterStatus] = useState("");
   // ✅ NOVO: estado para filtro de cidade
   const [filterCity, setFilterCity] = useState("");
+  const [filterSubcategory, setFilterSubcategory] = useState("");
+  const [rankingMode, setRankingMode] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importResults, setImportResults] = useState<{ success: number; errors: string[] } | null>(null);
