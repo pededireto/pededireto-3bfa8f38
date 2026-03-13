@@ -13,6 +13,7 @@ import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
+import { useBusinessSubcategoryMap } from "@/hooks/useBusinessSubcategoryMap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,8 @@ import {
   Pencil,
   Power,
   CheckSquare,
+  Trophy,
+  Medal,
 } from "lucide-react";
 import ContactLogsDialog from "@/components/admin/ContactLogsDialog";
 import BusinessFileCard from "@/components/admin/BusinessFileCard";
@@ -63,6 +66,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const syncSubcategories = useSyncBusinessSubcategories();
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: commercialPlans = [] } = useCommercialPlans(true);
+  const { data: subMap } = useBusinessSubcategoryMap();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,6 +74,8 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
   const [filterStatus, setFilterStatus] = useState("");
   // ✅ NOVO: estado para filtro de cidade
   const [filterCity, setFilterCity] = useState("");
+  const [filterSubcategory, setFilterSubcategory] = useState("");
+  const [rankingMode, setRankingMode] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importResults, setImportResults] = useState<{ success: number; errors: string[] } | null>(null);
@@ -350,26 +356,50 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     toast({ title: "Exportação concluída", description: `${exportData.length} negócios exportados` });
   };
 
-  // ✅ FILTRO: agora inclui filtro por cidade
-  const filteredBusinesses = businesses.filter((b) => {
-    const matchesSearch =
-      !searchTerm ||
-      b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.categories?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.cta_email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !filterCategory || filterCategory === "all" || b.category_id === filterCategory;
-    const matchesStatus =
-      !filterStatus ||
-      filterStatus === "all" ||
-      (filterStatus === "active" && b.is_active) ||
-      (filterStatus === "inactive" && !b.is_active) ||
-      (filterStatus === "featured" && b.is_featured) ||
-      (filterStatus === "premium" && b.is_premium);
-    // ✅ NOVO: filtro por cidade
-    const matchesCity = !filterCity || filterCity === "all" || b.city?.trim() === filterCity;
-    return matchesSearch && matchesCategory && matchesStatus && matchesCity;
-  });
+  // Subcategorias filtradas pela categoria selecionada
+  const filteredSubcategories = useMemo(() => {
+    if (!filterCategory || filterCategory === "all") return allSubcategories;
+    return allSubcategories.filter((s) => s.category_id === filterCategory);
+  }, [allSubcategories, filterCategory]);
+
+  // ✅ FILTRO: inclui filtro por cidade + subcategoria
+  const filteredBusinesses = useMemo(() => {
+    const list = businesses.filter((b) => {
+      const matchesSearch =
+        !searchTerm ||
+        b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.categories?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.cta_email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !filterCategory || filterCategory === "all" || b.category_id === filterCategory;
+      const matchesStatus =
+        !filterStatus ||
+        filterStatus === "all" ||
+        (filterStatus === "active" && b.is_active) ||
+        (filterStatus === "inactive" && !b.is_active) ||
+        (filterStatus === "featured" && b.is_featured) ||
+        (filterStatus === "premium" && b.is_premium);
+      const matchesCity = !filterCity || filterCity === "all" || b.city?.trim() === filterCity;
+      const matchesSubcategory =
+        !filterSubcategory ||
+        filterSubcategory === "all" ||
+        b.subcategory_id === filterSubcategory ||
+        (subMap && subMap.get(b.id)?.includes(filterSubcategory));
+      return matchesSearch && matchesCategory && matchesStatus && matchesCity && matchesSubcategory;
+    });
+
+    if (rankingMode) {
+      return [...list].sort((a, b) => (b.ranking_score ?? 0) - (a.ranking_score ?? 0));
+    }
+    return list;
+  }, [businesses, searchTerm, filterCategory, filterStatus, filterCity, filterSubcategory, subMap, rankingMode]);
+
+  const getPositionBadge = (pos: number) => {
+    if (pos === 1) return <span className="text-lg">🥇</span>;
+    if (pos === 2) return <span className="text-lg">🥈</span>;
+    if (pos === 3) return <span className="text-lg">🥉</span>;
+    return <span className="text-xs font-bold text-muted-foreground">#{pos}</span>;
+  };
 
   return (
     <div className="space-y-6">
@@ -530,7 +560,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             <SelectItem value="premium">Premium</SelectItem>
           </SelectContent>
         </Select>
-        {/* ✅ NOVO: Dropdown de filtro por cidade */}
+        {/* Dropdown de filtro por cidade */}
         <Select value={filterCity} onValueChange={setFilterCity}>
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Todas as cidades" />
@@ -544,6 +574,29 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             ))}
           </SelectContent>
         </Select>
+        {/* Subcategoria filter */}
+        <Select value={filterSubcategory} onValueChange={setFilterSubcategory}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Todas subcategorias" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas subcategorias</SelectItem>
+            {filteredSubcategories.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {/* Ranking toggle */}
+        <Button
+          variant={rankingMode ? "default" : "outline"}
+          onClick={() => setRankingMode(!rankingMode)}
+          className="gap-2"
+        >
+          <Trophy className="h-4 w-4" />
+          {rankingMode ? "Ranking" : "Ranking"}
+        </Button>
       </div>
 
       {/* BULK ACTIONS BAR */}
@@ -586,7 +639,13 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                     onCheckedChange={toggleSelectAll}
                   />
                 </th>
+                {rankingMode && (
+                  <th className="text-center p-4 font-medium text-muted-foreground w-16">#</th>
+                )}
                 <th className="text-left p-4 font-medium text-muted-foreground">Negócio</th>
+                {rankingMode && (
+                  <th className="text-center p-4 font-medium text-muted-foreground w-24">Score</th>
+                )}
                 <th className="text-left p-4 font-medium text-muted-foreground">Categoria</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Subcategoria</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Cidade</th>
@@ -595,14 +654,22 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
               </tr>
             </thead>
             <tbody>
-              {filteredBusinesses.map((business) => (
-                <tr key={business.id} className="border-t border-border">
+              {filteredBusinesses.map((business, index) => (
+                <tr
+                  key={business.id}
+                  className={`border-t border-border ${rankingMode && index < 3 ? "bg-primary/5" : ""}`}
+                >
                   <td className="p-4">
                     <Checkbox
                       checked={selectedIds.has(business.id)}
                       onCheckedChange={() => toggleSelect(business.id)}
                     />
                   </td>
+                  {rankingMode && (
+                    <td className="p-4 text-center">
+                      {getPositionBadge(index + 1)}
+                    </td>
+                  )}
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       {business.logo_url ? (
@@ -619,6 +686,13 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                       <span className="font-medium">{business.name}</span>
                     </div>
                   </td>
+                  {rankingMode && (
+                    <td className="p-4 text-center">
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {business.ranking_score?.toFixed(1) ?? "—"}
+                      </Badge>
+                    </td>
+                  )}
                   <td className="p-4 text-muted-foreground">{business.categories?.name || "-"}</td>
                   <td className="p-4 text-muted-foreground">{business.subcategories?.name || "-"}</td>
                   <td className="p-4 text-muted-foreground">{business.city || "-"}</td>
@@ -697,7 +771,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
               ))}
               {filteredBusinesses.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={rankingMode ? 9 : 7} className="p-8 text-center text-muted-foreground">
                     Nenhum negócio encontrado.
                   </td>
                 </tr>
