@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import CityAutocomplete from "@/components/ui/CityAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import MultiCategorySelector from "@/components/business/MultiCategorySelector";
+import MultiCityInput from "@/components/business/MultiCityInput";
 import {
   ChevronDown,
   ChevronRight,
