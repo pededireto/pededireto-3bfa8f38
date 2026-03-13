@@ -347,6 +347,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         primary_category_id: "",
         subcategory_ids: [],
         city: business.city || "",
+        city_names: [],
+        primary_city: "",
         zone: business.zone || "",
         alcance: business.alcance || "local",
         public_address: business.public_address || "",
