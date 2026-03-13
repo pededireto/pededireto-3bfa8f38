@@ -525,78 +525,73 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Pesquisar por nome, cidade ou email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar por nome, cidade ou email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v); setFilterSubcategory(""); }}>
+            <SelectTrigger className="w-[170px]">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterSubcategory} onValueChange={setFilterSubcategory}>
+            <SelectTrigger className="w-[170px]">
+              <SelectValue placeholder="Subcategoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas subcategorias</SelectItem>
+              {filteredSubcategories.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Todas categorias" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas categorias</SelectItem>
-            {categories.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Todos estados" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos estados</SelectItem>
-            <SelectItem value="active">Ativos</SelectItem>
-            <SelectItem value="inactive">Inativos</SelectItem>
-            <SelectItem value="featured">Destaques</SelectItem>
-            <SelectItem value="premium">Premium</SelectItem>
-          </SelectContent>
-        </Select>
-        {/* Dropdown de filtro por cidade */}
-        <Select value={filterCity} onValueChange={setFilterCity}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Todas as cidades" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as cidades</SelectItem>
-            {availableCities.map((city) => (
-              <SelectItem key={city} value={city}>
-                {city}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {/* Subcategoria filter */}
-        <Select value={filterSubcategory} onValueChange={setFilterSubcategory}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Todas subcategorias" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas subcategorias</SelectItem>
-            {filteredSubcategories.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {/* Ranking toggle */}
-        <Button
-          variant={rankingMode ? "default" : "outline"}
-          onClick={() => setRankingMode(!rankingMode)}
-          className="gap-2"
-        >
-          <Trophy className="h-4 w-4" />
-          {rankingMode ? "Ranking" : "Ranking"}
-        </Button>
+        <div className="flex flex-wrap gap-3 items-center">
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos estados</SelectItem>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="inactive">Inativos</SelectItem>
+              <SelectItem value="featured">Destaques</SelectItem>
+              <SelectItem value="premium">Premium</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterCity} onValueChange={setFilterCity}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Cidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas cidades</SelectItem>
+              {availableCities.map((city) => (
+                <SelectItem key={city} value={city}>{city}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant={rankingMode ? "default" : "outline"}
+            onClick={() => setRankingMode(!rankingMode)}
+            className="gap-2"
+          >
+            <Trophy className="h-4 w-4" />
+            Ranking
+          </Button>
+        </div>
       </div>
 
       {/* BULK ACTIONS BAR */}
