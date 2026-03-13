@@ -219,6 +219,11 @@ const StudioReelPage = () => {
     const tomLabels = toms.map((sel, i) => TOMS_PER_EXT[i].options[sel]);
     const catLabel = dbCategories.find((c) => c.id === selectedCatId)?.name || "";
 
+    // Build business URL: direct link if slug available, generic fallback otherwise
+    const businessUrl = selectedBusiness?.slug
+      ? `pededireto.pt/negocio/${selectedBusiness.slug}`
+      : "pededireto.pt";
+
     const data = await generate("generate_reel", {
       objectivo: OBJECTIVOS.find((o) => o.key === objectivo)?.label || objectivo,
       objectivoDescricao: objectivoDescricao || "",
@@ -237,6 +242,7 @@ const StudioReelPage = () => {
       tomExt5: tomLabels[4],
       estilo,
       estiloDesc: ESTILO_DESC[estilo] || "",
+      businessUrl,
     });
 
     setGenerating(false);
