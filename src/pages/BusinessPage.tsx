@@ -323,7 +323,7 @@ const BusinessPage = () => {
     }
   }, [business?.id]);
 
-  const handleCtaClick = (type: "whatsapp" | "phone" | "website" | "email" | "app") => {
+  const handleCtaClick = (type: "whatsapp" | "phone" | "website" | "email" | "app" | "instagram" | "facebook" | "reservation" | "order") => {
     if (!business) return;
     trackEvent.mutate({
       event_type: `click_${type}` as any,
@@ -885,7 +885,7 @@ const BusinessPage = () => {
                         variant="outline"
                         className="w-full justify-center text-base hover:border-primary hover:text-primary transition-colors"
                         onClick={() => {
-                          handleCtaClick("website");
+                          handleCtaClick("reservation");
                           trackGA4Lead("booking");
                           window.open(ctaBookingUrl, "_blank");
                         }}
@@ -899,7 +899,7 @@ const BusinessPage = () => {
                         variant="outline"
                         className="w-full justify-center text-base hover:border-orange-500 hover:text-orange-500 transition-colors"
                         onClick={() => {
-                          handleCtaClick("website");
+                          handleCtaClick("order");
                           trackGA4Lead("order");
                           window.open(ctaOrderUrl, "_blank");
                         }}
@@ -971,7 +971,7 @@ const BusinessPage = () => {
                           <Button
                             variant="outline"
                             className="w-full justify-center text-base hover:border-[#E1306C] hover:text-[#E1306C] transition-colors"
-                            onClick={() => window.open(instagramUrl, "_blank")}
+                            onClick={() => { handleCtaClick("instagram"); window.open(instagramUrl, "_blank"); }}
                           >
                             <Instagram className="w-5 h-5" />
                             Ver Instagram
@@ -981,7 +981,7 @@ const BusinessPage = () => {
                           <Button
                             variant="outline"
                             className="w-full justify-center text-base hover:border-[#1877F2] hover:text-[#1877F2] transition-colors"
-                            onClick={() => window.open(facebookUrl, "_blank")}
+                            onClick={() => { handleCtaClick("facebook"); window.open(facebookUrl, "_blank"); }}
                           >
                             <Facebook className="w-5 h-5" />
                             Ver Facebook

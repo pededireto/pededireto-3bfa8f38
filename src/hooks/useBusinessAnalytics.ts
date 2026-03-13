@@ -9,6 +9,10 @@ export interface BusinessAnalyticsData {
     whatsapp: number;
     website: number;
     email: number;
+    instagram: number;
+    facebook: number;
+    reservation: number;
+    order: number;
   };
 }
 
@@ -34,11 +38,15 @@ export const useBusinessAnalytics = (businessId: string | null, days = 30) => {
       const whatsapp = events.filter((e: any) => e.event_type === "click_whatsapp").length;
       const website = events.filter((e: any) => e.event_type === "click_website").length;
       const email = events.filter((e: any) => e.event_type === "click_email").length;
+      const instagram = events.filter((e: any) => e.event_type === "click_instagram").length;
+      const facebook = events.filter((e: any) => e.event_type === "click_facebook").length;
+      const reservation = events.filter((e: any) => e.event_type === "click_reservation").length;
+      const order = events.filter((e: any) => e.event_type === "click_order").length;
 
       return {
         views,
-        totalContacts: phone + whatsapp + website + email,
-        breakdown: { phone, whatsapp, website, email },
+        totalContacts: phone + whatsapp + website + email + instagram + facebook + reservation + order,
+        breakdown: { phone, whatsapp, website, email, instagram, facebook, reservation, order },
       };
     },
   });

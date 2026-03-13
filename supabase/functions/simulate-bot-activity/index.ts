@@ -45,7 +45,7 @@ const REVIEW_COMMENTS: Record<number, string[]> = {
   ],
 };
 
-const CLICK_TYPES = ["click_phone", "click_whatsapp", "click_email", "click_website"];
+const CLICK_TYPES = ["click_phone", "click_whatsapp", "click_email", "click_website", "click_instagram", "click_facebook", "click_reservation", "click_order"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
