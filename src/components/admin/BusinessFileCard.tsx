@@ -458,7 +458,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     other_social_url: "",
     cta_booking_url: "",
     cta_order_url: "",
-    show_social: true,
+    show_social: false,
     images: [] as string[],
     show_gallery: true,
     // 5. Dados Legais
