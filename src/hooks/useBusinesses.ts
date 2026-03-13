@@ -97,7 +97,51 @@ export const useBusinesses = (categoryId?: string, city?: string, subcategoryId?
         if (jError) throw jError;
         if (!junctionData || junctionData.length === 0) return [];
 
-        const businessIds = junctionData.map((j) => j.business_id);
+        let businessIds = junctionData.map((j) => j.business_id);
+
+        // If filtering by city, also include businesses from business_cities junction
+        if (city) {
+          const { data: cityJunction } = await supabase
+            .from("business_cities")
+            .select("business_id")
+            .ilike("city_name", `%${city}%`);
+
+          const cityBizIds = new Set((cityJunction || []).map((c) => c.business_id));
+          // Keep only businesses in this subcategory
+          const subcatBizIds = new Set(businessIds);
+
+          let query = supabase
+            .from("businesses")
+            .select(BUSINESS_SELECT)
+            .eq("is_active", true)
+            .in("id", businessIds)
+            .order("is_featured", { ascending: false })
+            .order("is_premium", { ascending: false })
+            .order("ranking_score", { ascending: false })
+            .order("display_order", { ascending: true });
+
+          if (categoryId) query = query.eq("category_id", categoryId);
+          // Match by city in businesses.city OR in business_cities OR alcance nacional
+          query = query.or(`city.ilike.%${city}%,alcance.eq.nacional`);
+
+          const { data, error } = await query;
+          if (error) throw error;
+
+          // Also include businesses found only in business_cities junction
+          const resultIds = new Set((data || []).map((b: any) => b.id));
+          const missingIds = [...cityBizIds].filter((id) => subcatBizIds.has(id) && !resultIds.has(id));
+
+          if (missingIds.length > 0) {
+            const { data: extra } = await supabase
+              .from("businesses")
+              .select(BUSINESS_SELECT)
+              .eq("is_active", true)
+              .in("id", missingIds);
+            if (extra) return [...(data as unknown as BusinessWithCategory[]), ...(extra as unknown as BusinessWithCategory[])];
+          }
+
+          return data as unknown as BusinessWithCategory[];
+        }
 
         let query = supabase
           .from("businesses")
@@ -106,11 +150,10 @@ export const useBusinesses = (categoryId?: string, city?: string, subcategoryId?
           .in("id", businessIds)
           .order("is_featured", { ascending: false })
           .order("is_premium", { ascending: false })
-          .order("ranking_score", { ascending: false }) // ← ranking por eventos
+          .order("ranking_score", { ascending: false })
           .order("display_order", { ascending: true });
 
         if (categoryId) query = query.eq("category_id", categoryId);
-        if (city) query = query.or(`city.ilike.%${city}%,alcance.eq.nacional`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -123,7 +166,7 @@ export const useBusinesses = (categoryId?: string, city?: string, subcategoryId?
         .eq("is_active", true)
         .order("is_featured", { ascending: false })
         .order("is_premium", { ascending: false })
-        .order("ranking_score", { ascending: false }) // ← ranking por eventos
+        .order("ranking_score", { ascending: false })
         .order("display_order", { ascending: true });
 
       if (categoryId) query = query.eq("category_id", categoryId);
