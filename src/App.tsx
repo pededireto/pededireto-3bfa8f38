@@ -50,6 +50,7 @@ import SearchPage from "./pages/SearchPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
 import TopRankingPage from "./pages/TopRankingPage";
+import TopIndexPage from "./pages/TopIndexPage";
 import PricingPage from "./pages/PricingPage";
 import BusinessShortUrl from "./pages/BusinessShortUrl";
 import NotFound from "./pages/NotFound";
@@ -170,6 +171,7 @@ const App = () => {
                     <Route path="/pesquisa" element={<SearchPage />} />
                     <Route path="/blog" element={<BlogPage />} />
                     <Route path="/blog/:slug" element={<BlogPostPage />} />
+                    <Route path="/top" element={<TopIndexPage />} />
                     <Route path="/top/:subcategorySlug/:citySlug" element={<TopRankingPage />} />
                     <Route path="/top/:subcategorySlug" element={<TopRankingPage />} />
                     <Route path="/s/:subSlug/:citySlug" element={<SeoSubcategoryCityPage />} />

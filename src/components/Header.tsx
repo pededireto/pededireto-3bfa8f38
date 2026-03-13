@@ -77,11 +77,11 @@ const Header = () => {
           </Link>
 
           <Link
-            to="/afiliados"
-            aria-current={isActive("/afiliados") ? "page" : undefined}
+            to="/top"
+            aria-current={isActive("/top") ? "page" : undefined}
             className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
           >
-            Afiliados
+            🏆 Top Negócios
           </Link>
 
           <Link
@@ -195,12 +195,12 @@ const Header = () => {
               </Link>
 
               <Link
-                to="/afiliados"
-                aria-current={isActive("/afiliados") ? "page" : undefined}
+                to="/top"
+                aria-current={isActive("/top") ? "page" : undefined}
                 className="text-lg font-medium text-foreground hover:text-primary transition-colors"
                 onClick={() => setIsOpen(false)}
               >
-                Afiliados
+                🏆 Top Negócios
               </Link>
 
               <Link
