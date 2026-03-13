@@ -61,16 +61,24 @@ export const useTopRanking = (subcategorySlug: string | undefined, citySlug?: st
         .in("id", bizIds)
         .eq("is_active", true)
         .order("ranking_score", { ascending: false, nullsFirst: false })
-        .limit(20);
-
-      if (citySlug) {
-        // Need to match city by slugified version
-        // Get all businesses first, then filter
-        query = query.limit(500);
-      }
+        .limit(500);
 
       const { data: rawBiz, error: bizErr } = await query;
       if (bizErr) throw bizErr;
+
+      // Also get cities from business_cities junction for all businesses
+      const { data: cityJunction } = await (supabase as any)
+        .from("business_cities")
+        .select("business_id, city_name")
+        .in("business_id", bizIds);
+
+      // Build a map of business_id -> additional cities
+      const businessCitiesMap = new Map<string, string[]>();
+      for (const cj of cityJunction || []) {
+        const existing = businessCitiesMap.get(cj.business_id) || [];
+        existing.push(cj.city_name);
+        businessCitiesMap.set(cj.business_id, existing);
+      }
 
       let businesses: TopBusiness[] = (rawBiz || []).map((b: any) => ({
         id: b.id,
@@ -86,20 +94,30 @@ export const useTopRanking = (subcategorySlug: string | undefined, citySlug?: st
       }));
 
       // Build city counts from all businesses (before city filter)
+      // Include cities from both businesses.city and business_cities junction
       const cityMap = new Map<string, number>();
       for (const b of businesses) {
-        if (b.city) {
-          const key = b.city;
-          cityMap.set(key, (cityMap.get(key) || 0) + 1);
+        const allCities = new Set<string>();
+        if (b.city) allCities.add(b.city);
+        const extraCities = businessCitiesMap.get(b.id) || [];
+        for (const c of extraCities) allCities.add(c);
+        for (const c of allCities) {
+          cityMap.set(c, (cityMap.get(c) || 0) + 1);
         }
       }
       const cityCounts: CityCount[] = Array.from(cityMap.entries())
         .map(([city, count]) => ({ city, citySlug: slugify(city), count }))
         .sort((a, b) => b.count - a.count);
 
-      // Filter by city if specified
+      // Filter by city if specified — match against businesses.city OR business_cities
       if (citySlug) {
-        businesses = businesses.filter((b) => b.city && slugify(b.city) === citySlug);
+        businesses = businesses.filter((b) => {
+          if (b.city && slugify(b.city) === citySlug) return true;
+          const extraCities = businessCitiesMap.get(b.id) || [];
+          return extraCities.some((c) => slugify(c) === citySlug);
+        });
+        businesses = businesses.slice(0, 20);
+      } else {
         businesses = businesses.slice(0, 20);
       }
 

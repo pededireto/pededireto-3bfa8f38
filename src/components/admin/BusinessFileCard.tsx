@@ -20,11 +20,13 @@ import {
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
+import { useBusinessCityNames, useSyncBusinessCities, parseCityString } from "@/hooks/useBusinessCities";
 import { useCreateAuditLog } from "@/hooks/useAuditLogs";
 import { useContactLogs, useCreateContactLog } from "@/hooks/useContactLogs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import AdminBadgesPanel from "@/components/admin/AdminBadgesPanel";
+import MultiCityInput from "@/components/business/MultiCityInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -420,6 +422,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   const createBusiness = useCreateBusiness();
   const createAuditLog = useCreateAuditLog();
   const syncSubcategories = useSyncBusinessSubcategories();
+  const { data: businessCities } = useBusinessCityNames(business?.id);
+  const syncCities = useSyncBusinessCities();
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: commercialPlans = [] } = useCommercialPlans(true);
   const { data: editSubcategoryIds } = useBusinessSubcategoryIds(business?.id);
@@ -440,6 +444,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     subcategory_ids: [] as string[],
     alcance: "local" as "local" | "nacional" | "hibrido",
     city: "",
+    city_names: [] as string[],
+    primary_city: "",
     zone: "",
     public_address: "",
     cta_phone: "",
@@ -493,6 +499,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         subcategory_ids: [],
         alcance: business.alcance || "local",
         city: business.city || "",
+        city_names: [],
+        primary_city: "",
         zone: business.zone || "",
         public_address: (business as any).public_address || "",
         cta_phone: business.cta_phone || "",
@@ -534,6 +542,19 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       setForm((prev) => ({ ...prev, subcategory_ids: editSubcategoryIds }));
     }
   }, [editSubcategoryIds, business]);
+  // Load cities from junction table
+  useEffect(() => {
+    if (businessCities && businessCities.length > 0) {
+      const names = businessCities.map((bc) => bc.city_name);
+      const primary = businessCities.find((bc) => bc.is_primary)?.city_name || names[0] || "";
+      setForm((prev) => ({ ...prev, city_names: names, primary_city: primary, city: primary }));
+    } else if (business?.city) {
+      const parsed = parseCityString(business.city);
+      if (parsed.length > 0) {
+        setForm((prev) => ({ ...prev, city_names: parsed, primary_city: parsed[0], city: parsed[0] }));
+      }
+    }
+  }, [businessCities, business?.city]);
   useEffect(() => {
     if (existingModuleValues.length > 0) {
       const map: Record<string, { value: string | null; value_json: any }> = {};
@@ -648,7 +669,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           logo_url: form.logo_url || null,
           category_id: form.category_id || null,
           subcategory_id: form.subcategory_ids[0] || null,
-          city: form.city || null,
+          city: form.primary_city || form.city || null,
           zone: form.zone || null,
           alcance: form.alcance,
           public_address: form.public_address || null,
@@ -687,7 +708,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           plan_id: form.plan_id || null,
           description: form.description || null,
           logo_url: form.logo_url || null,
-          city: form.city || null,
+           city: form.primary_city || form.city || null,
           zone: form.zone || null,
           alcance: form.alcance,
           public_address: form.public_address || null,
@@ -746,6 +767,14 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         }
         if (form.subcategory_ids.length > 0) {
           await syncSubcategories.mutateAsync({ businessId, subcategoryIds: form.subcategory_ids });
+        }
+        // Sync cities junction table
+        if (form.city_names.length > 0) {
+          await syncCities.mutateAsync({
+            businessId,
+            cities: form.city_names,
+            primaryCity: form.primary_city,
+          });
         }
         const moduleEntries = Object.entries(moduleValues);
         if (moduleEntries.length > 0) {
@@ -888,8 +917,19 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Cidade</Label>
-              <Input value={form.city} onChange={(e) => set("city", e.target.value)} />
+              <Label>Cidades onde opera</Label>
+              <MultiCityInput
+                cities={form.city_names}
+                primaryCity={form.primary_city}
+                onChange={(cities, primary) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    city_names: cities,
+                    primary_city: primary,
+                    city: primary,
+                  }));
+                }}
+              />
             </div>
             <div className="space-y-2">
               <Label>Zona / Região</Label>

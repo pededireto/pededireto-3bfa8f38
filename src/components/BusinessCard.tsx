@@ -3,6 +3,7 @@ import { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { PublicBusinessWithCategory } from "@/hooks/usePublicBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
 import { useBusinessPublicBadges } from "@/hooks/usePublicBadges";
+import { useBusinessCityNames } from "@/hooks/useBusinessCities";
 import { MapPin, Globe, Phone, MessageCircle, ExternalLink, Star as StarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FavoriteButton from "@/components/FavoriteButton";
@@ -34,6 +35,7 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
   const trackEvent = useTrackEvent();
   const navigate = useNavigate();
   const { data: publicBadges = [] } = useBusinessPublicBadges(business.id);
+  const { data: businessCities = [] } = useBusinessCityNames(business.id);
 
   const stats = (business as any).business_review_stats;
 
@@ -47,13 +49,25 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
   };
 
   const getAlcanceLabel = () => {
+    const cityNames = businessCities.length > 1
+      ? businessCities.map((c) => c.city_name).join(", ")
+      : null;
+
     switch (business.alcance) {
       case "nacional":
         return "Entrega em todo o país";
       case "local":
-        return business.city ? `Atende em ${business.city}` : "Atendimento local";
+        return cityNames
+          ? `Atende em ${cityNames}`
+          : business.city
+          ? `Atende em ${business.city}`
+          : "Atendimento local";
       case "hibrido":
-        return business.city ? `${business.city} + envios nacionais` : "Local + envios nacionais";
+        return cityNames
+          ? `${cityNames} + envios nacionais`
+          : business.city
+          ? `${business.city} + envios nacionais`
+          : "Local + envios nacionais";
       default:
         return null;
     }

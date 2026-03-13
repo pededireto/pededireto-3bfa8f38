@@ -63,6 +63,11 @@ Deno.serve(async (req) => {
     .from("business_subcategories")
     .select("business_id, subcategory_id");
 
+  // Business-cities junction (multi-city support)
+  const { data: businessCities } = await supabase
+    .from("business_cities")
+    .select("business_id, city_name");
+
   // Published blog posts
   const { data: blogPosts } = await supabase
     .from("blog_posts")
@@ -80,6 +85,20 @@ Deno.serve(async (req) => {
     const catSlug = catIdToSlug.get(s.category_id);
     if (catSlug) {
       subIdToData.set(s.id, { slug: s.slug, catSlug });
+    }
+  }
+
+  // Build business -> all cities map (from both businesses.city and business_cities)
+  const businessCitiesMap = new Map<string, Set<string>>();
+  for (const b of businesses ?? []) {
+    const cities = new Set<string>();
+    if (b.city) cities.add(b.city);
+    businessCitiesMap.set(b.id, cities);
+  }
+  for (const bc of businessCities ?? []) {
+    const cities = businessCitiesMap.get(bc.business_id);
+    if (cities) {
+      cities.add(bc.city_name);
     }
   }
 
@@ -178,26 +197,30 @@ Deno.serve(async (req) => {
   for (const bs of businessSubcategories ?? []) {
     const subData = subIdToData.get(bs.subcategory_id);
     if (!subData) continue;
-    const biz = businessById.get(bs.business_id);
-    if (!biz?.city) continue;
 
-    const citySlug = slugify(biz.city);
+    // Get all cities for this business (from both columns)
+    const allCities = businessCitiesMap.get(bs.business_id);
+    if (!allCities || allCities.size === 0) continue;
 
-    // Subcategory + City page
-    const key = `${subData.catSlug}/${subData.slug}/${citySlug}`;
-    if (!seenSubCity.has(key)) {
-      seenSubCity.add(key);
-      xml += `  <url>
+    for (const cityName of allCities) {
+      const citySlug = slugify(cityName);
+
+      // Subcategory + City page
+      const key = `${subData.catSlug}/${subData.slug}/${citySlug}`;
+      if (!seenSubCity.has(key)) {
+        seenSubCity.add(key);
+        xml += `  <url>
     <loc>${BASE_URL}/categoria/${subData.catSlug}/${subData.slug}/cidade/${citySlug}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 `;
-    }
+      }
 
-    // Count for top ranking + city
-    const topKey = `${subData.slug}/${citySlug}`;
-    subCityCounts.set(topKey, (subCityCounts.get(topKey) || 0) + 1);
+      // Count for top ranking + city
+      const topKey = `${subData.slug}/${citySlug}`;
+      subCityCounts.set(topKey, (subCityCounts.get(topKey) || 0) + 1);
+    }
   }
 
   // Top ranking + city pages (only if >= 3 businesses)
@@ -213,28 +236,16 @@ Deno.serve(async (req) => {
   }
 
   // SEO short URLs: /s/:subSlug/:citySlug (only if >= 3 businesses)
-  const seenShortUrl = new Set<string>();
-  for (const bs of businessSubcategories ?? []) {
-    const subData = subIdToData.get(bs.subcategory_id);
-    if (!subData) continue;
-    const biz = businessById.get(bs.business_id);
-    if (!biz?.city) continue;
-    const citySlugVal = slugify(biz.city);
-    const shortKey = `${subData.slug}/${citySlugVal}`;
-    if (!seenShortUrl.has(shortKey)) {
-      seenShortUrl.add(shortKey);
-    }
-  }
-
-  // Count businesses per short URL combo
   const shortUrlCounts = new Map<string, number>();
   for (const bs of businessSubcategories ?? []) {
     const subData = subIdToData.get(bs.subcategory_id);
     if (!subData) continue;
-    const biz = businessById.get(bs.business_id);
-    if (!biz?.city) continue;
-    const shortKey = `${subData.slug}/${slugify(biz.city)}`;
-    shortUrlCounts.set(shortKey, (shortUrlCounts.get(shortKey) || 0) + 1);
+    const allCities = businessCitiesMap.get(bs.business_id);
+    if (!allCities || allCities.size === 0) continue;
+    for (const cityName of allCities) {
+      const shortKey = `${subData.slug}/${slugify(cityName)}`;
+      shortUrlCounts.set(shortKey, (shortUrlCounts.get(shortKey) || 0) + 1);
+    }
   }
 
   for (const [key, count] of shortUrlCounts) {

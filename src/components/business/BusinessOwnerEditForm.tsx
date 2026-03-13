@@ -3,6 +3,7 @@ import { useUpdateBusinessOwner } from "@/hooks/useUpdateBusinessOwner";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
 import { useBusinessCategoryIds, useSyncBusinessCategories } from "@/hooks/useBusinessCategories";
+import { useBusinessCityNames, useSyncBusinessCities, parseCityString } from "@/hooks/useBusinessCities";
 import { useCategories } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import CityAutocomplete from "@/components/ui/CityAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import MultiCategorySelector from "@/components/business/MultiCategorySelector";
+import MultiCityInput from "@/components/business/MultiCityInput";
 import {
   ChevronDown,
   ChevronRight,
@@ -285,6 +287,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: editSubcategoryIds } = useBusinessSubcategoryIds(business?.id);
   const { data: businessCategories } = useBusinessCategoryIds(business?.id);
+  const { data: businessCities } = useBusinessCityNames(business?.id);
+  const syncCities = useSyncBusinessCities();
 
   const [rawSchedulePaste, setRawSchedulePaste] = useState("");
   const [showPasteBox, setShowPasteBox] = useState(false);
@@ -304,6 +308,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     primary_category_id: "",
     subcategory_ids: [] as string[],
     city: "",
+    city_names: [] as string[],
+    primary_city: "",
     zone: "",
     alcance: "local" as "local" | "nacional" | "hibrido",
     public_address: "",
@@ -341,6 +347,8 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         primary_category_id: "",
         subcategory_ids: [],
         city: business.city || "",
+        city_names: [],
+        primary_city: "",
         zone: business.zone || "",
         alcance: business.alcance || "local",
         public_address: business.public_address || "",
@@ -390,6 +398,21 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
       setForm((prev) => ({ ...prev, subcategory_ids: editSubcategoryIds }));
     }
   }, [editSubcategoryIds]);
+
+  // Load cities from junction table
+  useEffect(() => {
+    if (businessCities && businessCities.length > 0) {
+      const names = businessCities.map((bc) => bc.city_name);
+      const primary = businessCities.find((bc) => bc.is_primary)?.city_name || names[0] || "";
+      setForm((prev) => ({ ...prev, city_names: names, primary_city: primary, city: primary }));
+    } else if (business?.city) {
+      // Fallback: parse existing city string
+      const parsed = parseCityString(business.city);
+      if (parsed.length > 0) {
+        setForm((prev) => ({ ...prev, city_names: parsed, primary_city: parsed[0], city: parsed[0] }));
+      }
+    }
+  }, [businessCities, business?.city]);
 
   // ── Calcular campos em falta (reactivo ao form) ──
   const missingLegalFields = [
@@ -463,7 +486,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         logo_url: form.logo_url || null,
         category_id: form.primary_category_id || null,
         subcategory_id: form.subcategory_ids[0] || null,
-        city: form.city || null,
+        city: form.primary_city || form.city || null,
         zone: form.zone || null,
         alcance: form.alcance,
         public_address: form.public_address || null,
@@ -505,10 +528,19 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         });
       }
 
-      if (form.city.trim()) {
+      // Sync cities junction table
+      if (form.city_names.length > 0) {
+        await syncCities.mutateAsync({
+          businessId: business.id,
+          cities: form.city_names,
+          primaryCity: form.primary_city,
+        });
+      }
+
+      if (form.primary_city.trim()) {
         await (supabase as any)
           .from("cities")
-          .upsert({ name: form.city.trim() }, { onConflict: "name", ignoreDuplicates: true });
+          .upsert({ name: form.primary_city.trim() }, { onConflict: "name", ignoreDuplicates: true });
       }
 
       toast({ title: "✅ Negócio atualizado com sucesso!" });
@@ -621,8 +653,19 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Cidade</Label>
-                <CityAutocomplete value={form.city} onChange={(v) => set("city", v)} placeholder="Ex: Lisboa" />
+                <Label>Cidades onde opera</Label>
+                <MultiCityInput
+                  cities={form.city_names}
+                  primaryCity={form.primary_city}
+                  onChange={(cities, primary) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      city_names: cities,
+                      primary_city: primary,
+                      city: primary,
+                    }));
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Zona / Região</Label>
