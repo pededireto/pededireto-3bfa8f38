@@ -399,6 +399,21 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
     }
   }, [editSubcategoryIds]);
 
+  // Load cities from junction table
+  useEffect(() => {
+    if (businessCities && businessCities.length > 0) {
+      const names = businessCities.map((bc) => bc.city_name);
+      const primary = businessCities.find((bc) => bc.is_primary)?.city_name || names[0] || "";
+      setForm((prev) => ({ ...prev, city_names: names, primary_city: primary, city: primary }));
+    } else if (business?.city) {
+      // Fallback: parse existing city string
+      const parsed = parseCityString(business.city);
+      if (parsed.length > 0) {
+        setForm((prev) => ({ ...prev, city_names: parsed, primary_city: parsed[0], city: parsed[0] }));
+      }
+    }
+  }, [businessCities, business?.city]);
+
   // ── Calcular campos em falta (reactivo ao form) ──
   const missingLegalFields = [
     !form.nif.trim() && "NIF — Número de Identificação Fiscal",
