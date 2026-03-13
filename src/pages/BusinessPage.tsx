@@ -971,7 +971,7 @@ const BusinessPage = () => {
                           <Button
                             variant="outline"
                             className="w-full justify-center text-base hover:border-[#E1306C] hover:text-[#E1306C] transition-colors"
-                            onClick={() => window.open(instagramUrl, "_blank")}
+                            onClick={() => { handleCtaClick("instagram"); window.open(instagramUrl, "_blank"); }}
                           >
                             <Instagram className="w-5 h-5" />
                             Ver Instagram
