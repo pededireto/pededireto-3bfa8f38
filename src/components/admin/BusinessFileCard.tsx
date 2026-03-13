@@ -509,7 +509,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         other_social_url: (business as any).other_social_url || "",
         cta_booking_url: (business as any).cta_booking_url || "",
         cta_order_url: (business as any).cta_order_url || "",
-        show_social: (business as any).show_social ?? true,
+        show_social: (business as any).show_social ?? false,
         images: (business as any).images || [],
         show_gallery: (business as any).show_gallery ?? true,
         nif: (business as any).nif || "",

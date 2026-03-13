@@ -347,7 +347,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         instagram_url: business.instagram_url || "",
         facebook_url: business.facebook_url || "",
         other_social_url: business.other_social_url || "",
-        show_social: business.show_social ?? true,
+        show_social: business.show_social ?? false,
         images: business.images || [],
         show_gallery: business.show_gallery ?? true,
         nif: business.nif || "",
