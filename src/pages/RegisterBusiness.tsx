@@ -213,7 +213,7 @@ const RegisterBusiness = () => {
           p_slug: slug,
           p_city: formData.city,
           p_cta_phone: formData.phone,
-          p_category_id: formData.categoryId,
+          p_category_id: formData.primaryCategoryId,
           p_subcategory_id: primarySubcategoryId,
           p_owner_email: currentUser?.email || formData.email,
           p_registration_source: "onboarding_wizard",
