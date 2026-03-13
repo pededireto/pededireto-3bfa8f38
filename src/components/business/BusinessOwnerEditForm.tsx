@@ -461,7 +461,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
         name: form.name,
         description: form.description || null,
         logo_url: form.logo_url || null,
-        category_id: form.category_id || null,
+        category_id: form.primary_category_id || null,
         subcategory_id: form.subcategory_ids[0] || null,
         city: form.city || null,
         zone: form.zone || null,
