@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export type EventType = "view" | "click_whatsapp" | "click_phone" | "click_website" | "click_email" | "click_app";
+export type EventType = "view" | "click_whatsapp" | "click_phone" | "click_website" | "click_email" | "click_app" | "click_instagram" | "click_facebook" | "click_reservation" | "click_order";
 
 export type PeriodFilter = "7d" | "30d" | "90d" | "all";
 
