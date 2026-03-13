@@ -708,7 +708,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           plan_id: form.plan_id || null,
           description: form.description || null,
           logo_url: form.logo_url || null,
-          city: form.city || null,
+           city: form.primary_city || form.city || null,
           zone: form.zone || null,
           alcance: form.alcance,
           public_address: form.public_address || null,
