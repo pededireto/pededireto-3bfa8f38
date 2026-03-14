@@ -892,22 +892,18 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select
-                value={form.category_id}
-                onValueChange={(v) => setForm((prev) => ({ ...prev, category_id: v, subcategory_ids: [] }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Categorias</Label>
+              <MultiCategorySelector
+                selectedCategoryIds={form.category_ids.length > 0 ? form.category_ids : (form.category_id ? [form.category_id] : [])}
+                primaryCategoryId={form.primary_category_id || form.category_id}
+                onChange={(ids, primaryId) => setForm((prev) => ({
+                  ...prev,
+                  category_ids: ids,
+                  primary_category_id: primaryId,
+                  category_id: primaryId,
+                  subcategory_ids: [],
+                }))}
+              />
             </div>
             <div className="space-y-2">
               <Label>Alcance</Label>
