@@ -788,6 +788,13 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         if (form.subcategory_ids.length > 0) {
           await syncSubcategories.mutateAsync({ businessId, subcategoryIds: form.subcategory_ids });
         }
+        if (form.category_ids.length > 0) {
+          await syncCategories.mutateAsync({
+            businessId,
+            categoryIds: form.category_ids,
+            primaryCategoryId: form.primary_category_id || form.category_ids[0],
+          });
+        }
         // Sync cities junction table
         if (form.city_names.length > 0) {
           await syncCities.mutateAsync({
