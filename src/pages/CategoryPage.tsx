@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useCategory, useCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
@@ -40,7 +40,6 @@ const CategoryHeaderVideo = ({
   imageUrl?: string | null;
   name: string;
 }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const normalized = normalizeVideoUrl(videoUrl);
 
@@ -59,10 +58,9 @@ const CategoryHeaderVideo = ({
     };
   }, [normalized]);
 
-  // Pause automático quando sai do viewport
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !blobUrl) return;
+  // Callback ref — o observer só é criado quando o elemento entra no DOM
+  const videoCallbackRef = useCallback((video: HTMLVideoElement | null) => {
+    if (!video) return;
     const obs = new IntersectionObserver(
       ([e]) => {
         if (!e.isIntersecting) video.pause();
@@ -70,8 +68,9 @@ const CategoryHeaderVideo = ({
       { threshold: 0.2 },
     );
     obs.observe(video);
-    return () => obs.disconnect();
-  }, [blobUrl]);
+    // cleanup quando o elemento é removido
+    (video as any)._obs = obs;
+  }, []);
 
   // YouTube: sem autoplay, com controls, com som
   if (isYouTubeUrl(normalized)) {
@@ -105,7 +104,7 @@ const CategoryHeaderVideo = ({
   // mp4: sem autoplay, sem loop, com controls, com som, pause ao sair do ecrã
   return (
     <video
-      ref={videoRef}
+      ref={videoCallbackRef}
       src={blobUrl}
       playsInline
       controls
