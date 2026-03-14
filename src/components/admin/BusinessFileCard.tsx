@@ -20,6 +20,8 @@ import {
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
+import MultiCategorySelector from "@/components/business/MultiCategorySelector";
+import { useBusinessCategoryIds, useSyncBusinessCategories } from "@/hooks/useBusinessCategories";
 import { useBusinessCityNames, useSyncBusinessCities, parseCityString } from "@/hooks/useBusinessCities";
 import { useCreateAuditLog } from "@/hooks/useAuditLogs";
 import { useContactLogs, useCreateContactLog } from "@/hooks/useContactLogs";
