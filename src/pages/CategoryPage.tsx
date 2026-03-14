@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useCategory, useCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
@@ -30,7 +30,7 @@ const getYouTubeEmbedUrl = (url: string): string => {
   return url;
 };
 
-// ─── Vídeo do header com som ──────────────────────────────────────────────────
+// CategoryPage: SEM autoplay, COM controls, utilizador decide quando play
 const CategoryHeaderVideo = ({
   videoUrl,
   imageUrl,
@@ -40,7 +40,6 @@ const CategoryHeaderVideo = ({
   imageUrl?: string | null;
   name: string;
 }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const normalized = normalizeVideoUrl(videoUrl);
 
@@ -59,19 +58,18 @@ const CategoryHeaderVideo = ({
     };
   }, [normalized]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !blobUrl) return;
-    video.play().catch(() => {});
-  }, [blobUrl]);
-
+  // YouTube na página: sem autoplay, com controls, com som
   if (isYouTubeUrl(normalized)) {
+    const embedUrl = getYouTubeEmbedUrl(normalized)
+      .replace("autoplay=1", "autoplay=0")
+      .replace("mute=1", "mute=0")
+      .replace("controls=0", "controls=1");
     return (
       <iframe
-        src={getYouTubeEmbedUrl(normalized)}
-        allow="autoplay; encrypted-media"
+        src={embedUrl}
+        allow="encrypted-media"
         title={name}
-        className="w-full h-full min-h-[250px] md:min-h-[320px] rounded-2xl"
+        className="w-full min-h-[250px] md:min-h-[320px] rounded-2xl"
         style={{ border: "none" }}
       />
     );
@@ -89,9 +87,9 @@ const CategoryHeaderVideo = ({
     );
   }
 
+  // mp4 na página: sem autoplay, com controls, com som
   return (
     <video
-      ref={videoRef}
       src={blobUrl}
       loop
       playsInline
