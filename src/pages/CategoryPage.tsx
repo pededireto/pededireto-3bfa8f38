@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useCategory, useCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
@@ -30,7 +30,7 @@ const getYouTubeEmbedUrl = (url: string): string => {
   return url;
 };
 
-// CategoryPage: SEM autoplay, SEM loop, COM controls, pause fora do viewport
+// CategoryPage: SEM autoplay, SEM loop, COM controls, pause fora do viewport e ao sair da página
 const CategoryHeaderVideo = ({
   videoUrl,
   imageUrl,
@@ -40,9 +40,11 @@ const CategoryHeaderVideo = ({
   imageUrl?: string | null;
   name: string;
 }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const normalized = normalizeVideoUrl(videoUrl);
 
+  // Carregar blob
   useEffect(() => {
     if (isYouTubeUrl(normalized)) return;
     let objectUrl: string;
@@ -58,19 +60,31 @@ const CategoryHeaderVideo = ({
     };
   }, [normalized]);
 
-  // Callback ref — o observer só é criado quando o elemento entra no DOM
-  const videoCallbackRef = useCallback((video: HTMLVideoElement | null) => {
+  // CRÍTICO: parar e limpar quando o componente é desmontado (navegação para outra página)
+  useEffect(() => {
+    return () => {
+      const video = videoRef.current;
+      if (video) {
+        video.pause();
+        video.src = "";
+        video.load();
+      }
+    };
+  }, []);
+
+  // IntersectionObserver — pause quando sai do viewport
+  useEffect(() => {
+    const video = videoRef.current;
     if (!video) return;
     const obs = new IntersectionObserver(
       ([e]) => {
         if (!e.isIntersecting) video.pause();
       },
-      { threshold: 0.2 },
+      { threshold: 0.1 },
     );
     obs.observe(video);
-    // cleanup quando o elemento é removido
-    (video as any)._obs = obs;
-  }, []);
+    return () => obs.disconnect();
+  }, [blobUrl]); // re-run quando o blobUrl muda (vídeo montado)
 
   // YouTube: sem autoplay, com controls, com som
   if (isYouTubeUrl(normalized)) {
@@ -101,10 +115,9 @@ const CategoryHeaderVideo = ({
     );
   }
 
-  // mp4: sem autoplay, sem loop, com controls, com som, pause ao sair do ecrã
   return (
     <video
-      ref={videoCallbackRef}
+      ref={videoRef}
       src={blobUrl}
       playsInline
       controls
