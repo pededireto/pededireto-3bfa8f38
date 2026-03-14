@@ -318,32 +318,15 @@ const CategoryCard = ({
   pattern: "normal" | "wide";
   desktopPattern?: "normal" | "wide";
 }) => {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const IconComponent = iconMap[category.icon || "Briefcase"] || Briefcase;
   const videoUrl = (category as any).video_url ?? null;
   const hasMedia = !!(videoUrl || category.image_url);
-  // Em mobile sempre normal (2 cols), desktop usa desktopPattern
-  const isWide = false; // mobile: nunca wide (cada card = 1 de 2 colunas)
   const isDesktopWide = desktopPattern === "wide";
-
-  const handleMouseEnter = () => {
-    timerRef.current = setTimeout(() => onOpen(), 1500);
-  };
-  const handleMouseLeave = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ${""}`}
-      style={{
-        aspectRatio: "4/3",
-      }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      className="group relative overflow-hidden rounded-2xl cursor-pointer shadow-md hover:shadow-xl transition-all duration-300"
+      style={{ aspectRatio: "4/3" }}
       onClick={onOpen}
     >
       {hasMedia ? (
