@@ -163,6 +163,7 @@ const CardMedia = ({
 };
 
 // ─── Vídeo do modal — com som, via blob ──────────────────────────────────────
+// Modal: autoplay SEM som, SEM controls
 const ModalVideo = ({ videoUrl, imageUrl, name }: { videoUrl: string; imageUrl?: string | null; name: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -189,15 +190,15 @@ const ModalVideo = ({ videoUrl, imageUrl, name }: { videoUrl: string; imageUrl?:
     video.play().catch(() => {});
   }, [blobUrl]);
 
+  // YouTube no modal: muted, sem controls
   if (isYouTubeUrl(normalized)) {
-    const embedUrl = getYouTubeEmbedUrl(normalized).replace("mute=1", "mute=0");
     return (
       <iframe
-        src={embedUrl}
+        src={getYouTubeEmbedUrl(normalized)}
         allow="autoplay; encrypted-media"
         title={name}
         className="w-full h-full min-h-[300px] md:min-h-[400px]"
-        style={{ border: "none" }}
+        style={{ border: "none", pointerEvents: "none" }}
       />
     );
   }
@@ -214,13 +215,14 @@ const ModalVideo = ({ videoUrl, imageUrl, name }: { videoUrl: string; imageUrl?:
     );
   }
 
+  // mp4 no modal: muted, autoplay, sem controls
   return (
     <video
       ref={videoRef}
       src={blobUrl}
+      muted
       loop
       playsInline
-      controls
       className="w-full min-h-[300px] md:min-h-[400px] object-cover"
       aria-label={name}
     />
