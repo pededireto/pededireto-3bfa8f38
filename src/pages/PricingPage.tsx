@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Check, X, Zap, Crown, Star, Shield } from "lucide-react";
+import { Check, Zap, Crown, Star, Shield, Sparkles, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { useCommercialPlans } from "@/hooks/useCommercialPlans";
-import { usePlanRules, PlanRule } from "@/hooks/usePlanRules";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -17,9 +15,14 @@ interface TierConfig {
   label: string;
   icon: React.ElementType;
   description: string;
+  priceMonthly: string;
+  priceAnnual?: string;
   highlight?: boolean;
   badge?: string;
   color: string;
+  cta: string;
+  inheritLabel?: string;
+  features: string[];
 }
 
 const TIERS: TierConfig[] = [
@@ -28,94 +31,94 @@ const TIERS: TierConfig[] = [
     label: "Gratuito",
     icon: Shield,
     description: "Perfil básico para começar",
+    priceMonthly: "0",
     color: "border-border",
+    cta: "Começar grátis",
+    features: [
+      "Perfil no directório (nome, logótipo, descrição, telefone, email, site, morada, horário)",
+      "Aparecer na pesquisa",
+      "Dashboard Business limitado",
+      "Editar dados do negócio",
+      "Programa de Afiliados",
+    ],
   },
   {
     key: "start",
     label: "START",
     icon: Star,
     description: "Visibilidade e contactos directos",
+    priceMonthly: "9.90",
+    priceAnnual: "108.90",
     color: "border-primary/50",
+    cta: "Começar agora",
+    inheritLabel: "Tudo o que está no Gratuito, mais:",
+    features: [
+      "Galeria de fotos (até 2)",
+      "WhatsApp visível no perfil",
+      "Facebook, Instagram e TikTok links",
+      "Dashboard Analytics básico com performance na plataforma",
+      "Sistema de Avaliações",
+      "Receber pedidos e orçamentos com Chat directo com clientes",
+    ],
   },
   {
     key: "pro",
     label: "PRO",
     icon: Zap,
     description: "Analytics avançado e destaque",
+    priceMonthly: "19.90",
+    priceAnnual: "218.90",
     highlight: true,
     badge: "Mais popular",
     color: "border-primary",
+    cta: "Começar agora",
+    inheritLabel: "Tudo o que está no START, mais:",
+    features: [
+      "Galeria de fotos até 6",
+      "Vídeo no perfil (logótipo integrado no vídeo quando activo)",
+      "Reservar Agora + Pedir Online",
+      "Promoções (1 foto com promoções em vigor)",
+      "Analytics PRO & Intelligence Center",
+      "Destaque na subcategoria",
+    ],
   },
   {
     key: "pioneiro",
     label: "PRO Pioneiro",
     icon: Crown,
     description: "Máxima visibilidade e suporte prioritário",
+    priceMonthly: "99.90",
     badge: "Oferta limitada",
     color: "border-accent",
+    cta: "Começar agora",
+    inheritLabel: "Tudo o que está no PRO, mais:",
+    features: [
+      "Destaque na categoria",
+      "Super destaque (homepage)",
+      "Bloco premium nas listagens",
+      "Suporte prioritário",
+    ],
   },
 ];
 
-const FEATURES = [
-  { label: "Perfil no directório", tiers: ["free", "start", "pro", "pioneiro"] },
-  { label: "Aparecer na pesquisa", tiers: ["free", "start", "pro", "pioneiro"] },
-  { label: "Galeria de fotos (até 1)", tiers: ["free"] },
-  { label: "Galeria de fotos (até 2)", tiers: ["start"] },
-  { label: "Galeria de fotos (até 6)", tiers: ["pro", "pioneiro"] },
-  { label: "Receber pedidos de serviço", tiers: ["start", "pro", "pioneiro"] },
-  { label: "WhatsApp & redes sociais visíveis", tiers: ["start", "pro", "pioneiro"] },
-  { label: "Analytics básico", tiers: ["start", "pro", "pioneiro"] },
-  { label: "Vídeo no perfil", tiers: ["pro", "pioneiro"] },
-  { label: "Analytics PRO & Intelligence Center", tiers: ["pro", "pioneiro"] },
-  { label: "Destaque na subcategoria", tiers: ["pro", "pioneiro"] },
-  { label: "Destaque na categoria", tiers: ["pioneiro"] },
-  { label: "Super destaque (homepage)", tiers: ["pioneiro"] },
-  { label: "Bloco premium nas listagens", tiers: ["pioneiro"] },
-  { label: "Suporte prioritário", tiers: ["pioneiro"] },
+const ADDON_FEATURES = [
+  "Gerador de scripts de Reels em 5 cenas (formato Grok/CapCut)",
+  "Gerador de prompts de imagem para campanhas",
+  "Sequências de vídeo optimizadas para Instagram e YouTube Shorts",
+  "Histórico de conteúdos gerados",
+  "Selecção de negócio, tom e estilo personalizados",
+  "Compatível com qualquer plano PedeDireto",
 ];
 
 const PricingPage = () => {
   const [billing, setBilling] = useState<BillingCycle>("monthly");
-  const { data: plans = [] } = useCommercialPlans(true);
-  const { data: rules = [] } = usePlanRules();
 
-  // Group active plans by tier
-  const getPlanForTier = (tierKey: string, cycle: BillingCycle) => {
-    const isAnnual = cycle === "annual";
-
-    if (tierKey === "free") {
-      return plans.find((p) => p.price === 0 && p.plan_type === "business");
+  const getPrice = (tier: TierConfig) => {
+    if (tier.key === "free") return "0";
+    if (billing === "annual" && tier.priceAnnual) {
+      return (parseFloat(tier.priceAnnual) / 11).toFixed(2);
     }
-    if (tierKey === "start") {
-      return plans.find(
-        (p) =>
-          p.name.toLowerCase().includes("start") &&
-          p.payment_method === "sepa" &&
-          (isAnnual ? p.name.toLowerCase().includes("anual") : !p.name.toLowerCase().includes("anual"))
-      );
-    }
-    if (tierKey === "pro") {
-      return plans.find(
-        (p) =>
-          p.name.toLowerCase().includes("pro") &&
-          !p.name.toLowerCase().includes("pioneiro") &&
-          p.payment_method === "sepa" &&
-          (isAnnual ? p.name.toLowerCase().includes("anual") : !p.name.toLowerCase().includes("anual"))
-      );
-    }
-    if (tierKey === "pioneiro") {
-      return plans.find((p) => p.name.toLowerCase().includes("pioneiro"));
-    }
-    return null;
-  };
-
-  const getMonthlyEquivalent = (plan: any, tierKey: string) => {
-    if (!plan) return null;
-    if (tierKey === "free") return 0;
-    if (billing === "annual") {
-      return (plan.price / 11).toFixed(2); // 11 months = 1 free
-    }
-    return plan.price.toFixed(2);
+    return tier.priceMonthly;
   };
 
   return (
@@ -171,8 +174,7 @@ const PricingPage = () => {
           <div className="container max-w-6xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {TIERS.map((tier) => {
-                const plan = getPlanForTier(tier.key, billing);
-                const monthlyPrice = getMonthlyEquivalent(plan, tier.key);
+                const price = getPrice(tier);
 
                 return (
                   <div
@@ -202,52 +204,119 @@ const PricingPage = () => {
                     <div className="text-center mb-6">
                       {tier.key === "free" ? (
                         <div className="text-3xl font-bold text-foreground">€0</div>
-                      ) : monthlyPrice ? (
+                      ) : (
                         <>
                           <div className="text-3xl font-bold text-foreground">
-                            €{monthlyPrice}
+                            €{price}
                             <span className="text-sm font-normal text-muted-foreground">/mês</span>
                           </div>
-                          {billing === "annual" && plan && (
+                          {billing === "annual" && tier.priceAnnual && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              Facturado €{plan.price.toFixed(2)}/ano
+                              Facturado €{tier.priceAnnual}/ano
                             </p>
                           )}
                         </>
-                      ) : (
-                        <div className="text-xl font-semibold text-muted-foreground">Contactar</div>
                       )}
                     </div>
 
                     <div className="flex-1 space-y-3 mb-6">
-                      {FEATURES.map((feature) => {
-                        const included = feature.tiers.includes(tier.key);
-                        return (
-                          <div key={feature.label} className="flex items-start gap-2 text-sm">
-                            {included ? (
-                              <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                            ) : (
-                              <X className="h-4 w-4 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
-                            )}
-                            <span className={included ? "text-foreground" : "text-muted-foreground/50"}>
-                              {feature.label}
-                            </span>
-                          </div>
-                        );
-                      })}
+                      {tier.inheritLabel && (
+                        <p className="text-xs font-semibold text-primary mb-2">
+                          {tier.inheritLabel}
+                        </p>
+                      )}
+                      {tier.features.map((feature) => (
+                        <div key={feature} className="flex items-start gap-2 text-sm">
+                          <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                          <span className="text-foreground">{feature}</span>
+                        </div>
+                      ))}
                     </div>
 
-                    <Link to={tier.key === "free" ? "/register/business" : "/claim-business"} className="mt-auto">
+                    <a
+                      href="https://pededireto.pt/claim-business"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-auto"
+                    >
                       <Button
-                        className={`w-full ${tier.highlight ? "" : "variant-outline"}`}
-                        variant={tier.highlight ? "default" : "outline"}
+                        className="w-full"
+                        variant={tier.highlight ? "default" : tier.key === "free" ? "default" : "outline"}
                       >
-                        {tier.key === "free" ? "Começar grátis" : "Começar agora"}
+                        {tier.cta}
                       </Button>
-                    </Link>
+                    </a>
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </section>
+
+        {/* ADD-ON Section */}
+        <section className="pb-16 px-4">
+          <div className="container max-w-4xl mx-auto">
+            <div className="text-center mb-8 space-y-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+                Potencia o teu negócio com IA
+              </h2>
+              <p className="text-muted-foreground">
+                Disponível como add-on para qualquer plano
+              </p>
+            </div>
+
+            <div className="relative rounded-2xl border-2 border-warning/40 bg-gradient-to-br from-warning/5 via-card to-accent/5 p-8 shadow-lg ring-1 ring-warning/20">
+              <div className="flex flex-col md:flex-row md:items-start gap-6">
+                <div className="flex-1 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-warning/10">
+                      <Video className="h-6 w-6 text-warning" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground">
+                        🎬 Marketing AI Studio
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        €19.90<span className="text-xs">/mês</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-foreground/80">
+                    Cria conteúdo profissional para redes sociais em segundos, com IA.
+                  </p>
+
+                  <div className="space-y-2">
+                    {ADDON_FEATURES.map((f) => (
+                      <div key={f} className="flex items-start gap-2 text-sm">
+                        <Sparkles className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+                        <span className="text-foreground">{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 md:min-w-[200px] md:pt-16">
+                  <a
+                    href="https://pededireto.pt/claim-business"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button className="w-full bg-warning text-warning-foreground hover:bg-warning/90">
+                      Adicionar ao meu plano
+                    </Button>
+                  </a>
+                  <a
+                    href="https://api.whatsapp.com/send?phone=351210203862&text=Ol%C3%A1%2C%20gostaria%20de%20saber%20mais%20sobre%20o%20Marketing%20AI%20Studio"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="outline" className="w-full">
+                      Pedir demonstração
+                    </Button>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -273,6 +342,10 @@ const PricingPage = () => {
                 {
                   q: "Como funciona o período de verificação?",
                   a: "Após registar o seu negócio, a nossa equipa verifica os dados em 24-48h. Depois disso, o perfil fica visível publicamente.",
+                },
+                {
+                  q: "O Marketing AI Studio funciona com o plano gratuito?",
+                  a: "Sim, o add-on Marketing AI Studio é compatível com qualquer plano, incluindo o gratuito.",
                 },
               ].map(({ q, a }) => (
                 <div key={q} className="space-y-1">
