@@ -312,16 +312,20 @@ const CategoryCard = ({
   category,
   onOpen,
   pattern,
+  desktopPattern,
 }: {
   category: Category;
   onOpen: () => void;
   pattern: "normal" | "wide";
+  desktopPattern?: "normal" | "wide";
 }) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const IconComponent = iconMap[category.icon || "Briefcase"] || Briefcase;
   const videoUrl = (category as any).video_url ?? null;
   const hasMedia = !!(videoUrl || category.image_url);
-  const isWide = pattern === "wide";
+  // Em mobile sempre normal (2 cols), desktop usa desktopPattern
+  const isWide = false; // mobile: nunca wide (cada card = 1 de 2 colunas)
+  const isDesktopWide = desktopPattern === "wide";
 
   const handleMouseEnter = () => {
     timerRef.current = setTimeout(() => onOpen(), 1500);
@@ -335,11 +339,9 @@ const CategoryCard = ({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-2xl cursor-pointer shadow-md hover:shadow-xl transition-all duration-300"
+      className={`group relative overflow-hidden rounded-2xl cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ${isDesktopWide ? "md:[grid-column:span_2] md:[aspect-ratio:18/16]" : ""}`}
       style={{
-        gridColumn: isWide ? "span 2" : "span 1",
-        // aspect-ratio 9:16 — wide fica 18:16 (quase quadrado), normal fica portrait
-        aspectRatio: isWide ? "18/16" : "9/16",
+        aspectRatio: "9/16",
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -354,7 +356,7 @@ const CategoryCard = ({
           <div className="relative z-10 flex flex-col justify-end h-full p-4">
             <h3
               className={`font-semibold text-white drop-shadow-md transition-transform duration-300 group-hover:-translate-y-0.5 ${
-                isWide ? "text-base md:text-xl" : "text-sm md:text-base"
+                isDesktopWide ? "text-base md:text-xl" : "text-sm md:text-base"
               }`}
               style={{ textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}
             >
@@ -388,20 +390,10 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
             <h2 className="text-3xl md:text-4xl font-bold mb-3">Encontre por categoria</h2>
             <p className="text-muted-foreground text-lg">Escolha a área de negócio que procura</p>
           </div>
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-            {[...Array(8)].map((_, i) => {
-              const p = BENTO[i];
-              return (
-                <div
-                  key={i}
-                  className="animate-pulse rounded-2xl bg-muted"
-                  style={{
-                    gridColumn: p === "wide" ? "span 2" : "span 1",
-                    aspectRatio: p === "wide" ? "18/16" : "9/16",
-                  }}
-                />
-              );
-            })}
+          <div className="grid gap-2 md:gap-3 grid-cols-2 md:grid-cols-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="animate-pulse rounded-2xl bg-muted" style={{ aspectRatio: "9/16" }} />
+            ))}
           </div>
         </div>
       </section>
@@ -417,13 +409,14 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
             <p className="text-muted-foreground text-lg">Escolha a área de negócio que procura</p>
           </div>
 
-          {/* Bento grid — 4 colunas desktop, 2 em mobile */}
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+          {/* Bento grid — 2 colunas mobile, 4 colunas desktop */}
+          <div className="grid gap-2 md:gap-3 grid-cols-2 md:grid-cols-4">
             {categories.map((category, index) => (
               <CategoryCard
                 key={category.id}
                 category={category}
-                pattern={BENTO[index % BENTO.length]}
+                pattern="normal"
+                desktopPattern={BENTO[index % BENTO.length]}
                 onOpen={() => setModalIndex(index)}
               />
             ))}
