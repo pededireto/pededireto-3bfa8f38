@@ -584,7 +584,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     }
   }, [existingModuleValues]);
   const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
-  const filteredSubcategories = allSubcategories.filter((s) => s.category_id === form.category_id);
+  const activeCategoryIds = form.category_ids.length > 0 ? form.category_ids : (form.category_id ? [form.category_id] : []);
+  const filteredSubcategories = allSubcategories.filter((s) => activeCategoryIds.includes(s.category_id));
   const toggleSubcategory = (subId: string) => {
     setForm((prev) => ({
       ...prev,
