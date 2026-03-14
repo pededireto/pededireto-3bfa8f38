@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Subcategory } from "@/hooks/useSubcategories";
 import { ArrowRight, ArrowLeft, X } from "lucide-react";
@@ -164,28 +164,14 @@ const SubcategoryModal = ({
   );
 };
 
-// ─── Card com delay no hover ──────────────────────────────────────────────────
+// ─── Card sem hover delay ─────────────────────────────────────────────────────
 const SubcategoryCard = ({ sub, onOpen }: { sub: Subcategory; onOpen: () => void }) => {
   const [imgError, setImgError] = useState(false);
   const hasImage = sub.image_url && !imgError;
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleMouseEnter = () => {
-    timerRef.current = setTimeout(() => onOpen(), 1500);
-  };
-
-  const handleMouseLeave = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
 
   return (
     <div
       className="group relative overflow-hidden bg-card rounded-xl shadow-card hover:shadow-lg transition-all hover:-translate-y-1 border border-border cursor-pointer"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       onClick={onOpen}
     >
       {hasImage ? (
