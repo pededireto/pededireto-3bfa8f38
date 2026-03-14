@@ -20,6 +20,8 @@ import {
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
+import MultiCategorySelector from "@/components/business/MultiCategorySelector";
+import { useBusinessCategoryIds, useSyncBusinessCategories } from "@/hooks/useBusinessCategories";
 import { useBusinessCityNames, useSyncBusinessCities, parseCityString } from "@/hooks/useBusinessCities";
 import { useCreateAuditLog } from "@/hooks/useAuditLogs";
 import { useContactLogs, useCreateContactLog } from "@/hooks/useContactLogs";
@@ -441,6 +443,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     logo_url: "",
     // 2. Presença Pública
     category_id: "",
+    category_ids: [] as string[],
+    primary_category_id: "",
     subcategory_ids: [] as string[],
     alcance: "local" as "local" | "nacional" | "hibrido",
     city: "",
@@ -496,6 +500,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         description: business.description || "",
         logo_url: business.logo_url || "",
         category_id: business.category_id || "",
+        category_ids: [] as string[],
+        primary_category_id: "",
         subcategory_ids: [],
         alcance: business.alcance || "local",
         city: business.city || "",
@@ -542,6 +548,21 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       setForm((prev) => ({ ...prev, subcategory_ids: editSubcategoryIds }));
     }
   }, [editSubcategoryIds, business]);
+
+  const { data: editCategoryIds } = useBusinessCategoryIds(business?.id);
+  const syncCategories = useSyncBusinessCategories();
+
+  useEffect(() => {
+    if (editCategoryIds && business) {
+      setForm((prev) => ({
+        ...prev,
+        category_ids: editCategoryIds.map(c => c.category_id),
+        primary_category_id: editCategoryIds.find(c => c.is_primary)?.category_id || business.category_id || "",
+        category_id: editCategoryIds.find(c => c.is_primary)?.category_id || business.category_id || "",
+      }));
+    }
+  }, [editCategoryIds, business]);
+
   // Load cities from junction table
   useEffect(() => {
     if (businessCities && businessCities.length > 0) {
@@ -565,7 +586,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     }
   }, [existingModuleValues]);
   const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
-  const filteredSubcategories = allSubcategories.filter((s) => s.category_id === form.category_id);
+  const activeCategoryIds = form.category_ids.length > 0 ? form.category_ids : (form.category_id ? [form.category_id] : []);
+  const filteredSubcategories = allSubcategories.filter((s) => activeCategoryIds.includes(s.category_id));
   const toggleSubcategory = (subId: string) => {
     setForm((prev) => ({
       ...prev,
@@ -768,6 +790,13 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         if (form.subcategory_ids.length > 0) {
           await syncSubcategories.mutateAsync({ businessId, subcategoryIds: form.subcategory_ids });
         }
+        if (form.category_ids.length > 0) {
+          await syncCategories.mutateAsync({
+            businessId,
+            categoryIds: form.category_ids,
+            primaryCategoryId: form.primary_category_id || form.category_ids[0],
+          });
+        }
         // Sync cities junction table
         if (form.city_names.length > 0) {
           await syncCities.mutateAsync({
@@ -865,22 +894,18 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select
-                value={form.category_id}
-                onValueChange={(v) => setForm((prev) => ({ ...prev, category_id: v, subcategory_ids: [] }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Categorias</Label>
+              <MultiCategorySelector
+                selectedCategoryIds={form.category_ids.length > 0 ? form.category_ids : (form.category_id ? [form.category_id] : [])}
+                primaryCategoryId={form.primary_category_id || form.category_id}
+                onChange={(ids, primaryId) => setForm((prev) => ({
+                  ...prev,
+                  category_ids: ids,
+                  primary_category_id: primaryId,
+                  category_id: primaryId,
+                  subcategory_ids: [],
+                }))}
+              />
             </div>
             <div className="space-y-2">
               <Label>Alcance</Label>

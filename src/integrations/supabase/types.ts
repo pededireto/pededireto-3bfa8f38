@@ -2961,6 +2961,7 @@ export type Database = {
           name: string
           slug: string
           updated_at: string | null
+          video_url: string | null
         }
         Insert: {
           alcance_default?: Database["public"]["Enums"]["alcance_tipo"] | null
@@ -2974,6 +2975,7 @@ export type Database = {
           name: string
           slug: string
           updated_at?: string | null
+          video_url?: string | null
         }
         Update: {
           alcance_default?: Database["public"]["Enums"]["alcance_tipo"] | null
@@ -2987,6 +2989,7 @@ export type Database = {
           name?: string
           slug?: string
           updated_at?: string | null
+          video_url?: string | null
         }
         Relationships: []
       }
@@ -5996,6 +5999,7 @@ export type Database = {
           name: string
           slug: string
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           category_id: string
@@ -6009,6 +6013,7 @@ export type Database = {
           name: string
           slug: string
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           category_id?: string
@@ -6022,6 +6027,7 @@ export type Database = {
           name?: string
           slug?: string
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: [
           {
