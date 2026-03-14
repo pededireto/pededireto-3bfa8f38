@@ -546,6 +546,21 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       setForm((prev) => ({ ...prev, subcategory_ids: editSubcategoryIds }));
     }
   }, [editSubcategoryIds, business]);
+
+  const { data: editCategoryIds } = useBusinessCategoryIds(business?.id);
+  const syncCategories = useSyncBusinessCategories();
+
+  useEffect(() => {
+    if (editCategoryIds && business) {
+      setForm((prev) => ({
+        ...prev,
+        category_ids: editCategoryIds.map(c => c.category_id),
+        primary_category_id: editCategoryIds.find(c => c.is_primary)?.category_id || business.category_id || "",
+        category_id: editCategoryIds.find(c => c.is_primary)?.category_id || business.category_id || "",
+      }));
+    }
+  }, [editCategoryIds, business]);
+
   // Load cities from junction table
   useEffect(() => {
     if (businessCities && businessCities.length > 0) {
