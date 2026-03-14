@@ -500,6 +500,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         description: business.description || "",
         logo_url: business.logo_url || "",
         category_id: business.category_id || "",
+        category_ids: [] as string[],
+        primary_category_id: "",
         subcategory_ids: [],
         alcance: business.alcance || "local",
         city: business.city || "",
