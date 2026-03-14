@@ -162,6 +162,71 @@ const CardMedia = ({
   return null;
 };
 
+// ─── Vídeo do modal — com som, via blob ──────────────────────────────────────
+const ModalVideo = ({ videoUrl, imageUrl, name }: { videoUrl: string; imageUrl?: string | null; name: string }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const normalized = normalizeVideoUrl(videoUrl);
+
+  useEffect(() => {
+    if (isYouTubeUrl(normalized)) return;
+    let objectUrl: string;
+    fetch(normalized)
+      .then((r) => r.blob())
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+      })
+      .catch(() => {});
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [normalized]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !blobUrl) return;
+    video.play().catch(() => {});
+  }, [blobUrl]);
+
+  if (isYouTubeUrl(normalized)) {
+    const embedUrl = getYouTubeEmbedUrl(normalized).replace("mute=1", "mute=0");
+    return (
+      <iframe
+        src={embedUrl}
+        allow="autoplay; encrypted-media"
+        title={name}
+        className="w-full h-full min-h-[300px] md:min-h-[400px]"
+        style={{ border: "none" }}
+      />
+    );
+  }
+
+  if (!blobUrl) {
+    return (
+      <div className="w-full min-h-[300px] md:min-h-[400px] flex items-center justify-center bg-black">
+        {imageUrl ? (
+          <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <video
+      ref={videoRef}
+      src={blobUrl}
+      loop
+      playsInline
+      controls
+      className="w-full min-h-[300px] md:min-h-[400px] object-cover"
+      aria-label={name}
+    />
+  );
+};
+
 // ─── Modal com navegação ──────────────────────────────────────────────────────
 const CategoryModal = ({
   categories,
@@ -196,6 +261,7 @@ const CategoryModal = ({
 
   const IconComponent = iconMap[category.icon || "Briefcase"] || Briefcase;
   const videoUrl = (category as any).video_url ?? null;
+  const hasVideo = !!videoUrl;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8" onClick={onClose}>
@@ -225,82 +291,139 @@ const CategoryModal = ({
       )}
 
       <div
-        className="relative z-10 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl"
+        className={`relative z-10 w-full rounded-2xl overflow-hidden shadow-2xl ${hasVideo ? "max-w-4xl" : "max-w-2xl"}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative h-72 md:h-96">
-          {videoUrl || category.image_url ? (
-            <div className="absolute inset-0">
-              <CardMedia videoUrl={videoUrl} imageUrl={category.image_url} name={category.name} />
-            </div>
-          ) : (
-            <div className="w-full h-full bg-primary/10 flex items-center justify-center">
-              <IconComponent className="w-24 h-24 text-primary/30" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/50 hover:bg-black/90 flex items-center justify-center text-white transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-            {categories.map((_, i) => (
-              <button
-                key={i}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCurrentIndex(i);
-                }}
-                className={`h-1.5 rounded-full transition-all ${i === currentIndex ? "w-6 bg-white" : "w-1.5 bg-white/40"}`}
-              />
-            ))}
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 p-6">
-            <h2
-              className="text-2xl md:text-3xl font-bold text-white"
-              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.9)" }}
-            >
-              {category.name}
-            </h2>
-          </div>
+        {/* dots navegação */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+          {categories.map((_, i) => (
+            <button
+              key={i}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentIndex(i);
+              }}
+              className={`h-1.5 rounded-full transition-all ${i === currentIndex ? "w-6 bg-white" : "w-1.5 bg-white/40"}`}
+            />
+          ))}
         </div>
 
-        <div className="bg-card p-6 space-y-5">
-          {category.description && (
-            <p className="text-foreground text-base md:text-lg leading-relaxed">{category.description}</p>
-          )}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={goPrev}
-              disabled={!hasPrev}
-              className="w-10 h-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => {
-                onClose();
-                navigate(`/categoria/${category.slug}`);
-              }}
-              className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-6 rounded-xl transition-colors text-base"
-            >
-              Ver {category.name}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={goNext}
-              disabled={!hasNext}
-              className="w-10 h-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ArrowRight className="w-4 h-4" />
-            </button>
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/50 hover:bg-black/90 flex items-center justify-center text-white transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        {hasVideo ? (
+          /* ── Layout split: texto esquerda, vídeo direita ── */
+          <div className="flex flex-col md:flex-row">
+            {/* Mobile: vídeo em cima */}
+            <div className="md:hidden bg-black">
+              <ModalVideo videoUrl={videoUrl} imageUrl={category.image_url} name={category.name} />
+            </div>
+            {/* Coluna texto */}
+            <div className="bg-card flex flex-col justify-between p-6 md:w-2/5 space-y-5">
+              <div className="space-y-3 pt-4 md:pt-8">
+                <h2 className="text-2xl font-bold">{category.name}</h2>
+                {category.description && (
+                  <p className="text-muted-foreground text-sm leading-relaxed">{category.description}</p>
+                )}
+              </div>
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    onClose();
+                    navigate(`/categoria/${category.slug}`);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-6 rounded-xl transition-colors text-base"
+                >
+                  Ver {category.name}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={goPrev}
+                    disabled={!hasPrev}
+                    className="flex-1 h-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={goNext}
+                    disabled={!hasNext}
+                    className="flex-1 h-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-center text-xs text-muted-foreground">
+                  {currentIndex + 1} de {categories.length} categorias
+                </p>
+              </div>
+            </div>
+            {/* Desktop: vídeo à direita */}
+            <div className="hidden md:block md:w-3/5 bg-black">
+              <ModalVideo videoUrl={videoUrl} imageUrl={category.image_url} name={category.name} />
+            </div>
           </div>
-          <p className="text-center text-xs text-muted-foreground">
-            {currentIndex + 1} de {categories.length} categorias · usa ← → para navegar
-          </p>
-        </div>
+        ) : (
+          /* ── Layout original: sem vídeo ── */
+          <>
+            <div className="relative h-72 md:h-96">
+              {category.image_url ? (
+                <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                  <IconComponent className="w-24 h-24 text-primary/30" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6">
+                <h2
+                  className="text-2xl md:text-3xl font-bold text-white"
+                  style={{ textShadow: "0 2px 12px rgba(0,0,0,0.9)" }}
+                >
+                  {category.name}
+                </h2>
+              </div>
+            </div>
+            <div className="bg-card p-6 space-y-5">
+              {category.description && (
+                <p className="text-foreground text-base md:text-lg leading-relaxed">{category.description}</p>
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={goPrev}
+                  disabled={!hasPrev}
+                  className="w-10 h-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    onClose();
+                    navigate(`/categoria/${category.slug}`);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-6 rounded-xl transition-colors text-base"
+                >
+                  Ver {category.name}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={goNext}
+                  disabled={!hasNext}
+                  className="w-10 h-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-center text-xs text-muted-foreground">
+                {currentIndex + 1} de {categories.length} categorias · usa ← → para navegar
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -319,8 +442,8 @@ const CategoryCard = ({
   desktopPattern?: "normal" | "wide";
 }) => {
   const IconComponent = iconMap[category.icon || "Briefcase"] || Briefcase;
-  const videoUrl = (category as any).video_url ?? null;
-  const hasMedia = !!(videoUrl || category.image_url);
+  // Cards da grelha: apenas imagem, nunca vídeo
+  const hasMedia = !!category.image_url;
   const isDesktopWide = desktopPattern === "wide";
 
   return (
@@ -332,7 +455,7 @@ const CategoryCard = ({
       {hasMedia ? (
         <>
           <div className="absolute inset-0">
-            <CardMedia videoUrl={videoUrl} imageUrl={category.image_url} name={category.name} />
+            <CardMedia videoUrl={null} imageUrl={category.image_url} name={category.name} />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent transition-opacity duration-300 group-hover:from-black/90" />
           <div className="relative z-10 flex flex-col justify-end h-full p-4">
