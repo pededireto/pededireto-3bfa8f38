@@ -146,9 +146,8 @@ const MultiCategorySelector = ({
                   key={cat.id}
                   type="button"
                   onClick={() => handleAdd(cat.id)}
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
                 >
-                  {cat.icon && <span>{cat.icon}</span>}
                   {cat.name}
                 </button>
               ))}
