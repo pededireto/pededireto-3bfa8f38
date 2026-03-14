@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useCategory, useCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
@@ -30,7 +30,7 @@ const getYouTubeEmbedUrl = (url: string): string => {
   return url;
 };
 
-// CategoryPage: SEM autoplay, COM controls, utilizador decide quando play
+// CategoryPage: SEM autoplay, SEM loop, COM controls, pause fora do viewport
 const CategoryHeaderVideo = ({
   videoUrl,
   imageUrl,
@@ -40,6 +40,7 @@ const CategoryHeaderVideo = ({
   imageUrl?: string | null;
   name: string;
 }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const normalized = normalizeVideoUrl(videoUrl);
 
@@ -58,7 +59,21 @@ const CategoryHeaderVideo = ({
     };
   }, [normalized]);
 
-  // YouTube na página: sem autoplay, com controls, com som
+  // Pause automático quando sai do viewport
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !blobUrl) return;
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) video.pause();
+      },
+      { threshold: 0.2 },
+    );
+    obs.observe(video);
+    return () => obs.disconnect();
+  }, [blobUrl]);
+
+  // YouTube: sem autoplay, com controls, com som
   if (isYouTubeUrl(normalized)) {
     const embedUrl = getYouTubeEmbedUrl(normalized)
       .replace("autoplay=1", "autoplay=0")
@@ -87,11 +102,11 @@ const CategoryHeaderVideo = ({
     );
   }
 
-  // mp4 na página: sem autoplay, com controls, com som
+  // mp4: sem autoplay, sem loop, com controls, com som, pause ao sair do ecrã
   return (
     <video
+      ref={videoRef}
       src={blobUrl}
-      loop
       playsInline
       controls
       className="w-full min-h-[250px] md:min-h-[320px] rounded-2xl object-cover"
