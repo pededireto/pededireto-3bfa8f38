@@ -36,9 +36,8 @@ const iconMap: Record<string, LucideIcon> = {
   Sparkles,
 };
 
-// Padrão bento — todos os cards têm aspect-ratio 9:16 (formato Shorts/Reels)
-// "wide" = 2 colunas, "normal" = 1 coluna
-const BENTO: Array<"normal" | "wide"> = ["wide", "normal", "normal", "normal", "normal", "wide"];
+// Sem bento por agora — todos os cards iguais, 4:3 como os SuperDestaques
+const BENTO: Array<"normal" | "wide"> = ["normal", "normal", "normal", "normal", "normal", "normal"];
 
 // ─── Helpers de média ─────────────────────────────────────────────────────────
 const SUPABASE_VIDEO_BASE = "https://zzkkdgiabsqtagtdhpid.supabase.co/storage/v1/object/public/Video/";
@@ -339,9 +338,9 @@ const CategoryCard = ({
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ${isDesktopWide ? "md:[grid-column:span_2] md:[aspect-ratio:18/16]" : ""}`}
+      className={`group relative overflow-hidden rounded-2xl cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ${""}`}
       style={{
-        aspectRatio: "9/16",
+        aspectRatio: "4/3",
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -390,9 +389,9 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
             <h2 className="text-3xl md:text-4xl font-bold mb-3">Encontre por categoria</h2>
             <p className="text-muted-foreground text-lg">Escolha a área de negócio que procura</p>
           </div>
-          <div className="grid gap-2 md:gap-3 grid-cols-2 md:grid-cols-4">
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="animate-pulse rounded-2xl bg-muted" style={{ aspectRatio: "9/16" }} />
+              <div key={i} className="animate-pulse rounded-2xl bg-muted" style={{ aspectRatio: "4/3" }} />
             ))}
           </div>
         </div>
@@ -410,7 +409,7 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
           </div>
 
           {/* Bento grid — 2 colunas mobile, 4 colunas desktop */}
-          <div className="grid gap-2 md:gap-3 grid-cols-2 md:grid-cols-4">
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
             {categories.map((category, index) => (
               <CategoryCard
                 key={category.id}
