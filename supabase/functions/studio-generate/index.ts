@@ -477,25 +477,13 @@ serve(async (req) => {
     }
 
     const { action, ...payload } = await req.json();
-
-    // ── Normalizar actions antigas ─────────────────────────
-    const actionMap: Record<string, string> = {
-      generate_reel_completo: "generate_reel_full_package",
-      generate_image_prompt_reel: "generate_reel_storyboard",
-      reel_storyboard: "generate_reel_storyboard",
-    };
-
-    const normalizedAction = actionMap[action] || action;
-
-    console.log("[studio-generate] action recebida:", action);
-    console.log("[studio-generate] action normalizada:", normalizedAction);
-    console.log("[studio-generate] payload keys:", Object.keys(payload || {}));
+    console.log(`[studio-generate] action=${action}`);
 
     let rawText = "";
 
-    if (action === "extract_profile") {
+    if (normalizedAction === "extract_profile") {
       rawText = await callGemini(EXTRACT_PROFILE_PROMPT, payload.text, undefined, 600);
-    } else if (action === "generate_reel") {
+    } else if (normalizedAction === "generate_reel") {
       const systemPrompt = buildReelPrompt(payload);
       const userMessage =
         `Frame inicial do video. Objectivo: ${payload.objectivo || "promover o negocio"}. ${payload.objectivoDescricao ? "Descricao: " + payload.objectivoDescricao : ""} ${payload.nome ? "Negocio: " + payload.nome : ""} ${payload.cidade ? "Cidade: " + payload.cidade : ""}`.trim();
@@ -503,7 +491,7 @@ serve(async (req) => {
         ? [{ base64: payload.imageBase64, mimeType: payload.imageMimeType || "image/jpeg" }]
         : undefined;
       rawText = await callGemini(systemPrompt, userMessage, images, 4096);
-    } else if (action === "generate_reel_multi") {
+    } else if (normalizedAction === "generate_reel_multi") {
       const systemPrompt = buildReelMultiImagePrompt(payload);
       const userMessage =
         `${payload.images?.length || 0} imagens fornecidas. Objectivo: ${payload.objectivo || "promover o negocio"}. ${payload.objectivoDescricao || ""} ${payload.nome ? "Negocio: " + payload.nome : ""}`.trim();
@@ -518,14 +506,14 @@ serve(async (req) => {
         });
       }
       rawText = await callGemini(systemPrompt, userMessage, images, 5000);
-    } else if (action === "generate_image_prompt") {
+    } else if (normalizedAction === "generate_image_prompt") {
       const systemPrompt = buildImagePrompt(payload);
       const userText = `Gera prompts de imagem para: ${payload.nome || payload.descricao || "negocio local portugues"}. Estilo: ${payload.estilo || "local"}. Proporcao: ${payload.proporcao || "9:16"}.`;
       const images = payload.referenceImageBase64
         ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
         : undefined;
       rawText = await callGemini(systemPrompt, userText, images, 1200);
-    } else if (action === "generate_reel_storyboard") {
+    } else if (normalizedAction === "generate_reel_storyboard") {
       // Novo: storyboard com camera/lighting/composition/emotion/voiceover/screen_text
       const systemPrompt = buildReelStoryboardPrompt(payload);
       const userText = `Cria o storyboard completo para: ${payload.nome || payload.descricao || "negocio local portugues"}. Estilo: ${payload.estilo || "local"}. Proporcao: ${payload.proporcao || "9:16"}.`;
@@ -533,7 +521,7 @@ serve(async (req) => {
         ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
         : undefined;
       rawText = await callGemini(systemPrompt, userText, images, 3000);
-    } else if (action === "generate_reel_full_package") {
+    } else if (normalizedAction === "generate_reel_full_package") {
       // Novo: script + legenda + hashtags + copy de anuncio
       const systemPrompt = buildReelFullPackagePrompt(payload);
       const userText = `Cria o pacote completo de conteudo para o Reel de ${payload.nome || "negocio local portugues"}.`;
