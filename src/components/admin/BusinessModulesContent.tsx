@@ -131,7 +131,10 @@ const BusinessModulesContent = () => {
       await deleteModule.mutateAsync(id);
       toast({ title: "Módulo eliminado" });
     } catch (e: any) {
-      toast({ title: "Erro", description: e.message, variant: "destructive" });
+      const detail = e?.details || e?.hint || e?.message || "Erro desconhecido";
+      const code = e?.code ? ` (${e.code})` : "";
+      toast({ title: "Erro ao eliminar módulo", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[BusinessModulesContent] delete error:", e);
     }
   };
 

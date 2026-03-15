@@ -104,7 +104,10 @@ const BlogContent = () => {
       }
       setDialogOpen(false);
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      const detail = err?.details || err?.hint || err?.message || "Erro desconhecido";
+      const code = err?.code ? ` (${err.code})` : "";
+      toast({ title: "Erro ao guardar artigo", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[BlogContent] save error:", err);
     }
   };
 
