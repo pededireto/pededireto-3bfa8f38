@@ -67,5 +67,8 @@ export const useSyncBusinessCategories = () => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
       queryClient.invalidateQueries({ queryKey: ["business"] });
     },
+    onError: (error: any) => {
+      console.error("[useSyncBusinessCategories] error:", error);
+    },
   });
 };

@@ -62,7 +62,6 @@ export const useBlogPost = (slug: string | undefined) => {
         .eq("slug", slug!)
         .single();
 
-      // Non-admins can only see published posts (RLS handles this)
       const { data, error } = await query;
       if (error) throw error;
       return data as BlogPost;
@@ -119,6 +118,9 @@ export const useCreateBlogPost = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-blog-posts"] });
       queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
     },
+    onError: (error: any) => {
+      console.error("[useCreateBlogPost] error:", error);
+    },
   });
 };
 
@@ -140,6 +142,9 @@ export const useUpdateBlogPost = () => {
       queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
       queryClient.invalidateQueries({ queryKey: ["blog-post"] });
     },
+    onError: (error: any) => {
+      console.error("[useUpdateBlogPost] error:", error);
+    },
   });
 };
 
@@ -153,6 +158,9 @@ export const useDeleteBlogPost = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-blog-posts"] });
       queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
+    },
+    onError: (error: any) => {
+      console.error("[useDeleteBlogPost] error:", error);
     },
   });
 };

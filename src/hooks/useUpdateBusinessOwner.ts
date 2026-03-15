@@ -53,5 +53,8 @@ export const useUpdateBusinessOwner = () => {
       queryClient.invalidateQueries({ queryKey: ["business"] });
       queryClient.invalidateQueries({ queryKey: ["business-by-user"] });
     },
+    onError: (error: any) => {
+      console.error("[useUpdateBusinessOwner] error:", error);
+    },
   });
 };

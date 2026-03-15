@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { formatSupabaseError } from "@/utils/supabaseError";
 
 interface Generation {
   id: string;
@@ -66,10 +67,11 @@ export function useSaveGeneration() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["generations"] });
     },
-    onError: (err: any) => {
+    onError: (error: any) => {
+      console.error("[useSaveGeneration] error:", error);
       toast({
-        title: "Erro ao guardar",
-        description: err.message,
+        title: "Erro ao guardar geração",
+        description: formatSupabaseError(error),
         variant: "destructive",
       });
     },
@@ -91,6 +93,14 @@ export function useDeleteGeneration() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["generations"] });
       toast({ title: "Geração eliminada" });
+    },
+    onError: (error: any) => {
+      console.error("[useDeleteGeneration] error:", error);
+      toast({
+        title: "Erro ao eliminar geração",
+        description: formatSupabaseError(error),
+        variant: "destructive",
+      });
     },
   });
 }

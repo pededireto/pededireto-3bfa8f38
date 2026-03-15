@@ -18,7 +18,6 @@ export interface BusinessAddon {
 function computeExpiresAt(addon: BusinessAddon): Date {
   const d = new Date(addon.activated_at);
   if (addon.is_trial) {
-    // Trials are always 15 days
     d.setDate(d.getDate() + 15);
   } else {
     d.setMonth(d.getMonth() + addon.duration_months);
@@ -98,6 +97,9 @@ export const useCreateAddon = () => {
       qc.invalidateQueries({ queryKey: ["business-addons-all"] });
       qc.invalidateQueries({ queryKey: ["business-addon"] });
     },
+    onError: (error: any) => {
+      console.error("[useCreateAddon] error:", error);
+    },
   });
 };
 
@@ -114,6 +116,9 @@ export const useDeactivateAddon = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["business-addons-all"] });
       qc.invalidateQueries({ queryKey: ["business-addon"] });
+    },
+    onError: (error: any) => {
+      console.error("[useDeactivateAddon] error:", error);
     },
   });
 };

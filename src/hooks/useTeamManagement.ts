@@ -37,6 +37,9 @@ export const useCreateTeamMember = () => {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team-members"] }),
+    onError: (error: any) => {
+      console.error("[useCreateTeamMember] error:", error);
+    },
   });
 };
 
@@ -52,5 +55,8 @@ export const useDeleteTeamMember = () => {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team-members"] }),
+    onError: (error: any) => {
+      console.error("[useDeleteTeamMember] error:", error);
+    },
   });
 };

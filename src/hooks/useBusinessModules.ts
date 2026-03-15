@@ -92,6 +92,9 @@ export function useCreateBusinessModule() {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["business-modules"] }),
+    onError: (error: any) => {
+      console.error("[useCreateBusinessModule] error:", error);
+    },
   });
 }
 
@@ -104,6 +107,9 @@ export function useUpdateBusinessModule() {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["business-modules"] }),
+    onError: (error: any) => {
+      console.error("[useUpdateBusinessModule] error:", error);
+    },
   });
 }
 
@@ -115,6 +121,9 @@ export function useDeleteBusinessModule() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["business-modules"] }),
+    onError: (error: any) => {
+      console.error("[useDeleteBusinessModule] error:", error);
+    },
   });
 }
 
@@ -133,7 +142,6 @@ export function useUpsertBusinessModuleValues() {
         const isEmpty = !v.value?.trim() && !v.value_json;
 
         if (isEmpty) {
-          // Apagar o registo se o valor ficou vazio
           const { error } = await supabase
             .from("business_module_values")
             .delete()
@@ -141,7 +149,6 @@ export function useUpsertBusinessModuleValues() {
             .eq("module_id", v.module_id);
           if (error) throw error;
         } else {
-          // Upsert normal
           const { error } = await supabase.from("business_module_values").upsert(
             {
               business_id: businessId,
@@ -157,6 +164,9 @@ export function useUpsertBusinessModuleValues() {
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["business-module-values", vars.businessId] });
+    },
+    onError: (error: any) => {
+      console.error("[useUpsertBusinessModuleValues] error:", error);
     },
   });
 }

@@ -26,7 +26,7 @@ export const useBusinessNotifications = (businessId: string | undefined) => {
       return data as unknown as BusinessNotification[];
     },
     enabled: !!businessId,
-    refetchInterval: 30000, // 30s — lista completa
+    refetchInterval: 30000,
   });
 };
 
@@ -44,8 +44,8 @@ export const useUnreadNotificationsCount = (businessId: string | undefined) => {
       return count || 0;
     },
     enabled: !!businessId,
-    refetchInterval: 15000, // 15s — badge actualiza rápido
-    refetchIntervalInBackground: true, // actualiza mesmo com tab em background
+    refetchInterval: 15000,
+    refetchIntervalInBackground: true,
   });
 };
 
@@ -60,6 +60,9 @@ export const useMarkNotificationAsRead = () => {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
+    onError: (error: any) => {
+      console.error("[useMarkNotificationAsRead] error:", error);
+    },
   });
 };
 
@@ -75,5 +78,8 @@ export const useMarkAllNotificationsAsRead = () => {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
+    onError: (error: any) => {
+      console.error("[useMarkAllNotificationsAsRead] error:", error);
+    },
   });
 };

@@ -90,6 +90,9 @@ export const useCreateHighlight = () => {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["business-highlights"] }),
+    onError: (error: any) => {
+      console.error("[useCreateHighlight] error:", error);
+    },
   });
 };
 
@@ -107,6 +110,9 @@ export const useUpdateHighlight = () => {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["business-highlights"] }),
+    onError: (error: any) => {
+      console.error("[useUpdateHighlight] error:", error);
+    },
   });
 };
 
@@ -121,5 +127,8 @@ export const useDeleteHighlight = () => {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["business-highlights"] }),
+    onError: (error: any) => {
+      console.error("[useDeleteHighlight] error:", error);
+    },
   });
 };
