@@ -60,8 +60,10 @@ export const ReviewCard = ({ review, onEdit, onDelete, showBusinessResponse = tr
           is_helpful: isHelpful,
         });
       }
-    } catch (error) {
-      toast({ title: "Erro ao votar", variant: "destructive" });
+    } catch (error: any) {
+      const detail = error?.details || error?.hint || error?.message || "Erro desconhecido";
+      toast({ title: "Erro ao votar", description: detail, variant: "destructive" });
+      console.error("[ReviewCard] vote error:", error);
     }
   };
 
