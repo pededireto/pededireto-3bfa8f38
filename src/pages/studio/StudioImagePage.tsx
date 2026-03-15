@@ -13,22 +13,20 @@ import { useNavigate } from "react-router-dom";
 import GrokBox from "@/components/studio/GrokBox";
 import CopyButton from "@/components/studio/CopyButton";
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
-
 const ESTILOS = [
-  { key: "moderno", label: "Moderno & Escuro", emoji: "🌑", desc: "Fundo escuro, neon verde/laranja" },
-  { key: "limpo", label: "Limpo & Profissional", emoji: "☀️", desc: "Fundo claro, tons neutros" },
-  { key: "local", label: "Local & Acolhedor", emoji: "🏡", desc: "Cores quentes, textura natural" },
-  { key: "urgencia", label: "Urgência & Impacto", emoji: "⚡", desc: "Alto contraste, vermelho/laranja" },
+  { key: "moderno", label: "Moderno & Escuro", emoji: "\u{1F311}", desc: "Fundo escuro, neon verde/laranja" },
+  { key: "limpo", label: "Limpo & Profissional", emoji: "\u2600\uFE0F", desc: "Fundo claro, tons neutros" },
+  { key: "local", label: "Local & Acolhedor", emoji: "\u{1F3E1}", desc: "Cores quentes, textura natural" },
+  { key: "urgencia", label: "Urgência & Impacto", emoji: "\u26A1", desc: "Alto contraste, vermelho/laranja" },
 ];
 
 const OBJECTIVOS = [
-  { key: "negocio", label: "Negócio", emoji: "🏪" },
-  { key: "produto", label: "Produto", emoji: "📦" },
-  { key: "evento", label: "Evento", emoji: "🎉" },
-  { key: "pessoa", label: "Pessoa/Equipa", emoji: "👤" },
-  { key: "espaco", label: "Espaço", emoji: "🌅" },
-  { key: "outro", label: "Outro", emoji: "🎯" },
+  { key: "negocio", label: "Negócio", emoji: "\u{1F3EA}" },
+  { key: "produto", label: "Produto", emoji: "\u{1F4E6}" },
+  { key: "evento", label: "Evento", emoji: "\u{1F389}" },
+  { key: "pessoa", label: "Pessoa/Equipa", emoji: "\u{1F464}" },
+  { key: "espaco", label: "Espaço", emoji: "\u{1F305}" },
+  { key: "outro", label: "Outro", emoji: "\u{1F3AF}" },
 ];
 
 const PROPORCOES = [
@@ -37,16 +35,34 @@ const PROPORCOES = [
   { key: "16:9", label: "16:9 Horizontal", desc: "YouTube & Web" },
 ];
 
-// Cores por cena — paridade visual com o Reel Generator
 const CENA_COLORS = [
-  { bg: "bg-cta", text: "text-cta", border: "border-cta/40", num: "01", label: "HOOK", time: "0–6s" },
-  { bg: "bg-primary", text: "text-primary", border: "border-primary/40", num: "02", label: "DESENVOLVIMENTO", time: "6–12s" },
-  { bg: "bg-blue-500", text: "text-blue-400", border: "border-blue-500/40", num: "03", label: "CONFIANÇA", time: "12–18s" },
-  { bg: "bg-warning", text: "text-warning", border: "border-warning/40", num: "04", label: "URGÊNCIA", time: "18–24s" },
-  { bg: "bg-purple-500", text: "text-purple-400", border: "border-purple-500/40", num: "05", label: "CTA", time: "24–30s" },
+  { bg: "bg-cta", text: "text-cta", border: "border-cta/40", num: "01", label: "HOOK", time: "0-6s" },
+  {
+    bg: "bg-primary",
+    text: "text-primary",
+    border: "border-primary/40",
+    num: "02",
+    label: "DESENVOLVIMENTO",
+    time: "6-12s",
+  },
+  {
+    bg: "bg-blue-500",
+    text: "text-blue-400",
+    border: "border-blue-500/40",
+    num: "03",
+    label: "CONFIANCA",
+    time: "12-18s",
+  },
+  { bg: "bg-warning", text: "text-warning", border: "border-warning/40", num: "04", label: "URGENCIA", time: "18-24s" },
+  {
+    bg: "bg-purple-500",
+    text: "text-purple-400",
+    border: "border-purple-500/40",
+    num: "05",
+    label: "CTA",
+    time: "24-30s",
+  },
 ];
-
-// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface Cena {
   titulo: string;
@@ -58,8 +74,6 @@ interface Cena {
   emotion?: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 const buildFullPrompt = (cena: Cena): string => {
   const parts: string[] = [];
   if (cena.camera) parts.push(`Camera: ${cena.camera}`);
@@ -70,28 +84,18 @@ const buildFullPrompt = (cena: Cena): string => {
   return parts.join("\n");
 };
 
-// ─── Componente: Toggle Reel-ready ───────────────────────────────────────────
-
-const ReelReadyToggle = ({
-  active,
-  onChange,
-}: {
-  active: boolean;
-  onChange: (v: boolean) => void;
-}) => (
+const ReelReadyToggle = ({ active, onChange }: { active: boolean; onChange: (v: boolean) => void }) => (
   <button
     onClick={() => onChange(!active)}
     className={cn(
       "w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300",
-      active
-        ? "border-purple-500/50 bg-purple-500/10"
-        : "border-border hover:border-primary/30 bg-card"
+      active ? "border-purple-500/50 bg-purple-500/10" : "border-border hover:border-primary/30 bg-card",
     )}
   >
     <div
       className={cn(
         "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
-        active ? "bg-purple-500/20" : "bg-muted"
+        active ? "bg-purple-500/20" : "bg-muted",
       )}
     >
       <Film className={cn("h-4 w-4", active ? "text-purple-400" : "text-muted-foreground")} />
@@ -101,33 +105,25 @@ const ReelReadyToggle = ({
         <span className={cn("text-sm font-semibold", active ? "text-purple-300" : "text-foreground")}>
           Modo Reel-ready
         </span>
-        {active && (
-          <Badge className="text-[10px] bg-purple-500/20 text-purple-300 border-purple-500/30">
-            ATIVO
-          </Badge>
-        )}
+        {active && <Badge className="text-[10px] bg-purple-500/20 text-purple-300 border-purple-500/30">ATIVO</Badge>}
       </div>
-      <p className="text-xs text-muted-foreground">
-        Gera 5 variantes da mesma imagem — uma por cena do Reel
-      </p>
+      <p className="text-xs text-muted-foreground">Gera 5 variantes da mesma imagem -- uma por cena do Reel</p>
     </div>
     <div
       className={cn(
         "w-10 h-5 rounded-full flex-shrink-0 relative transition-colors duration-300",
-        active ? "bg-purple-500" : "bg-muted"
+        active ? "bg-purple-500" : "bg-muted",
       )}
     >
       <div
         className={cn(
           "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-300",
-          active ? "translate-x-5" : "translate-x-0.5"
+          active ? "translate-x-5" : "translate-x-0.5",
         )}
       />
     </div>
   </button>
 );
-
-// ─── Componente: Preview panel (estado vazio) ─────────────────────────────────
 
 const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
   <div className="h-full flex flex-col p-6 space-y-5 min-h-[400px]">
@@ -138,20 +134,26 @@ const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
         <span className="text-[10px] font-medium text-primary">Gemini Pro AI</span>
       </div>
     </div>
-
     {reelMode ? (
       <>
         <div className="flex items-center gap-2 p-3 rounded-xl border border-purple-500/30 bg-purple-500/5">
           <Film className="h-4 w-4 text-purple-400 flex-shrink-0" />
           <div>
             <p className="text-xs font-semibold text-purple-300">Modo Reel-ready ativo</p>
-            <p className="text-[10px] text-muted-foreground">5 variantes cinematográficas — uma por cena · Camera, Lighting, Composition, Emotion</p>
+            <p className="text-[10px] text-muted-foreground">
+              5 variantes cinematograficas -- uma por cena. Camera, Lighting, Composition, Emotion
+            </p>
           </div>
         </div>
         <div className="flex-1 space-y-2">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">5 Variantes geradas</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+            5 Variantes geradas
+          </p>
           {CENA_COLORS.map((c) => (
-            <div key={c.num} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl border opacity-40", c.border)}>
+            <div
+              key={c.num}
+              className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl border opacity-40", c.border)}
+            >
               <span className={cn("font-mono font-black text-xl leading-none w-8 flex-shrink-0", c.text)}>{c.num}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -165,9 +167,9 @@ const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
           ))}
         </div>
         <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3">
-          <p className="text-xs font-semibold text-purple-300 mb-1">🚀 Workflow completo</p>
+          <p className="text-xs font-semibold text-purple-300 mb-1">Workflow completo</p>
           <p className="text-[10px] text-muted-foreground">
-            5 variantes → gera imagens no Grok → "Gerar Reel completo" cria script + legenda + hashtags + copy de anúncio
+            5 variantes -&gt; gera imagens no Grok -&gt; "Gerar Reel completo" cria script + legenda + hashtags + copy
           </p>
         </div>
       </>
@@ -175,10 +177,10 @@ const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
       <>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { icon: "🖼️", label: "Prompt principal", desc: "Optimizado para Gemini Imagen" },
-            { icon: "🔄", label: "2 variantes", desc: "Ângulo e iluminação diferentes" },
-            { icon: "📋", label: "Guia de uso", desc: "Passo a passo para o Grok" },
-            { icon: "🎬", label: "Workflow Reel", desc: "Como usar no Gerador de Reel" },
+            { icon: "\u{1F5BC}\uFE0F", label: "Prompt principal", desc: "Optimizado para Gemini Imagen" },
+            { icon: "\u{1F504}", label: "2 variantes", desc: "Angulo e iluminacao diferentes" },
+            { icon: "\u{1F4CB}", label: "Guia de uso", desc: "Passo a passo para o Grok" },
+            { icon: "\u{1F3AC}", label: "Workflow Reel", desc: "Como usar no Gerador de Reel" },
           ].map((item) => (
             <div key={item.label} className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-muted/20">
               <span className="text-base flex-shrink-0">{item.icon}</span>
@@ -207,23 +209,20 @@ const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
         </div>
       </>
     )}
-
     <p className="text-[11px] text-muted-foreground text-center">
-      {reelMode ? "Preenche os dados e clica em gerar" : "Escolhe um estilo e clica em gerar — a IA é criativa!"}
+      {reelMode ? "Preenche os dados e clica em gerar" : "Escolhe um estilo e clica em gerar -- a IA e criativa!"}
     </p>
   </div>
 );
-
-// ─── Componente: Card de cena cinematográfica ─────────────────────────────────
 
 const CenaCard = ({ cena, index }: { cena: Cena; index: number }) => {
   const c = CENA_COLORS[index] || CENA_COLORS[0];
   const hasCinematic = cena.camera || cena.lighting || cena.composition || cena.emotion;
   const fullPrompt = buildFullPrompt(cena);
-
   return (
-    <div className={cn("rounded-2xl border bg-card overflow-hidden transition-all duration-300 hover:shadow-lg", c.border)}>
-      {/* Header */}
+    <div
+      className={cn("rounded-2xl border bg-card overflow-hidden transition-all duration-300 hover:shadow-lg", c.border)}
+    >
       <div className={cn("flex items-center justify-between px-4 py-2.5 border-b bg-black/20", c.border)}>
         <div className="flex items-center gap-3">
           <span className={cn("font-mono font-black text-2xl leading-none tracking-tighter opacity-90", c.text)}>
@@ -236,47 +235,47 @@ const CenaCard = ({ cena, index }: { cena: Cena; index: number }) => {
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[9px] text-muted-foreground font-mono">{c.time}</span>
-              {cena.foco && <span className="text-[9px] text-muted-foreground">· {cena.foco}</span>}
+              {cena.foco && <span className="text-[9px] text-muted-foreground">- {cena.foco}</span>}
             </div>
           </div>
         </div>
         <CopyButton text={fullPrompt} />
       </div>
-
-      {/* Parâmetros cinematográficos */}
       {hasCinematic && (
         <div className="grid grid-cols-2 gap-px bg-border mx-4 mt-3 rounded-lg overflow-hidden border border-border/50">
           {cena.camera && (
             <div className="bg-card px-3 py-2">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">📷 Camera</p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Camera</p>
               <p className="text-xs text-foreground">{cena.camera}</p>
             </div>
           )}
           {cena.lighting && (
             <div className="bg-card px-3 py-2">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">💡 Lighting</p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Lighting</p>
               <p className="text-xs text-foreground">{cena.lighting}</p>
             </div>
           )}
           {cena.composition && (
             <div className="bg-card px-3 py-2">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">🎞️ Composition</p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
+                Composition
+              </p>
               <p className="text-xs text-foreground">{cena.composition}</p>
             </div>
           )}
           {cena.emotion && (
             <div className="bg-card px-3 py-2">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">🎭 Emotion</p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Emotion</p>
               <p className="text-xs text-foreground">{cena.emotion}</p>
             </div>
           )}
         </div>
       )}
-
-      {/* Prompt completo */}
       <div className="px-4 py-3">
         {hasCinematic && (
-          <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">Prompt completo</p>
+          <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
+            Prompt completo
+          </p>
         )}
         <GrokBox content={fullPrompt} />
       </div>
@@ -284,113 +283,101 @@ const CenaCard = ({ cena, index }: { cena: Cena; index: number }) => {
   );
 };
 
-// ─── Componente: Painel "Reel completo" (tabs, inline no output panel) ───────
-
-// Resolve campos tanto de estrutura plana como aninhada { reel, instagram, ads }
 const resolveReelCompleto = (r: any) => ({
-  script:    r?.reel?.script    || r?.script_reel    || r?.script    || "",
-  duracao:   r?.reel?.duracao   || "30s",
-  legenda:   r?.instagram?.legenda || r?.legenda_instagram || r?.legenda  || "",
-  hashtags:  r?.instagram?.hashtags || r?.hashtags || [],
-  copy:      r?.ads?.copy       || r?.copy_anuncio  || "",
-  cta:       r?.ads?.cta        || r?.cta            || "",
+  script: r?.reel?.script || r?.script_reel || r?.script || "",
+  duracao: r?.reel?.duracao || "30s",
+  legenda: r?.instagram?.legenda || r?.legenda_instagram || r?.legenda || "",
+  hashtags: r?.instagram?.hashtags || r?.hashtags || [],
+  copy: r?.ads?.copy || r?.copy_anuncio || "",
+  cta: r?.ads?.cta || r?.cta || "",
 });
 
 const ReelCompletoPanel = ({ result, onClose }: { result: any; onClose: () => void }) => {
   const d = resolveReelCompleto(result);
   const hashtagsStr = Array.isArray(d.hashtags) ? d.hashtags.join(" ") : d.hashtags;
 
-  // Ponto 5: Exportar pacote completo num clipboard formatado
   const handleExportarPacote = () => {
-    const pacote = [
-      "SCRIPT
-------
-" + d.script,
-      "LEGENDA
-------
-" + d.legenda,
-      "HASHTAGS
-------
-" + hashtagsStr,
-      "ANÚNCIO
-------
-" + d.copy + (d.cta ? `
-
-CTA: ${d.cta}` : ""),
-    ].join("
-
-
-");
-    navigator.clipboard.writeText(pacote);
+    const linhas = [
+      "SCRIPT\n------\n" + d.script,
+      "LEGENDA\n------\n" + d.legenda,
+      "HASHTAGS\n------\n" + hashtagsStr,
+      "ANUNCIO\n------\n" + d.copy + (d.cta ? "\n\nCTA: " + d.cta : ""),
+    ];
+    navigator.clipboard.writeText(linhas.join("\n\n\n"));
   };
 
   return (
-  <div className="border-t border-purple-500/20 bg-purple-500/5">
-    <div className="flex items-center justify-between px-4 pt-3 pb-2">
-      <div className="flex items-center gap-2">
-        <Film className="h-3.5 w-3.5 text-purple-400" />
-        <span className="text-xs font-semibold text-purple-300">Reel completo gerado</span>
-        <Badge className="text-[10px] bg-purple-500/20 text-purple-300 border-purple-500/30">{d.duracao}</Badge>
+    <div className="border-t border-purple-500/20 bg-purple-500/5">
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <div className="flex items-center gap-2">
+          <Film className="h-3.5 w-3.5 text-purple-400" />
+          <span className="text-xs font-semibold text-purple-300">Reel completo gerado</span>
+          <Badge className="text-[10px] bg-purple-500/20 text-purple-300 border-purple-500/30">{d.duracao}</Badge>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleExportarPacote}
+            className="text-[10px] flex items-center gap-1 px-2 py-1 rounded-lg border border-purple-500/30 text-purple-300 hover:bg-purple-500/10 transition-colors"
+          >
+            Exportar pacote
+          </button>
+          <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground ml-1">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={handleExportarPacote}
-          className="text-[10px] flex items-center gap-1 px-2 py-1 rounded-lg border border-purple-500/30 text-purple-300 hover:bg-purple-500/10 transition-colors"
-          title="Copiar pacote completo"
-        >
-          📦 Exportar pacote
-        </button>
-        <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground ml-1">
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
-    <Tabs defaultValue="script" className="w-full">
-      <TabsList className="w-full justify-start rounded-none border-b border-purple-500/20 bg-transparent px-4">
-        <TabsTrigger value="script" className="text-xs">🎬 Script</TabsTrigger>
-        <TabsTrigger value="legenda" className="text-xs">📱 Legenda</TabsTrigger>
-        <TabsTrigger value="hashtags" className="text-xs">🏷️ Hashtags</TabsTrigger>
-        <TabsTrigger value="anuncio" className="text-xs">⚡ Anúncio</TabsTrigger>
-      </TabsList>
-      <div className="p-4 space-y-3">
-        <TabsContent value="script" className="mt-0 space-y-2">
-          <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
-            {d.script || "—"}
-          </div>
-          <CopyButton text={d.script} />
-        </TabsContent>
-        <TabsContent value="legenda" className="mt-0 space-y-2">
-          <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
-            {d.legenda || "—"}
-          </div>
-          <CopyButton text={d.legenda} />
-        </TabsContent>
-        <TabsContent value="hashtags" className="mt-0 space-y-2">
-          <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-            {hashtagsStr || "—"}
-          </div>
-          <CopyButton text={hashtagsStr} />
-        </TabsContent>
-        <TabsContent value="anuncio" className="mt-0 space-y-2">
-          <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
-            {d.copy || "—"}
-          </div>
-          {d.cta && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">CTA</span>
-              <span className="text-xs font-semibold">{d.cta}</span>
-              <CopyButton text={d.cta} />
+      <Tabs defaultValue="script" className="w-full">
+        <TabsList className="w-full justify-start rounded-none border-b border-purple-500/20 bg-transparent px-4">
+          <TabsTrigger value="script" className="text-xs">
+            Script
+          </TabsTrigger>
+          <TabsTrigger value="legenda" className="text-xs">
+            Legenda
+          </TabsTrigger>
+          <TabsTrigger value="hashtags" className="text-xs">
+            Hashtags
+          </TabsTrigger>
+          <TabsTrigger value="anuncio" className="text-xs">
+            Anuncio
+          </TabsTrigger>
+        </TabsList>
+        <div className="p-4 space-y-3">
+          <TabsContent value="script" className="mt-0 space-y-2">
+            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+              {d.script || "-"}
             </div>
-          )}
-          <CopyButton text={d.copy} />
-        </TabsContent>
-      </div>
-    </Tabs>
-  </div>
+            <CopyButton text={d.script} />
+          </TabsContent>
+          <TabsContent value="legenda" className="mt-0 space-y-2">
+            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+              {d.legenda || "-"}
+            </div>
+            <CopyButton text={d.legenda} />
+          </TabsContent>
+          <TabsContent value="hashtags" className="mt-0 space-y-2">
+            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+              {hashtagsStr || "-"}
+            </div>
+            <CopyButton text={hashtagsStr} />
+          </TabsContent>
+          <TabsContent value="anuncio" className="mt-0 space-y-2">
+            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+              {d.copy || "-"}
+            </div>
+            {d.cta && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">CTA</span>
+                <span className="text-xs font-semibold">{d.cta}</span>
+                <CopyButton text={d.cta} />
+              </div>
+            )}
+            <CopyButton text={d.copy} />
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
   );
 };
-
-// ─── Componente: Output Reel-ready ───────────────────────────────────────────
 
 const ReelReadyOutput = ({
   result,
@@ -408,130 +395,123 @@ const ReelReadyOutput = ({
   onCloseReelCompleto: () => void;
 }) => {
   const cenas: Cena[] = result.cenas || [];
-
   return (
     <div className="space-y-0">
-    <div className="p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-purple-500/30 bg-purple-500/5">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-            <span className="text-[10px] font-medium text-purple-300">5 variantes geradas</span>
-          </div>
-          <span className="text-[10px] text-muted-foreground border border-border rounded-full px-2 py-0.5">
-            🎬 Reel-ready · 30s
-          </span>
-        </div>
-        <Button
-          size="sm"
-          onClick={onUseInReel}
-          className="flex items-center gap-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white border-0"
-        >
-          <Film className="h-3.5 w-3.5" />
-          Usar no Reel
-          <ChevronRight className="h-3 w-3" />
-        </Button>
-      </div>
-
-      {/* Estratégia cinematográfica */}
-      {result.instrucao_reel && (
-        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 px-4 py-3">
-          <p className="text-xs font-semibold text-purple-300 mb-1">💡 Estratégia cinematográfica</p>
-          <p className="text-xs text-muted-foreground">{result.instrucao_reel}</p>
-        </div>
-      )}
-
-      {/* Timeline visual — o utilizador sente que está a construir um vídeo */}
-      <div className="rounded-xl border border-border bg-card/50 px-4 py-3 space-y-2">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
-          Storyboard · 30 segundos
-        </p>
-        {/* Barra de segmentos coloridos */}
-        <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
-          {CENA_COLORS.map((c) => (
-            <div key={c.num} className={cn("flex-1 rounded-full", c.bg)} />
-          ))}
-        </div>
-        {/* Labels da timeline */}
-        <div className="flex">
-          {CENA_COLORS.map((c) => (
-            <div key={c.num} className="flex-1 min-w-0">
-              <p className={cn("text-[9px] font-semibold truncate", c.text)}>{c.label}</p>
-              <p className="text-[8px] text-muted-foreground font-mono">{c.time}</p>
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-purple-500/30 bg-purple-500/5">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+              <span className="text-[10px] font-medium text-purple-300">5 variantes geradas</span>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 5 cenas com parâmetros cinematográficos */}
-      <div className="space-y-3">
-        {cenas.map((cena, i) => (
-          <CenaCard key={i} cena={cena} index={i} />
-        ))}
-      </div>
-
-      {/* CTA: Usar no Reel + Gerar Reel completo */}
-      <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
-        <div>
-          <p className="text-xs font-semibold text-purple-300">🚀 Próximo passo</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Gera as imagens no Grok com cada prompt, depois escolhe o teu caminho:
-          </p>
-        </div>
-        <div className="flex gap-2">
+            <span className="text-[10px] text-muted-foreground border border-border rounded-full px-2 py-0.5">
+              Reel-ready - 30s
+            </span>
+          </div>
           <Button
-            onClick={onUseInReel}
-            variant="outline"
             size="sm"
-            className="flex-1 flex items-center justify-center gap-1.5 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 text-xs"
+            onClick={onUseInReel}
+            className="flex items-center gap-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white border-0"
           >
             <Film className="h-3.5 w-3.5" />
-            Abrir no Reel Generator
-          </Button>
-          <Button
-            onClick={onGerarReelCompleto}
-            disabled={gerandoReelCompleto}
-            size="sm"
-            className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white border-0 text-xs"
-          >
-            {gerandoReelCompleto ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" />A gerar...</>
-            ) : (
-              <><Sparkles className="h-3.5 w-3.5" />Gerar Reel completo</>
-            )}
+            Usar no Reel
+            <ChevronRight className="h-3 w-3" />
           </Button>
         </div>
-        <p className="text-[9px] text-muted-foreground text-center">
-          "Gerar Reel completo" → script · legenda · hashtags · copy de anúncio
-        </p>
-      </div>
 
-      {/* Copiar tudo */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={() => {
-          const all = cenas
-            .map((cena, i) => `CENA ${CENA_COLORS[i]?.num} — ${cena.titulo}\n${buildFullPrompt(cena)}`)
-            .join("\n\n---\n\n");
-          const prefix = result.instrucao_reel ? `ESTRATÉGIA:\n${result.instrucao_reel}\n\n` : "";
-          navigator.clipboard.writeText(prefix + all);
-        }}
-      >
-        📋 Copiar todas as variantes
-      </Button>
-    </div>
-    {/* Painel Reel completo — aparece inline abaixo dos cards */}
-    {reelCompletoResult && (
-      <ReelCompletoPanel result={reelCompletoResult} onClose={onCloseReelCompleto} />
-    )}
+        {result.instrucao_reel && (
+          <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 px-4 py-3">
+            <p className="text-xs font-semibold text-purple-300 mb-1">Estrategia cinematografica</p>
+            <p className="text-xs text-muted-foreground">{result.instrucao_reel}</p>
+          </div>
+        )}
+
+        <div className="rounded-xl border border-border bg-card/50 px-4 py-3 space-y-2">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
+            Storyboard - 30 segundos
+          </p>
+          <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
+            {CENA_COLORS.map((c) => (
+              <div key={c.num} className={cn("flex-1 rounded-full", c.bg)} />
+            ))}
+          </div>
+          <div className="flex">
+            {CENA_COLORS.map((c) => (
+              <div key={c.num} className="flex-1 min-w-0">
+                <p className={cn("text-[9px] font-semibold truncate", c.text)}>{c.label}</p>
+                <p className="text-[8px] text-muted-foreground font-mono">{c.time}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {cenas.map((cena, i) => (
+            <CenaCard key={i} cena={cena} index={i} />
+          ))}
+        </div>
+
+        <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
+          <div>
+            <p className="text-xs font-semibold text-purple-300">Proximo passo</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Gera as imagens no Grok com cada prompt, depois escolhe o teu caminho:
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={onUseInReel}
+              variant="outline"
+              size="sm"
+              className="flex-1 flex items-center justify-center gap-1.5 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 text-xs"
+            >
+              <Film className="h-3.5 w-3.5" />
+              Abrir no Reel Generator
+            </Button>
+            <Button
+              onClick={onGerarReelCompleto}
+              disabled={gerandoReelCompleto}
+              size="sm"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white border-0 text-xs"
+            >
+              {gerandoReelCompleto ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />A gerar...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Gerar Reel completo
+                </>
+              )}
+            </Button>
+          </div>
+          <p className="text-[9px] text-muted-foreground text-center">
+            "Gerar Reel completo" -&gt; script - legenda - hashtags - copy de anuncio
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => {
+            const all = cenas
+              .map(
+                (cena, i) => "CENA " + (CENA_COLORS[i]?.num ?? "") + " - " + cena.titulo + "\n" + buildFullPrompt(cena),
+              )
+              .join("\n\n---\n\n");
+            const prefix = result.instrucao_reel ? "ESTRATEGIA:\n" + result.instrucao_reel + "\n\n" : "";
+            navigator.clipboard.writeText(prefix + all);
+          }}
+        >
+          Copiar todas as variantes
+        </Button>
+      </div>
+      {reelCompletoResult && <ReelCompletoPanel result={reelCompletoResult} onClose={onCloseReelCompleto} />}
     </div>
   );
 };
-
-// ─── Componente: Output normal ────────────────────────────────────────────────
 
 const ImageOutput = ({
   result,
@@ -544,9 +524,15 @@ const ImageOutput = ({
 }) => (
   <Tabs defaultValue="principal" className="h-full flex flex-col">
     <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-4 pt-3">
-      <TabsTrigger value="principal" className="text-xs">🖼️ Prompt Principal</TabsTrigger>
-      <TabsTrigger value="variantes" className="text-xs">🔄 Variantes</TabsTrigger>
-      <TabsTrigger value="guia" className="text-xs">📋 Guia de Uso</TabsTrigger>
+      <TabsTrigger value="principal" className="text-xs">
+        Prompt Principal
+      </TabsTrigger>
+      <TabsTrigger value="variantes" className="text-xs">
+        Variantes
+      </TabsTrigger>
+      <TabsTrigger value="guia" className="text-xs">
+        Guia de Uso
+      </TabsTrigger>
     </TabsList>
     <div className="flex-1 overflow-auto">
       <TabsContent value="principal" className="p-4 space-y-4 mt-0">
@@ -568,25 +554,29 @@ const ImageOutput = ({
             Usar no Reel
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportPDF}>
-            ⬇ Exportar
+            Exportar
           </Button>
         </div>
       </TabsContent>
       <TabsContent value="variantes" className="p-4 space-y-4 mt-0">
         <div>
-          <p className="text-xs font-semibold mb-2">Variante A — Ângulo diferente</p>
+          <p className="text-xs font-semibold mb-2">Variante A - Angulo diferente</p>
           <GrokBox content={result.variante_a || ""} />
-          <div className="mt-2"><CopyButton text={result.variante_a || ""} /></div>
+          <div className="mt-2">
+            <CopyButton text={result.variante_a || ""} />
+          </div>
         </div>
         <div>
-          <p className="text-xs font-semibold mb-2">Variante B — Iluminação diferente</p>
+          <p className="text-xs font-semibold mb-2">Variante B - Iluminacao diferente</p>
           <GrokBox content={result.variante_b || ""} />
-          <div className="mt-2"><CopyButton text={result.variante_b || ""} /></div>
+          <div className="mt-2">
+            <CopyButton text={result.variante_b || ""} />
+          </div>
         </div>
         <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3">
-          <p className="text-xs font-semibold text-purple-300 mb-1">💡 Dica Reel</p>
+          <p className="text-xs font-semibold text-purple-300 mb-1">Dica Reel</p>
           <p className="text-xs text-muted-foreground">
-            Usa as 3 prompts para gerar frames diferentes e carrega-os no Gerador de Reel como imagens múltiplas.
+            Usa as 3 prompts para gerar frames diferentes e carrega-os no Gerador de Reel como imagens multiplas.
           </p>
           <Button
             size="sm"
@@ -600,20 +590,20 @@ const ImageOutput = ({
       </TabsContent>
       <TabsContent value="guia" className="p-4 space-y-4 mt-0">
         <div className="rounded-xl border border-border bg-muted/30 p-4">
-          <p className="text-xs font-semibold mb-2">📋 Passo a passo</p>
+          <p className="text-xs font-semibold mb-2">Passo a passo</p>
           <div className="text-xs text-muted-foreground whitespace-pre-wrap">
             {result.instrucoes ||
               "1. Copia a prompt principal\n2. Abre o Grok e cola a prompt\n3. Ajusta o formato para 9:16 vertical\n4. Usa a imagem gerada como frame no Gerador de Reel"}
           </div>
         </div>
         <div className="rounded-xl border border-border bg-muted/30 p-4">
-          <p className="text-xs font-semibold mb-2">🎬 Workflow Grok → Reel 30s</p>
+          <p className="text-xs font-semibold mb-2">Workflow Grok -&gt; Reel 30s</p>
           <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
             <li>Gera a imagem com a prompt acima</li>
             <li>Vai ao Gerador de Reel e carrega a imagem</li>
-            <li>Gera as 5 extensões automaticamente</li>
-            <li>Cola cada extensão sequencialmente no Grok</li>
-            <li>Exporta o vídeo final e edita no CapCut</li>
+            <li>Gera as 5 extensoes automaticamente</li>
+            <li>Cola cada extensao sequencialmente no Grok</li>
+            <li>Exporta o video final e edita no CapCut</li>
           </ol>
         </div>
         <Button
@@ -627,8 +617,6 @@ const ImageOutput = ({
     </div>
   </Tabs>
 );
-
-// ─── Página principal ─────────────────────────────────────────────────────────
 
 const StudioImagePage = () => {
   const { generate } = useStudioGenerate();
@@ -652,8 +640,6 @@ const StudioImagePage = () => {
   const [reelMode, setReelMode] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
-
-  // Estado para o modal "Gerar Reel completo"
   const [reelCompletoResult, setReelCompletoResult] = useState<any>(null);
   const [gerandoReelCompleto, setGerandoReelCompleto] = useState(false);
 
@@ -687,23 +673,19 @@ const StudioImagePage = () => {
     setGenerating(true);
     setResult(null);
     setReelCompletoResult(null);
-
     const action = reelMode ? "generate_reel_storyboard" : "generate_image_prompt";
     const data = await generate(action, buildPayload());
-
     setGenerating(false);
     if (!data) return;
     setResult(data);
-
     saveGen.mutate({
       type: "image",
-      title: `${nome || objectivoImagem || "Imagem"} · ${sector || estilo}`,
-      subtitle: reelMode ? `Reel-ready · ${proporcao}` : `${proporcao} · ${estilo}`,
+      title: (nome || objectivoImagem || "Imagem") + " - " + (sector || estilo),
+      subtitle: reelMode ? "Reel-ready - " + proporcao : proporcao + " - " + estilo,
       data,
     });
   };
 
-  // Gera script + legenda + hashtags + copy a partir das cenas já geradas
   const handleGerarReelCompleto = async () => {
     if (!result?.cenas) return;
     setGerandoReelCompleto(true);
@@ -725,7 +707,6 @@ const StudioImagePage = () => {
   };
 
   const handleUseInReel = () => {
-    // Contexto versionado — versionar evita quebras quando o schema crescer
     sessionStorage.setItem(
       "studio_reel_context",
       JSON.stringify({
@@ -733,10 +714,10 @@ const StudioImagePage = () => {
         nome,
         sector,
         objectivo: objectivoImagem || "negocio",
+        tipo_reel: objectivoImagem || "negocio",
         descricao,
-        tipo_reel: objectivoImagem || "negocio",  // prepara para reel_promocao, reel_story, etc.
         cenas: result?.cenas || null,
-      })
+      }),
     );
     navigate("/studio/reel");
   };
@@ -747,54 +728,73 @@ const StudioImagePage = () => {
     const doc = new jsPDF();
     let y = 20;
     doc.setFontSize(16);
-    doc.text("PEDE DIRETO — Marketing AI Studio", 15, y); y += 8;
+    doc.text("PEDE DIRETO - Marketing AI Studio", 15, y);
+    y += 8;
     doc.setFontSize(11);
-    doc.text(`Prompt de Imagem · ${nome || "Criativo"}`, 15, y); y += 12;
-
+    doc.text("Prompt de Imagem - " + (nome || "Criativo"), 15, y);
+    y += 12;
     if (reelMode && result.cenas) {
       (result.cenas as Cena[]).forEach((cena, i) => {
-        if (y > 260) { doc.addPage(); y = 20; }
+        if (y > 260) {
+          doc.addPage();
+          y = 20;
+        }
         doc.setFontSize(12);
-        doc.text(`CENA ${CENA_COLORS[i]?.num} — ${cena.titulo}`, 15, y); y += 7;
+        doc.text("CENA " + (CENA_COLORS[i]?.num ?? "") + " - " + cena.titulo, 15, y);
+        y += 7;
         doc.setFontSize(9);
         const lines = doc.splitTextToSize(buildFullPrompt(cena), 180);
-        doc.text(lines, 15, y); y += lines.length * 5 + 10;
+        doc.text(lines, 15, y);
+        y += lines.length * 5 + 10;
       });
     } else {
-      doc.setFontSize(12); doc.text("PROMPT PRINCIPAL", 15, y); y += 7;
+      doc.setFontSize(12);
+      doc.text("PROMPT PRINCIPAL", 15, y);
+      y += 7;
       doc.setFontSize(9);
       const lines = doc.splitTextToSize(result.prompt_principal || "", 180);
-      doc.text(lines, 15, y); y += lines.length * 5 + 10;
+      doc.text(lines, 15, y);
+      y += lines.length * 5 + 10;
       if (result.variante_a) {
-        doc.setFontSize(12); doc.text("VARIANTE A", 15, y); y += 7;
+        doc.setFontSize(12);
+        doc.text("VARIANTE A", 15, y);
+        y += 7;
         doc.setFontSize(9);
         const la = doc.splitTextToSize(result.variante_a, 180);
-        doc.text(la, 15, y); y += la.length * 5 + 10;
+        doc.text(la, 15, y);
+        y += la.length * 5 + 10;
       }
       if (result.variante_b) {
-        doc.setFontSize(12); doc.text("VARIANTE B", 15, y); y += 7;
+        doc.setFontSize(12);
+        doc.text("VARIANTE B", 15, y);
+        y += 7;
         doc.setFontSize(9);
         const lb = doc.splitTextToSize(result.variante_b, 180);
-        doc.text(lb, 15, y); y += lb.length * 5 + 10;
+        doc.text(lb, 15, y);
+        y += lb.length * 5 + 10;
       }
     }
-
     doc.setFontSize(8);
     doc.text("pededireto.pt", 15, 285);
-    doc.save(`imagem-${(nome || "criativo").toLowerCase().replace(/\s+/g, "-")}.pdf`);
+    doc.save("imagem-" + (nome || "criativo").toLowerCase().replace(/\s+/g, "-") + ".pdf");
   };
 
   return (
     <>
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6 max-w-[1400px]">
-        {/* ── LEFT: Form ── */}
         <div className="space-y-4">
-          <ReelReadyToggle active={reelMode} onChange={(v) => { setReelMode(v); setResult(null); setReelCompletoResult(null); }} />
+          <ReelReadyToggle
+            active={reelMode}
+            onChange={(v) => {
+              setReelMode(v);
+              setResult(null);
+              setReelCompletoResult(null);
+            }}
+          />
 
-          {/* Referência visual */}
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-            <p className="text-sm font-display font-semibold">Referência visual</p>
-            <p className="text-xs text-muted-foreground">Serve de inspiração visual — a IA adapta o estilo</p>
+            <p className="text-sm font-display font-semibold">Referencia visual</p>
+            <p className="text-xs text-muted-foreground">Serve de inspiracao visual -- a IA adapta o estilo</p>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleRefUpload} />
             {!referenceImage ? (
               <button
@@ -802,14 +802,21 @@ const StudioImagePage = () => {
                 className="w-full border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center gap-2 hover:border-primary/30 transition-colors"
               >
                 <Upload className="h-5 w-5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Carregar foto de referência (opcional)</span>
+                <span className="text-xs text-muted-foreground">Carregar foto de referencia (opcional)</span>
               </button>
             ) : (
               <div className="flex items-center gap-3">
                 <img src={referenceImage} alt="ref" className="w-16 h-16 object-cover rounded-lg" />
                 <div className="flex-1">
                   <p className="text-xs truncate">{refImageName}</p>
-                  <Button variant="ghost" size="sm" onClick={() => { setReferenceImage(null); setRefImageName(""); }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setReferenceImage(null);
+                      setRefImageName("");
+                    }}
+                  >
                     Remover
                   </Button>
                 </div>
@@ -817,7 +824,6 @@ const StudioImagePage = () => {
             )}
           </div>
 
-          {/* O que queres criar? */}
           <div className="rounded-xl border border-border bg-card p-4 space-y-4">
             <div className="flex items-center gap-2">
               <p className="text-sm font-display font-semibold">O que queres criar?</p>
@@ -828,7 +834,7 @@ const StudioImagePage = () => {
               )}
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-2">Objectivo da imagem (opcional — ajuda a IA a focar)</p>
+              <p className="text-xs text-muted-foreground mb-2">Objectivo da imagem (opcional)</p>
               <div className="flex flex-wrap gap-2">
                 {OBJECTIVOS.map((o) => (
                   <button
@@ -838,7 +844,7 @@ const StudioImagePage = () => {
                       "px-3 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5",
                       objectivoImagem === o.key
                         ? "bg-primary/10 border-primary text-primary font-medium"
-                        : "border-border hover:border-primary/30"
+                        : "border-border hover:border-primary/30",
                     )}
                   >
                     <span>{o.emoji}</span>
@@ -849,48 +855,68 @@ const StudioImagePage = () => {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Nome do negócio ou marca</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Nome do negocio ou marca</label>
                 <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Taberna do Borges" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Sector / Tipo de negócio</label>
-                <Input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Ex: Restauração, Barbearia..." />
+                <label className="text-xs text-muted-foreground mb-1 block">Sector / Tipo de negocio</label>
+                <Input
+                  value={sector}
+                  onChange={(e) => setSector(e.target.value)}
+                  placeholder="Ex: Restauracao, Barbearia..."
+                />
               </div>
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
-                {reelMode ? "Qual é a história deste Reel?" : "O que deve aparecer na imagem"}
+                {reelMode ? "Qual e a historia deste Reel?" : "O que deve aparecer na imagem"}
               </label>
               <Textarea
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
                 rows={3}
                 className="resize-none"
-                placeholder={reelMode
-                  ? "Ex: mostrar o ambiente acolhedor da taberna, os petiscos tradicionais e terminar com convite para reservar mesa."
-                  : "Ex: um café acolhedor com vista para o rio, mesa com pastel de nata e café..."
+                placeholder={
+                  reelMode
+                    ? "Ex: mostrar o ambiente acolhedor da taberna, os petiscos tradicionais e terminar com convite para reservar mesa."
+                    : "Ex: um cafe acolhedor com vista para o rio, mesa com pastel de nata e cafe..."
                 }
               />
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Personagens ou pessoas?</label>
-              <Input value={personagens} onChange={(e) => setPersonagens(e.target.value)} placeholder="Ex: barista jovem, casal de 30 anos, mascote verde..." />
+              <Input
+                value={personagens}
+                onChange={(e) => setPersonagens(e.target.value)}
+                placeholder="Ex: barista jovem, casal de 30 anos, mascote verde..."
+              />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Ambiente e localização</label>
-              <Input value={ambiente} onChange={(e) => setAmbiente(e.target.value)} placeholder="Ex: interior rústico português, rua de Lisboa com calçada..." />
+              <label className="text-xs text-muted-foreground mb-1 block">Ambiente e localizacao</label>
+              <Input
+                value={ambiente}
+                onChange={(e) => setAmbiente(e.target.value)}
+                placeholder="Ex: interior rustico portugues, rua de Lisboa com calcada..."
+              />
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Mensagem / texto sobreposto</label>
-              <Input value={textoSobreposto} onChange={(e) => setTextoSobreposto(e.target.value)} placeholder="Ex: Promoção de Verão · -20%" />
+              <Input
+                value={textoSobreposto}
+                onChange={(e) => setTextoSobreposto(e.target.value)}
+                placeholder="Ex: Promocao de Verao - -20%"
+              />
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Elementos adicionais</label>
-              <Input value={extras} onChange={(e) => setExtras(e.target.value)} placeholder="Ex: iluminação quente, névoa matinal, estilo cinematográfico..." />
+              <Input
+                value={extras}
+                onChange={(e) => setExtras(e.target.value)}
+                placeholder="Ex: iluminacao quente, nevoa matinal, estilo cinematografico..."
+              />
             </div>
           </div>
 
-          {/* Estilo visual */}
           <div className="rounded-xl border border-border bg-card p-4 space-y-4">
             <p className="text-sm font-display font-semibold">Estilo visual</p>
             <div className="grid grid-cols-2 gap-2">
@@ -900,7 +926,7 @@ const StudioImagePage = () => {
                   onClick={() => setEstilo(e.key)}
                   className={cn(
                     "p-3 rounded-xl border text-left transition-all",
-                    estilo === e.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                    estilo === e.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/30",
                   )}
                 >
                   <span className="text-lg">{e.emoji}</span>
@@ -910,7 +936,7 @@ const StudioImagePage = () => {
               ))}
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-2">Proporção</p>
+              <p className="text-xs text-muted-foreground mb-2">Proporcao</p>
               <div className="flex gap-2">
                 {PROPORCOES.map((p) => (
                   <button
@@ -920,7 +946,7 @@ const StudioImagePage = () => {
                       "flex-1 px-3 py-2 rounded-lg text-xs border transition-all text-center",
                       proporcao === p.key
                         ? "bg-primary/10 border-primary text-primary font-medium"
-                        : "border-border hover:border-primary/30"
+                        : "border-border hover:border-primary/30",
                     )}
                   >
                     <div className="font-medium">{p.label}</div>
@@ -928,11 +954,10 @@ const StudioImagePage = () => {
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">9:16 é o ideal para Reels e Stories</p>
+              <p className="text-[10px] text-muted-foreground mt-1">9:16 e o ideal para Reels e Stories</p>
             </div>
           </div>
 
-          {/* Botão gerar */}
           <div className="relative">
             {canGenerate && !generating && (
               <div className="absolute inset-0 rounded-xl bg-primary/30 blur-md animate-pulse pointer-events-none" />
@@ -942,22 +967,27 @@ const StudioImagePage = () => {
               disabled={!canGenerate}
               className={cn(
                 "relative w-full h-12 font-display font-bold text-base overflow-hidden transition-all duration-300",
-                reelMode && "bg-purple-600 hover:bg-purple-700 border-purple-500"
+                reelMode && "bg-purple-600 hover:bg-purple-700 border-purple-500",
               )}
               size="lg"
             >
               {generating ? (
-                <><Loader2 className="h-5 w-5 mr-2 animate-spin" />{reelMode ? "A gerar 5 variantes Reel-ready..." : "A gerar prompt..."}</>
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  {reelMode ? "A gerar 5 variantes Reel-ready..." : "A gerar prompt..."}
+                </>
               ) : reelMode ? (
-                <><Film className="h-5 w-5 mr-2" />✦ Gerar 5 Variantes Reel-ready</>
+                <>
+                  <Film className="h-5 w-5 mr-2" />
+                  Gerar 5 Variantes Reel-ready
+                </>
               ) : (
-                "✦ Gerar Prompt de Imagem"
+                "Gerar Prompt de Imagem"
               )}
             </Button>
           </div>
         </div>
 
-        {/* ── RIGHT: Output ── */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           {generating ? (
             <div className="p-6 space-y-4">
