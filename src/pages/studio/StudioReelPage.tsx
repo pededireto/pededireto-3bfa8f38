@@ -410,6 +410,7 @@ const StudioReelPage = () => {
   const [result, setResult] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
 
+  // useEffect 1: preencher campos quando negócio é selecionado no seletor global
   useEffect(() => {
     if (selectedBusiness) {
       setNome(selectedBusiness.name || "");
@@ -419,6 +420,7 @@ const StudioReelPage = () => {
     }
   }, [selectedBusiness]);
 
+  // useEffect 2: preencher subcategoria quando as subcategorias carregam
   useEffect(() => {
     if (selectedBusiness?.subcategory_id && dbSubcategories.length > 0 && !subcategoria) {
       const match = dbSubcategories.find((s) => s.id === selectedBusiness.subcategory_id);
@@ -426,11 +428,42 @@ const StudioReelPage = () => {
     }
   }, [selectedBusiness, dbSubcategories]);
 
+  // useEffect 3: aplicar defaults de toms e estilo quando objectivo muda
   useEffect(() => {
     if (!objectivo) return;
     if (!userChangedToms) setToms(DEFAULT_TOMS[objectivo] || DEFAULT_TOMS["negocio"]);
     if (!userChangedEstilo) setEstilo(DEFAULT_ESTILO[objectivo] || "institucional");
   }, [objectivo, userChangedToms, userChangedEstilo]);
+
+  // useEffect 4 — 1A: Ler contexto gravado pelo Gerador de Imagem ("Usar no Reel")
+  // Fecha o loop Imagem → Reel sem fricção: nome, sector, descrição e objectivo
+  // são pré-preenchidos automaticamente. O step 2 abre para o utilizador confirmar.
+  useEffect(() => {
+    const raw = sessionStorage.getItem("studio_reel_context");
+    if (!raw) return;
+    try {
+      const ctx = JSON.parse(raw);
+      // Só processa version: 1 — versões futuras podem ter campos diferentes
+      if (ctx.version !== 1) return;
+      if (ctx.nome && !nome) setNome(ctx.nome);
+      if (ctx.sector && !servicos) setServicos(ctx.sector);
+      if (ctx.descricao && !diferencial) setDiferencial(ctx.descricao);
+      if (ctx.objectivo && !objectivo) setObjectivo(ctx.objectivo);
+      // Abrir o step 2 para o utilizador ver e confirmar o que foi preenchido
+      setStep2Open(true);
+      toast({
+        title: "Contexto do Gerador de Imagem aplicado",
+        description: ctx.nome
+          ? `Dados de "${ctx.nome}" pré-preenchidos`
+          : "Dados do negócio pré-preenchidos a partir do Gerador de Imagem",
+      });
+    } catch {
+      // JSON inválido — ignorar silenciosamente
+    } finally {
+      // Limpar sempre, independentemente do resultado
+      sessionStorage.removeItem("studio_reel_context");
+    }
+  }, []); // [] intencional — só lemos uma vez no mount da página
 
   const handleApplyTemplate = (template: any) => {
     setObjectivo(template.objectivo || "negocio");
@@ -827,7 +860,6 @@ const StudioReelPage = () => {
             )}
           </div>
 
-          {/* Duração total */}
           <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <span className="w-1 h-1 rounded-full bg-cta" />
@@ -837,7 +869,6 @@ const StudioReelPage = () => {
             <span>Formato optimizado para Instagram Reels</span>
           </div>
 
-          {/* Botão com glow animado */}
           <div className="relative">
             {canGenerate && !generating && (
               <div className="absolute inset-0 rounded-xl bg-primary/30 blur-md animate-pulse pointer-events-none" />
@@ -851,7 +882,6 @@ const StudioReelPage = () => {
               )}
               size="lg"
             >
-              {/* Brilho subtil quando activo */}
               {canGenerate && !generating && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/40 animate-ping" />
               )}
@@ -908,7 +938,6 @@ const StudioReelPage = () => {
   );
 };
 
-// ── Painel de preview (estado vazio) ─────────────────────────────────────────
 const REEL_STRUCTURE = [
   { time: "0–6s", label: "HOOK", desc: "Captar atenção", color: "text-cta", bg: "bg-cta", num: "01" },
   {
@@ -963,7 +992,6 @@ const ReelPreviewPanel = () => (
         </p>
         <span className="text-[10px] text-muted-foreground font-mono">~30 segundos</span>
       </div>
-      {/* Mini frames placeholder */}
       <div className="flex gap-1.5 mb-2">
         {REEL_STRUCTURE.map((s) => (
           <div key={s.num} className="flex-1 flex flex-col gap-1">
@@ -978,7 +1006,6 @@ const ReelPreviewPanel = () => (
           </div>
         ))}
       </div>
-      {/* Timeline bar */}
       <div className="flex gap-0.5 mb-2">
         {REEL_STRUCTURE.map((s) => (
           <div key={s.num} className={cn("flex-1 h-1 rounded-full opacity-70", s.bg)} />
@@ -1009,32 +1036,23 @@ const ReelPreviewPanel = () => (
   </div>
 );
 
-// ── Parser cinematográfico — separa Prompt / VOZ / TEXTO NO ECRÃ ─────────────
 const PromptCard = ({ prompt }: { prompt: string }) => {
-  // Extrair VOZ e TEXTO NO ECRÃ do prompt
   const vozMatch = prompt.match(/VOZ:\s*[""\u201c\u201d]?([^""\u201c\u201d\n]+)[""\u201c\u201d]?/i);
   const textoMatch = prompt.match(/TEXTO NO ECR[\u00c3A]:\s*[""\u201c\u201d]?([^""\u201c\u201d\n]+)[""\u201c\u201d]?/i);
-
-  // Limpar o prompt removendo as secções que vamos mostrar separadas
   const promptClean = prompt
     .replace(/VOZ:\s*[""\u201c\u201d]?[^""\u201c\u201d\n]+[""\u201c\u201d]?/i, "")
     .replace(/TEXTO NO ECR[\u00c3A]:\s*[""\u201c\u201d]?[^""\u201c\u201d\n]+[""\u201c\u201d]?/i, "")
     .trim();
-
   const voz = vozMatch?.[1]?.trim();
   const texto = textoMatch?.[1]?.trim();
-
   return (
     <div className="space-y-2">
-      {/* Instrução cinematográfica */}
       <div>
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5 flex items-center gap-1">
           🎥 Direção cinematográfica
         </p>
         <GrokBox content={promptClean} />
       </div>
-
-      {/* VOZ */}
       {voz && (
         <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border border-border/60 bg-muted/20">
           <span className="text-base flex-shrink-0 mt-0.5">🎤</span>
@@ -1045,8 +1063,6 @@ const PromptCard = ({ prompt }: { prompt: string }) => {
           <CopyButton text={voz} />
         </div>
       )}
-
-      {/* TEXTO NO ECRÃ */}
       {texto && (
         <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border border-border/60 bg-muted/20">
           <span className="text-base flex-shrink-0 mt-0.5">🖥️</span>
@@ -1184,7 +1200,6 @@ const ReelOutput = ({
       </TabsList>
       <div className="flex-1 overflow-auto">
         <TabsContent value="extensoes" className="p-4 space-y-3 mt-0">
-          {/* Badge de continuidade */}
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5">
@@ -1196,7 +1211,6 @@ const ReelOutput = ({
               </span>
             </div>
           </div>
-
           {isMultiImage && result.analise_imagens ? (
             <div className="rounded-xl border border-ring/20 bg-ring/5 px-4 py-3 space-y-2">
               <div className="flex items-center gap-2 mb-1">
@@ -1236,8 +1250,6 @@ const ReelOutput = ({
               <p className="text-xs text-muted-foreground">{result.analise_imagem}</p>
             </div>
           ) : null}
-
-          {/* Header storyboard + botão copiar tudo */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-foreground">🎬 Storyboard gerado</p>
@@ -1248,7 +1260,6 @@ const ReelOutput = ({
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-1 text-xs border-primary/30 hover:bg-primary/5"
-                title="Copia os prompts completos para colar no Grok"
                 onClick={() => {
                   const prompts = (result.extensoes || [])
                     .map(
@@ -1265,7 +1276,6 @@ const ReelOutput = ({
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-1 text-xs border-primary/30 hover:bg-primary/5"
-                title="Copia o storyboard completo com voz e texto no ecrã"
                 onClick={() => {
                   const storyboard = (result.extensoes || [])
                     .map((ext: any, idx: number) => {
@@ -1283,7 +1293,6 @@ const ReelOutput = ({
               </Button>
             </div>
           </div>
-
           <div className="space-y-3">
             {(result.extensoes || []).map((ext: any, i: number) => {
               const c = EXT_COLORS[i] || EXT_COLORS[0];
@@ -1333,7 +1342,6 @@ const ReelOutput = ({
               );
             })}
           </div>
-
           <div className="rounded-xl border border-border bg-muted/20 p-4">
             <p className="text-xs font-semibold mb-2">📋 Como usar no Grok</p>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
@@ -1360,7 +1368,6 @@ const ReelOutput = ({
             ⬇ Exportar PDF completo
           </Button>
         </TabsContent>
-
         <TabsContent value="copy" className="p-4 space-y-4 mt-0">
           <div>
             <p className="text-xs font-semibold mb-2">Legenda Instagram / Facebook</p>
@@ -1384,7 +1391,6 @@ const ReelOutput = ({
             ⬇ Exportar PDF
           </Button>
         </TabsContent>
-
         <TabsContent value="segmentacao" className="p-4 space-y-4 mt-0">
           {result.segmentacao && (
             <>
