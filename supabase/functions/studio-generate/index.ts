@@ -477,7 +477,19 @@ serve(async (req) => {
     }
 
     const { action, ...payload } = await req.json();
-    console.log(`[studio-generate] action=${action}`);
+
+    // ── Normalizar actions antigas ─────────────────────────
+    const actionMap: Record<string, string> = {
+      generate_reel_completo: "generate_reel_full_package",
+      generate_image_prompt_reel: "generate_reel_storyboard",
+      reel_storyboard: "generate_reel_storyboard",
+    };
+
+    const normalizedAction = actionMap[action] || action;
+
+    console.log("[studio-generate] action recebida:", action);
+    console.log("[studio-generate] action normalizada:", normalizedAction);
+    console.log("[studio-generate] payload keys:", Object.keys(payload || {}));
 
     let rawText = "";
 
