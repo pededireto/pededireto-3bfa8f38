@@ -72,6 +72,8 @@ interface Cena {
   lighting?: string;
   composition?: string;
   emotion?: string;
+  voiceover?: string;
+  screen_text?: string;
 }
 
 const buildFullPrompt = (cena: Cena): string => {
@@ -278,6 +280,34 @@ const CenaCard = ({ cena, index }: { cena: Cena; index: number }) => {
           </p>
         )}
         <GrokBox content={fullPrompt} />
+        {(cena.voiceover || cena.screen_text) && (
+          <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
+            {cena.voiceover && (
+              <div className="flex items-start gap-2.5 px-3 py-2 rounded-xl border border-border/60 bg-muted/20">
+                <span className="text-sm flex-shrink-0 mt-0.5">🎤</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
+                    Voz off
+                  </p>
+                  <p className="text-xs text-foreground italic">"{cena.voiceover}"</p>
+                </div>
+                <CopyButton text={cena.voiceover} />
+              </div>
+            )}
+            {cena.screen_text && (
+              <div className="flex items-start gap-2.5 px-3 py-2 rounded-xl border border-border/60 bg-muted/20">
+                <span className="text-sm flex-shrink-0 mt-0.5">🖥️</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
+                    Texto no ecra
+                  </p>
+                  <p className="text-xs font-semibold text-foreground">"{cena.screen_text}"</p>
+                </div>
+                <CopyButton text={cena.screen_text} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
