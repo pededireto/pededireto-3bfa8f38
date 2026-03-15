@@ -514,27 +514,42 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
 
       // Sync categories junction table
       if (form.category_ids.length > 0) {
-        await syncCategories.mutateAsync({
-          businessId: business.id,
-          categoryIds: form.category_ids,
-          primaryCategoryId: form.primary_category_id,
-        });
+        try {
+          await syncCategories.mutateAsync({
+            businessId: business.id,
+            categoryIds: form.category_ids,
+            primaryCategoryId: form.primary_category_id,
+          });
+        } catch (catErr: any) {
+          console.error("[BusinessOwnerEditForm] Erro ao sincronizar categorias:", catErr);
+          toast({ title: "Aviso: erro ao sincronizar categorias", description: catErr?.message, variant: "destructive" });
+        }
       }
 
       if (form.subcategory_ids.length > 0) {
-        await syncSubcategories.mutateAsync({
-          businessId: business.id,
-          subcategoryIds: form.subcategory_ids,
-        });
+        try {
+          await syncSubcategories.mutateAsync({
+            businessId: business.id,
+            subcategoryIds: form.subcategory_ids,
+          });
+        } catch (subErr: any) {
+          console.error("[BusinessOwnerEditForm] Erro ao sincronizar subcategorias:", subErr);
+          toast({ title: "Aviso: erro ao sincronizar subcategorias", description: subErr?.message, variant: "destructive" });
+        }
       }
 
       // Sync cities junction table
       if (form.city_names.length > 0) {
-        await syncCities.mutateAsync({
-          businessId: business.id,
-          cities: form.city_names,
-          primaryCity: form.primary_city,
-        });
+        try {
+          await syncCities.mutateAsync({
+            businessId: business.id,
+            cities: form.city_names,
+            primaryCity: form.primary_city,
+          });
+        } catch (cityErr: any) {
+          console.error("[BusinessOwnerEditForm] Erro ao sincronizar cidades:", cityErr);
+          toast({ title: "Aviso: erro ao sincronizar cidades", description: cityErr?.message, variant: "destructive" });
+        }
       }
 
       if (form.primary_city.trim()) {
@@ -546,7 +561,10 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
       toast({ title: "✅ Negócio atualizado com sucesso!" });
       onSaved?.();
     } catch (error: any) {
-      toast({ title: "Erro ao guardar", description: error.message, variant: "destructive" });
+      const detail = error?.details || error?.hint || error?.message || "Erro desconhecido";
+      const code = error?.code ? ` (${error.code})` : "";
+      toast({ title: "Erro ao guardar negócio", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[BusinessOwnerEditForm] error:", error);
     }
   };
 
