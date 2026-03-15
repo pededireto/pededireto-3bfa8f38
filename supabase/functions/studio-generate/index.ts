@@ -141,11 +141,31 @@ Responde APENAS JSON valido:
 }
 
 function buildImagePrompt(p: any): string {
-  return `You are an image generation expert. Return ONLY valid JSON, no markdown, no explanation.
-Fill ALL fields with relevant content based on: subject="${p.descricao || p.nome || "local business"}", style="${p.estilo || "warm local"}", ratio="${p.proporcao || "9:16"}", people="${p.personagens || ""}", place="${p.ambiente || "Portugal"}", extras="${p.extras || ""}"
+  const ctx = [
+    p.descricao && `scene: ${p.descricao}`,
+    p.nome && `brand: ${p.nome}`,
+    p.personagens && `people: ${p.personagens}`,
+    p.ambiente && `location: ${p.ambiente}`,
+    p.extras && `extras: ${p.extras}`,
+    p.textoSobreposto && `text: ${p.textoSobreposto}`,
+  ]
+    .filter(Boolean)
+    .join(". ");
 
-Return exactly this JSON structure with short values (max 8 words each):
-{"subject":"what appears in image","style":"visual style keywords","lighting":"lighting type","camera":"camera angle","mood":"emotional tone","ratio":"${p.proporcao || "9:16"}","va":"different angle keywords","vb":"different lighting keywords","instrucoes":"1.Copia prompt_principal. 2.Gera no Grok. 3.Usa no Gerador de Reel."}`;
+  const styleMap: Record<string, string> = {
+    "Moderno & Escuro": "dark bg, neon accents, dramatic",
+    "Limpo & Profissional": "clean white, neutral tones, soft light",
+    "Local & Acolhedor": "warm earthy, rustic Portuguese, lantern light",
+    "Urgencia & Impacto": "high contrast, red orange, dynamic",
+  };
+  const styleDesc = styleMap[p.estilo || ""] || "warm cinematic";
+  const ratio = p.proporcao || "9:16";
+
+  return `Professional image prompt writer for AI generators.
+Context: ${ctx || "Portuguese local business"}. Style: ${styleDesc}. Ratio: ${ratio}.
+Write 3 prompts of EXACTLY 15-20 words each. Comma-separated keywords. English only.
+Return ONLY JSON (no markdown):
+{"prompt_principal":"keyword1, keyword2, keyword3, lighting, camera, mood, ${ratio}, photorealistic","variante_a":"same subject, different angle, ${ratio}, photorealistic","variante_b":"same subject, different lighting, ${ratio}, photorealistic","instrucoes":"1. Copia o prompt. 2. Gera no Grok. 3. Usa no Gerador de Reel."}`;
 }
 
 function buildReelStoryboardPrompt(p: any): string {
