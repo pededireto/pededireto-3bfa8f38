@@ -31,13 +31,34 @@ function safeParseJSON(raw: string): any {
   let escaped = false;
   for (let i = 0; i < s.length; i++) {
     const char = s[i];
-    if (escaped) { result += char; escaped = false; continue; }
-    if (char === "\\") { result += char; escaped = true; continue; }
-    if (char === '"') { inString = !inString; result += char; continue; }
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      result += char;
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      result += char;
+      continue;
+    }
     if (inString) {
-      if (char === "\n") { result += "\\n"; continue; }
-      if (char === "\r") { result += "\\r"; continue; }
-      if (char === "\t") { result += "\\t"; continue; }
+      if (char === "\n") {
+        result += "\\n";
+        continue;
+      }
+      if (char === "\r") {
+        result += "\\r";
+        continue;
+      }
+      if (char === "\t") {
+        result += "\\t";
+        continue;
+      }
     }
     result += char;
   }
@@ -70,7 +91,7 @@ async function callGemini(
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: "user", parts: userParts }],
-    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7, responseMimeType: "application/json" },
+    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
   };
 
   console.log(`[Gemini] model=${model}, images=${images?.length || 0}`);
@@ -127,14 +148,18 @@ ${REGRA_VOZ_PTPT}
 OBJECTIVO DO REEL: ${p.objectivo || "promover o negocio"}
 ${p.objectivoDescricao ? `DESCRICAO: ${p.objectivoDescricao}` : ""}
 
-${temNegocio ? `DADOS DO NEGOCIO:
+${
+  temNegocio
+    ? `DADOS DO NEGOCIO:
 - Nome: ${p.nome || "nao especificado"}
 - Cidade: ${p.cidade || "nao especificado"}
 - Categoria: ${p.categoria || "nao especificado"}
 - Subcategoria: ${p.subcategoria || "nao especificado"}
 - Servicos: ${p.servicos || "nao especificado"}
 - Diferencial: ${p.diferencial || "nao especificado"}
-` : `NEGOCIO: Dados nao fornecidos - baseia-te na imagem e no objectivo.\n`}
+`
+    : `NEGOCIO: Dados nao fornecidos - baseia-te na imagem e no objectivo.\n`
+}
 
 TOM POR EXTENSAO:
 - Extensao 1 (0-6s): ${p.tomExt1 || "Emocional"}
@@ -190,14 +215,18 @@ Foram fornecidas ${numImages} imagem(ns). A tua missao e:
 OBJECTIVO DO REEL: ${p.objectivo || "promover o negocio"}
 ${p.objectivoDescricao ? `DESCRICAO: ${p.objectivoDescricao}` : ""}
 
-${temNegocio ? `DADOS DO NEGOCIO:
+${
+  temNegocio
+    ? `DADOS DO NEGOCIO:
 - Nome: ${p.nome || "nao especificado"}
 - Cidade: ${p.cidade || "nao especificado"}
 - Categoria: ${p.categoria || "nao especificado"}
 - Subcategoria: ${p.subcategoria || "nao especificado"}
 - Servicos: ${p.servicos || "nao especificado"}
 - Diferencial: ${p.diferencial || "nao especificado"}
-` : "NEGOCIO: Infere da imagem.\n"}
+`
+    : "NEGOCIO: Infere da imagem.\n"
+}
 
 TOM POR EXTENSAO:
 - Extensao 1 (0-6s): ${p.tomExt1 || "Emocional"} - captar atencao
@@ -329,9 +358,7 @@ IMPORTANTE: todos os valores sao strings simples, sem newlines, sem aspas duplas
 // ── NOVO: generate_reel_full_package ──────────────────────────────────────
 // Recebe as cenas ja geradas e produz script + legenda + hashtags + copy de anuncio
 function buildReelFullPackagePrompt(p: any): string {
-  const cenasFormatadas = (p.cenas || [])
-    .map((c: any) => `CENA ${c.num} - ${c.titulo}:\n${c.prompt}`)
-    .join("\n\n");
+  const cenasFormatadas = (p.cenas || []).map((c: any) => `CENA ${c.num} - ${c.titulo}:\n${c.prompt}`).join("\n\n");
 
   return `Es copywriter especialista em marketing digital para negocios locais em Portugal.
 
@@ -410,18 +437,18 @@ serve(async (req) => {
 
     if (normalizedAction === "extract_profile") {
       rawText = await callGemini(EXTRACT_PROFILE_PROMPT, payload.text, undefined, 600);
-
     } else if (normalizedAction === "generate_reel") {
       const systemPrompt = buildReelPrompt(payload);
-      const userMessage = `Frame inicial do video. Objectivo: ${payload.objectivo || "promover o negocio"}. ${payload.objectivoDescricao ? "Descricao: " + payload.objectivoDescricao : ""} ${payload.nome ? "Negocio: " + payload.nome : ""} ${payload.cidade ? "Cidade: " + payload.cidade : ""}`.trim();
+      const userMessage =
+        `Frame inicial do video. Objectivo: ${payload.objectivo || "promover o negocio"}. ${payload.objectivoDescricao ? "Descricao: " + payload.objectivoDescricao : ""} ${payload.nome ? "Negocio: " + payload.nome : ""} ${payload.cidade ? "Cidade: " + payload.cidade : ""}`.trim();
       const images = payload.imageBase64
         ? [{ base64: payload.imageBase64, mimeType: payload.imageMimeType || "image/jpeg" }]
         : undefined;
       rawText = await callGemini(systemPrompt, userMessage, images, 4096);
-
     } else if (normalizedAction === "generate_reel_multi") {
       const systemPrompt = buildReelMultiImagePrompt(payload);
-      const userMessage = `${payload.images?.length || 0} imagens fornecidas. Objectivo: ${payload.objectivo || "promover o negocio"}. ${payload.objectivoDescricao || ""} ${payload.nome ? "Negocio: " + payload.nome : ""}`.trim();
+      const userMessage =
+        `${payload.images?.length || 0} imagens fornecidas. Objectivo: ${payload.objectivo || "promover o negocio"}. ${payload.objectivoDescricao || ""} ${payload.nome ? "Negocio: " + payload.nome : ""}`.trim();
       const images: Array<{ base64: string; mimeType: string }> = (payload.images || []).map((img: any) => ({
         base64: img.base64,
         mimeType: img.mimeType || "image/jpeg",
@@ -433,7 +460,6 @@ serve(async (req) => {
         });
       }
       rawText = await callGemini(systemPrompt, userMessage, images, 5000);
-
     } else if (normalizedAction === "generate_image_prompt") {
       const systemPrompt = buildImagePrompt(payload);
       const userText = `Gera prompts de imagem para: ${payload.nome || payload.descricao || "negocio local portugues"}. Estilo: ${payload.estilo || "local"}. Proporcao: ${payload.proporcao || "9:16"}.`;
@@ -441,7 +467,6 @@ serve(async (req) => {
         ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
         : undefined;
       rawText = await callGemini(systemPrompt, userText, images, 2000);
-
     } else if (normalizedAction === "generate_reel_storyboard") {
       // Novo: storyboard com camera/lighting/composition/emotion/voiceover/screen_text
       const systemPrompt = buildReelStoryboardPrompt(payload);
@@ -450,13 +475,11 @@ serve(async (req) => {
         ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
         : undefined;
       rawText = await callGemini(systemPrompt, userText, images, 4000);
-
     } else if (normalizedAction === "generate_reel_full_package") {
       // Novo: script + legenda + hashtags + copy de anuncio
       const systemPrompt = buildReelFullPackagePrompt(payload);
       const userText = `Cria o pacote completo de conteudo para o Reel de ${payload.nome || "negocio local portugues"}.`;
       rawText = await callGemini(systemPrompt, userText, undefined, 2000);
-
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400,
@@ -481,9 +504,11 @@ serve(async (req) => {
     const msg = e instanceof Error ? e.message : "Erro desconhecido";
     const status = msg.includes("429") ? 429 : msg.includes("402") ? 402 : 500;
     const userMsg =
-      status === 429 ? "Limite de pedidos excedido. Tenta novamente em alguns segundos."
-      : status === 402 ? "Creditos insuficientes."
-      : msg;
+      status === 429
+        ? "Limite de pedidos excedido. Tenta novamente em alguns segundos."
+        : status === 402
+          ? "Creditos insuficientes."
+          : msg;
     return new Response(JSON.stringify({ error: userMsg }), {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
