@@ -86,7 +86,7 @@ async function callGemini(
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: "user", parts: userParts }],
-    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7, responseMimeType: "application/json" },
+    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
   };
   console.log(`[Gemini] model=${model}, images=${images?.length || 0}, maxTokens=${maxTokens}`);
   const response = await fetch(url, {
@@ -145,9 +145,9 @@ function buildImagePrompt(p: any): string {
   return `Es especialista em prompts de imagem para marketing de negocios locais em Portugal.
 CONTEXTO: objectivo=${p.objectivoImagem || ""} nome=${p.nome || ""} sector=${p.sector || ""} descricao=${p.descricao || ""} personagens=${p.personagens || ""} ambiente=${p.ambiente || ""} texto=${p.textoSobreposto || ""} extras=${p.extras || ""} estilo=${p.estilo || "local"} proporcao=${p.proporcao || "9:16"}
 ${!hasContext ? "MODO CRIATIVO: sem contexto especifico, se visualmente rico." : ""}
-REGRAS: Prompts em ingles. Fotorrealista. Cinematografico. Proporcao ${p.proporcao || "9:16"}.
+REGRAS CRITICAS: Prompts em ingles. Fotorrealista. Cinematografico. Proporcao ${p.proporcao || "9:16"}. BREVIDADE OBRIGATORIA: prompt_principal MAX 60 palavras, variantes MAX 50 palavras cada. Nao uses frases longas - usa keywords cinematograficas separadas por virgula.
 Responde APENAS JSON valido:
-{"prompt_principal":"prompt ingles max 150 palavras proporcao ${p.proporcao || "9:16"} fotorrealista cinematografico","variante_a":"variante angulo diferente 100 palavras","variante_b":"variante iluminacao diferente 100 palavras","instrucoes":"3-4 passos PT-PT para usar no Grok e workflow Reel 5x6s"}`;
+{"prompt_principal":"prompt ingles MAX 60 PALAVRAS proporcao ${p.proporcao || "9:16"} fotorrealista cinematografico - OBRIGATORIO maximo 60 palavras","variante_a":"variante angulo diferente MAX 50 PALAVRAS","variante_b":"variante iluminacao diferente MAX 50 PALAVRAS","instrucoes":"3 passos curtos PT-PT"}`;
 }
 
 function buildReelStoryboardPrompt(p: any): string {
@@ -240,7 +240,7 @@ serve(async (req) => {
         buildImagePrompt(payload),
         `Prompts para: ${payload.nome || payload.descricao || "negocio local"}. Estilo: ${payload.estilo || "local"}. Proporcao: ${payload.proporcao || "9:16"}.`,
         images,
-        1200,
+        2500,
       );
     } else if (normalizedAction === "generate_reel_storyboard") {
       const images = payload.referenceImageBase64
@@ -250,7 +250,7 @@ serve(async (req) => {
         buildReelStoryboardPrompt(payload),
         `Storyboard 5 cenas para: ${payload.nome || payload.descricao || "negocio local"}. Estilo: ${payload.estilo || "local"}.`,
         images,
-        4000,
+        6000,
       );
     } else if (normalizedAction === "generate_reel_full_package") {
       rawText = await callGemini(
@@ -273,14 +273,11 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (parseErr) {
-      const preview = rawText ? rawText.substring(0, 800) : "rawText vazio";
-      console.error("JSON parse failed preview:", preview);
-      return new Response(
-        JSON.stringify({
-          error: "Resposta malformada: " + preview,
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      console.error("JSON parse failed. Raw:", rawText.substring(0, 500));
+      return new Response(JSON.stringify({ error: "A IA gerou uma resposta malformada. Tenta novamente." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
   } catch (e) {
     console.error("studio-generate error:", e);
