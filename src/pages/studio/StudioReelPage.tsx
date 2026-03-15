@@ -616,7 +616,12 @@ const PromptCard = ({ prompt }: { prompt: string }) => {
   return (
     <div className="space-y-2">
       {/* Instrução cinematográfica */}
-      <GrokBox content={promptClean} />
+      <div>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5 flex items-center gap-1">
+          🎥 Direção cinematográfica
+        </p>
+        <GrokBox content={promptClean} />
+      </div>
 
       {/* VOZ */}
       {voz && (
@@ -714,6 +719,26 @@ const ReelOutput = ({ result, nome, cidade, subcategoria, estilo, isMultiImage }
             </div>
           ) : null}
 
+          {/* Header storyboard + botão copiar tudo */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-foreground">🎬 Storyboard gerado</p>
+              <p className="text-[10px] text-muted-foreground">5 cenas · 30 segundos · Continuidade narrativa</p>
+            </div>
+            <Button
+              variant="outline" size="sm"
+              className="flex items-center gap-1.5 text-xs border-primary/30 hover:bg-primary/5"
+              onClick={() => {
+                const allPrompts = (result.extensoes || []).map((ext: any, idx: number) =>
+                  `CENA ${String(idx+1).padStart(2,"0")} — ${ext.titulo}\n${ext.prompt}`
+                ).join("\n\n---\n\n");
+                navigator.clipboard.writeText(allPrompts);
+              }}
+            >
+              📄 Copiar tudo
+            </Button>
+          </div>
+
           <div className="space-y-3">
             {(result.extensoes || []).map((ext: any, i: number) => {
               const c = EXT_COLORS[i] || EXT_COLORS[0];
@@ -728,7 +753,14 @@ const ReelOutput = ({ result, nome, cidade, subcategoria, estilo, isMultiImage }
                           <span className="text-xs font-semibold text-foreground">{ext.titulo}</span>
                           {ext.image_index && isMultiImage && <Badge variant="outline" className={cn("text-[9px] h-4 px-1", c.border, c.text)}>img {ext.image_index}</Badge>}
                         </div>
-                        <span className="text-[10px] text-muted-foreground">Ext {ext.num} · 6 segundos</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[9px] text-muted-foreground font-mono">{REEL_STRUCTURE[i]?.time || `${i*6}–${i*6+6}s`}</span>
+                          {i > 0 && (
+                            <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                              <span>🔗</span> Continuação da cena anterior
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <CopyButton text={ext.prompt || ""} />
