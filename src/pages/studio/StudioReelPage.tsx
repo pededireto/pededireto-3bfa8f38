@@ -827,20 +827,43 @@ const StudioReelPage = () => {
             )}
           </div>
 
-          <Button
-            onClick={handleGenerate}
-            disabled={!canGenerate}
-            className="w-full h-12 font-display font-bold text-base"
-            size="lg"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />A gerar...
-              </>
-            ) : (
-              "✦ Analisar Imagem + Gerar 5 Extensões"
+          {/* Duração total */}
+          <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-cta" />
+              🎬 Reel final: ~30 segundos
+            </span>
+            <span>·</span>
+            <span>Formato optimizado para Instagram Reels</span>
+          </div>
+
+          {/* Botão com glow animado */}
+          <div className="relative">
+            {canGenerate && !generating && (
+              <div className="absolute inset-0 rounded-xl bg-primary/30 blur-md animate-pulse pointer-events-none" />
             )}
-          </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={!canGenerate}
+              className={cn(
+                "relative w-full h-12 font-display font-bold text-base overflow-hidden transition-all duration-300",
+                canGenerate && !generating && "shadow-lg shadow-primary/25",
+              )}
+              size="lg"
+            >
+              {/* Brilho subtil quando activo */}
+              {canGenerate && !generating && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/40 animate-ping" />
+              )}
+              {generating ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />A gerar com Gemini AI...
+                </>
+              ) : (
+                "✦ Analisar Imagem + Gerar 5 Extensões"
+              )}
+            </Button>
+          </div>
           {!canGenerate && !generating && (
             <p className="text-[10px] text-muted-foreground text-center">
               {!objectivo && images.length === 0
@@ -934,10 +957,31 @@ const ReelPreviewPanel = () => (
       ))}
     </div>
     <div className="flex-1 space-y-2">
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Estrutura do Reel 30s</p>
-      <div className="flex gap-1 mb-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+          Estrutura do Reel 30s
+        </p>
+        <span className="text-[10px] text-muted-foreground font-mono">~30 segundos</span>
+      </div>
+      {/* Mini frames placeholder */}
+      <div className="flex gap-1.5 mb-2">
         {REEL_STRUCTURE.map((s) => (
-          <div key={s.num} className={cn("flex-1 h-1.5 rounded-full opacity-60", s.bg)} />
+          <div key={s.num} className="flex-1 flex flex-col gap-1">
+            <div
+              className={cn("w-full rounded-md border opacity-40", s.bg.replace("bg-", "border-"), "bg-muted/40")}
+              style={{ aspectRatio: "9/16", maxHeight: "48px" }}
+            >
+              <div className="w-full h-full flex items-end p-1">
+                <span className={cn("text-[8px] font-mono font-black leading-none", s.color)}>{s.num}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Timeline bar */}
+      <div className="flex gap-0.5 mb-2">
+        {REEL_STRUCTURE.map((s) => (
+          <div key={s.num} className={cn("flex-1 h-1 rounded-full opacity-70", s.bg)} />
         ))}
       </div>
       <div className="space-y-1.5">
