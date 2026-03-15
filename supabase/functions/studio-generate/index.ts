@@ -141,13 +141,23 @@ Responde APENAS JSON valido:
 }
 
 function buildImagePrompt(p: any): string {
-  const hasContext = p.nome || p.sector || p.descricao || p.personagens || p.ambiente;
-  return `Es especialista em prompts de imagem para marketing de negocios locais em Portugal.
-CONTEXTO: objectivo=${p.objectivoImagem || ""} nome=${p.nome || ""} sector=${p.sector || ""} descricao=${p.descricao || ""} personagens=${p.personagens || ""} ambiente=${p.ambiente || ""} texto=${p.textoSobreposto || ""} extras=${p.extras || ""} estilo=${p.estilo || "local"} proporcao=${p.proporcao || "9:16"}
-${!hasContext ? "MODO CRIATIVO: sem contexto especifico, se visualmente rico." : ""}
-REGRAS CRITICAS: Prompts em ingles. Fotorrealista. Cinematografico. Proporcao ${p.proporcao || "9:16"}. BREVIDADE OBRIGATORIA: prompt_principal MAX 60 palavras, variantes MAX 50 palavras cada. Nao uses frases longas - usa keywords cinematograficas separadas por virgula.
-Responde APENAS JSON valido:
-{"prompt_principal":"prompt ingles MAX 60 PALAVRAS proporcao ${p.proporcao || "9:16"} fotorrealista cinematografico - OBRIGATORIO maximo 60 palavras","variante_a":"variante angulo diferente MAX 50 PALAVRAS","variante_b":"variante iluminacao diferente MAX 50 PALAVRAS","instrucoes":"3 passos curtos PT-PT"}`;
+  const ctx = [
+    p.nome && `negocio: ${p.nome}`,
+    p.sector && `sector: ${p.sector}`,
+    p.descricao && `descricao: ${p.descricao}`,
+    p.personagens && `personagens: ${p.personagens}`,
+    p.ambiente && `ambiente: ${p.ambiente}`,
+    p.textoSobreposto && `texto: ${p.textoSobreposto}`,
+    p.extras && `extras: ${p.extras}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return `Image prompt specialist for Portuguese local business marketing.
+Context: ${ctx || "creative, visually rich"}, style=${p.estilo || "local"}, ratio=${p.proporcao || "9:16"}
+STRICT RULES: English only. Max 40 words per prompt. Use comma-separated cinematographic keywords. No full sentences.
+Return ONLY valid JSON, no markdown:
+{"prompt_principal":"[subject], [style], [camera], [lighting], [mood], [ratio] - max 40 words","variante_a":"[different angle variant] - max 30 words","variante_b":"[different lighting variant] - max 30 words","instrucoes":"1.Copia prompt. 2.Cola no Grok. 3.Usa imagem no Gerador de Reel."}`;
 }
 
 function buildReelStoryboardPrompt(p: any): string {
