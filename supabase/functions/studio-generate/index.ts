@@ -142,12 +142,14 @@ Responde APENAS JSON valido:
 
 function buildImagePrompt(p: any): string {
   const hasContext = p.nome || p.sector || p.descricao || p.personagens || p.ambiente;
-  return `Es especialista em criar prompts de geracao de imagem para marketing de negocios locais em Portugal.
-CONTEXTO: objectivo=${p.objectivoImagem || ""} nome=${p.nome || ""} sector=${p.sector || ""} descricao=${p.descricao || ""} personagens=${p.personagens || ""} ambiente=${p.ambiente || ""} texto=${p.textoSobreposto || ""} extras=${p.extras || ""} estilo=${p.estilo || "local"} proporcao=${p.proporcao || "9:16"}
-${!hasContext ? "MODO CRIATIVO: sem contexto especifico, se criativo." : ""}
-REGRAS: Prompts em ingles. Fotorrealista. Cinematografico. Proporcao ${p.proporcao || "9:16"}. IMPORTANTE: cada prompt maximo 2 frases curtas.
-Responde APENAS JSON valido sem markdown:
-{"prompt_principal":"prompt ingles 2 frases max proporcao ${p.proporcao || "9:16"}","variante_a":"variante angulo diferente 1 frase","variante_b":"variante iluminacao diferente 1 frase","instrucoes":"3 passos PT-PT: 1.Copia prompt. 2.Gera no Grok. 3.Usa no Gerador de Reel."}`;
+  return `You are a cinematographic image prompt specialist. Generate VERY SHORT prompts.
+Context: subject=${p.descricao || p.nome || "local business"}, style=${p.estilo || "local"}, ratio=${p.proporcao || "9:16"}, people=${p.personagens || "none"}, place=${p.ambiente || "portugal"}, extras=${p.extras || "none"}
+${!hasContext ? "Be creative, warm, Portuguese local business feel." : ""}
+
+CRITICAL: Each prompt field must be UNDER 20 WORDS. Use comma-separated keywords only. No long sentences.
+
+Return ONLY this exact JSON structure with short values:
+{"subject":"main subject in 5 words","style":"visual style in 5 words","lighting":"lighting in 3 words","camera":"camera angle in 3 words","mood":"mood in 3 words","ratio":"${p.proporcao || "9:16"}","variante_a_change":"different angle in 3 words","variante_b_change":"different lighting in 3 words","instrucoes":"1.Copia prompt_principal. 2.Gera no Grok. 3.Usa no Gerador de Reel."}`;
 }
 
 function buildReelStoryboardPrompt(p: any): string {
@@ -236,12 +238,66 @@ serve(async (req) => {
       const images = payload.referenceImageBase64
         ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
         : undefined;
-      rawText = await callGemini(
+      const rawFields = await callGemini(
         buildImagePrompt(payload),
-        `Prompts para: ${payload.nome || payload.descricao || "negocio local"}. Estilo: ${payload.estilo || "local"}. Proporcao: ${payload.proporcao || "9:16"}.`,
+        `Generate for: ${payload.nome || payload.descricao || "local business"}. Style: ${payload.estilo || "local"}. Ratio: ${payload.proporcao || "9:16"}.`,
         images,
-        2500,
+        800,
       );
+
+      // Montar prompt_principal a partir dos campos curtos
+      let fieldsObj: any = {};
+      try {
+        fieldsObj = safeParseJSON(rawFields);
+      } catch (e) {
+        fieldsObj = {};
+      }
+
+      const ratio = payload.proporcao || "9:16";
+      const promptPrincipal = [
+        fieldsObj.subject,
+        fieldsObj.style,
+        fieldsObj.lighting,
+        fieldsObj.camera,
+        fieldsObj.mood,
+        `ratio ${ratio}`,
+        "photorealistic, cinematic, high quality",
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      const varianteA = [
+        fieldsObj.subject,
+        fieldsObj.variante_a_change || "different angle",
+        fieldsObj.lighting,
+        fieldsObj.mood,
+        `ratio ${ratio}`,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      const varianteB = [
+        fieldsObj.subject,
+        fieldsObj.style,
+        fieldsObj.variante_b_change || "different lighting",
+        fieldsObj.mood,
+        `ratio ${ratio}`,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      rawText = JSON.stringify({
+        prompt_principal: promptPrincipal,
+        variante_a: varianteA,
+        variante_b: varianteB,
+        instrucoes:
+          fieldsObj.instrucoes || "1. Copia o prompt. 2. Abre o Grok e gera a imagem. 3. Usa no Gerador de Reel.",
+      });
+
+      // rawText já é JSON válido — parse directo
+      const parsed = JSON.parse(rawText);
+      return new Response(JSON.stringify({ content: parsed }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     } else if (normalizedAction === "generate_reel_storyboard" || normalizedAction === "generate_image_prompt_reel") {
       // generate_image_prompt_reel é o alias usado no StudioImagePage doc 11
       const images = payload.referenceImageBase64
@@ -275,11 +331,14 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (parseErr) {
-      console.error("JSON parse failed. Raw:", rawText.substring(0, 500));
-      return new Response(JSON.stringify({ error: "A IA gerou uma resposta malformada. Tenta novamente." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const rawPreview = rawText ? rawText.substring(0, 600) : "VAZIO";
+      console.error("JSON parse failed. Raw:", rawPreview);
+      return new Response(
+        JSON.stringify({
+          error: `Resposta malformada [${normalizedAction}]: ${rawPreview}`,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
   } catch (e) {
     console.error("studio-generate error:", e);
