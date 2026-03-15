@@ -7,6 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ── Safe JSON parser ──────────────────────────────────────────────────────
 function safeParseJSON(raw: string): any {
   let s = raw
     .replace(/```json\s*/g, "")
@@ -64,6 +65,7 @@ function safeParseJSON(raw: string): any {
   return JSON.parse(result);
 }
 
+// ── Gemini caller — suporta múltiplas imagens ─────────────────────────────
 async function callGemini(
   systemPrompt: string,
   userText: string,
@@ -71,110 +73,252 @@ async function callGemini(
   maxTokens = 3000,
 ): Promise<string> {
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY nao configurado");
+  if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY não configurado");
+
   const model = "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
   const userParts: any[] = [];
+
+  // Adicionar todas as imagens antes do texto
   if (images && images.length > 0) {
     images.forEach((img, idx) => {
       const pureBase64 = img.base64.includes(",") ? img.base64.split(",")[1] : img.base64;
-      userParts.push({ inline_data: { mime_type: img.mimeType, data: pureBase64 } });
-      if (images.length > 1) userParts.push({ text: `[Imagem ${idx + 1}]` });
+      userParts.push({
+        inline_data: { mime_type: img.mimeType, data: pureBase64 },
+      });
+      // Label para identificar cada imagem
+      if (images.length > 1) {
+        userParts.push({ text: `[Imagem ${idx + 1}]` });
+      }
     });
   }
+
   userParts.push({ text: userText });
+
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: "user", parts: userParts }],
-    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
+    generationConfig: {
+      maxOutputTokens: maxTokens,
+      temperature: 0.7,
+      responseMimeType: "application/json",
+    },
   };
-  console.log(`[Gemini] model=${model}, images=${images?.length || 0}, maxTokens=${maxTokens}`);
+
+  console.log(`[Gemini] model=${model}, images=${images?.length || 0}`);
+
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`[Gemini] Error ${response.status}:`, errorText);
     throw new Error(`Gemini API error ${response.status}: ${errorText}`);
   }
+
   const result = await response.json();
   const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) {
     console.error("[Gemini] Resposta inesperada:", JSON.stringify(result));
-    throw new Error("Resposta vazia da Gemini API");
+    throw new Error("Resposta vazia ou inesperada da Gemini API");
   }
+
   return text;
 }
 
-const EXTRACT_PROFILE_PROMPT = `Analisa este texto de um perfil de negocio portugues e extrai os dados estruturados. Responde APENAS com JSON valido, sem markdown:
-{"nome":"nome do negocio","cidade":"cidade/localidade","categoria_key":"obras|restauracao|beleza|saude|profissionais|transporte|comercio|educacao|tecnologia|eventos","subcategoria":"subcategoria especifica","servicos":"servicos principais separados por virgula","diferencial":"o que torna este negocio especial","tom_sugerido":"emocional|institucional|urgente|proximidade","estilo_sugerido":"institucional|promocao|historia|produto","resumo_preview":"resumo 1 linha"}`;
+// ── Prompt builders ───────────────────────────────────────────────────────
 
-const REGRA_VOZ_PTPT = `REGRA CRITICA: VOZ OFF sempre em Portugues de Portugal (PT-PT). NUNCA brasileiro. PT-PT: "Ja provaste","Fica a saber","Experimenta","Nao percas","Reserva ja","Vem ca". NUNCA: "Voce","Confira","Aproveite","Nao perca".`;
+const EXTRACT_PROFILE_PROMPT = `Analisa este texto de um perfil de negócio português e extrai os dados estruturados.
+
+Responde APENAS com JSON válido, sem markdown, sem texto extra:
+{
+  "nome": "nome do negócio",
+  "cidade": "cidade/localidade",
+  "categoria_key": "uma de: obras|restauracao|beleza|saude|profissionais|transporte|comercio|educacao|tecnologia|eventos",
+  "subcategoria": "subcategoria específica do negócio",
+  "servicos": "lista de serviços principais separados por vírgula",
+  "diferencial": "o que torna este negócio especial — extraído do texto, com emoção se possível",
+  "tom_sugerido": "um de: emocional|institucional|urgente|proximidade — baseado no texto",
+  "estilo_sugerido": "um de: institucional|promocao|historia|produto — baseado no texto",
+  "resumo_preview": "resumo de 1 linha: nome + cidade + categoria"
+}`;
 
 function buildReelPrompt(p: any): string {
   const temNegocio = p.nome || p.cidade || p.subcategoria;
-  return `Es especialista em roteiros cinematograficos para Grok Aurora para negocios locais em Portugal.
-${REGRA_VOZ_PTPT}
-OBJECTIVO: ${p.objectivo || "promover o negocio"} ${p.objectivoDescricao ? "- " + p.objectivoDescricao : ""}
-${temNegocio ? `NEGOCIO: Nome=${p.nome || ""} Cidade=${p.cidade || ""} Categoria=${p.categoria || ""} Subcategoria=${p.subcategoria || ""} Servicos=${p.servicos || ""} Diferencial=${p.diferencial || ""}` : "NEGOCIO: Infere da imagem."}
-TOMS: Ext1=${p.tomExt1 || "Emocional"} Ext2=${p.tomExt2 || "Qualidade"} Ext3=${p.tomExt3 || "Confianca"} Ext4=${p.tomExt4 || "Urgencia"} Ext5=${p.tomExt5 || "CTA"}
-ESTILO: ${p.estilo || "institucional"} - ${p.estiloDesc || ""}
-REGRAS: 1-Ext1 comeca com "Animar esta imagem de forma natural e cinematografica." 2-Ext2-5 comecam com "Estender o video a partir do final da cena anterior." 3-Movimentos suaves. 4-VOZ PT-PT: UMA frase completa e fluida, max 15 palavras (ex: "Encomende online e receba em casa em ate 48h, com portes gratis."). 5-TEXTO NO ECRA entre aspas max 4 palavras. 6-Ext5 termina com "${p.businessUrl || "pededireto.pt"}". 7-Max 2 frases por prompt. Sem newlines nos valores.
-Responde APENAS JSON valido:
-{"analise_imagem":"descricao imagem","estilo_aplicado":"${p.estilo || "institucional"}","extensoes":[{"num":1,"titulo":"Animacao - ${p.tomExt1 || "Emocional"}","prompt":"..."},{"num":2,"titulo":"${p.tomExt2 || "Qualidade"} - desenvolvimento","prompt":"..."},{"num":3,"titulo":"${p.tomExt3 || "Confianca"} - detalhe","prompt":"..."},{"num":4,"titulo":"${p.tomExt4 || "Urgencia"} - resultado","prompt":"..."},{"num":5,"titulo":"CTA Final","prompt":"...com ${p.businessUrl || "pededireto.pt"}"}],"copy_post":"legenda Instagram PT-PT com emojis e CTA para ${p.businessUrl || "pededireto.pt"}","copy_story":"versao curta story 2-3 linhas","segmentacao":{"genero":"...","idade":"...","interesses":"...","objetivo":"...","orcamento_dia":"EX/dia"}}`;
+  return `És especialista em criar roteiros de vídeo cinematográficos para IA (Grok Aurora) para negócios locais em Portugal.
+
+OBJECTIVO DO REEL: ${p.objectivo || "promover o negócio"}
+${p.objectivoDescricao ? `DESCRIÇÃO: ${p.objectivoDescricao}` : ""}
+
+${
+  temNegocio
+    ? `DADOS DO NEGÓCIO:
+- Nome: ${p.nome || "não especificado"}
+- Cidade: ${p.cidade || "não especificado"}
+- Categoria: ${p.categoria || "não especificado"}
+- Subcategoria: ${p.subcategoria || "não especificado"}
+- Serviços: ${p.servicos || "não especificado"}
+- Diferencial: ${p.diferencial || "não especificado"}
+`
+    : `NEGÓCIO: Dados não fornecidos — baseia-te na imagem e no objectivo.\n`
 }
 
+TOM POR EXTENSÃO:
+- Extensão 1 (0-6s): ${p.tomExt1 || "Emocional"}
+- Extensão 2 (6-12s): ${p.tomExt2 || "Qualidade"}
+- Extensão 3 (12-18s): ${p.tomExt3 || "Confiança"}
+- Extensão 4 (18-24s): ${p.tomExt4 || "Urgência"}
+- Extensão 5 (24-30s): ${p.tomExt5 || "CTA directo"}
+
+ESTILO DO VÍDEO: ${p.estilo || "institucional"} — ${p.estiloDesc || ""}
+
+REGRAS OBRIGATÓRIAS:
+1 — EXTENSÃO 1: começa com "Animar esta imagem de forma natural e cinematográfica."
+2 — EXTENSÕES 2-5: começam com "Estender o vídeo a partir do final da cena anterior."
+3 — Movimentos suaves — NUNCA cortes bruscos
+4 — VOZ em Português de Portugal
+5 — TEXTO NO ECRÃ entre aspas duplas: "TEXTO"
+6 — EXTENSÃO 5 termina com URL "${p.businessUrl || "pededireto.pt"}" no TEXTO NO ECRÃ e na VOZ.
+7 — Cada prompt máximo 3 frases. Sem newlines dentro dos valores.
+
+Responde APENAS com JSON válido:
+{
+  "analise_imagem": "descrição: espaço, pessoas, serviço, ambiente, emoção",
+  "estilo_aplicado": "${p.estilo || "institucional"}",
+  "extensoes": [
+    {"num": 1, "titulo": "Animação — ${p.tomExt1 || "Emocional"}", "prompt": "..."},
+    {"num": 2, "titulo": "${p.tomExt2 || "Qualidade"} — desenvolvimento", "prompt": "..."},
+    {"num": 3, "titulo": "${p.tomExt3 || "Confiança"} — detalhe", "prompt": "..."},
+    {"num": 4, "titulo": "${p.tomExt4 || "Urgência"} — resultado", "prompt": "..."},
+    {"num": 5, "titulo": "CTA Final${p.nome ? " — " + p.nome : ""}", "prompt": "...com ${p.businessUrl || "pededireto.pt"}"}
+  ],
+  "copy_post": "legenda Instagram PT-PT com emojis e CTA para ${p.businessUrl || "pededireto.pt"}",
+  "copy_story": "versão curta 2-3 linhas para story",
+  "segmentacao": {
+    "genero": "...", "idade": "...", "interesses": "...",
+    "objetivo": "...", "orcamento_dia": "€X/dia"
+  }
+}`;
+}
+
+// ── NOVO: Prompt para multi-imagem ────────────────────────────────────────
 function buildReelMultiImagePrompt(p: any): string {
   const numImages = p.images?.length || 1;
   const temNegocio = p.nome || p.cidade || p.subcategoria;
-  return `Es especialista em roteiros cinematograficos para Grok Aurora para negocios locais em Portugal.
-${REGRA_VOZ_PTPT}
-${numImages} imagem(ns) fornecida(s). Analisa cada uma, decide sequencia cinematografica optima.
-OBJECTIVO: ${p.objectivo || "promover"} ${p.objectivoDescricao || ""}
-${temNegocio ? `NEGOCIO: Nome=${p.nome || ""} Cidade=${p.cidade || ""} Servicos=${p.servicos || ""} Diferencial=${p.diferencial || ""}` : "Infere da imagem."}
-TOMS: Ext1=${p.tomExt1 || "Emocional"} Ext2=${p.tomExt2 || "Qualidade"} Ext3=${p.tomExt3 || "Confianca"} Ext4=${p.tomExt4 || "Urgencia"} Ext5=${p.tomExt5 || "CTA"}
-REGRAS: Ext1="Animar a Imagem X...". Ext2-5="Estender...Transicao suave para Imagem X." quando muda. VOZ PT-PT. Ext5 termina com "${p.businessUrl || "pededireto.pt"}". Sem newlines nos valores.
-Responde APENAS JSON valido:
-{"analise_imagens":[{"index":1,"descricao":"...","melhor_para":"..."}],"logica_sequencia":"...","estilo_aplicado":"${p.estilo || "institucional"}","extensoes":[{"num":1,"titulo":"Animacao","image_index":1,"prompt":"..."},{"num":2,"titulo":"Desenvolvimento","image_index":1,"prompt":"..."},{"num":3,"titulo":"Confianca","image_index":1,"prompt":"..."},{"num":4,"titulo":"Urgencia","image_index":1,"prompt":"..."},{"num":5,"titulo":"CTA Final","image_index":1,"prompt":"...com ${p.businessUrl || "pededireto.pt"}"}],"copy_post":"...","copy_story":"...","segmentacao":{"genero":"...","idade":"...","interesses":"...","objetivo":"...","orcamento_dia":"EX/dia"}}`;
+
+  return `És especialista em criar roteiros de vídeo cinematográficos para IA (Grok Aurora) para negócios locais em Portugal.
+
+Foram fornecidas ${numImages} imagem(ns). A tua missão é:
+1. Analisar cada imagem individualmente
+2. Decidir a SEQUÊNCIA CINEMATOGRÁFICA ÓPTIMA — não tens de usar a ordem fornecida
+3. Atribuir cada cena (extensão) à imagem que melhor serve o seu tom narrativo
+4. Criar prompts específicos para cada imagem/cena
+
+OBJECTIVO DO REEL: ${p.objectivo || "promover o negócio"}
+${p.objectivoDescricao ? `DESCRIÇÃO: ${p.objectivoDescricao}` : ""}
+
+${
+  temNegocio
+    ? `DADOS DO NEGÓCIO:
+- Nome: ${p.nome || "não especificado"}
+- Cidade: ${p.cidade || "não especificado"}
+- Categoria: ${p.categoria || "não especificado"}
+- Subcategoria: ${p.subcategoria || "não especificado"}
+- Serviços: ${p.servicos || "não especificado"}
+- Diferencial: ${p.diferencial || "não especificado"}
+`
+    : "NEGÓCIO: Infere da imagem.\n"
+}
+
+TOM POR EXTENSÃO:
+- Extensão 1 (0-6s): ${p.tomExt1 || "Emocional"} — captar atenção
+- Extensão 2 (6-12s): ${p.tomExt2 || "Qualidade"} — desenvolver
+- Extensão 3 (12-18s): ${p.tomExt3 || "Confiança"} — credibilidade
+- Extensão 4 (18-24s): ${p.tomExt4 || "Urgência"} — motivar
+- Extensão 5 (24-30s): ${p.tomExt5 || "CTA directo"} — CTA final
+
+ESTILO: ${p.estilo || "institucional"} — ${p.estiloDesc || ""}
+
+REGRAS OBRIGATÓRIAS:
+1 — EXTENSÃO 1: começa com "Animar a Imagem X de forma natural e cinematográfica." (X = número da imagem escolhida)
+2 — EXTENSÕES 2-5: começam com "Estender o vídeo a partir do final da cena anterior. Transição suave para a Imagem X." (quando muda de imagem) OU "Estender o vídeo a partir do final da cena anterior." (quando continua na mesma imagem)
+3 — Movimentos suaves — NUNCA cortes bruscos
+4 — VOZ em Português de Portugal
+5 — TEXTO NO ECRÃ entre aspas duplas
+6 — EXTENSÃO 5 termina com "${p.businessUrl || "pededireto.pt"}" visível
+7 — Cada prompt máximo 3 frases. Sem newlines nos valores.
+8 — Se só foi fornecida 1 imagem, todas as extensões usam image_index: 1
+
+LÓGICA DE SEQUÊNCIA:
+- Identifica qual imagem tem mais impacto emocional → usa na Ext 1
+- Identifica qual mostra melhor o produto/serviço → usa na Ext 2 ou 3
+- Identifica qual transmite mais confiança/resultado → usa na Ext 3 ou 4
+- Podes repetir imagens se fizer sentido narrativo
+- Explica brevemente o raciocínio da sequência em "logica_sequencia"
+
+Responde APENAS com JSON válido:
+{
+  "analise_imagens": [
+    {"index": 1, "descricao": "o que vês nesta imagem", "melhor_para": "qual tom/cena serve melhor"},
+    {"index": 2, "descricao": "...", "melhor_para": "..."}
+  ],
+  "logica_sequencia": "explicação breve de por que escolheste esta ordem",
+  "estilo_aplicado": "${p.estilo || "institucional"}",
+  "extensoes": [
+    {"num": 1, "titulo": "Animação — ${p.tomExt1 || "Emocional"}", "image_index": 1, "prompt": "Animar a Imagem X..."},
+    {"num": 2, "titulo": "${p.tomExt2 || "Qualidade"} — desenvolvimento", "image_index": 1, "prompt": "Estender..."},
+    {"num": 3, "titulo": "${p.tomExt3 || "Confiança"} — detalhe", "image_index": 1, "prompt": "Estender..."},
+    {"num": 4, "titulo": "${p.tomExt4 || "Urgência"} — resultado", "image_index": 1, "prompt": "Estender..."},
+    {"num": 5, "titulo": "CTA Final${p.nome ? " — " + p.nome : ""}", "image_index": 1, "prompt": "Estender...com ${p.businessUrl || "pededireto.pt"}"}
+  ],
+  "copy_post": "legenda Instagram PT-PT com emojis e CTA para ${p.businessUrl || "pededireto.pt"}",
+  "copy_story": "versão curta 2-3 linhas para story",
+  "segmentacao": {
+    "genero": "...", "idade": "...", "interesses": "...",
+    "objetivo": "...", "orcamento_dia": "€X/dia"
+  }
+}`;
 }
 
 function buildImagePrompt(p: any): string {
   const hasContext = p.nome || p.sector || p.descricao || p.personagens || p.ambiente;
-  return `Es especialista em criar prompts de geracao de imagem para marketing de negocios locais em Portugal.
-CONTEXTO: objectivo=${p.objectivoImagem || ""} nome=${p.nome || ""} sector=${p.sector || ""} descricao=${p.descricao || ""} personagens=${p.personagens || ""} ambiente=${p.ambiente || ""} texto=${p.textoSobreposto || ""} extras=${p.extras || ""} estilo=${p.estilo || "local"} proporcao=${p.proporcao || "9:16"}
-${!hasContext ? "MODO CRIATIVO: sem contexto especifico, se criativo." : ""}
-REGRAS: Prompts em ingles. Fotorrealista. Cinematografico. Proporcao ${p.proporcao || "9:16"}. IMPORTANTE: cada prompt maximo 2 frases curtas.
-Responde APENAS JSON valido sem markdown:
-{"prompt_principal":"prompt ingles 2 frases max proporcao ${p.proporcao || "9:16"}","variante_a":"variante angulo diferente 1 frase","variante_b":"variante iluminacao diferente 1 frase","instrucoes":"3 passos PT-PT: 1.Copia prompt. 2.Gera no Grok. 3.Usa no Gerador de Reel."}`;
+  return `És especialista em criar prompts de geração de imagem para marketing de negócios locais em Portugal.
+
+CONTEXTO:
+${p.objectivoImagem ? `- Objectivo: ${p.objectivoImagem}` : ""}
+${p.nome ? `- Nome/Marca: ${p.nome}` : ""}
+${p.sector ? `- Sector: ${p.sector}` : ""}
+${p.descricao ? `- O que deve aparecer: ${p.descricao}` : ""}
+${p.personagens ? `- Personagens: ${p.personagens}` : ""}
+${p.ambiente ? `- Ambiente: ${p.ambiente}` : ""}
+${p.textoSobreposto ? `- Texto sobreposto: ${p.textoSobreposto}` : ""}
+${p.extras ? `- Extras: ${p.extras}` : ""}
+- Estilo: ${p.estilo || "local"}
+- Proporção: ${p.proporcao || "9:16"}
+
+${!hasContext ? "MODO CRIATIVO: sem contexto específico, sê criativo e visualmente rico.\n" : ""}
+
+REGRAS: Prompts em inglês, fotorrealista, cinematográfico, proporção ${p.proporcao || "9:16"}.
+
+Responde APENAS com JSON válido:
+{
+  "prompt_principal": "prompt completa em inglês, máx 150 palavras, proporção ${p.proporcao || "9:16"}",
+  "variante_a": "variante ângulo diferente, 100 palavras",
+  "variante_b": "variante iluminação diferente, 100 palavras",
+  "instrucoes": "3-4 passos práticos em português sobre como usar no Grok/Midjourney e depois no workflow Reel 5×6s"
+}`;
 }
 
-function buildReelStoryboardPrompt(p: any): string {
-  return `Es director de fotografia e copywriter para redes sociais de negocios locais em Portugal.
-${REGRA_VOZ_PTPT}
-Cria storyboard de 5 cenas (6 segundos cada) para Reel de 30 segundos.
-NEGOCIO: nome=${p.nome || ""} sector=${p.sector || ""} descricao=${p.descricao || ""} objectivo=${p.objectivoImagem || "promover"} personagens=${p.personagens || ""} ambiente=${p.ambiente || ""} extras=${p.extras || ""} estilo=${p.estilo || "local"} proporcao=${p.proporcao || "9:16"}
-ESTRUTURA: Cena1=HOOK Cena2=DESENVOLVIMENTO Cena3=CONFIANCA Cena4=URGENCIA Cena5=CTA
-REGRAS: voiceover max 12 palavras PT-PT. screen_text max 5 palavras em maiusculas. prompt imagem em ingles cinematografico. Sem newlines dentro dos valores string.
-Responde APENAS com este JSON exacto com exactamente 5 itens em cenas:
-{"instrucao_reel":"estrategia geral 1 frase","cenas":[{"titulo":"HOOK","foco":"foco curto","camera":"camera ingles","lighting":"lighting ingles","composition":"composition ingles","emotion":"emotion ingles","prompt":"prompt ingles cinematografico para Grok sem newlines","voiceover":"frase PT-PT max 12 palavras","screen_text":"TEXTO MAX 5 PALAVRAS"},{"titulo":"DESENVOLVIMENTO","foco":"...","camera":"...","lighting":"...","composition":"...","emotion":"...","prompt":"...","voiceover":"...","screen_text":"..."},{"titulo":"CONFIANCA","foco":"...","camera":"...","lighting":"...","composition":"...","emotion":"...","prompt":"...","voiceover":"...","screen_text":"..."},{"titulo":"URGENCIA","foco":"...","camera":"...","lighting":"...","composition":"...","emotion":"...","prompt":"...","voiceover":"...","screen_text":"..."},{"titulo":"CTA","foco":"...","camera":"...","lighting":"...","composition":"...","emotion":"...","prompt":"...","voiceover":"...","screen_text":"..."}]}`;
-}
-
-function buildReelFullPackagePrompt(p: any): string {
-  const cenasFormatadas = (p.cenas || []).map((c: any) => `CENA ${c.num}-${c.titulo}: ${c.prompt}`).join(" | ");
-  return `Es copywriter especialista em marketing digital para negocios locais em Portugal.
-${REGRA_VOZ_PTPT}
-NEGOCIO: nome=${p.nome || ""} sector=${p.sector || ""} descricao=${p.descricao || ""}
-STORYBOARD: ${cenasFormatadas}
-${p.instrucao_reel ? `ESTRATEGIA: ${p.instrucao_reel}` : ""}
-REGRAS: Tudo PT-PT. Legenda max 2200 chars com emojis. Max 30 hashtags. Copy anuncio max 125 chars. Sem newlines nos valores.
-Responde APENAS JSON valido:
-{"reel":{"script":"narracao completa 30s guia para criador","duracao":"30s"},"instagram":{"legenda":"legenda com emojis e CTA","hashtags":["#portugal","#negociolocal","#pededireto"]},"ads":{"copy":"texto anuncio max 125 chars","cta":"Reserva Ja"}}`;
-}
+// ── Main handler ──────────────────────────────────────────────────────────
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -188,6 +332,7 @@ serve(async (req) => {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
+
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
@@ -198,70 +343,50 @@ serve(async (req) => {
     }
 
     const { action, ...payload } = await req.json();
-    // ✅ FIX PRINCIPAL: normalizedAction correctamente definido
-    const normalizedAction = (action || "").trim().toLowerCase();
-    console.log(`[studio-generate] action=${action} normalized=${normalizedAction}`);
+    console.log(`[studio-generate] action=${action}`);
 
     let rawText = "";
 
-    if (normalizedAction === "extract_profile") {
+    if (action === "extract_profile") {
       rawText = await callGemini(EXTRACT_PROFILE_PROMPT, payload.text, undefined, 600);
-    } else if (normalizedAction === "generate_reel") {
+    } else if (action === "generate_reel") {
+      // Single image — comportamento original
+      const systemPrompt = buildReelPrompt(payload);
+      const userMessage =
+        `Frame inicial do vídeo. Objectivo: ${payload.objectivo || "promover o negócio"}. ${payload.objectivoDescricao ? "Descrição: " + payload.objectivoDescricao : ""} ${payload.nome ? "Negócio: " + payload.nome : ""} ${payload.cidade ? "Cidade: " + payload.cidade : ""}`.trim();
       const images = payload.imageBase64
         ? [{ base64: payload.imageBase64, mimeType: payload.imageMimeType || "image/jpeg" }]
         : undefined;
-      rawText = await callGemini(
-        buildReelPrompt(payload),
-        `Frame inicial. Objectivo: ${payload.objectivo || "promover"}. ${payload.objectivoDescricao || ""} ${payload.nome || ""} ${payload.cidade || ""}`.trim(),
-        images,
-        4096,
-      );
-    } else if (normalizedAction === "generate_reel_multi") {
+      rawText = await callGemini(systemPrompt, userMessage, images, 4096);
+    } else if (action === "generate_reel_multi") {
+      // Multi-image — nova action
+      const systemPrompt = buildReelMultiImagePrompt(payload);
+      const userMessage =
+        `${payload.images?.length || 0} imagens fornecidas. Objectivo: ${payload.objectivo || "promover o negócio"}. ${payload.objectivoDescricao || ""} ${payload.nome ? "Negócio: " + payload.nome : ""}`.trim();
+
+      // Converter array de imagens para o formato esperado
       const images: Array<{ base64: string; mimeType: string }> = (payload.images || []).map((img: any) => ({
         base64: img.base64,
         mimeType: img.mimeType || "image/jpeg",
       }));
-      if (images.length === 0)
+
+      if (images.length === 0) {
         return new Response(JSON.stringify({ error: "Nenhuma imagem fornecida" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      rawText = await callGemini(
-        buildReelMultiImagePrompt(payload),
-        `${images.length} imagens. Objectivo: ${payload.objectivo || "promover"}. ${payload.nome || ""}`.trim(),
-        images,
-        5000,
-      );
-    } else if (normalizedAction === "generate_image_prompt") {
+      }
+
+      rawText = await callGemini(systemPrompt, userMessage, images, 5000);
+    } else if (action === "generate_image_prompt") {
+      const systemPrompt = buildImagePrompt(payload);
+      const userText = `Gera prompts de imagem para: ${payload.nome || payload.descricao || "negócio local português"}. Estilo: ${payload.estilo || "local"}. Proporção: ${payload.proporcao || "9:16"}.`;
       const images = payload.referenceImageBase64
         ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
         : undefined;
-      rawText = await callGemini(
-        buildImagePrompt(payload),
-        `Prompts para: ${payload.nome || payload.descricao || "negocio local"}. Estilo: ${payload.estilo || "local"}. Proporcao: ${payload.proporcao || "9:16"}.`,
-        images,
-        2500,
-      );
-    } else if (normalizedAction === "generate_reel_storyboard") {
-      const images = payload.referenceImageBase64
-        ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
-        : undefined;
-      rawText = await callGemini(
-        buildReelStoryboardPrompt(payload),
-        `Storyboard 5 cenas para: ${payload.nome || payload.descricao || "negocio local"}. Estilo: ${payload.estilo || "local"}.`,
-        images,
-        6000,
-      );
-    } else if (normalizedAction === "generate_reel_full_package") {
-      rawText = await callGemini(
-        buildReelFullPackagePrompt(payload),
-        `Pacote completo para Reel de ${payload.nome || "negocio local"}.`,
-        undefined,
-        2000,
-      );
+      rawText = await callGemini(systemPrompt, userText, images, 1200);
     } else {
-      console.error(`[studio-generate] Unknown action: "${action}" normalized="${normalizedAction}"`);
-      return new Response(JSON.stringify({ error: `Accao desconhecida: ${action}` }), {
+      return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -273,7 +398,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (parseErr) {
-      console.error("JSON parse failed. Raw:", rawText.substring(0, 500));
+      console.error("JSON parse failed. Raw:", rawText);
       return new Response(JSON.stringify({ error: "A IA gerou uma resposta malformada. Tenta novamente." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -287,7 +412,7 @@ serve(async (req) => {
       status === 429
         ? "Limite de pedidos excedido. Tenta novamente em alguns segundos."
         : status === 402
-          ? "Creditos insuficientes."
+          ? "Créditos insuficientes."
           : msg;
     return new Response(JSON.stringify({ error: userMsg }), {
       status,

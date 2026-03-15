@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Loader2, Upload, Sparkles, Film, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,22 +12,23 @@ import { useSaveGeneration } from "@/hooks/useGenerations";
 import { useNavigate } from "react-router-dom";
 import GrokBox from "@/components/studio/GrokBox";
 import CopyButton from "@/components/studio/CopyButton";
-import { useStudioContext } from "@/pages/studio/StudioLayout";
+
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const ESTILOS = [
-  { key: "moderno", label: "Moderno & Escuro", emoji: "\u{1F311}", desc: "Fundo escuro, neon verde/laranja" },
-  { key: "limpo", label: "Limpo & Profissional", emoji: "\u2600\uFE0F", desc: "Fundo claro, tons neutros" },
-  { key: "local", label: "Local & Acolhedor", emoji: "\u{1F3E1}", desc: "Cores quentes, textura natural" },
-  { key: "urgencia", label: "Urgência & Impacto", emoji: "\u26A1", desc: "Alto contraste, vermelho/laranja" },
+  { key: "moderno", label: "Moderno & Escuro", emoji: "🌑", desc: "Fundo escuro, neon verde/laranja" },
+  { key: "limpo", label: "Limpo & Profissional", emoji: "☀️", desc: "Fundo claro, tons neutros" },
+  { key: "local", label: "Local & Acolhedor", emoji: "🏡", desc: "Cores quentes, textura natural" },
+  { key: "urgencia", label: "Urgência & Impacto", emoji: "⚡", desc: "Alto contraste, vermelho/laranja" },
 ];
 
 const OBJECTIVOS = [
-  { key: "negocio", label: "Negócio", emoji: "\u{1F3EA}" },
-  { key: "produto", label: "Produto", emoji: "\u{1F4E6}" },
-  { key: "evento", label: "Evento", emoji: "\u{1F389}" },
-  { key: "pessoa", label: "Pessoa/Equipa", emoji: "\u{1F464}" },
-  { key: "espaco", label: "Espaço", emoji: "\u{1F305}" },
-  { key: "outro", label: "Outro", emoji: "\u{1F3AF}" },
+  { key: "negocio", label: "Negócio", emoji: "🏪" },
+  { key: "produto", label: "Produto", emoji: "📦" },
+  { key: "evento", label: "Evento", emoji: "🎉" },
+  { key: "pessoa", label: "Pessoa/Equipa", emoji: "👤" },
+  { key: "espaco", label: "Espaço", emoji: "🌅" },
+  { key: "outro", label: "Outro", emoji: "🎯" },
 ];
 
 const PROPORCOES = [
@@ -36,34 +37,37 @@ const PROPORCOES = [
   { key: "16:9", label: "16:9 Horizontal", desc: "YouTube & Web" },
 ];
 
+// Cores por cena — paridade visual com o Reel Generator
 const CENA_COLORS = [
-  { bg: "bg-cta", text: "text-cta", border: "border-cta/40", num: "01", label: "HOOK", time: "0-6s" },
+  { bg: "bg-cta", text: "text-cta", border: "border-cta/40", num: "01", label: "HOOK", time: "0–6s" },
   {
     bg: "bg-primary",
     text: "text-primary",
     border: "border-primary/40",
     num: "02",
     label: "DESENVOLVIMENTO",
-    time: "6-12s",
+    time: "6–12s",
   },
   {
     bg: "bg-blue-500",
     text: "text-blue-400",
     border: "border-blue-500/40",
     num: "03",
-    label: "CONFIANCA",
-    time: "12-18s",
+    label: "CONFIANÇA",
+    time: "12–18s",
   },
-  { bg: "bg-warning", text: "text-warning", border: "border-warning/40", num: "04", label: "URGENCIA", time: "18-24s" },
+  { bg: "bg-warning", text: "text-warning", border: "border-warning/40", num: "04", label: "URGÊNCIA", time: "18–24s" },
   {
     bg: "bg-purple-500",
     text: "text-purple-400",
     border: "border-purple-500/40",
     num: "05",
     label: "CTA",
-    time: "24-30s",
+    time: "24–30s",
   },
 ];
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface Cena {
   titulo: string;
@@ -73,9 +77,9 @@ interface Cena {
   lighting?: string;
   composition?: string;
   emotion?: string;
-  voiceover?: string;
-  screen_text?: string;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const buildFullPrompt = (cena: Cena): string => {
   const parts: string[] = [];
@@ -86,6 +90,8 @@ const buildFullPrompt = (cena: Cena): string => {
   if (cena.prompt) parts.push(parts.length > 0 ? `\n${cena.prompt}` : cena.prompt);
   return parts.join("\n");
 };
+
+// ─── Componente: Toggle Reel-ready ───────────────────────────────────────────
 
 const ReelReadyToggle = ({ active, onChange }: { active: boolean; onChange: (v: boolean) => void }) => (
   <button
@@ -110,7 +116,7 @@ const ReelReadyToggle = ({ active, onChange }: { active: boolean; onChange: (v: 
         </span>
         {active && <Badge className="text-[10px] bg-purple-500/20 text-purple-300 border-purple-500/30">ATIVO</Badge>}
       </div>
-      <p className="text-xs text-muted-foreground">Gera 5 variantes da mesma imagem -- uma por cena do Reel</p>
+      <p className="text-xs text-muted-foreground">Gera 5 variantes da mesma imagem — uma por cena do Reel</p>
     </div>
     <div
       className={cn(
@@ -128,6 +134,8 @@ const ReelReadyToggle = ({ active, onChange }: { active: boolean; onChange: (v: 
   </button>
 );
 
+// ─── Componente: Preview panel (estado vazio) ─────────────────────────────────
+
 const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
   <div className="h-full flex flex-col p-6 space-y-5 min-h-[400px]">
     <div className="flex items-center justify-between">
@@ -137,6 +145,7 @@ const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
         <span className="text-[10px] font-medium text-primary">Gemini Pro AI</span>
       </div>
     </div>
+
     {reelMode ? (
       <>
         <div className="flex items-center gap-2 p-3 rounded-xl border border-purple-500/30 bg-purple-500/5">
@@ -144,7 +153,7 @@ const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
           <div>
             <p className="text-xs font-semibold text-purple-300">Modo Reel-ready ativo</p>
             <p className="text-[10px] text-muted-foreground">
-              5 variantes cinematograficas -- uma por cena. Camera, Lighting, Composition, Emotion
+              5 variantes cinematográficas — uma por cena · Camera, Lighting, Composition, Emotion
             </p>
           </div>
         </div>
@@ -170,9 +179,10 @@ const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
           ))}
         </div>
         <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3">
-          <p className="text-xs font-semibold text-purple-300 mb-1">Workflow completo</p>
+          <p className="text-xs font-semibold text-purple-300 mb-1">🚀 Workflow completo</p>
           <p className="text-[10px] text-muted-foreground">
-            5 variantes -&gt; gera imagens no Grok -&gt; "Gerar Reel completo" cria script + legenda + hashtags + copy
+            5 variantes → gera imagens no Grok → "Gerar Reel completo" cria script + legenda + hashtags + copy de
+            anúncio
           </p>
         </div>
       </>
@@ -180,10 +190,10 @@ const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
       <>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { icon: "\u{1F5BC}\uFE0F", label: "Prompt principal", desc: "Optimizado para Gemini Imagen" },
-            { icon: "\u{1F504}", label: "2 variantes", desc: "Angulo e iluminacao diferentes" },
-            { icon: "\u{1F4CB}", label: "Guia de uso", desc: "Passo a passo para o Grok" },
-            { icon: "\u{1F3AC}", label: "Workflow Reel", desc: "Como usar no Gerador de Reel" },
+            { icon: "🖼️", label: "Prompt principal", desc: "Optimizado para Gemini Imagen" },
+            { icon: "🔄", label: "2 variantes", desc: "Ângulo e iluminação diferentes" },
+            { icon: "📋", label: "Guia de uso", desc: "Passo a passo para o Grok" },
+            { icon: "🎬", label: "Workflow Reel", desc: "Como usar no Gerador de Reel" },
           ].map((item) => (
             <div key={item.label} className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-muted/20">
               <span className="text-base flex-shrink-0">{item.icon}</span>
@@ -212,20 +222,25 @@ const ImagePreviewPanel = ({ reelMode }: { reelMode: boolean }) => (
         </div>
       </>
     )}
+
     <p className="text-[11px] text-muted-foreground text-center">
-      {reelMode ? "Preenche os dados e clica em gerar" : "Escolhe um estilo e clica em gerar -- a IA e criativa!"}
+      {reelMode ? "Preenche os dados e clica em gerar" : "Escolhe um estilo e clica em gerar — a IA é criativa!"}
     </p>
   </div>
 );
+
+// ─── Componente: Card de cena cinematográfica ─────────────────────────────────
 
 const CenaCard = ({ cena, index }: { cena: Cena; index: number }) => {
   const c = CENA_COLORS[index] || CENA_COLORS[0];
   const hasCinematic = cena.camera || cena.lighting || cena.composition || cena.emotion;
   const fullPrompt = buildFullPrompt(cena);
+
   return (
     <div
       className={cn("rounded-2xl border bg-card overflow-hidden transition-all duration-300 hover:shadow-lg", c.border)}
     >
+      {/* Header */}
       <div className={cn("flex items-center justify-between px-4 py-2.5 border-b bg-black/20", c.border)}>
         <div className="flex items-center gap-3">
           <span className={cn("font-mono font-black text-2xl leading-none tracking-tighter opacity-90", c.text)}>
@@ -238,42 +253,52 @@ const CenaCard = ({ cena, index }: { cena: Cena; index: number }) => {
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[9px] text-muted-foreground font-mono">{c.time}</span>
-              {cena.foco && <span className="text-[9px] text-muted-foreground">- {cena.foco}</span>}
+              {cena.foco && <span className="text-[9px] text-muted-foreground">· {cena.foco}</span>}
             </div>
           </div>
         </div>
         <CopyButton text={fullPrompt} />
       </div>
+
+      {/* Parâmetros cinematográficos */}
       {hasCinematic && (
         <div className="grid grid-cols-2 gap-px bg-border mx-4 mt-3 rounded-lg overflow-hidden border border-border/50">
           {cena.camera && (
             <div className="bg-card px-3 py-2">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Camera</p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
+                📷 Camera
+              </p>
               <p className="text-xs text-foreground">{cena.camera}</p>
             </div>
           )}
           {cena.lighting && (
             <div className="bg-card px-3 py-2">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Lighting</p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
+                💡 Lighting
+              </p>
               <p className="text-xs text-foreground">{cena.lighting}</p>
             </div>
           )}
           {cena.composition && (
             <div className="bg-card px-3 py-2">
               <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
-                Composition
+                🎞️ Composition
               </p>
               <p className="text-xs text-foreground">{cena.composition}</p>
             </div>
           )}
           {cena.emotion && (
             <div className="bg-card px-3 py-2">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Emotion</p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
+                🎭 Emotion
+              </p>
               <p className="text-xs text-foreground">{cena.emotion}</p>
             </div>
           )}
         </div>
       )}
+
+      {/* Prompt completo */}
       <div className="px-4 py-3">
         {hasCinematic && (
           <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
@@ -281,268 +306,195 @@ const CenaCard = ({ cena, index }: { cena: Cena; index: number }) => {
           </p>
         )}
         <GrokBox content={fullPrompt} />
-        {(cena.voiceover || cena.screen_text) && (
-          <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
-            {cena.voiceover && (
-              <div className="flex items-start gap-2.5 px-3 py-2 rounded-xl border border-border/60 bg-muted/20">
-                <span className="text-sm flex-shrink-0 mt-0.5">🎤</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
-                    Voz off
-                  </p>
-                  <p className="text-xs text-foreground italic">"{cena.voiceover}"</p>
-                </div>
-                <CopyButton text={cena.voiceover} />
-              </div>
-            )}
-            {cena.screen_text && (
-              <div className="flex items-start gap-2.5 px-3 py-2 rounded-xl border border-border/60 bg-muted/20">
-                <span className="text-sm flex-shrink-0 mt-0.5">🖥️</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
-                    Texto no ecra
-                  </p>
-                  <p className="text-xs font-semibold text-foreground">"{cena.screen_text}"</p>
-                </div>
-                <CopyButton text={cena.screen_text} />
-              </div>
-            )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Componente: Modal "Gerar Reel completo" ──────────────────────────────────
+
+const ReelCompletoModal = ({ result, onClose }: { result: any; onClose: () => void }) => (
+  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+    <div
+      className="relative z-10 w-full max-w-lg bg-card rounded-2xl border border-purple-500/30 shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <Film className="h-4 w-4 text-purple-400" />
+          <h3 className="font-semibold text-sm">Reel completo gerado</h3>
+          <Badge className="text-[10px] bg-purple-500/20 text-purple-300 border-purple-500/30">1 clique</Badge>
+        </div>
+        <button onClick={onClose} className="p-1 rounded hover:bg-muted">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="overflow-auto flex-1 p-4 space-y-4">
+        {result.script && (
+          <div>
+            <p className="text-xs font-semibold mb-2">🎬 Script narrativo</p>
+            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+              {result.script}
+            </div>
+            <div className="mt-1">
+              <CopyButton text={result.script} />
+            </div>
+          </div>
+        )}
+        {result.legenda && (
+          <div>
+            <p className="text-xs font-semibold mb-2">📱 Legenda Instagram</p>
+            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+              {result.legenda}
+            </div>
+            <div className="mt-1">
+              <CopyButton text={result.legenda} />
+            </div>
+          </div>
+        )}
+        {result.hashtags && (
+          <div>
+            <p className="text-xs font-semibold mb-2">🏷️ Hashtags</p>
+            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+              {result.hashtags}
+            </div>
+            <div className="mt-1">
+              <CopyButton text={result.hashtags} />
+            </div>
+          </div>
+        )}
+        {result.copy_anuncio && (
+          <div>
+            <p className="text-xs font-semibold mb-2">⚡ Copy de anúncio (Meta Ads)</p>
+            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+              {result.copy_anuncio}
+            </div>
+            <div className="mt-1">
+              <CopyButton text={result.copy_anuncio} />
+            </div>
           </div>
         )}
       </div>
     </div>
-  );
-};
+  </div>
+);
 
-const resolveReelCompleto = (r: any) => ({
-  script: r?.reel?.script || r?.script_reel || r?.script || "",
-  duracao: r?.reel?.duracao || "30s",
-  legenda: r?.instagram?.legenda || r?.legenda_instagram || r?.legenda || "",
-  hashtags: r?.instagram?.hashtags || r?.hashtags || [],
-  copy: r?.ads?.copy || r?.copy_anuncio || "",
-  cta: r?.ads?.cta || r?.cta || "",
-});
-
-const ReelCompletoPanel = ({ result, onClose }: { result: any; onClose: () => void }) => {
-  const d = resolveReelCompleto(result);
-  const hashtagsStr = Array.isArray(d.hashtags) ? d.hashtags.join(" ") : d.hashtags;
-
-  const handleExportarPacote = () => {
-    const linhas = [
-      "SCRIPT\n------\n" + d.script,
-      "LEGENDA\n------\n" + d.legenda,
-      "HASHTAGS\n------\n" + hashtagsStr,
-      "ANUNCIO\n------\n" + d.copy + (d.cta ? "\n\nCTA: " + d.cta : ""),
-    ];
-    navigator.clipboard.writeText(linhas.join("\n\n\n"));
-  };
-
-  return (
-    <div className="border-t border-purple-500/20 bg-purple-500/5">
-      <div className="flex items-center justify-between px-4 pt-3 pb-2">
-        <div className="flex items-center gap-2">
-          <Film className="h-3.5 w-3.5 text-purple-400" />
-          <span className="text-xs font-semibold text-purple-300">Reel completo gerado</span>
-          <Badge className="text-[10px] bg-purple-500/20 text-purple-300 border-purple-500/30">{d.duracao}</Badge>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleExportarPacote}
-            className="text-[10px] flex items-center gap-1 px-2 py-1 rounded-lg border border-purple-500/30 text-purple-300 hover:bg-purple-500/10 transition-colors"
-          >
-            Exportar pacote
-          </button>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground ml-1">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-      <Tabs defaultValue="script" className="w-full">
-        <TabsList className="w-full justify-start rounded-none border-b border-purple-500/20 bg-transparent px-4">
-          <TabsTrigger value="script" className="text-xs">
-            Script
-          </TabsTrigger>
-          <TabsTrigger value="legenda" className="text-xs">
-            Legenda
-          </TabsTrigger>
-          <TabsTrigger value="hashtags" className="text-xs">
-            Hashtags
-          </TabsTrigger>
-          <TabsTrigger value="anuncio" className="text-xs">
-            Anuncio
-          </TabsTrigger>
-        </TabsList>
-        <div className="p-4 space-y-3">
-          <TabsContent value="script" className="mt-0 space-y-2">
-            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
-              {d.script || "-"}
-            </div>
-            <CopyButton text={d.script} />
-          </TabsContent>
-          <TabsContent value="legenda" className="mt-0 space-y-2">
-            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
-              {d.legenda || "-"}
-            </div>
-            <CopyButton text={d.legenda} />
-          </TabsContent>
-          <TabsContent value="hashtags" className="mt-0 space-y-2">
-            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-              {hashtagsStr || "-"}
-            </div>
-            <CopyButton text={hashtagsStr} />
-          </TabsContent>
-          <TabsContent value="anuncio" className="mt-0 space-y-2">
-            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
-              {d.copy || "-"}
-            </div>
-            {d.cta && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">CTA</span>
-                <span className="text-xs font-semibold">{d.cta}</span>
-                <CopyButton text={d.cta} />
-              </div>
-            )}
-            <CopyButton text={d.copy} />
-          </TabsContent>
-        </div>
-      </Tabs>
-    </div>
-  );
-};
+// ─── Componente: Output Reel-ready ───────────────────────────────────────────
 
 const ReelReadyOutput = ({
   result,
   onUseInReel,
   onGerarReelCompleto,
   gerandoReelCompleto,
-  reelCompletoResult,
-  onCloseReelCompleto,
 }: {
   result: any;
   onUseInReel: () => void;
   onGerarReelCompleto: () => void;
   gerandoReelCompleto: boolean;
-  reelCompletoResult: any;
-  onCloseReelCompleto: () => void;
 }) => {
   const cenas: Cena[] = result.cenas || [];
+
   return (
-    <div className="space-y-0">
-      <div className="p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-purple-500/30 bg-purple-500/5">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-              <span className="text-[10px] font-medium text-purple-300">5 variantes geradas</span>
-            </div>
-            <span className="text-[10px] text-muted-foreground border border-border rounded-full px-2 py-0.5">
-              Reel-ready - 30s
-            </span>
+    <div className="p-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-purple-500/30 bg-purple-500/5">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+            <span className="text-[10px] font-medium text-purple-300">5 variantes geradas</span>
           </div>
-          <Button
-            size="sm"
-            onClick={onUseInReel}
-            className="flex items-center gap-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white border-0"
-          >
-            <Film className="h-3.5 w-3.5" />
-            Usar no Reel
-            <ChevronRight className="h-3 w-3" />
-          </Button>
+          <span className="text-[10px] text-muted-foreground border border-border rounded-full px-2 py-0.5">
+            🎬 Reel-ready · 30s
+          </span>
         </div>
-
-        {result.instrucao_reel && (
-          <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 px-4 py-3">
-            <p className="text-xs font-semibold text-purple-300 mb-1">Estrategia cinematografica</p>
-            <p className="text-xs text-muted-foreground">{result.instrucao_reel}</p>
-          </div>
-        )}
-
-        <div className="rounded-xl border border-border bg-card/50 px-4 py-3 space-y-2">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
-            Storyboard - 30 segundos
-          </p>
-          <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
-            {CENA_COLORS.map((c) => (
-              <div key={c.num} className={cn("flex-1 rounded-full", c.bg)} />
-            ))}
-          </div>
-          <div className="flex">
-            {CENA_COLORS.map((c) => (
-              <div key={c.num} className="flex-1 min-w-0">
-                <p className={cn("text-[9px] font-semibold truncate", c.text)}>{c.label}</p>
-                <p className="text-[8px] text-muted-foreground font-mono">{c.time}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {cenas.map((cena, i) => (
-            <CenaCard key={i} cena={cena} index={i} />
-          ))}
-        </div>
-
-        <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
-          <div>
-            <p className="text-xs font-semibold text-purple-300">Proximo passo</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Gera as imagens no Grok com cada prompt, depois escolhe o teu caminho:
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={onUseInReel}
-              variant="outline"
-              size="sm"
-              className="flex-1 flex items-center justify-center gap-1.5 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 text-xs"
-            >
-              <Film className="h-3.5 w-3.5" />
-              Abrir no Reel Generator
-            </Button>
-            <Button
-              onClick={onGerarReelCompleto}
-              disabled={gerandoReelCompleto}
-              size="sm"
-              className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white border-0 text-xs"
-            >
-              {gerandoReelCompleto ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />A gerar...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Gerar Reel completo
-                </>
-              )}
-            </Button>
-          </div>
-          <p className="text-[9px] text-muted-foreground text-center">
-            "Gerar Reel completo" -&gt; script - legenda - hashtags - copy de anuncio
-          </p>
-        </div>
-
         <Button
-          variant="outline"
           size="sm"
-          className="w-full"
-          onClick={() => {
-            const all = cenas
-              .map(
-                (cena, i) => "CENA " + (CENA_COLORS[i]?.num ?? "") + " - " + cena.titulo + "\n" + buildFullPrompt(cena),
-              )
-              .join("\n\n---\n\n");
-            const prefix = result.instrucao_reel ? "ESTRATEGIA:\n" + result.instrucao_reel + "\n\n" : "";
-            navigator.clipboard.writeText(prefix + all);
-          }}
+          onClick={onUseInReel}
+          className="flex items-center gap-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white border-0"
         >
-          Copiar todas as variantes
+          <Film className="h-3.5 w-3.5" />
+          Usar no Reel
+          <ChevronRight className="h-3 w-3" />
         </Button>
       </div>
-      {reelCompletoResult && <ReelCompletoPanel result={reelCompletoResult} onClose={onCloseReelCompleto} />}
+
+      {/* Estratégia cinematográfica */}
+      {result.instrucao_reel && (
+        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 px-4 py-3">
+          <p className="text-xs font-semibold text-purple-300 mb-1">💡 Estratégia cinematográfica</p>
+          <p className="text-xs text-muted-foreground">{result.instrucao_reel}</p>
+        </div>
+      )}
+
+      {/* 5 cenas com parâmetros cinematográficos */}
+      <div className="space-y-3">
+        {cenas.map((cena, i) => (
+          <CenaCard key={i} cena={cena} index={i} />
+        ))}
+      </div>
+
+      {/* CTA: Usar no Reel + Gerar Reel completo */}
+      <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
+        <div>
+          <p className="text-xs font-semibold text-purple-300">🚀 Próximo passo</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Gera as imagens no Grok com cada prompt, depois escolhe o teu caminho:
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={onUseInReel}
+            variant="outline"
+            size="sm"
+            className="flex-1 flex items-center justify-center gap-1.5 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 text-xs"
+          >
+            <Film className="h-3.5 w-3.5" />
+            Abrir no Reel Generator
+          </Button>
+          <Button
+            onClick={onGerarReelCompleto}
+            disabled={gerandoReelCompleto}
+            size="sm"
+            className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white border-0 text-xs"
+          >
+            {gerandoReelCompleto ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />A gerar...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3.5 w-3.5" />
+                Gerar Reel completo
+              </>
+            )}
+          </Button>
+        </div>
+        <p className="text-[9px] text-muted-foreground text-center">
+          "Gerar Reel completo" → script · legenda · hashtags · copy de anúncio
+        </p>
+      </div>
+
+      {/* Copiar tudo */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() => {
+          const all = cenas
+            .map((cena, i) => `CENA ${CENA_COLORS[i]?.num} — ${cena.titulo}\n${buildFullPrompt(cena)}`)
+            .join("\n\n---\n\n");
+          const prefix = result.instrucao_reel ? `ESTRATÉGIA:\n${result.instrucao_reel}\n\n` : "";
+          navigator.clipboard.writeText(prefix + all);
+        }}
+      >
+        📋 Copiar todas as variantes
+      </Button>
     </div>
   );
 };
+
+// ─── Componente: Output normal ────────────────────────────────────────────────
 
 const ImageOutput = ({
   result,
@@ -556,13 +508,13 @@ const ImageOutput = ({
   <Tabs defaultValue="principal" className="h-full flex flex-col">
     <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-4 pt-3">
       <TabsTrigger value="principal" className="text-xs">
-        Prompt Principal
+        🖼️ Prompt Principal
       </TabsTrigger>
       <TabsTrigger value="variantes" className="text-xs">
-        Variantes
+        🔄 Variantes
       </TabsTrigger>
       <TabsTrigger value="guia" className="text-xs">
-        Guia de Uso
+        📋 Guia de Uso
       </TabsTrigger>
     </TabsList>
     <div className="flex-1 overflow-auto">
@@ -585,29 +537,29 @@ const ImageOutput = ({
             Usar no Reel
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportPDF}>
-            Exportar
+            ⬇ Exportar
           </Button>
         </div>
       </TabsContent>
       <TabsContent value="variantes" className="p-4 space-y-4 mt-0">
         <div>
-          <p className="text-xs font-semibold mb-2">Variante A - Angulo diferente</p>
+          <p className="text-xs font-semibold mb-2">Variante A — Ângulo diferente</p>
           <GrokBox content={result.variante_a || ""} />
           <div className="mt-2">
             <CopyButton text={result.variante_a || ""} />
           </div>
         </div>
         <div>
-          <p className="text-xs font-semibold mb-2">Variante B - Iluminacao diferente</p>
+          <p className="text-xs font-semibold mb-2">Variante B — Iluminação diferente</p>
           <GrokBox content={result.variante_b || ""} />
           <div className="mt-2">
             <CopyButton text={result.variante_b || ""} />
           </div>
         </div>
         <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3">
-          <p className="text-xs font-semibold text-purple-300 mb-1">Dica Reel</p>
+          <p className="text-xs font-semibold text-purple-300 mb-1">💡 Dica Reel</p>
           <p className="text-xs text-muted-foreground">
-            Usa as 3 prompts para gerar frames diferentes e carrega-os no Gerador de Reel como imagens multiplas.
+            Usa as 3 prompts para gerar frames diferentes e carrega-os no Gerador de Reel como imagens múltiplas.
           </p>
           <Button
             size="sm"
@@ -621,20 +573,20 @@ const ImageOutput = ({
       </TabsContent>
       <TabsContent value="guia" className="p-4 space-y-4 mt-0">
         <div className="rounded-xl border border-border bg-muted/30 p-4">
-          <p className="text-xs font-semibold mb-2">Passo a passo</p>
+          <p className="text-xs font-semibold mb-2">📋 Passo a passo</p>
           <div className="text-xs text-muted-foreground whitespace-pre-wrap">
             {result.instrucoes ||
               "1. Copia a prompt principal\n2. Abre o Grok e cola a prompt\n3. Ajusta o formato para 9:16 vertical\n4. Usa a imagem gerada como frame no Gerador de Reel"}
           </div>
         </div>
         <div className="rounded-xl border border-border bg-muted/30 p-4">
-          <p className="text-xs font-semibold mb-2">Workflow Grok -&gt; Reel 30s</p>
+          <p className="text-xs font-semibold mb-2">🎬 Workflow Grok → Reel 30s</p>
           <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
             <li>Gera a imagem com a prompt acima</li>
             <li>Vai ao Gerador de Reel e carrega a imagem</li>
-            <li>Gera as 5 extensoes automaticamente</li>
-            <li>Cola cada extensao sequencialmente no Grok</li>
-            <li>Exporta o video final e edita no CapCut</li>
+            <li>Gera as 5 extensões automaticamente</li>
+            <li>Cola cada extensão sequencialmente no Grok</li>
+            <li>Exporta o vídeo final e edita no CapCut</li>
           </ol>
         </div>
         <Button
@@ -648,6 +600,8 @@ const ImageOutput = ({
     </div>
   </Tabs>
 );
+
+// ─── Página principal ─────────────────────────────────────────────────────────
 
 const StudioImagePage = () => {
   const { generate } = useStudioGenerate();
@@ -671,18 +625,10 @@ const StudioImagePage = () => {
   const [reelMode, setReelMode] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
+
+  // Estado para o modal "Gerar Reel completo"
   const [reelCompletoResult, setReelCompletoResult] = useState<any>(null);
   const [gerandoReelCompleto, setGerandoReelCompleto] = useState(false);
-
-  // Pre-preencher campos quando negocio selecionado no selector do topo
-  const { selectedBusiness } = useStudioContext();
-
-  useEffect(() => {
-    if (!selectedBusiness) return;
-    if (selectedBusiness.name && !nome) setNome(selectedBusiness.name);
-    if (selectedBusiness.city && !ambiente) setAmbiente(selectedBusiness.city);
-    if (selectedBusiness.description && !descricao) setDescricao(selectedBusiness.description);
-  }, [selectedBusiness]);
 
   const canGenerate = !generating;
 
@@ -714,24 +660,28 @@ const StudioImagePage = () => {
     setGenerating(true);
     setResult(null);
     setReelCompletoResult(null);
-    const action = reelMode ? "generate_reel_storyboard" : "generate_image_prompt";
+
+    const action = reelMode ? "generate_image_prompt_reel" : "generate_image_prompt";
     const data = await generate(action, buildPayload());
+
     setGenerating(false);
     if (!data) return;
     setResult(data);
+
     saveGen.mutate({
       type: "image",
-      title: (nome || objectivoImagem || "Imagem") + " - " + (sector || estilo),
-      subtitle: reelMode ? "Reel-ready - " + proporcao : proporcao + " - " + estilo,
+      title: `${nome || objectivoImagem || "Imagem"} · ${sector || estilo}`,
+      subtitle: reelMode ? `Reel-ready · ${proporcao}` : `${proporcao} · ${estilo}`,
       data,
     });
   };
 
+  // Gera script + legenda + hashtags + copy a partir das cenas já geradas
   const handleGerarReelCompleto = async () => {
     if (!result?.cenas) return;
     setGerandoReelCompleto(true);
     const cenas: Cena[] = result.cenas;
-    const data = await generate("generate_reel_full_package", {
+    const data = await generate("generate_reel_completo", {
       nome,
       sector,
       descricao,
@@ -748,18 +698,15 @@ const StudioImagePage = () => {
   };
 
   const handleUseInReel = () => {
+    // Passa contexto textual para o Reel Generator
     sessionStorage.setItem(
-      "studio_reel_context",
-      JSON.stringify({
-        version: 1,
-        nome,
-        sector,
-        objectivo: objectivoImagem || "negocio",
-        tipo_reel: objectivoImagem || "negocio",
-        descricao,
-        cenas: result?.cenas || null,
-      }),
+      "studio_reel_prefill",
+      JSON.stringify({ nome, cidade: "", sector, objectivo: objectivoImagem || "negocio", diferencial: descricao }),
     );
+    // Passa as cenas (para contexto visual futuro)
+    if (result?.cenas) {
+      sessionStorage.setItem("studio_reel_cenas", JSON.stringify(result.cenas));
+    }
     navigate("/studio/reel");
   };
 
@@ -769,11 +716,12 @@ const StudioImagePage = () => {
     const doc = new jsPDF();
     let y = 20;
     doc.setFontSize(16);
-    doc.text("PEDE DIRETO - Marketing AI Studio", 15, y);
+    doc.text("PEDE DIRETO — Marketing AI Studio", 15, y);
     y += 8;
     doc.setFontSize(11);
-    doc.text("Prompt de Imagem - " + (nome || "Criativo"), 15, y);
+    doc.text(`Prompt de Imagem · ${nome || "Criativo"}`, 15, y);
     y += 12;
+
     if (reelMode && result.cenas) {
       (result.cenas as Cena[]).forEach((cena, i) => {
         if (y > 260) {
@@ -781,7 +729,7 @@ const StudioImagePage = () => {
           y = 20;
         }
         doc.setFontSize(12);
-        doc.text("CENA " + (CENA_COLORS[i]?.num ?? "") + " - " + cena.titulo, 15, y);
+        doc.text(`CENA ${CENA_COLORS[i]?.num} — ${cena.titulo}`, 15, y);
         y += 7;
         doc.setFontSize(9);
         const lines = doc.splitTextToSize(buildFullPrompt(cena), 180);
@@ -815,14 +763,21 @@ const StudioImagePage = () => {
         y += lb.length * 5 + 10;
       }
     }
+
     doc.setFontSize(8);
     doc.text("pededireto.pt", 15, 285);
-    doc.save("imagem-" + (nome || "criativo").toLowerCase().replace(/\s+/g, "-") + ".pdf");
+    doc.save(`imagem-${(nome || "criativo").toLowerCase().replace(/\s+/g, "-")}.pdf`);
   };
 
   return (
     <>
+      {/* Modal Reel completo */}
+      {reelCompletoResult && (
+        <ReelCompletoModal result={reelCompletoResult} onClose={() => setReelCompletoResult(null)} />
+      )}
+
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6 max-w-[1400px]">
+        {/* ── LEFT: Form ── */}
         <div className="space-y-4">
           <ReelReadyToggle
             active={reelMode}
@@ -833,9 +788,10 @@ const StudioImagePage = () => {
             }}
           />
 
+          {/* Referência visual */}
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-            <p className="text-sm font-display font-semibold">Referencia visual</p>
-            <p className="text-xs text-muted-foreground">Serve de inspiracao visual -- a IA adapta o estilo</p>
+            <p className="text-sm font-display font-semibold">Referência visual</p>
+            <p className="text-xs text-muted-foreground">Serve de inspiração visual — a IA adapta o estilo</p>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleRefUpload} />
             {!referenceImage ? (
               <button
@@ -843,7 +799,7 @@ const StudioImagePage = () => {
                 className="w-full border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center gap-2 hover:border-primary/30 transition-colors"
               >
                 <Upload className="h-5 w-5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Carregar foto de referencia (opcional)</span>
+                <span className="text-xs text-muted-foreground">Carregar foto de referência (opcional)</span>
               </button>
             ) : (
               <div className="flex items-center gap-3">
@@ -865,6 +821,7 @@ const StudioImagePage = () => {
             )}
           </div>
 
+          {/* O que queres criar? */}
           <div className="rounded-xl border border-border bg-card p-4 space-y-4">
             <div className="flex items-center gap-2">
               <p className="text-sm font-display font-semibold">O que queres criar?</p>
@@ -875,7 +832,7 @@ const StudioImagePage = () => {
               )}
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-2">Objectivo da imagem (opcional)</p>
+              <p className="text-xs text-muted-foreground mb-2">Objectivo da imagem (opcional — ajuda a IA a focar)</p>
               <div className="flex flex-wrap gap-2">
                 {OBJECTIVOS.map((o) => (
                   <button
@@ -896,32 +853,30 @@ const StudioImagePage = () => {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Nome do negocio ou marca</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Nome do negócio ou marca</label>
                 <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Taberna do Borges" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Sector / Tipo de negocio</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Sector / Tipo de negócio</label>
                 <Input
                   value={sector}
                   onChange={(e) => setSector(e.target.value)}
-                  placeholder="Ex: Restauracao, Barbearia..."
+                  placeholder="Ex: Restauração, Barbearia..."
                 />
               </div>
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
-                {reelMode ? "Qual e a historia deste Reel?" : "O que deve aparecer na imagem"}
+                {reelMode
+                  ? "O que deve aparecer nas imagens (base para todas as cenas)"
+                  : "O que deve aparecer na imagem"}
               </label>
               <Textarea
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
                 rows={3}
                 className="resize-none"
-                placeholder={
-                  reelMode
-                    ? "Ex: mostrar o ambiente acolhedor da taberna, os petiscos tradicionais e terminar com convite para reservar mesa."
-                    : "Ex: um cafe acolhedor com vista para o rio, mesa com pastel de nata e cafe..."
-                }
+                placeholder="Ex: um café acolhedor com vista para o rio, mesa com pastel de nata e café..."
               />
             </div>
             <div>
@@ -933,11 +888,11 @@ const StudioImagePage = () => {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Ambiente e localizacao</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Ambiente e localização</label>
               <Input
                 value={ambiente}
                 onChange={(e) => setAmbiente(e.target.value)}
-                placeholder="Ex: interior rustico portugues, rua de Lisboa com calcada..."
+                placeholder="Ex: interior rústico português, rua de Lisboa com calçada..."
               />
             </div>
             <div>
@@ -945,7 +900,7 @@ const StudioImagePage = () => {
               <Input
                 value={textoSobreposto}
                 onChange={(e) => setTextoSobreposto(e.target.value)}
-                placeholder="Ex: Promocao de Verao - -20%"
+                placeholder="Ex: Promoção de Verão · -20%"
               />
             </div>
             <div>
@@ -953,11 +908,12 @@ const StudioImagePage = () => {
               <Input
                 value={extras}
                 onChange={(e) => setExtras(e.target.value)}
-                placeholder="Ex: iluminacao quente, nevoa matinal, estilo cinematografico..."
+                placeholder="Ex: iluminação quente, névoa matinal, estilo cinematográfico..."
               />
             </div>
           </div>
 
+          {/* Estilo visual */}
           <div className="rounded-xl border border-border bg-card p-4 space-y-4">
             <p className="text-sm font-display font-semibold">Estilo visual</p>
             <div className="grid grid-cols-2 gap-2">
@@ -977,7 +933,7 @@ const StudioImagePage = () => {
               ))}
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-2">Proporcao</p>
+              <p className="text-xs text-muted-foreground mb-2">Proporção</p>
               <div className="flex gap-2">
                 {PROPORCOES.map((p) => (
                   <button
@@ -995,10 +951,11 @@ const StudioImagePage = () => {
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">9:16 e o ideal para Reels e Stories</p>
+              <p className="text-[10px] text-muted-foreground mt-1">9:16 é o ideal para Reels e Stories</p>
             </div>
           </div>
 
+          {/* Botão gerar */}
           <div className="relative">
             {canGenerate && !generating && (
               <div className="absolute inset-0 rounded-xl bg-primary/30 blur-md animate-pulse pointer-events-none" />
@@ -1019,16 +976,16 @@ const StudioImagePage = () => {
                 </>
               ) : reelMode ? (
                 <>
-                  <Film className="h-5 w-5 mr-2" />
-                  Gerar 5 Variantes Reel-ready
+                  <Film className="h-5 w-5 mr-2" />✦ Gerar 5 Variantes Reel-ready
                 </>
               ) : (
-                "Gerar Prompt de Imagem"
+                "✦ Gerar Prompt de Imagem"
               )}
             </Button>
           </div>
         </div>
 
+        {/* ── RIGHT: Output ── */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           {generating ? (
             <div className="p-6 space-y-4">
@@ -1057,8 +1014,6 @@ const StudioImagePage = () => {
                   onUseInReel={handleUseInReel}
                   onGerarReelCompleto={handleGerarReelCompleto}
                   gerandoReelCompleto={gerandoReelCompleto}
-                  reelCompletoResult={reelCompletoResult}
-                  onCloseReelCompleto={() => setReelCompletoResult(null)}
                 />
               </div>
             ) : (
