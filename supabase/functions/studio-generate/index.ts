@@ -12,6 +12,7 @@ function safeParseJSON(raw: string): any {
     .replace(/```json\s*/g, "")
     .replace(/```\s*/g, "")
     .trim();
+
   const iObj = s.indexOf("{");
   const iArr = s.indexOf("[");
   let start: number, end: number;
@@ -23,7 +24,40 @@ function safeParseJSON(raw: string): any {
     start = iArr;
     end = s.lastIndexOf("]");
   }
-  if (end === -1) throw new Error("No JSON found in response");
+
+  // Se nao encontrou fecho, tentar reparar JSON truncado
+  if (end === -1 || end < start) {
+    // Fechar strings abertas e objectos abertos
+    s = s.slice(start);
+    // Contar aspas para saber se string esta aberta
+    let inStr = false,
+      esc = false;
+    for (const ch of s) {
+      if (esc) {
+        esc = false;
+        continue;
+      }
+      if (ch === "\\") {
+        esc = true;
+        continue;
+      }
+      if (ch === '"') inStr = !inStr;
+    }
+    if (inStr) s += '"'; // fechar string aberta
+    // Contar chavetas abertas
+    let depth = 0;
+    for (const ch of s) {
+      if (ch === "{") depth++;
+      else if (ch === "}") depth--;
+    }
+    s += "}".repeat(Math.max(0, depth));
+    try {
+      return JSON.parse(s);
+    } catch (e) {
+      throw new Error("Truncated JSON unrecoverable");
+    }
+  }
+
   s = s.slice(start, end + 1);
   let result = "";
   let inString = false;
@@ -141,31 +175,32 @@ Responde APENAS JSON valido:
 }
 
 function buildImagePrompt(p: any): string {
-  const ctx = [
-    p.descricao && `scene: ${p.descricao}`,
-    p.nome && `brand: ${p.nome}`,
-    p.personagens && `people: ${p.personagens}`,
-    p.ambiente && `location: ${p.ambiente}`,
-    p.extras && `extras: ${p.extras}`,
-    p.textoSobreposto && `text: ${p.textoSobreposto}`,
-  ]
-    .filter(Boolean)
-    .join(". ");
-
   const styleMap: Record<string, string> = {
-    "Moderno & Escuro": "dark bg, neon accents, dramatic",
-    "Limpo & Profissional": "clean white, neutral tones, soft light",
-    "Local & Acolhedor": "warm earthy, rustic Portuguese, lantern light",
-    "Urgencia & Impacto": "high contrast, red orange, dynamic",
+    "Moderno & Escuro": "dark moody background, neon green orange accents, dramatic contrast",
+    "Limpo & Profissional": "clean white background, neutral tones, soft natural light, minimal",
+    "Local & Acolhedor": "warm earthy tones, rustic Portuguese texture, golden hour light, cozy",
+    "Urgência & Impacto": "high contrast, vibrant red orange, bold dynamic composition",
   };
-  const styleDesc = styleMap[p.estilo || ""] || "warm cinematic";
+  const style = styleMap[p.estilo || ""] || "warm cinematic, natural light";
   const ratio = p.proporcao || "9:16";
+  const subject = p.descricao || p.nome || "Portuguese local business";
+  const people = p.personagens ? `, featuring ${p.personagens}` : "";
+  const place = p.ambiente ? `, ${p.ambiente}` : ", Portugal";
+  const extras = p.extras ? `, ${p.extras}` : "";
 
-  return `Professional image prompt writer for AI generators.
-Context: ${ctx || "Portuguese local business"}. Style: ${styleDesc}. Ratio: ${ratio}.
-Write 3 prompts of EXACTLY 15-20 words each. Comma-separated keywords. English only.
-Return ONLY JSON (no markdown):
-{"prompt_principal":"keyword1, keyword2, keyword3, lighting, camera, mood, ${ratio}, photorealistic","variante_a":"same subject, different angle, ${ratio}, photorealistic","variante_b":"same subject, different lighting, ${ratio}, photorealistic","instrucoes":"1. Copia o prompt. 2. Gera no Grok. 3. Usa no Gerador de Reel."}`;
+  // Gerar prompt directamente sem chamar Gemini
+  const promptPrincipal = `${subject}${people}${place}, ${style}${extras}, photorealistic, cinematic, ${ratio} aspect ratio, high quality`;
+  const varianteA = `${subject}${people}${place}, low angle shot, ${style}${extras}, photorealistic, cinematic, ${ratio} aspect ratio`;
+  const varianteB = `${subject}${people}${place}, golden hour lighting, warm bokeh, ${style}${extras}, photorealistic, ${ratio} aspect ratio`;
+
+  // Devolver JSON directamente — sem chamar Gemini
+  return JSON.stringify({
+    prompt_principal: promptPrincipal,
+    variante_a: varianteA,
+    variante_b: varianteB,
+    instrucoes: `1. Copia o prompt principal.\n2. Abre o Grok Aurora e cola o prompt.\n3. Selecciona proporção ${ratio}.\n4. Usa a imagem gerada no Gerador de Reel.`,
+    _generated_locally: true,
+  });
 }
 
 function buildReelStoryboardPrompt(p: any): string {
@@ -251,65 +286,45 @@ serve(async (req) => {
         5000,
       );
     } else if (normalizedAction === "generate_image_prompt") {
-      const images = payload.referenceImageBase64
-        ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
-        : undefined;
-      const rawFields = await callGemini(
-        buildImagePrompt(payload),
-        `Generate for: ${payload.nome || payload.descricao || "local business"}. Style: ${payload.estilo || "local"}. Ratio: ${payload.proporcao || "9:16"}.`,
-        images,
-        800,
-      );
+      // Gerar prompt localmente (sem Gemini) para evitar truncamento
+      // Se houver imagem de referência, usar Gemini para analisar e melhorar
+      if (payload.referenceImageBase64) {
+        const images = [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }];
+        const styleMap: Record<string, string> = {
+          "Moderno & Escuro": "dark moody, neon accents, dramatic",
+          "Limpo & Profissional": "clean minimal, soft light, professional",
+          "Local & Acolhedor": "warm earthy, rustic Portuguese, cozy",
+          "Urgência & Impacto": "high contrast, bold, dynamic",
+        };
+        const style = styleMap[payload.estilo || ""] || "warm cinematic";
+        const ratio = payload.proporcao || "9:16";
+        const refPrompt = `Describe this reference image in 10 words max. Then return JSON only:
+{"subject":"10 words describing main subject","mood":"3 word mood","details":"3 specific visual details"}`;
+        let refDesc = {
+          subject: payload.descricao || payload.nome || "local business",
+          mood: style,
+          details: "natural lighting",
+        };
+        try {
+          const refRaw = await callGemini(refPrompt, "Describe the reference image.", images, 300);
+          const parsed = safeParseJSON(refRaw);
+          if (parsed.subject) refDesc = parsed;
+        } catch (e) {
+          /* usar defaults */
+        }
 
-      // Montar prompt_principal a partir dos campos curtos
-      let fieldsObj: any = {};
-      try {
-        fieldsObj = safeParseJSON(rawFields);
-      } catch (e) {
-        fieldsObj = {};
+        const promptPrincipal = `${refDesc.subject}, ${refDesc.mood}, ${refDesc.details}, ${style}, photorealistic, cinematic, ${ratio}`;
+        rawText = JSON.stringify({
+          prompt_principal: promptPrincipal,
+          variante_a: `${refDesc.subject}, low angle view, ${refDesc.details}, ${style}, photorealistic, ${ratio}`,
+          variante_b: `${refDesc.subject}, golden hour light, soft bokeh, ${refDesc.details}, ${style}, photorealistic, ${ratio}`,
+          instrucoes: `1. Copia o prompt principal.\n2. Abre o Grok e cola o prompt.\n3. Usa a imagem gerada no Gerador de Reel.`,
+        });
+      } else {
+        // Sem imagem — gerar localmente, sem chamar Gemini
+        rawText = buildImagePrompt(payload);
       }
 
-      const ratio = payload.proporcao || "9:16";
-      const promptPrincipal = [
-        fieldsObj.subject,
-        fieldsObj.style,
-        fieldsObj.lighting,
-        fieldsObj.camera,
-        fieldsObj.mood,
-        `ratio ${ratio}`,
-        "photorealistic, cinematic, high quality",
-      ]
-        .filter(Boolean)
-        .join(", ");
-
-      const varianteA = [
-        fieldsObj.subject,
-        fieldsObj.variante_a_change || "different angle",
-        fieldsObj.lighting,
-        fieldsObj.mood,
-        `ratio ${ratio}`,
-      ]
-        .filter(Boolean)
-        .join(", ");
-      const varianteB = [
-        fieldsObj.subject,
-        fieldsObj.style,
-        fieldsObj.variante_b_change || "different lighting",
-        fieldsObj.mood,
-        `ratio ${ratio}`,
-      ]
-        .filter(Boolean)
-        .join(", ");
-
-      rawText = JSON.stringify({
-        prompt_principal: promptPrincipal,
-        variante_a: varianteA,
-        variante_b: varianteB,
-        instrucoes:
-          fieldsObj.instrucoes || "1. Copia o prompt. 2. Abre o Grok e gera a imagem. 3. Usa no Gerador de Reel.",
-      });
-
-      // rawText já é JSON válido — parse directo
       const parsed = JSON.parse(rawText);
       return new Response(JSON.stringify({ content: parsed }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
