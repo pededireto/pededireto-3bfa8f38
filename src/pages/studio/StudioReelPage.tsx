@@ -877,22 +877,93 @@ const StudioReelPage = () => {
               isMultiImage={images.length > 1}
             />
           ) : (
-            <div className="h-full flex items-center justify-center p-8 text-center min-h-[400px]">
-              <div>
-                <span className="text-5xl block mb-4">🎬</span>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Selecciona o objectivo, carrega uma imagem e clica em gerar.
-                  <br />
-                  Os dados do negócio e o tom são opcionais.
-                </p>
-              </div>
-            </div>
+            <ReelPreviewPanel />
           )}
         </div>
       </div>
     </>
   );
 };
+
+// ── Painel de preview (estado vazio) ─────────────────────────────────────────
+const REEL_STRUCTURE = [
+  { time: "0–6s", label: "HOOK", desc: "Captar atenção", color: "text-cta", bg: "bg-cta", num: "01" },
+  {
+    time: "6–12s",
+    label: "DESENVOLVIMENTO",
+    desc: "Apresentar valor",
+    color: "text-primary",
+    bg: "bg-primary",
+    num: "02",
+  },
+  { time: "12–18s", label: "CONFIANÇA", desc: "Credibilidade", color: "text-blue-400", bg: "bg-blue-500", num: "03" },
+  { time: "18–24s", label: "URGÊNCIA", desc: "Motivar acção", color: "text-warning", bg: "bg-warning", num: "04" },
+  {
+    time: "24–30s",
+    label: "CTA",
+    desc: "Chamada para acção",
+    color: "text-purple-400",
+    bg: "bg-purple-500",
+    num: "05",
+  },
+];
+
+const ReelPreviewPanel = () => (
+  <div className="h-full flex flex-col p-6 space-y-5 min-h-[400px]">
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-muted-foreground">O que vais receber</span>
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5">
+        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+        <span className="text-[10px] font-medium text-primary">Gemini Pro AI</span>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-2">
+      {[
+        { icon: "🎬", label: "5 cenas de vídeo", desc: "Prompts para Grok" },
+        { icon: "📱", label: "Copy Instagram", desc: "Legenda com emojis" },
+        { icon: "⚡", label: "Copy Story", desc: "Versão curta" },
+        { icon: "🎯", label: "Segmentação Meta", desc: "Audiência + budget" },
+      ].map((item) => (
+        <div key={item.label} className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-muted/20">
+          <span className="text-base flex-shrink-0">{item.icon}</span>
+          <div>
+            <div className="text-xs font-semibold text-foreground">{item.label}</div>
+            <div className="text-[10px] text-muted-foreground">{item.desc}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+    <div className="flex-1 space-y-2">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Estrutura do Reel 30s</p>
+      <div className="flex gap-1 mb-3">
+        {REEL_STRUCTURE.map((s) => (
+          <div key={s.num} className={cn("flex-1 h-1.5 rounded-full opacity-60", s.bg)} />
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        {REEL_STRUCTURE.map((s) => (
+          <div
+            key={s.num}
+            className="flex items-center gap-3 py-2 px-3 rounded-xl border border-border/50 bg-card/50 hover:bg-muted/30 transition-colors"
+          >
+            <span className={cn("font-mono font-black text-lg leading-none w-8 flex-shrink-0", s.color)}>{s.num}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", s.bg)} />
+                <span className="text-xs font-semibold text-foreground">{s.label}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">{s.desc}</span>
+            </div>
+            <span className="text-[9px] text-muted-foreground font-mono flex-shrink-0">{s.time}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+    <p className="text-[11px] text-muted-foreground text-center pb-2">
+      Selecciona o objectivo e carrega uma imagem para começar
+    </p>
+  </div>
+);
 
 const ReelOutput = ({
   result,
