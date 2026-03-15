@@ -942,7 +942,7 @@ const ReelPreviewPanel = () => (
     </div>
     <div className="grid grid-cols-2 gap-2">
       {[
-        { icon: "🎬", label: "5 cenas de vídeo", desc: "Prompts para Grok" },
+        { icon: "🎬", label: "5 cenas de vídeo", desc: "Prompts cinematográficos encadeados" },
         { icon: "📱", label: "Copy Instagram", desc: "Legenda com emojis" },
         { icon: "⚡", label: "Copy Story", desc: "Versão curta" },
         { icon: "🎯", label: "Segmentação Meta", desc: "Audiência + budget" },
@@ -1119,7 +1119,7 @@ const ReelOutput = ({
     <Tabs defaultValue="extensoes" className="h-full flex flex-col">
       <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-4 pt-3">
         <TabsTrigger value="extensoes" className="text-xs">
-          🎬 5 Extensões
+          🎬 5 Cenas
         </TabsTrigger>
         <TabsTrigger value="copy" className="text-xs">
           📝 Copy Post
@@ -1130,6 +1130,19 @@ const ReelOutput = ({
       </TabsList>
       <div className="flex-1 overflow-auto">
         <TabsContent value="extensoes" className="p-4 space-y-3 mt-0">
+          {/* Badge de continuidade */}
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-[10px] font-medium text-primary">Gemini Pro AI</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground border border-border rounded-full px-2 py-0.5">
+                🎬 ~30s · Continuidade narrativa
+              </span>
+            </div>
+          </div>
+
           {isMultiImage && result.analise_imagens ? (
             <div className="rounded-xl border border-ring/20 bg-ring/5 px-4 py-3 space-y-2">
               <div className="flex items-center gap-2 mb-1">
