@@ -121,7 +121,7 @@ OBJECTIVO: ${p.objectivo || "promover o negocio"} ${p.objectivoDescricao ? "- " 
 ${temNegocio ? `NEGOCIO: Nome=${p.nome || ""} Cidade=${p.cidade || ""} Categoria=${p.categoria || ""} Subcategoria=${p.subcategoria || ""} Servicos=${p.servicos || ""} Diferencial=${p.diferencial || ""}` : "NEGOCIO: Infere da imagem."}
 TOMS: Ext1=${p.tomExt1 || "Emocional"} Ext2=${p.tomExt2 || "Qualidade"} Ext3=${p.tomExt3 || "Confianca"} Ext4=${p.tomExt4 || "Urgencia"} Ext5=${p.tomExt5 || "CTA"}
 ESTILO: ${p.estilo || "institucional"} - ${p.estiloDesc || ""}
-REGRAS: 1-Ext1 comeca com "Animar esta imagem de forma natural e cinematografica." 2-Ext2-5 comecam com "Estender o video a partir do final da cena anterior." 3-Movimentos suaves. 4-VOZ PT-PT. 5-TEXTO NO ECRA entre aspas. 6-Ext5 termina com "${p.businessUrl || "pededireto.pt"}". 7-Max 3 frases por prompt. Sem newlines nos valores.
+REGRAS: 1-Ext1 comeca com "Animar esta imagem de forma natural e cinematografica." 2-Ext2-5 comecam com "Estender o video a partir do final da cena anterior." 3-Movimentos suaves. 4-VOZ PT-PT: UMA frase completa e fluida, max 15 palavras (ex: "Encomende online e receba em casa em ate 48h, com portes gratis."). 5-TEXTO NO ECRA entre aspas max 4 palavras. 6-Ext5 termina com "${p.businessUrl || "pededireto.pt"}". 7-Max 2 frases por prompt. Sem newlines nos valores.
 Responde APENAS JSON valido:
 {"analise_imagem":"descricao imagem","estilo_aplicado":"${p.estilo || "institucional"}","extensoes":[{"num":1,"titulo":"Animacao - ${p.tomExt1 || "Emocional"}","prompt":"..."},{"num":2,"titulo":"${p.tomExt2 || "Qualidade"} - desenvolvimento","prompt":"..."},{"num":3,"titulo":"${p.tomExt3 || "Confianca"} - detalhe","prompt":"..."},{"num":4,"titulo":"${p.tomExt4 || "Urgencia"} - resultado","prompt":"..."},{"num":5,"titulo":"CTA Final","prompt":"...com ${p.businessUrl || "pededireto.pt"}"}],"copy_post":"legenda Instagram PT-PT com emojis e CTA para ${p.businessUrl || "pededireto.pt"}","copy_story":"versao curta story 2-3 linhas","segmentacao":{"genero":"...","idade":"...","interesses":"...","objetivo":"...","orcamento_dia":"EX/dia"}}`;
 }
@@ -141,23 +141,13 @@ Responde APENAS JSON valido:
 }
 
 function buildImagePrompt(p: any): string {
-  const ctx = [
-    p.nome && `negocio: ${p.nome}`,
-    p.sector && `sector: ${p.sector}`,
-    p.descricao && `descricao: ${p.descricao}`,
-    p.personagens && `personagens: ${p.personagens}`,
-    p.ambiente && `ambiente: ${p.ambiente}`,
-    p.textoSobreposto && `texto: ${p.textoSobreposto}`,
-    p.extras && `extras: ${p.extras}`,
-  ]
-    .filter(Boolean)
-    .join(", ");
-
-  return `Image prompt specialist for Portuguese local business marketing.
-Context: ${ctx || "creative, visually rich"}, style=${p.estilo || "local"}, ratio=${p.proporcao || "9:16"}
-STRICT RULES: English only. Max 40 words per prompt. Use comma-separated cinematographic keywords. No full sentences.
-Return ONLY valid JSON, no markdown:
-{"prompt_principal":"[subject], [style], [camera], [lighting], [mood], [ratio] - max 40 words","variante_a":"[different angle variant] - max 30 words","variante_b":"[different lighting variant] - max 30 words","instrucoes":"1.Copia prompt. 2.Cola no Grok. 3.Usa imagem no Gerador de Reel."}`;
+  const hasContext = p.nome || p.sector || p.descricao || p.personagens || p.ambiente;
+  return `Es especialista em criar prompts de geracao de imagem para marketing de negocios locais em Portugal.
+CONTEXTO: objectivo=${p.objectivoImagem || ""} nome=${p.nome || ""} sector=${p.sector || ""} descricao=${p.descricao || ""} personagens=${p.personagens || ""} ambiente=${p.ambiente || ""} texto=${p.textoSobreposto || ""} extras=${p.extras || ""} estilo=${p.estilo || "local"} proporcao=${p.proporcao || "9:16"}
+${!hasContext ? "MODO CRIATIVO: sem contexto especifico, se criativo." : ""}
+REGRAS: Prompts em ingles. Fotorrealista. Cinematografico. Proporcao ${p.proporcao || "9:16"}. IMPORTANTE: cada prompt maximo 2 frases curtas.
+Responde APENAS JSON valido sem markdown:
+{"prompt_principal":"prompt ingles 2 frases max proporcao ${p.proporcao || "9:16"}","variante_a":"variante angulo diferente 1 frase","variante_b":"variante iluminacao diferente 1 frase","instrucoes":"3 passos PT-PT: 1.Copia prompt. 2.Gera no Grok. 3.Usa no Gerador de Reel."}`;
 }
 
 function buildReelStoryboardPrompt(p: any): string {
