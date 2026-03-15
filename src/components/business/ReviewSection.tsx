@@ -77,8 +77,10 @@ export const ReviewSection = ({ businessId, businessName, isOwner }: ReviewSecti
     try {
       await deleteReview.mutateAsync(reviewId);
       toast({ title: "Avaliação apagada com sucesso" });
-    } catch (error) {
-      toast({ title: "Erro ao apagar avaliação", variant: "destructive" });
+    } catch (error: any) {
+      const detail = error?.details || error?.hint || error?.message || "Erro desconhecido";
+      toast({ title: "Erro ao apagar avaliação", description: detail, variant: "destructive" });
+      console.error("[ReviewSection] delete error:", error);
     }
   };
 

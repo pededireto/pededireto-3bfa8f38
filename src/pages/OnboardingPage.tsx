@@ -32,7 +32,8 @@ const OnboardingPage = () => {
       await supabase.auth.signOut();
       toast.success("Sessão terminada");
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("[OnboardingPage] logout error:", error);
       toast.error("Erro ao terminar sessão");
     }
   };

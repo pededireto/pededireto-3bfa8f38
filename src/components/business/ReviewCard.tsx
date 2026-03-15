@@ -78,8 +78,10 @@ export const ReviewCard = ({ review, onEdit, onDelete, showBusinessResponse = tr
       toast({ title: "Avaliação denunciada", description: "Iremos analisar o caso." });
       setShowFlagDialog(false);
       setFlagReason("");
-    } catch (error) {
-      toast({ title: "Erro ao denunciar", variant: "destructive" });
+    } catch (error: any) {
+      const detail = error?.details || error?.hint || error?.message || "Erro desconhecido";
+      toast({ title: "Erro ao denunciar", description: detail, variant: "destructive" });
+      console.error("[ReviewCard] flag error:", error);
     }
   };
 
