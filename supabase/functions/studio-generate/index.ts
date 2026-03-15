@@ -141,15 +141,11 @@ Responde APENAS JSON valido:
 }
 
 function buildImagePrompt(p: any): string {
-  const hasContext = p.nome || p.sector || p.descricao || p.personagens || p.ambiente;
-  return `You are a cinematographic image prompt specialist. Generate VERY SHORT prompts.
-Context: subject=${p.descricao || p.nome || "local business"}, style=${p.estilo || "local"}, ratio=${p.proporcao || "9:16"}, people=${p.personagens || "none"}, place=${p.ambiente || "portugal"}, extras=${p.extras || "none"}
-${!hasContext ? "Be creative, warm, Portuguese local business feel." : ""}
+  return `You are an image generation expert. Return ONLY valid JSON, no markdown, no explanation.
+Fill ALL fields with relevant content based on: subject="${p.descricao || p.nome || "local business"}", style="${p.estilo || "warm local"}", ratio="${p.proporcao || "9:16"}", people="${p.personagens || ""}", place="${p.ambiente || "Portugal"}", extras="${p.extras || ""}"
 
-CRITICAL: Each prompt field must be UNDER 20 WORDS. Use comma-separated keywords only. No long sentences.
-
-Return ONLY this exact JSON structure with short values:
-{"subject":"main subject in 5 words","style":"visual style in 5 words","lighting":"lighting in 3 words","camera":"camera angle in 3 words","mood":"mood in 3 words","ratio":"${p.proporcao || "9:16"}","variante_a_change":"different angle in 3 words","variante_b_change":"different lighting in 3 words","instrucoes":"1.Copia prompt_principal. 2.Gera no Grok. 3.Usa no Gerador de Reel."}`;
+Return exactly this JSON structure with short values (max 8 words each):
+{"subject":"what appears in image","style":"visual style keywords","lighting":"lighting type","camera":"camera angle","mood":"emotional tone","ratio":"${p.proporcao || "9:16"}","va":"different angle keywords","vb":"different lighting keywords","instrucoes":"1.Copia prompt_principal. 2.Gera no Grok. 3.Usa no Gerador de Reel."}`;
 }
 
 function buildReelStoryboardPrompt(p: any): string {
