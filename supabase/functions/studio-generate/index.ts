@@ -273,11 +273,14 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (parseErr) {
-      console.error("JSON parse failed. Raw:", rawText.substring(0, 500));
-      return new Response(JSON.stringify({ error: "A IA gerou uma resposta malformada. Tenta novamente." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const preview = rawText ? rawText.substring(0, 800) : "rawText vazio";
+      console.error("JSON parse failed preview:", preview);
+      return new Response(
+        JSON.stringify({
+          error: "Resposta malformada: " + preview,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
   } catch (e) {
     console.error("studio-generate error:", e);
