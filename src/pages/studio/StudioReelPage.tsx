@@ -1222,11 +1222,16 @@ const ReelOutput = ({
             </div>
           ) : result.analise_imagem ? (
             <div className="rounded-xl border border-ring/20 bg-ring/5 px-4 py-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-xs font-semibold text-ring">Análise da imagem base</span>
-                <Badge variant="secondary" className="text-[10px]">
-                  {ESTILOS.find((e) => e.key === estilo)?.emoji} {estilo}
-                </Badge>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-ring">Análise visual da imagem</span>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {ESTILOS.find((e) => e.key === estilo)?.emoji} {estilo}
+                  </Badge>
+                </div>
+                <span className="text-[9px] text-muted-foreground flex items-center gap-1 px-2 py-0.5 rounded-full border border-ring/20 bg-ring/10">
+                  🧠 Gemini analisou a tua imagem
+                </span>
               </div>
               <p className="text-xs text-muted-foreground">{result.analise_imagem}</p>
             </div>
@@ -1238,22 +1243,45 @@ const ReelOutput = ({
               <p className="text-xs font-semibold text-foreground">🎬 Storyboard gerado</p>
               <p className="text-[10px] text-muted-foreground">5 cenas · 30 segundos · Continuidade narrativa</p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1.5 text-xs border-primary/30 hover:bg-primary/5"
-              onClick={() => {
-                const allPrompts = (result.extensoes || [])
-                  .map(
-                    (ext: any, idx: number) =>
-                      `CENA ${String(idx + 1).padStart(2, "0")} — ${ext.titulo}\n${ext.prompt}`,
-                  )
-                  .join("\n\n---\n\n");
-                navigator.clipboard.writeText(allPrompts);
-              }}
-            >
-              📄 Copiar tudo
-            </Button>
+            <div className="flex gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1 text-xs border-primary/30 hover:bg-primary/5"
+                title="Copia os prompts completos para colar no Grok"
+                onClick={() => {
+                  const prompts = (result.extensoes || [])
+                    .map(
+                      (ext: any, idx: number) =>
+                        `CENA ${String(idx + 1).padStart(2, "0")} — ${ext.titulo}\n${ext.prompt}`,
+                    )
+                    .join("\n\n---\n\n");
+                  navigator.clipboard.writeText(prompts);
+                }}
+              >
+                🎬 Prompts Grok
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1 text-xs border-primary/30 hover:bg-primary/5"
+                title="Copia o storyboard completo com voz e texto no ecrã"
+                onClick={() => {
+                  const storyboard = (result.extensoes || [])
+                    .map((ext: any, idx: number) => {
+                      const vozM = ext.prompt.match(/VOZ:\s*[""]?([^""\n]+)[""]?/i);
+                      const textoM = ext.prompt.match(/TEXTO NO ECR[ÃA]:\s*[""]?([^""\n]+)[""]?/i);
+                      const voz = vozM?.[1]?.trim() || "";
+                      const texto = textoM?.[1]?.trim() || "";
+                      return `CENA ${String(idx + 1).padStart(2, "0")} — ${ext.titulo}\n🎤 VOZ: "${voz}"\n🖥️ ECRÃ: "${texto}"`;
+                    })
+                    .join("\n\n");
+                  navigator.clipboard.writeText(storyboard);
+                }}
+              >
+                📄 Storyboard
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-3">
