@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Loader2, Upload, Sparkles, Film, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { useSaveGeneration } from "@/hooks/useGenerations";
 import { useNavigate } from "react-router-dom";
 import GrokBox from "@/components/studio/GrokBox";
 import CopyButton from "@/components/studio/CopyButton";
+import { useStudioContext } from "@/pages/studio/StudioLayout";
 
 const ESTILOS = [
   { key: "moderno", label: "Moderno & Escuro", emoji: "\u{1F311}", desc: "Fundo escuro, neon verde/laranja" },
@@ -672,6 +673,16 @@ const StudioImagePage = () => {
   const [generating, setGenerating] = useState(false);
   const [reelCompletoResult, setReelCompletoResult] = useState<any>(null);
   const [gerandoReelCompleto, setGerandoReelCompleto] = useState(false);
+
+  // Pre-preencher campos quando negocio selecionado no selector do topo
+  const { selectedBusiness } = useStudioContext();
+
+  useEffect(() => {
+    if (!selectedBusiness) return;
+    if (selectedBusiness.name && !nome) setNome(selectedBusiness.name);
+    if (selectedBusiness.city && !ambiente) setAmbiente(selectedBusiness.city);
+    if (selectedBusiness.description && !descricao) setDescricao(selectedBusiness.description);
+  }, [selectedBusiness]);
 
   const canGenerate = !generating;
 
