@@ -500,7 +500,7 @@ const StudioImagePage = () => {
     setResult(data);
 
     saveGen.mutate({
-      type: reelMode ? "image_reel" : "image",
+      type: "image",
       title: `${nome || objectivoImagem || "Imagem"} · ${sector || estilo}`,
       subtitle: reelMode ? `Reel-ready · ${proporcao}` : `${proporcao} · ${estilo}`,
       data,
