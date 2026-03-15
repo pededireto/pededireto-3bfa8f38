@@ -8,7 +8,7 @@ export interface Category {
   description: string | null;
   icon: string | null;
   image_url: string | null;
-  video_url: string | null; // ← novo campo
+  video_url: string | null;
   alcance_default: "local" | "nacional" | "hibrido";
   display_order: number;
   is_active: boolean;
@@ -70,6 +70,9 @@ export const useCreateCategory = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
+    onError: (error: any) => {
+      console.error("[useCreateCategory] error:", error);
+    },
   });
 };
 
@@ -85,6 +88,9 @@ export const useUpdateCategory = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
+    onError: (error: any) => {
+      console.error("[useUpdateCategory] error:", error);
+    },
   });
 };
 
@@ -98,6 +104,9 @@ export const useDeleteCategory = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+    onError: (error: any) => {
+      console.error("[useDeleteCategory] error:", error);
     },
   });
 };

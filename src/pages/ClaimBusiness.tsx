@@ -151,7 +151,10 @@ const ClaimBusiness = () => {
       toast({ title: "Conta criada e negócio reclamado!", description: "O seu pedido está em validação." });
       window.location.href = BUSINESS_DASHBOARD_URL;
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message || "Não foi possível criar a conta.", variant: "destructive" });
+      const detail = err?.details || err?.hint || err?.message || "Não foi possível criar a conta.";
+      const code = err?.code ? ` (${err.code})` : "";
+      toast({ title: "Erro ao criar conta", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[ClaimBusiness] signup error:", err);
     } finally {
       setIsSigningUp(false);
     }
@@ -182,7 +185,10 @@ const ClaimBusiness = () => {
       toast({ title: "Pedido enviado!", description: "O negócio foi criado e está pendente de validação." });
       window.location.href = BUSINESS_DASHBOARD_URL;
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message || "Não foi possível criar o negócio.", variant: "destructive" });
+      const detail = err?.details || err?.hint || err?.message || "Não foi possível criar o negócio.";
+      const code = err?.code ? ` (${err.code})` : "";
+      toast({ title: "Erro ao criar negócio", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[ClaimBusiness] create error:", err);
     } finally {
       setIsCreating(false);
     }

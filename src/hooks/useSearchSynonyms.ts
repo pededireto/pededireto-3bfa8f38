@@ -50,6 +50,9 @@ export const useCreateSearchSynonym = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["search-synonyms"] });
     },
+    onError: (error: any) => {
+      console.error("[useCreateSearchSynonym] error:", error);
+    },
   });
 };
 
@@ -68,6 +71,9 @@ export const useDeleteSearchSynonym = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["search-synonyms"] });
     },
+    onError: (error: any) => {
+      console.error("[useDeleteSearchSynonym] error:", error);
+    },
   });
 };
 
@@ -76,7 +82,6 @@ export const useBulkCreateSearchSynonyms = () => {
 
   return useMutation({
     mutationFn: async (rows: { termo: string; equivalente: string; type: string }[]) => {
-      // Count before
       const { count: before } = await supabase
         .from("search_synonyms")
         .select("*", { count: "exact", head: true });
@@ -87,7 +92,6 @@ export const useBulkCreateSearchSynonyms = () => {
 
       if (error) throw error;
 
-      // Count after
       const { count: after } = await supabase
         .from("search_synonyms")
         .select("*", { count: "exact", head: true });
@@ -98,6 +102,9 @@ export const useBulkCreateSearchSynonyms = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["search-synonyms"] });
+    },
+    onError: (error: any) => {
+      console.error("[useBulkCreateSearchSynonyms] error:", error);
     },
   });
 };

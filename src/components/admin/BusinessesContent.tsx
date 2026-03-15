@@ -121,8 +121,11 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
     try {
       await deleteBusiness.mutateAsync(id);
       toast({ title: "Negócio removido com sucesso" });
-    } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível remover o negócio", variant: "destructive" });
+    } catch (error: any) {
+      const detail = error?.details || error?.hint || error?.message || "Não foi possível remover o negócio";
+      const code = error?.code ? ` (${error.code})` : "";
+      toast({ title: "Erro ao remover negócio", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[BusinessesContent] delete error:", error);
     }
   };
 

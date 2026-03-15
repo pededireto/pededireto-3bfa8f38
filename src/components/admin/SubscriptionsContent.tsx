@@ -42,8 +42,11 @@ const SubscriptionsContent = ({ businesses }: SubscriptionsContentProps) => {
         is_active: false,
       });
       toast({ title: "Subscrição marcada como expirada" });
-    } catch (error) {
-      toast({ title: "Erro ao atualizar", variant: "destructive" });
+    } catch (error: any) {
+      const detail = error?.details || error?.hint || error?.message || "Erro desconhecido";
+      const code = error?.code ? ` (${error.code})` : "";
+      toast({ title: "Erro ao expirar subscrição", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[SubscriptionsContent] error:", error);
     } finally {
       setUpdatingId(null);
     }

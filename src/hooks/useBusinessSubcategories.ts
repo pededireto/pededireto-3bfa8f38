@@ -87,5 +87,8 @@ export const useSyncBusinessSubcategories = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
     },
+    onError: (error: any) => {
+      console.error("[useSyncBusinessSubcategories] error:", error);
+    },
   });
 };

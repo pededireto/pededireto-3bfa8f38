@@ -16,7 +16,6 @@ export interface SuggestionInput {
   message?: string | null;
 }
 
-// Create suggestion (public)
 export const useCreateSuggestion = () => {
   return useMutation({
     mutationFn: async (suggestion: SuggestionInput) => {
@@ -29,10 +28,12 @@ export const useCreateSuggestion = () => {
       if (error) throw error;
       return data as Suggestion;
     },
+    onError: (error: any) => {
+      console.error("[useCreateSuggestion] error:", error);
+    },
   });
 };
 
-// Fetch all suggestions (admin only)
 export const useSuggestions = () => {
   return useQuery({
     queryKey: ["suggestions"],
@@ -48,7 +49,6 @@ export const useSuggestions = () => {
   });
 };
 
-// Delete suggestion (admin only)
 export const useDeleteSuggestion = () => {
   const queryClient = useQueryClient();
   
@@ -64,10 +64,12 @@ export const useDeleteSuggestion = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suggestions"] });
     },
+    onError: (error: any) => {
+      console.error("[useDeleteSuggestion] error:", error);
+    },
   });
 };
 
-// Update suggestion status (admin only)
 export const useUpdateSuggestionStatus = () => {
   const queryClient = useQueryClient();
 
@@ -82,6 +84,9 @@ export const useUpdateSuggestionStatus = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suggestions"] });
+    },
+    onError: (error: any) => {
+      console.error("[useUpdateSuggestionStatus] error:", error);
     },
   });
 };

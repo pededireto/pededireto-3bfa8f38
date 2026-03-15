@@ -822,11 +822,14 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       }
       onSaved();
     } catch (error: any) {
+      const detail = error?.details || error?.hint || error?.message || "Erro desconhecido";
+      const code = error?.code ? ` (${error.code})` : "";
       toast({
-        title: "Erro",
-        description: error?.message || "Não foi possível guardar o negócio",
+        title: "Erro ao guardar negócio",
+        description: `${detail}${code}`,
         variant: "destructive",
       });
+      console.error("[BusinessFileCard] error:", error);
     }
   };
   const isLoading = createBusiness.isPending || updateBusinessAdmin.isPending || updateBusinessOwner.isPending;

@@ -65,12 +65,14 @@ export const ReviewForm = ({ businessId, existingReview, onSuccess, onCancel }: 
       setComment("");
 
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
+      const detail = error?.details || error?.hint || error?.message || "Por favor, tente novamente.";
       toast({
         title: "Erro ao publicar avaliação",
-        description: "Por favor, tente novamente.",
+        description: detail,
         variant: "destructive",
       });
+      console.error("[ReviewForm] error:", error);
     }
   };
 

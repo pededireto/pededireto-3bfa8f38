@@ -13,8 +13,8 @@ export interface FeaturedCategory {
     name: string;
     slug: string;
     icon: string | null;
-    image_url: string | null; // ← adicionado
-    video_url: string | null; // ← adicionado
+    image_url: string | null;
+    video_url: string | null;
   } | null;
 }
 
@@ -24,7 +24,6 @@ export const useFeaturedCategories = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("featured_categories" as any)
-        // ← join expandido para incluir image_url e video_url da tabela categories
         .select("*, categories(name, slug, icon, image_url, video_url)")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
@@ -68,6 +67,9 @@ export const useCreateFeaturedCategory = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["featured_categories"] });
     },
+    onError: (error: any) => {
+      console.error("[useCreateFeaturedCategory] error:", error);
+    },
   });
 };
 
@@ -95,6 +97,9 @@ export const useUpdateFeaturedCategory = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["featured_categories"] });
     },
+    onError: (error: any) => {
+      console.error("[useUpdateFeaturedCategory] error:", error);
+    },
   });
 };
 
@@ -110,6 +115,9 @@ export const useDeleteFeaturedCategory = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["featured_categories"] });
+    },
+    onError: (error: any) => {
+      console.error("[useDeleteFeaturedCategory] error:", error);
     },
   });
 };

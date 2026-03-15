@@ -18,7 +18,10 @@ export const PendingClaimsPanel = () => {
       await approve.mutateAsync({ claimId, businessId });
       toast({ title: "Reclamação aprovada" });
     } catch (error: any) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      const detail = error?.details || error?.hint || error?.message || "Erro desconhecido";
+      const code = error?.code ? ` (${error.code})` : "";
+      toast({ title: "Erro ao aprovar reclamação", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[PendingClaimsPanel] approve error:", error);
     }
   };
 
@@ -27,7 +30,10 @@ export const PendingClaimsPanel = () => {
       await reject.mutateAsync({ claimId });
       toast({ title: "Reclamação rejeitada" });
     } catch (error: any) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      const detail = error?.details || error?.hint || error?.message || "Erro desconhecido";
+      const code = error?.code ? ` (${error.code})` : "";
+      toast({ title: "Erro ao rejeitar reclamação", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[PendingClaimsPanel] reject error:", error);
     }
   };
 

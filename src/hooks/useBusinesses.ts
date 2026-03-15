@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatSupabaseError } from "@/utils/supabaseError";
 import type { Json } from "@/integrations/supabase/types";
 
 export type SubscriptionPlan = "free" | "1_month" | "3_months" | "6_months" | "1_year";
@@ -263,6 +264,9 @@ export const useCreateBusiness = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
     },
+    onError: (error: any) => {
+      console.error("[useCreateBusiness] error:", error);
+    },
   });
 };
 
@@ -284,6 +288,9 @@ export const useUpdateBusiness = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
     },
+    onError: (error: any) => {
+      console.error("[useUpdateBusiness] error:", error);
+    },
   });
 };
 
@@ -298,6 +305,9 @@ export const useDeleteBusiness = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
+    },
+    onError: (error: any) => {
+      console.error("[useDeleteBusiness] error:", error);
     },
   });
 };

@@ -108,6 +108,9 @@ export const useCreateSubcategory = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subcategories"] });
     },
+    onError: (error: any) => {
+      console.error("[useCreateSubcategory] error:", error);
+    },
   });
 };
 
@@ -129,6 +132,9 @@ export const useUpdateSubcategory = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subcategories"] });
     },
+    onError: (error: any) => {
+      console.error("[useUpdateSubcategory] error:", error);
+    },
   });
 };
 
@@ -146,6 +152,9 @@ export const useDeleteSubcategory = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subcategories"] });
+    },
+    onError: (error: any) => {
+      console.error("[useDeleteSubcategory] error:", error);
     },
   });
 };
