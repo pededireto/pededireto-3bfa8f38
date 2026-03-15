@@ -265,11 +265,14 @@ const RegisterBusiness = () => {
 
       navigate("/business-dashboard");
     } catch (err: any) {
+      const detail = err?.details || err?.hint || err?.message || "Não foi possível registar o negócio.";
+      const code = err?.code ? ` (${err.code})` : "";
       toast({
-        title: "Erro",
-        description: err.message || "Não foi possível registar o negócio.",
+        title: "Erro ao registar negócio",
+        description: `${detail}${code}`,
         variant: "destructive",
       });
+      console.error("[RegisterBusiness] error:", err);
     } finally {
       setIsSubmitting(false);
     }
