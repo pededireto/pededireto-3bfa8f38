@@ -338,67 +338,22 @@ REGRAS DE QUALIDADE:
 - Voiceover em PT-PT - NUNCA brasileiro
 - screen_text impactante, max 5 palavras
 
-Responde APENAS com JSON valido, sem markdown, sem texto extra:
-{
-  "instrucao_reel": "estrategia cinematografica geral para os 30 segundos em 1-2 frases",
-  "cenas": [
-    {
-      "titulo": "HOOK",
-      "foco": "captar atencao",
-      "camera": "extreme close-up, rack focus",
-      "lighting": "warm golden hour backlight",
-      "composition": "rule of thirds, subject off-center",
-      "emotion": "curiosity and desire",
-      "prompt": "Cinematic extreme close-up of [descricao em ingles]... 9:16 vertical, photorealistic",
-      "voiceover": "frase impactante em PT-PT, max 12 palavras",
-      "screen_text": "TEXTO IMPACTO"
-    },
-    {
-      "titulo": "DESENVOLVIMENTO",
-      "foco": "apresentar valor",
-      "camera": "medium shot, slow dolly in",
-      "lighting": "soft diffused light, warm tones",
-      "composition": "centered subject, depth layers",
-      "emotion": "warmth and quality",
-      "prompt": "...",
-      "voiceover": "...",
-      "screen_text": "..."
-    },
-    {
-      "titulo": "CONFIANCA",
-      "foco": "credibilidade",
-      "camera": "close-up detail shot",
-      "lighting": "natural window light",
-      "composition": "macro texture, shallow depth of field",
-      "emotion": "trust and authenticity",
-      "prompt": "...",
-      "voiceover": "...",
-      "screen_text": "..."
-    },
-    {
-      "titulo": "URGENCIA",
-      "foco": "motivar accao",
-      "camera": "dynamic angle, slight low angle",
-      "lighting": "high contrast, dramatic",
-      "composition": "leading lines, asymmetric",
-      "emotion": "urgency and excitement",
-      "prompt": "...",
-      "voiceover": "...",
-      "screen_text": "..."
-    },
-    {
-      "titulo": "CTA",
-      "foco": "chamada para accao",
-      "camera": "wide establishing shot or brand close-up",
-      "lighting": "clean, professional",
-      "composition": "centered, balanced",
-      "emotion": "confidence and invitation",
-      "prompt": "...",
-      "voiceover": "...",
-      "screen_text": "..."
-    }
-  ]
-}`;
+Responde APENAS com JSON valido, sem markdown, sem texto extra.
+O JSON deve ter esta estrutura exacta com exactamente 5 cenas:
+
+instrucao_reel: string com estrategia geral
+cenas: array de 5 objectos, cada um com:
+  titulo: string (HOOK | DESENVOLVIMENTO | CONFIANCA | URGENCIA | CTA)
+  foco: string curta
+  camera: string em ingles
+  lighting: string em ingles
+  composition: string em ingles
+  emotion: string em ingles
+  prompt: string em ingles, cinematografico, para Grok image generation, sem newlines
+  voiceover: string PT-PT, max 12 palavras, sem aspas dentro
+  screen_text: string max 5 palavras em maiusculas, sem aspas dentro
+
+IMPORTANTE: todos os valores sao strings simples, sem newlines, sem aspas duplas dentro dos valores.`;
 }
 
 // ── NOVO: generate_reel_full_package ──────────────────────────────────────
@@ -520,7 +475,7 @@ serve(async (req) => {
       const images = payload.referenceImageBase64
         ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
         : undefined;
-      rawText = await callGemini(systemPrompt, userText, images, 3000);
+      rawText = await callGemini(systemPrompt, userText, images, 4000);
     } else if (normalizedAction === "generate_reel_full_package") {
       // Novo: script + legenda + hashtags + copy de anuncio
       const systemPrompt = buildReelFullPackagePrompt(payload);
