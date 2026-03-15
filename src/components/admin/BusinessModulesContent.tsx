@@ -111,7 +111,10 @@ const BusinessModulesContent = () => {
       }
       setDialogOpen(false);
     } catch (e: any) {
-      toast({ title: "Erro", description: e.message, variant: "destructive" });
+      const detail = e?.details || e?.hint || e?.message || "Erro desconhecido";
+      const code = e?.code ? ` (${e.code})` : "";
+      toast({ title: "Erro ao guardar módulo", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[BusinessModulesContent] save error:", e);
     }
   };
 
