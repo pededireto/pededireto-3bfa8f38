@@ -188,6 +188,8 @@ const App = () => {
                     <Route path="/registar/consumidor" element={<UserRegister />} />
                     <Route path="/register/business" element={<RegisterBusiness />} />
 
+                    <Route path="/auth/callback" element={<AuthCallback />} />
+
                     {/* PASSWORD RECOVERY */}
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
