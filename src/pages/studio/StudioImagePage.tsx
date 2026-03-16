@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,160 @@ import { cn } from "@/lib/utils";
 import { useImageLookup } from "@/hooks/useImageLookup";
 import { useSaveGeneration } from "@/hooks/useGenerations";
 import GrokBox from "@/components/studio/GrokBox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// 🗂️ ESTRUTURA DE CATEGORIAS E SUBCATEGORIAS DO SISTEMA
+const CATEGORIAS_SISTEMA = [
+  {
+    key: "restaurantes",
+    label: "Restauração",
+    emoji: "🍽️",
+    subcategorias: [
+      { key: "comida-tradicional", label: "Comida Tradicional" },
+      { key: "pizza", label: "Pizzarias" },
+      { key: "sushi", label: "Sushi" },
+      { key: "hamburguer", label: "Hambúrgueres" },
+      { key: "asiatica", label: "Cozinha Asiática" },
+      { key: "vegetariano", label: "Vegetariano & Vegan" },
+      { key: "cafe-bistro", label: "Café & Bistro" },
+      { key: "buffet", label: "Buffet & Rodízio" },
+    ],
+  },
+  {
+    key: "beleza-bem-estar",
+    label: "Beleza & Bem-estar",
+    emoji: "💇",
+    subcategorias: [
+      { key: "cabeleireiro", label: "Cabeleireiro & Barbearia" },
+      { key: "estetica", label: "Estética" },
+      { key: "pedicure", label: "Pedicure" },
+      { key: "tatuagens", label: "Tatuagens & Piercings" },
+      { key: "spa", label: "Spa & Bem-Estar" },
+    ],
+  },
+  {
+    key: "saude",
+    label: "Saúde",
+    emoji: "🏥",
+    subcategorias: [
+      { key: "clinicas-medicas", label: "Clínicas Médicas" },
+      { key: "fisioterapia", label: "Fisioterapia & Reabilitação" },
+      { key: "psicologia", label: "Psicologia & Saúde Mental" },
+      { key: "dentistas", label: "Dentistas & Saúde Oral" },
+      { key: "farmacias", label: "Farmácias" },
+      { key: "analises-clinicas", label: "Análises Clínicas" },
+    ],
+  },
+  {
+    key: "oficinas-automovel",
+    label: "Oficinas & Automóvel",
+    emoji: "🚗",
+    subcategorias: [
+      { key: "oficinas", label: "Oficinas Mecânicas" },
+      { key: "lavagem-auto", label: "Lavagem & Estética Automóvel" },
+      { key: "pneus", label: "Pneus & Alinhamento" },
+      { key: "autopecas", label: "Autopeças & Acessórios" },
+      { key: "electricista-auto", label: "Electricista Automóvel" },
+    ],
+  },
+  {
+    key: "construcao-materiais",
+    label: "Construção & Materiais",
+    emoji: "🏗️",
+    subcategorias: [
+      { key: "materiais-construcao", label: "Materiais de Construção Geral" },
+      { key: "tintas", label: "Tintas & Revestimentos" },
+      { key: "portas-janelas", label: "Portas, Janelas & Caixilharia" },
+      { key: "madeiras", label: "Madeiras & Carpintaria" },
+      { key: "telhados", label: "Coberturas & Telhados" },
+    ],
+  },
+  {
+    key: "energia-sustentabilidade",
+    label: "Energia & Sustentabilidade",
+    emoji: "⚡",
+    subcategorias: [
+      { key: "paineis-solares", label: "Painéis Solares & Fotovoltaico" },
+      { key: "consultoria-energetica", label: "Consultoria Energética" },
+      { key: "baterias", label: "Baterias & Armazenamento" },
+      { key: "carregadores-ev", label: "Carregadores Veículos Elétricos" },
+    ],
+  },
+  {
+    key: "limpezas-manutencao",
+    label: "Limpezas & Manutenção",
+    emoji: "🧹",
+    subcategorias: [
+      { key: "limpeza-domestica", label: "Limpeza Doméstica" },
+      { key: "limpeza-condominios", label: "Limpeza de Condomínios" },
+      { key: "limpeza-pos-obra", label: "Limpeza Pós-Obra" },
+      { key: "desentupimentos", label: "Desentupimentos Urgentes" },
+      { key: "controlo-pragas", label: "Desinfecção & Controlo de Pragas" },
+    ],
+  },
+  {
+    key: "educacao-formacao",
+    label: "Educação & Formação",
+    emoji: "📚",
+    subcategorias: [
+      { key: "centros-estudo", label: "Centros de Estudo & Explicações" },
+      { key: "escolas-conducao", label: "Escolas de Condução" },
+      { key: "formacao", label: "Formação & Desenvolvimento" },
+    ],
+  },
+  {
+    key: "eventos",
+    label: "Eventos",
+    emoji: "🎉",
+    subcategorias: [
+      { key: "organizadoras", label: "Empresas Organizadoras de Eventos" },
+      { key: "catering", label: "Catering & Bebidas" },
+      { key: "servicos-complementares", label: "Serviços Complementares" },
+    ],
+  },
+  {
+    key: "imobiliario",
+    label: "Imobiliário",
+    emoji: "🏠",
+    subcategorias: [
+      { key: "agencias", label: "Agências Imobiliárias" },
+      { key: "consultores", label: "Consultores Imobiliários" },
+      { key: "avaliacao", label: "Avaliação de Imóveis" },
+      { key: "administracao-condominios", label: "Administração de Condomínios" },
+    ],
+  },
+  {
+    key: "transporte-logistica",
+    label: "Transporte & Logística",
+    emoji: "🚚",
+    subcategorias: [
+      { key: "mudancas", label: "Mudanças Residenciais & Comerciais" },
+      { key: "entregas-rapidas", label: "Entregas Rápidas & Urgentes" },
+      { key: "transportadoras", label: "Transportadoras & Carga Geral" },
+      { key: "motoristas", label: "Motoristas & Serviços Personalizados" },
+    ],
+  },
+  {
+    key: "familia-criancas",
+    label: "Família & Crianças",
+    emoji: "👶",
+    subcategorias: [
+      { key: "babysitting", label: "Babysitting" },
+      { key: "transporte-escolar", label: "Transporte Escolar" },
+      { key: "animacao-infantil", label: "Animação Infantil" },
+    ],
+  },
+  {
+    key: "animais",
+    label: "Pet & Animais",
+    emoji: "🐾",
+    subcategorias: [
+      { key: "lojas-pet", label: "Lojas & Produtos para Animais" },
+      { key: "veterinarios", label: "Veterinários" },
+      { key: "grooming", label: "Grooming & Estética Animal" },
+    ],
+  },
+];
 
 const ESTILOS = [
   { key: "moderno", label: "Moderno & Escuro", emoji: "🌑", desc: "Fundo escuro, neon verde/laranja" },
@@ -33,27 +187,14 @@ const PROPORCOES = [
   { key: "16:9", label: "16:9 Horizontal", desc: "YouTube & Web" },
 ];
 
-const CATEGORIAS = [
-  { key: "restaurantes", label: "Restauração", emoji: "🍽️" },
-  { key: "beleza-bem-estar", label: "Beleza & Bem-estar", emoji: "💇" },
-  { key: "saude", label: "Saúde", emoji: "🏥" },
-  { key: "reparacoes-servicos-urgentes", label: "Reparações & Urgentes", emoji: "🔧" },
-  { key: "limpezas-manutencao", label: "Limpezas & Manutenção", emoji: "🧹" },
-  { key: "servicos-profissionais-empresariais", label: "Serv. Profissionais", emoji: "💼" },
-  { key: "eventos", label: "Eventos", emoji: "🎉" },
-  { key: "lojas", label: "Lojas", emoji: "🛍️" },
-  { key: "tecnologia-informatica", label: "Tecnologia", emoji: "💻" },
-  { key: "pet-animais", label: "Pet & Animais", emoji: "🐾" },
-  { key: "imobiliario", label: "Imobiliário", emoji: "🏠" },
-  { key: "servicos-automovel", label: "Automóvel", emoji: "🚗" },
-];
-
 const StudioImagePage = () => {
   const { lookupPrompt, isLoading: lookupLoading } = useImageLookup();
   const saveGen = useSaveGeneration();
   const navigate = useNavigate();
 
-  const [categoria, setCategoria] = useState("");
+  // Estados
+  const [categoriaKey, setCategoriaKey] = useState("");
+  const [subcategoriaKey, setSubcategoriaKey] = useState("");
   const [objectivoImagem, setObjectivoImagem] = useState("");
   const [nome, setNome] = useState("");
   const [sector, setSector] = useState("");
@@ -67,13 +208,26 @@ const StudioImagePage = () => {
   const [result, setResult] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
 
+  // 🎯 Categoria selecionada
+  const categoriaAtual = useMemo(() => CATEGORIAS_SISTEMA.find((c) => c.key === categoriaKey), [categoriaKey]);
+
+  // 🎯 Subcategorias da categoria selecionada
+  const subcategoriasDisponiveis = useMemo(() => categoriaAtual?.subcategorias || [], [categoriaAtual]);
+
+  // Reset subcategoria quando muda categoria
+  const handleCategoriaChange = (newKey: string) => {
+    setCategoriaKey(newKey);
+    setSubcategoriaKey(""); // Reset subcategoria
+  };
+
   const handleGenerate = async () => {
     if (generating) return;
     setGenerating(true);
     setResult(null);
 
     const data = await lookupPrompt({
-      categoria: categoria || "restaurantes",
+      categoria: categoriaKey || "restaurantes",
+      subcategoria: subcategoriaKey,
       estilo,
       proporcao,
       objectivo: OBJECTIVOS.find((o) => o.key === objectivoImagem)?.label || objectivoImagem || undefined,
@@ -91,7 +245,7 @@ const StudioImagePage = () => {
 
     saveGen.mutate({
       type: "image",
-      title: `${nome || categoria || "Imagem"} · ${sector || estilo}`,
+      title: `${nome || categoriaAtual?.label || "Imagem"} · ${sector || estilo}`,
       subtitle: `${proporcao} · ${estilo}`,
       data,
     });
@@ -145,23 +299,42 @@ const StudioImagePage = () => {
         {/* Categoria do negócio */}
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
           <p className="text-sm font-display font-semibold">Categoria do negócio</p>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIAS.map((c) => (
-              <button
-                key={c.key}
-                onClick={() => setCategoria(categoria === c.key ? "" : c.key)}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5",
-                  categoria === c.key
-                    ? "bg-primary/10 border-primary text-primary font-medium"
-                    : "border-border hover:border-primary/30",
-                )}
-              >
-                <span>{c.emoji}</span>
-                <span>{c.label}</span>
-              </button>
-            ))}
-          </div>
+
+          {/* Dropdown de Categorias */}
+          <Select value={categoriaKey} onValueChange={handleCategoriaChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Seleciona a categoria..." />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIAS_SISTEMA.map((cat) => (
+                <SelectItem key={cat.key} value={cat.key}>
+                  <span className="flex items-center gap-2">
+                    <span>{cat.emoji}</span>
+                    <span>{cat.label}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Dropdown de Subcategorias (só aparece se tiver categoria selecionada) */}
+          {categoriaAtual && subcategoriasDisponiveis.length > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Subcategoria (opcional)</p>
+              <Select value={subcategoriaKey} onValueChange={setSubcategoriaKey}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleciona a subcategoria..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {subcategoriasDisponiveis.map((sub) => (
+                    <SelectItem key={sub.key} value={sub.key}>
+                      {sub.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* O que queres criar? */}
@@ -279,13 +452,32 @@ const StudioImagePage = () => {
         </div>
 
         {/* Feedback visual das personalizações ativas */}
-        {!generating && (nome || descricao || personagens || ambiente) && (
+        {!generating && (nome || descricao || personagens || ambiente || categoriaAtual || subcategoriaKey) && (
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
             <p className="font-semibold text-primary mb-1.5 flex items-center gap-1.5">
               <span>✨</span>
               <span>Personalizações ativas</span>
             </p>
             <div className="space-y-0.5 text-muted-foreground">
+              {categoriaAtual && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-primary">•</span>
+                  <span>
+                    Categoria: <span className="text-foreground font-medium">{categoriaAtual.label}</span>
+                  </span>
+                </div>
+              )}
+              {subcategoriaKey && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-primary">•</span>
+                  <span>
+                    Subcategoria:{" "}
+                    <span className="text-foreground font-medium">
+                      {subcategoriasDisponiveis.find((s) => s.key === subcategoriaKey)?.label}
+                    </span>
+                  </span>
+                </div>
+              )}
               {nome && (
                 <div className="flex items-start gap-1.5">
                   <span className="text-primary">•</span>
@@ -318,7 +510,7 @@ const StudioImagePage = () => {
 
         <Button
           onClick={handleGenerate}
-          disabled={generating}
+          disabled={generating || !categoriaKey}
           className="w-full h-12 font-display font-bold text-base"
           size="lg"
         >
