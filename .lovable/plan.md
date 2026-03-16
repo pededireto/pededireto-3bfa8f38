@@ -1,21 +1,16 @@
 
-# Plan: Multi-Cidade para Negócios
+# Plan: Gerador de Imagem via Base de Dados
 
 ## Status: ✅ IMPLEMENTADO
 
 ### O que foi feito
 
-1. **Migration SQL** — Criada `business_cities` junction table com RLS, trigger `sync_primary_city` e backfill de todos os negócios existentes (incluindo split dos 6 com separadores)
-2. **Hook `useBusinessCities`** — CRUD para multi-cidade com `useBusinessCityNames` e `useSyncBusinessCities`
-3. **Componente `MultiCityInput`** — Pills removíveis com estrela para cidade primária, input com split automático por vírgula/pipe
-4. **BusinessOwnerEditForm** — Substituído campo cidade por MultiCityInput, sync com junction table ao guardar
-5. **BusinessFileCard (admin)** — Idem
-6. **useBusinesses** — Query agora consulta `business_cities` para filtros de cidade
-7. **useTopRanking** — Rankings consideram todas as cidades de cada negócio
-8. **SubcategoryCityPage** — Consulta junction table para incluir negócios multi-cidade
-9. **BusinessPage + BusinessCard** — Mostram "Atende em Lisboa, Porto, ..." em vez de mega-string
-10. **Sitemap** — Gera URLs SEO para cada cidade individual de cada negócio
+1. **Tabela `image_prompts_library`** — Já existia com 95 templates activos cobrindo 24 categorias × 4 estilos
+2. **Hook `useImageLookup`** — Query directa à BD com filtro progressivo (categoria+estilo+proporcao → relaxação), substituição de placeholders `{{nome}}` etc., incremento de `usage_count`
+3. **`StudioImagePage.tsx`** — Substituída chamada ao Gemini por lookup à BD, adicionado selector de categoria, botão "Usar no Reel", badge do template usado
+4. **`StudioTopbar.tsx`** — Badge condicional: "📚 Biblioteca Curada" em `/app/image`, "IA · Gemini Pro" em `/app/reel`
 
-### Backward compatibility
-- `businesses.city` mantém-se sincronizado via trigger (= cidade primária)
-- Todas as views, RPCs e funções existentes continuam a funcionar
+### Não tocado
+- `studio-generate` Edge Function
+- `StudioReelPage.tsx`
+- `useStudioGenerate.ts`
