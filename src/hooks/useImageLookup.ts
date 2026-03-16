@@ -5,7 +5,7 @@ import { formatSupabaseError } from "@/utils/supabaseError";
 
 interface LookupParams {
   categoria: string;
-  subcategoria?: string; // 👈 ADICIONADO
+  subcategoria?: string;
   estilo: string;
   proporcao: string;
   objectivo?: string;
@@ -27,20 +27,26 @@ interface LookupResult {
 
 function replacePlaceholders(text: string | null, params: LookupParams): string {
   if (!text) return "";
-  return text
-    .replace(/\{\{nome\}\}/gi, params.nome || "the business")
-    .replace(/\{\{sector\}\}/gi, params.sector || "")
-    .replace(/\{\{descricao\}\}/gi, params.descricao || "")
-    .replace(/\{\{personagens\}\}/gi, params.personagens || "")
-    .replace(/\{\{ambiente\}\}/gi, params.ambiente || "")
-    .replace(/\{\{textoSobreposto\}\}/gi, params.textoSobreposto || "");
+
+  let result = text;
+  result = result.replace(/\{\{nome\}\}/gi, params.nome || "the business");
+  result = result.replace(/\{\{sector\}\}/gi, params.sector || "");
+  result = result.replace(/\{\{descricao\}\}/gi, params.descricao || "");
+  result = result.replace(/\{\{personagens\}\}/gi, params.personagens || "");
+  result = result.replace(/\{\{ambiente\}\}/gi, params.ambiente || "");
+  result = result.replace(/\{\{textoSobreposto\}\}/gi, params.textoSobreposto || "");
+
+  return result;
 }
 
 function enrichPromptWithUserInputs(basePrompt: string, params: LookupParams): string {
   let enriched = basePrompt;
 
   if (params.descricao && params.descricao.trim()) {
-    if (!enriched.toLowerCase().includes(params.descricao.toLowerCase())) {
+    const lowerEnriched = enriched.toLowerCase();
+    const lowerDesc = params.descricao.toLowerCase();
+
+    if (!lowerEnriched.includes(lowerDesc)) {
       const firstCommaIndex = enriched.indexOf(",");
       if (firstCommaIndex > 0) {
         enriched = enriched.slice(0, firstCommaIndex) + `, ${params.descricao}` + enriched.slice(firstCommaIndex);
@@ -70,19 +76,32 @@ function enrichPromptWithUserInputs(basePrompt: string, params: LookupParams): s
       }
     }
 
-    if (!replaced && !enriched.toLowerCase().includes(params.personagens.toLowerCase())) {
-      enriched = enriched.replace(/,\s*/, `, ${params.personagens}, `);
+    if (!replaced) {
+      const lowerEnriched = enriched.toLowerCase();
+      const lowerPers = params.personagens.toLowerCase();
+      if (!lowerEnriched.includes(lowerPers)) {
+        const firstComma = enriched.indexOf(",");
+        if (firstComma > 0) {
+          enriched = enriched.slice(0, firstComma + 1) + ` ${params.personagens},` + enriched.slice(firstComma + 1);
+        }
+      }
     }
   }
 
   if (params.ambiente && params.ambiente.trim()) {
-    if (!enriched.toLowerCase().includes(params.ambiente.toLowerCase())) {
+    const lowerEnriched = enriched.toLowerCase();
+    const lowerAmb = params.ambiente.toLowerCase();
+
+    if (!lowerEnriched.includes(lowerAmb)) {
       enriched = enriched.replace(/(,?\s*9:16|1:1|16:9)/i, `, ${params.ambiente}, 9:16`);
     }
   }
 
   if (params.nome && params.nome.trim()) {
-    if (!enriched.toLowerCase().includes(params.nome.toLowerCase())) {
+    const lowerEnriched = enriched.toLowerCase();
+    const lowerNome = params.nome.toLowerCase();
+
+    if (!lowerEnriched.includes(lowerNome)) {
       enriched = enriched.replace(/(Portuguese|Portugal|setting)/i, `${params.nome} $1`);
     }
   }
@@ -90,7 +109,6 @@ function enrichPromptWithUserInputs(basePrompt: string, params: LookupParams): s
   enriched = enriched
     .replace(/,\s*,/g, ",")
     .replace(/\s{2,}/g, " ")
-    .replace(/,\s*9:16/g, ", 9:16")
     .trim();
 
   return enriched;
@@ -106,13 +124,7 @@ function createVariantA(basePrompt: string): string {
   ];
 
   const angle = angleModifiers[Math.floor(Math.random() * angleModifiers.length)];
-  let variant = `${angle} ${basePrompt}`;
-  variant = variant.replace(
-    /(close-up|wide angle|overhead|detail shot)\s+(close-up|wide angle|overhead|detail shot)/gi,
-    "$1",
-  );
-
-  return variant;
+  return `${angle} ${basePrompt}`;
 }
 
 function createVariantB(basePrompt: string): string {
@@ -135,9 +147,7 @@ function createVariantB(basePrompt: string): string {
   const lighting = lightingMoods[Math.floor(Math.random() * lightingMoods.length)];
   const detail = extraDetails[Math.floor(Math.random() * extraDetails.length)];
 
-  let variant = basePrompt.replace(/(9:16|1:1|16:9)/i, `${lighting}${detail}$1`);
-
-  return variant;
+  return basePrompt.replace(/(9:16|1:1|16:9)/i, `${lighting}${detail}$1`);
 }
 
 export function useImageLookup() {
@@ -149,17 +159,17 @@ export function useImageLookup() {
     try {
       const { categoria, subcategoria, estilo, proporcao } = params;
 
-      // 🔍 Progressive filtering com SUBCATEGORIA
-      const filters = [
-        { categoria, subcategoria, estilo, proporcao }, // Match completo
-        { categoria, subcategoria, estilo }, // Sem proporção
-        { categoria, estilo, proporcao }, // Sem subcategoria
-        { categoria, estilo }, // Só categoria + estilo
-        { categoria }, // Só categoria
-        {}, // Fallback total
+      const filters: Array<Record<string, string>> = [
+        { categoria, subcategoria: subcategoria || "", estilo, proporcao },
+        { categoria, subcategoria: subcategoria || "", estilo },
+        { categoria, estilo, proporcao },
+        { categoria, estilo },
+        { categoria },
+        {},
       ];
 
       let row: any = null;
+
       for (const filter of filters) {
         let query = supabase.from("image_prompts_library").select("*").eq("is_active", true);
 
@@ -177,7 +187,7 @@ export function useImageLookup() {
 
         if (data) {
           row = data;
-          console.log(`✅ Template encontrado: ${data.titulo} (${Object.keys(filter).join(", ")})`);
+          console.log(`✅ Template: ${data.titulo}`);
           break;
         }
       }
@@ -208,10 +218,6 @@ export function useImageLookup() {
       baseForB = enrichPromptWithUserInputs(baseForB, params);
       const varianteB = createVariantB(baseForB);
 
-      console.log("🎯 Principal:", promptPrincipal.substring(0, 80));
-      console.log("🔄 Variante A:", varianteA.substring(0, 80));
-      console.log("🌅 Variante B:", varianteB.substring(0, 80));
-
       return {
         prompt_principal: promptPrincipal,
         variante_a: varianteA,
@@ -221,11 +227,7 @@ export function useImageLookup() {
       };
     } catch (err: any) {
       const detail = formatSupabaseError(err, "Erro ao procurar template");
-      toast({
-        title: "Erro — Biblioteca de Imagem",
-        description: detail,
-        variant: "destructive",
-      });
+      toast({ title: "Erro — Biblioteca de Imagem", description: detail, variant: "destructive" });
       console.error("[useImageLookup] error:", err);
       return null;
     } finally {
