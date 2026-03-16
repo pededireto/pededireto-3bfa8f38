@@ -34,12 +34,18 @@ const PROPORCOES = [
 ];
 
 const CATEGORIAS = [
-  { key: "restauracao", label: "Restauração", emoji: "🍽️" },
-  { key: "beleza", label: "Beleza & Estética", emoji: "💇" },
-  { key: "saude", label: "Saúde & Bem-estar", emoji: "🏥" },
-  { key: "obras", label: "Obras & Construção", emoji: "🔨" },
-  { key: "profissionais", label: "Serviços Profissionais", emoji: "💼" },
+  { key: "restaurantes", label: "Restauração", emoji: "🍽️" },
+  { key: "beleza-bem-estar", label: "Beleza & Bem-estar", emoji: "💇" },
+  { key: "saude", label: "Saúde", emoji: "🏥" },
+  { key: "reparacoes-servicos-urgentes", label: "Reparações & Urgentes", emoji: "🔧" },
+  { key: "limpezas-manutencao", label: "Limpezas & Manutenção", emoji: "🧹" },
+  { key: "servicos-profissionais-empresariais", label: "Serv. Profissionais", emoji: "💼" },
   { key: "eventos", label: "Eventos", emoji: "🎉" },
+  { key: "lojas", label: "Lojas", emoji: "🛍️" },
+  { key: "tecnologia-informatica", label: "Tecnologia", emoji: "💻" },
+  { key: "pet-animais", label: "Pet & Animais", emoji: "🐾" },
+  { key: "imobiliario", label: "Imobiliário", emoji: "🏠" },
+  { key: "servicos-automovel", label: "Automóvel", emoji: "🚗" },
 ];
 
 const StudioImagePage = () => {
