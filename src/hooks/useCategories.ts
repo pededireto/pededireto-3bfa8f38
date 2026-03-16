@@ -110,3 +110,75 @@ export const useDeleteCategory = () => {
     },
   });
 };
+
+export interface Subcategory {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  image_url: string | null;
+  video_url: string | null;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CategoryWithSubcategories extends Category {
+  subcategories: Subcategory[];
+}
+
+export const useSubcategories = (categoryId: string | undefined) => {
+  return useQuery({
+    queryKey: ["subcategories", categoryId],
+    queryFn: async () => {
+      if (!categoryId) return [];
+
+      const { data, error } = await supabase
+        .from("subcategories")
+        .select("*")
+        .eq("category_id", categoryId)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+      return data as Subcategory[];
+    },
+    enabled: !!categoryId,
+  });
+};
+
+export const useCategoriesWithSubcategories = () => {
+  return useQuery({
+    queryKey: ["categories-with-subcategories"],
+    queryFn: async () => {
+      // Buscar categorias
+      const { data: categories, error: catError } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (catError) throw catError;
+
+      // Buscar todas as subcategorias
+      const { data: subcategories, error: subError } = await supabase
+        .from("subcategories")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (subError) throw subError;
+
+      // Agrupar subcategorias por categoria
+      const categoriesWithSubs: CategoryWithSubcategories[] = (categories || []).map((cat) => ({
+        ...cat,
+        subcategories: (subcategories || []).filter((sub) => sub.category_id === cat.id),
+      }));
+
+      return categoriesWithSubs;
+    },
+  });
+};
