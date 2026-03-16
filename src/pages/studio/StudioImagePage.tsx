@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ArrowRight, ChevronDown } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,161 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useImageLookup } from "@/hooks/useImageLookup";
 import { useSaveGeneration } from "@/hooks/useGenerations";
+import { useCategories } from "@/hooks/useCategories"; // 👈 NOVO
 import GrokBox from "@/components/studio/GrokBox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-// 🗂️ ESTRUTURA DE CATEGORIAS E SUBCATEGORIAS DO SISTEMA
-const CATEGORIAS_SISTEMA = [
-  {
-    key: "restaurantes",
-    label: "Restauração",
-    emoji: "🍽️",
-    subcategorias: [
-      { key: "comida-tradicional", label: "Comida Tradicional" },
-      { key: "pizza", label: "Pizzarias" },
-      { key: "sushi", label: "Sushi" },
-      { key: "hamburguer", label: "Hambúrgueres" },
-      { key: "asiatica", label: "Cozinha Asiática" },
-      { key: "vegetariano", label: "Vegetariano & Vegan" },
-      { key: "cafe-bistro", label: "Café & Bistro" },
-      { key: "buffet", label: "Buffet & Rodízio" },
-    ],
-  },
-  {
-    key: "beleza-bem-estar",
-    label: "Beleza & Bem-estar",
-    emoji: "💇",
-    subcategorias: [
-      { key: "cabeleireiro", label: "Cabeleireiro & Barbearia" },
-      { key: "estetica", label: "Estética" },
-      { key: "pedicure", label: "Pedicure" },
-      { key: "tatuagens", label: "Tatuagens & Piercings" },
-      { key: "spa", label: "Spa & Bem-Estar" },
-    ],
-  },
-  {
-    key: "saude",
-    label: "Saúde",
-    emoji: "🏥",
-    subcategorias: [
-      { key: "clinicas-medicas", label: "Clínicas Médicas" },
-      { key: "fisioterapia", label: "Fisioterapia & Reabilitação" },
-      { key: "psicologia", label: "Psicologia & Saúde Mental" },
-      { key: "dentistas", label: "Dentistas & Saúde Oral" },
-      { key: "farmacias", label: "Farmácias" },
-      { key: "analises-clinicas", label: "Análises Clínicas" },
-    ],
-  },
-  {
-    key: "oficinas-automovel",
-    label: "Oficinas & Automóvel",
-    emoji: "🚗",
-    subcategorias: [
-      { key: "oficinas", label: "Oficinas Mecânicas" },
-      { key: "lavagem-auto", label: "Lavagem & Estética Automóvel" },
-      { key: "pneus", label: "Pneus & Alinhamento" },
-      { key: "autopecas", label: "Autopeças & Acessórios" },
-      { key: "electricista-auto", label: "Electricista Automóvel" },
-    ],
-  },
-  {
-    key: "construcao-materiais",
-    label: "Construção & Materiais",
-    emoji: "🏗️",
-    subcategorias: [
-      { key: "materiais-construcao", label: "Materiais de Construção Geral" },
-      { key: "tintas", label: "Tintas & Revestimentos" },
-      { key: "portas-janelas", label: "Portas, Janelas & Caixilharia" },
-      { key: "madeiras", label: "Madeiras & Carpintaria" },
-      { key: "telhados", label: "Coberturas & Telhados" },
-    ],
-  },
-  {
-    key: "energia-sustentabilidade",
-    label: "Energia & Sustentabilidade",
-    emoji: "⚡",
-    subcategorias: [
-      { key: "paineis-solares", label: "Painéis Solares & Fotovoltaico" },
-      { key: "consultoria-energetica", label: "Consultoria Energética" },
-      { key: "baterias", label: "Baterias & Armazenamento" },
-      { key: "carregadores-ev", label: "Carregadores Veículos Elétricos" },
-    ],
-  },
-  {
-    key: "limpezas-manutencao",
-    label: "Limpezas & Manutenção",
-    emoji: "🧹",
-    subcategorias: [
-      { key: "limpeza-domestica", label: "Limpeza Doméstica" },
-      { key: "limpeza-condominios", label: "Limpeza de Condomínios" },
-      { key: "limpeza-pos-obra", label: "Limpeza Pós-Obra" },
-      { key: "desentupimentos", label: "Desentupimentos Urgentes" },
-      { key: "controlo-pragas", label: "Desinfecção & Controlo de Pragas" },
-    ],
-  },
-  {
-    key: "educacao-formacao",
-    label: "Educação & Formação",
-    emoji: "📚",
-    subcategorias: [
-      { key: "centros-estudo", label: "Centros de Estudo & Explicações" },
-      { key: "escolas-conducao", label: "Escolas de Condução" },
-      { key: "formacao", label: "Formação & Desenvolvimento" },
-    ],
-  },
-  {
-    key: "eventos",
-    label: "Eventos",
-    emoji: "🎉",
-    subcategorias: [
-      { key: "organizadoras", label: "Empresas Organizadoras de Eventos" },
-      { key: "catering", label: "Catering & Bebidas" },
-      { key: "servicos-complementares", label: "Serviços Complementares" },
-    ],
-  },
-  {
-    key: "imobiliario",
-    label: "Imobiliário",
-    emoji: "🏠",
-    subcategorias: [
-      { key: "agencias", label: "Agências Imobiliárias" },
-      { key: "consultores", label: "Consultores Imobiliários" },
-      { key: "avaliacao", label: "Avaliação de Imóveis" },
-      { key: "administracao-condominios", label: "Administração de Condomínios" },
-    ],
-  },
-  {
-    key: "transporte-logistica",
-    label: "Transporte & Logística",
-    emoji: "🚚",
-    subcategorias: [
-      { key: "mudancas", label: "Mudanças Residenciais & Comerciais" },
-      { key: "entregas-rapidas", label: "Entregas Rápidas & Urgentes" },
-      { key: "transportadoras", label: "Transportadoras & Carga Geral" },
-      { key: "motoristas", label: "Motoristas & Serviços Personalizados" },
-    ],
-  },
-  {
-    key: "familia-criancas",
-    label: "Família & Crianças",
-    emoji: "👶",
-    subcategorias: [
-      { key: "babysitting", label: "Babysitting" },
-      { key: "transporte-escolar", label: "Transporte Escolar" },
-      { key: "animacao-infantil", label: "Animação Infantil" },
-    ],
-  },
-  {
-    key: "animais",
-    label: "Pet & Animais",
-    emoji: "🐾",
-    subcategorias: [
-      { key: "lojas-pet", label: "Lojas & Produtos para Animais" },
-      { key: "veterinarios", label: "Veterinários" },
-      { key: "grooming", label: "Grooming & Estética Animal" },
-    ],
-  },
-];
 
 const ESTILOS = [
   { key: "moderno", label: "Moderno & Escuro", emoji: "🌑", desc: "Fundo escuro, neon verde/laranja" },
@@ -188,13 +36,13 @@ const PROPORCOES = [
 ];
 
 const StudioImagePage = () => {
-  const { lookupPrompt, isLoading: lookupLoading } = useImageLookup();
+  const { lookupPrompt } = useImageLookup();
   const saveGen = useSaveGeneration();
   const navigate = useNavigate();
+  const { data: categories, isLoading: categoriesLoading } = useCategories(); // 👈 CARREGAR DO SUPABASE
 
-  // Estados
-  const [categoriaKey, setCategoriaKey] = useState("");
-  const [subcategoriaKey, setSubcategoriaKey] = useState("");
+  const [categoriaSlug, setCategoriaSlug] = useState("");
+  const [subcategoriaSlug, setSubcategoriaSlug] = useState("");
   const [objectivoImagem, setObjectivoImagem] = useState("");
   const [nome, setNome] = useState("");
   const [sector, setSector] = useState("");
@@ -208,16 +56,13 @@ const StudioImagePage = () => {
   const [result, setResult] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
 
-  // 🎯 Categoria selecionada
-  const categoriaAtual = useMemo(() => CATEGORIAS_SISTEMA.find((c) => c.key === categoriaKey), [categoriaKey]);
+  const categoriaAtual = useMemo(() => categories?.find((c) => c.slug === categoriaSlug), [categories, categoriaSlug]);
 
-  // 🎯 Subcategorias da categoria selecionada
-  const subcategoriasDisponiveis = useMemo(() => categoriaAtual?.subcategorias || [], [categoriaAtual]);
+  const subcategoriasDisponiveis = useMemo(() => categoriaAtual?.subcategories || [], [categoriaAtual]);
 
-  // Reset subcategoria quando muda categoria
-  const handleCategoriaChange = (newKey: string) => {
-    setCategoriaKey(newKey);
-    setSubcategoriaKey(""); // Reset subcategoria
+  const handleCategoriaChange = (newSlug: string) => {
+    setCategoriaSlug(newSlug);
+    setSubcategoriaSlug("");
   };
 
   const handleGenerate = async () => {
@@ -226,8 +71,8 @@ const StudioImagePage = () => {
     setResult(null);
 
     const data = await lookupPrompt({
-      categoria: categoriaKey || "restaurantes",
-      subcategoria: subcategoriaKey,
+      categoria: categoriaSlug,
+      subcategoria: subcategoriaSlug || undefined,
       estilo,
       proporcao,
       objectivo: OBJECTIVOS.find((o) => o.key === objectivoImagem)?.label || objectivoImagem || undefined,
@@ -245,7 +90,7 @@ const StudioImagePage = () => {
 
     saveGen.mutate({
       type: "image",
-      title: `${nome || categoriaAtual?.label || "Imagem"} · ${sector || estilo}`,
+      title: `${nome || categoriaAtual?.name || "Imagem"} · ${sector || estilo}`,
       subtitle: `${proporcao} · ${estilo}`,
       data,
     });
@@ -294,46 +139,49 @@ const StudioImagePage = () => {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6 max-w-[1400px]">
-      {/* LEFT: Form */}
       <div className="space-y-4">
         {/* Categoria do negócio */}
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
           <p className="text-sm font-display font-semibold">Categoria do negócio</p>
 
-          {/* Dropdown de Categorias */}
-          <Select value={categoriaKey} onValueChange={handleCategoriaChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Seleciona a categoria..." />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORIAS_SISTEMA.map((cat) => (
-                <SelectItem key={cat.key} value={cat.key}>
-                  <span className="flex items-center gap-2">
-                    <span>{cat.emoji}</span>
-                    <span>{cat.label}</span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Dropdown de Subcategorias (só aparece se tiver categoria selecionada) */}
-          {categoriaAtual && subcategoriasDisponiveis.length > 0 && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">Subcategoria (opcional)</p>
-              <Select value={subcategoriaKey} onValueChange={setSubcategoriaKey}>
+          {categoriesLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : (
+            <>
+              <Select value={categoriaSlug} onValueChange={handleCategoriaChange}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleciona a subcategoria..." />
+                  <SelectValue placeholder="Seleciona a categoria..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {subcategoriasDisponiveis.map((sub) => (
-                    <SelectItem key={sub.key} value={sub.key}>
-                      {sub.label}
+                  {categories?.map((cat) => (
+                    <SelectItem key={cat.slug} value={cat.slug}>
+                      <span className="flex items-center gap-2">
+                        {cat.icon && <span>{cat.icon}</span>}
+                        <span>{cat.name}</span>
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+
+              {categoriaAtual && subcategoriasDisponiveis.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Subcategoria (opcional)</p>
+                  <Select value={subcategoriaSlug} onValueChange={setSubcategoriaSlug}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleciona a subcategoria..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subcategoriasDisponiveis.map((sub) => (
+                        <SelectItem key={sub.slug} value={sub.slug}>
+                          {sub.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -451,8 +299,7 @@ const StudioImagePage = () => {
           </div>
         </div>
 
-        {/* Feedback visual das personalizações ativas */}
-        {!generating && (nome || descricao || personagens || ambiente || categoriaAtual || subcategoriaKey) && (
+        {!generating && (nome || descricao || personagens || ambiente || categoriaAtual || subcategoriaSlug) && (
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
             <p className="font-semibold text-primary mb-1.5 flex items-center gap-1.5">
               <span>✨</span>
@@ -463,17 +310,17 @@ const StudioImagePage = () => {
                 <div className="flex items-start gap-1.5">
                   <span className="text-primary">•</span>
                   <span>
-                    Categoria: <span className="text-foreground font-medium">{categoriaAtual.label}</span>
+                    Categoria: <span className="text-foreground font-medium">{categoriaAtual.name}</span>
                   </span>
                 </div>
               )}
-              {subcategoriaKey && (
+              {subcategoriaSlug && (
                 <div className="flex items-start gap-1.5">
                   <span className="text-primary">•</span>
                   <span>
                     Subcategoria:{" "}
                     <span className="text-foreground font-medium">
-                      {subcategoriasDisponiveis.find((s) => s.key === subcategoriaKey)?.label}
+                      {subcategoriasDisponiveis.find((s) => s.slug === subcategoriaSlug)?.name}
                     </span>
                   </span>
                 </div>
@@ -510,7 +357,7 @@ const StudioImagePage = () => {
 
         <Button
           onClick={handleGenerate}
-          disabled={generating || !categoriaKey}
+          disabled={generating || !categoriaSlug}
           className="w-full h-12 font-display font-bold text-base"
           size="lg"
         >
