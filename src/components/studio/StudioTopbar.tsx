@@ -46,7 +46,7 @@ const StudioTopbar = ({ onMenuClick }: { onMenuClick: () => void }) => {
       </div>
 
       <Badge variant="secondary" className="text-[10px] hidden sm:inline-flex">
-        IA · Gemini Pro
+        {location.pathname === "/app/image" ? "📚 Biblioteca Curada" : "IA · Gemini Pro"}
       </Badge>
 
       <div className="ml-auto flex items-center gap-2">

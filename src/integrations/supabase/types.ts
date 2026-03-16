@@ -4509,6 +4509,60 @@ export type Database = {
         }
         Relationships: []
       }
+      image_prompts_library: {
+        Row: {
+          categoria: string
+          created_at: string
+          estilo: string
+          exemplo_negocio: string | null
+          id: string
+          instrucoes: string | null
+          is_active: boolean
+          objectivo: string | null
+          prompt_principal: string
+          proporcao: string
+          tags: string[] | null
+          titulo: string | null
+          usage_count: number
+          variante_a: string
+          variante_b: string
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          estilo: string
+          exemplo_negocio?: string | null
+          id?: string
+          instrucoes?: string | null
+          is_active?: boolean
+          objectivo?: string | null
+          prompt_principal: string
+          proporcao?: string
+          tags?: string[] | null
+          titulo?: string | null
+          usage_count?: number
+          variante_a: string
+          variante_b: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          estilo?: string
+          exemplo_negocio?: string | null
+          id?: string
+          instrucoes?: string | null
+          is_active?: boolean
+          objectivo?: string | null
+          prompt_principal?: string
+          proporcao?: string
+          tags?: string[] | null
+          titulo?: string | null
+          usage_count?: number
+          variante_a?: string
+          variante_b?: string
+        }
+        Relationships: []
+      }
       institutional_pages: {
         Row: {
           blocks: Json | null
@@ -5985,6 +6039,68 @@ export type Database = {
           value?: string | null
         }
         Relationships: []
+      }
+      studio_templates: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          descricao_sugerida: string | null
+          description: string | null
+          diferencial_sugerido: string | null
+          estilo: string
+          id: string
+          is_system: boolean
+          name: string
+          objectivo: string
+          servicos_sugeridos: string | null
+          toms: number[]
+          updated_at: string
+          usage_count: number
+          user_id: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          descricao_sugerida?: string | null
+          description?: string | null
+          diferencial_sugerido?: string | null
+          estilo?: string
+          id?: string
+          is_system?: boolean
+          name: string
+          objectivo?: string
+          servicos_sugeridos?: string | null
+          toms?: number[]
+          updated_at?: string
+          usage_count?: number
+          user_id?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          descricao_sugerida?: string | null
+          description?: string | null
+          diferencial_sugerido?: string | null
+          estilo?: string
+          id?: string
+          is_system?: boolean
+          name?: string
+          objectivo?: string
+          servicos_sugeridos?: string | null
+          toms?: number[]
+          updated_at?: string
+          usage_count?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subcategories: {
         Row: {
@@ -7600,6 +7716,10 @@ export type Database = {
         Returns: boolean
       }
       increment_blog_views: { Args: { post_slug: string }; Returns: undefined }
+      increment_prompt_usage: {
+        Args: { prompt_id: string }
+        Returns: undefined
+      }
       invite_business_member: {
         Args: {
           p_business_id: string
