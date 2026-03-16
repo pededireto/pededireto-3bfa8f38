@@ -39,7 +39,7 @@ const StudioImagePage = () => {
   const { lookupPrompt } = useImageLookup();
   const saveGen = useSaveGeneration();
   const navigate = useNavigate();
-  const { data: categories, isLoading: categoriesLoading } = useCategories(); // 👈 CARREGAR DO SUPABASE
+  const { data: categories, isLoading: categoriesLoading } = useCategoriesWithSubcategories(); // 👈 CARREGAR DO SUPABASE
 
   const [categoriaSlug, setCategoriaSlug] = useState("");
   const [subcategoriaSlug, setSubcategoriaSlug] = useState("");
