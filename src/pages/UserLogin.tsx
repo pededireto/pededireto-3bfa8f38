@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Email inválido").max(255),
