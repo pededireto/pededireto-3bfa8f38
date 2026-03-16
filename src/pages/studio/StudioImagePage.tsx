@@ -73,7 +73,7 @@ const StudioImagePage = () => {
     setResult(null);
 
     const data = await lookupPrompt({
-      categoria: categoria || "restauracao",
+      categoria: categoria || "restaurantes",
       estilo,
       proporcao,
       objectivo: OBJECTIVOS.find((o) => o.key === objectivoImagem)?.label || objectivoImagem || undefined,
@@ -154,7 +154,7 @@ const StudioImagePage = () => {
                   "px-3 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5",
                   categoria === c.key
                     ? "bg-primary/10 border-primary text-primary font-medium"
-                    : "border-border hover:border-primary/30"
+                    : "border-border hover:border-primary/30",
                 )}
               >
                 <span>{c.emoji}</span>
@@ -178,7 +178,7 @@ const StudioImagePage = () => {
                     "px-3 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5",
                     objectivoImagem === o.key
                       ? "bg-primary/10 border-primary text-primary font-medium"
-                      : "border-border hover:border-primary/30"
+                      : "border-border hover:border-primary/30",
                   )}
                 >
                   <span>{o.emoji}</span>
@@ -194,24 +194,46 @@ const StudioImagePage = () => {
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Sector / Tipo de negócio</label>
-              <Input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Ex: Restauração, Barbearia..." />
+              <Input
+                value={sector}
+                onChange={(e) => setSector(e.target.value)}
+                placeholder="Ex: Restauração, Barbearia..."
+              />
             </div>
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">O que deve aparecer na imagem</label>
-            <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} className="resize-none" placeholder="Ex: um café acolhedor com vista para o rio..." />
+            <Textarea
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              rows={3}
+              className="resize-none"
+              placeholder="Ex: um café acolhedor com vista para o rio..."
+            />
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Personagens ou pessoas?</label>
-            <Input value={personagens} onChange={(e) => setPersonagens(e.target.value)} placeholder="Ex: barista jovem, casal de 30 anos..." />
+            <Input
+              value={personagens}
+              onChange={(e) => setPersonagens(e.target.value)}
+              placeholder="Ex: barista jovem, casal de 30 anos..."
+            />
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Ambiente e localização</label>
-            <Input value={ambiente} onChange={(e) => setAmbiente(e.target.value)} placeholder="Ex: interior rústico português..." />
+            <Input
+              value={ambiente}
+              onChange={(e) => setAmbiente(e.target.value)}
+              placeholder="Ex: interior rústico português..."
+            />
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Mensagem / texto sobreposto</label>
-            <Input value={textoSobreposto} onChange={(e) => setTextoSobreposto(e.target.value)} placeholder="Ex: Promoção de Verão · -20%" />
+            <Input
+              value={textoSobreposto}
+              onChange={(e) => setTextoSobreposto(e.target.value)}
+              placeholder="Ex: Promoção de Verão · -20%"
+            />
           </div>
         </div>
 
@@ -225,7 +247,7 @@ const StudioImagePage = () => {
                 onClick={() => setEstilo(e.key)}
                 className={cn(
                   "p-3 rounded-xl border text-left transition-all",
-                  estilo === e.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                  estilo === e.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/30",
                 )}
               >
                 <span className="text-lg">{e.emoji}</span>
@@ -245,7 +267,7 @@ const StudioImagePage = () => {
                     "flex-1 px-3 py-2 rounded-lg text-xs border transition-all text-center",
                     proporcao === p.key
                       ? "bg-primary/10 border-primary text-primary font-medium"
-                      : "border-border hover:border-primary/30"
+                      : "border-border hover:border-primary/30",
                   )}
                 >
                   <div className="font-medium">{p.label}</div>
@@ -256,9 +278,54 @@ const StudioImagePage = () => {
           </div>
         </div>
 
-        <Button onClick={handleGenerate} disabled={generating} className="w-full h-12 font-display font-bold text-base" size="lg">
+        {/* Feedback visual das personalizações ativas */}
+        {!generating && (nome || descricao || personagens || ambiente) && (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
+            <p className="font-semibold text-primary mb-1.5 flex items-center gap-1.5">
+              <span>✨</span>
+              <span>Personalizações ativas</span>
+            </p>
+            <div className="space-y-0.5 text-muted-foreground">
+              {nome && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-primary">•</span>
+                  <span>
+                    Nome: <span className="text-foreground font-medium">{nome}</span>
+                  </span>
+                </div>
+              )}
+              {descricao && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-primary">•</span>
+                  <span>Descrição personalizada</span>
+                </div>
+              )}
+              {personagens && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-primary">•</span>
+                  <span>Personagens específicos</span>
+                </div>
+              )}
+              {ambiente && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-primary">•</span>
+                  <span>Ambiente customizado</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <Button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="w-full h-12 font-display font-bold text-base"
+          size="lg"
+        >
           {generating ? (
-            <><Loader2 className="h-5 w-5 mr-2 animate-spin" />A procurar...</>
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />A procurar e a personalizar...
+            </>
           ) : (
             "✦ Gerar Prompt de Imagem"
           )}
@@ -270,7 +337,10 @@ const StudioImagePage = () => {
         {generating ? (
           <div className="p-6 space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-20 w-full" /></div>
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-20 w-full" />
+              </div>
             ))}
           </div>
         ) : result ? (
@@ -280,7 +350,8 @@ const StudioImagePage = () => {
             <div>
               <span className="text-4xl block mb-3">🖼️</span>
               <p className="text-sm text-muted-foreground">
-                Escolhe uma categoria e estilo, depois clica em gerar.<br />
+                Escolhe uma categoria e estilo, depois clica em gerar.
+                <br />
                 Os prompts vêm da biblioteca curada — sem esperas!
               </p>
             </div>
@@ -291,12 +362,26 @@ const StudioImagePage = () => {
   );
 };
 
-const ImageOutput = ({ result, handleExportPDF, onUseInReel }: { result: any; handleExportPDF: () => void; onUseInReel: () => void }) => (
+const ImageOutput = ({
+  result,
+  handleExportPDF,
+  onUseInReel,
+}: {
+  result: any;
+  handleExportPDF: () => void;
+  onUseInReel: () => void;
+}) => (
   <Tabs defaultValue="principal" className="h-full flex flex-col">
     <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-4 pt-3">
-      <TabsTrigger value="principal" className="text-xs">🖼️ Prompt Principal</TabsTrigger>
-      <TabsTrigger value="variantes" className="text-xs">🔄 Variantes</TabsTrigger>
-      <TabsTrigger value="guia" className="text-xs">📋 Guia de Uso</TabsTrigger>
+      <TabsTrigger value="principal" className="text-xs">
+        🖼️ Prompt Principal
+      </TabsTrigger>
+      <TabsTrigger value="variantes" className="text-xs">
+        🔄 Variantes
+      </TabsTrigger>
+      <TabsTrigger value="guia" className="text-xs">
+        📋 Guia de Uso
+      </TabsTrigger>
     </TabsList>
 
     <div className="flex-1 overflow-auto">
@@ -308,7 +393,9 @@ const ImageOutput = ({ result, handleExportPDF, onUseInReel }: { result: any; ha
         )}
         <GrokBox content={result.prompt_principal || ""} />
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportPDF}>⬇ Exportar PDF</Button>
+          <Button variant="outline" size="sm" onClick={handleExportPDF}>
+            ⬇ Exportar PDF
+          </Button>
           <Button size="sm" onClick={onUseInReel} className="gap-1">
             Usar no Reel <ArrowRight className="h-3.5 w-3.5" />
           </Button>
@@ -330,7 +417,8 @@ const ImageOutput = ({ result, handleExportPDF, onUseInReel }: { result: any; ha
         <div className="rounded-xl border border-border bg-muted/30 p-4">
           <p className="text-xs font-semibold mb-2">📋 Instruções</p>
           <div className="text-xs text-muted-foreground whitespace-pre-wrap">
-            {result.instrucoes || "1. Copia a prompt principal\n2. Abre o Grok e cola a prompt\n3. Ajusta o formato para 9:16 vertical\n4. Usa a imagem gerada como frame no Gerador de Reel"}
+            {result.instrucoes ||
+              "1. Copia a prompt principal\n2. Abre o Grok e cola a prompt\n3. Ajusta o formato para 9:16 vertical\n4. Usa a imagem gerada como frame no Gerador de Reel"}
           </div>
         </div>
       </TabsContent>
