@@ -53,6 +53,7 @@ import TopRankingPage from "./pages/TopRankingPage";
 import TopIndexPage from "./pages/TopIndexPage";
 import PricingPage from "./pages/PricingPage";
 import BusinessShortUrl from "./pages/BusinessShortUrl";
+import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import AffiliateLandingPage from "./pages/AffiliateLandingPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
@@ -186,6 +187,8 @@ const App = () => {
                     <Route path="/register" element={<RegisterChoice />} />
                     <Route path="/registar/consumidor" element={<UserRegister />} />
                     <Route path="/register/business" element={<RegisterBusiness />} />
+
+                    <Route path="/auth/callback" element={<AuthCallback />} />
 
                     {/* PASSWORD RECOVERY */}
                     <Route path="/forgot-password" element={<ForgotPassword />} />

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Email inválido").max(255),
@@ -97,6 +98,19 @@ const UserLogin = () => {
             </Link>
             <h2 className="text-xl font-semibold text-foreground">A Minha Conta</h2>
             <p className="text-muted-foreground mt-1">Faz login para aceder à tua área</p>
+          </div>
+
+          <div className="mb-6">
+            <GoogleSignInButton />
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">ou</span>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
