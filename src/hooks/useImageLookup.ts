@@ -24,9 +24,6 @@ interface LookupResult {
   instrucoes: string;
 }
 
-/**
- * Substitui placeholders básicos no template
- */
 function replacePlaceholders(text: string | null, params: LookupParams): string {
   if (!text) return "";
   return text
@@ -38,13 +35,9 @@ function replacePlaceholders(text: string | null, params: LookupParams): string 
     .replace(/\{\{textoSobreposto\}\}/gi, params.textoSobreposto || "");
 }
 
-/**
- * 🎯 Enriquece o prompt base com inputs do utilizador
- */
 function enrichPromptWithUserInputs(basePrompt: string, params: LookupParams): string {
   let enriched = basePrompt;
 
-  // 1. Se tem DESCRIÇÃO específica → injeta
   if (params.descricao && params.descricao.trim()) {
     enriched = enriched.replace(/professional .+ in .+ setting/i, params.descricao);
     if (!enriched.includes(params.descricao)) {
@@ -52,117 +45,88 @@ function enrichPromptWithUserInputs(basePrompt: string, params: LookupParams): s
     }
   }
 
-  // 2. Se tem PERSONAGENS específicos → injeta
   if (params.personagens && params.personagens.trim()) {
-    enriched = enriched.replace(
-      /(professional|worker|specialist|technician|person)[^,]*/i,
-      params.personagens
-    );
+    enriched = enriched.replace(/(professional|worker|specialist|technician|person)[^,]*/i, params.personagens);
     if (!enriched.includes(params.personagens)) {
       enriched = enriched.replace(/,\s*/, `, ${params.personagens}, `);
     }
   }
 
-  // 3. Se tem AMBIENTE específico → injeta
   if (params.ambiente && params.ambiente.trim()) {
     enriched = enriched.replace(
       /(modern|traditional|clean|warm|bright)\s+(salon|office|shop|restaurant|space|interior|setting)[^,]*/gi,
-      params.ambiente
+      params.ambiente,
     );
     if (!enriched.includes(params.ambiente)) {
-      enriched = enriched.replace(
-        /(,?\s*9:16 aspect ratio)/i,
-        `, ${params.ambiente}, 9:16 aspect ratio`
-      );
+      enriched = enriched.replace(/(,?\s*9:16 aspect ratio)/i, `, ${params.ambiente}, 9:16 aspect ratio`);
     }
   }
 
-  // 4. Se tem NOME → garante que aparece
   if (params.nome && params.nome.trim()) {
     if (!enriched.toLowerCase().includes(params.nome.toLowerCase())) {
       enriched = enriched.replace(/(Portuguese|Portugal)/i, `${params.nome} $1`);
     }
   }
 
-  // 5. Limpa duplicações
-  enriched = enriched.replace(/,\s*,/g, ",").replace(/\s{2,}/g, " ").trim();
+  enriched = enriched
+    .replace(/,\s*,/g, ",")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 
   return enriched;
 }
 
-/**
- * 🎨 NOVA: Cria VARIANTE A com foco diferente (ângulo/composição)
- */
 function createVariantA(basePrompt: string, params: LookupParams): string {
   let variant = basePrompt;
 
-  // Modificadores de ÂNGULO para Variante A
   const angleModifiers = [
-    "close-up hands applying",
-    "over-the-shoulder perspective",
-    "wide angle showing full space",
+    "close-up hands working on",
+    "over-the-shoulder view of",
+    "wide angle showing full",
     "detail shot focusing on",
-    "bird's eye view of",
+    "top-down perspective of",
   ];
 
-  // Adiciona modificador de ângulo no início
   const randomAngle = angleModifiers[Math.floor(Math.random() * angleModifiers.length)];
-  
-  // Se não tem já um close-up ou ângulo específico, adiciona
-  if (!variant.match(/close-up|wide angle|overhead|perspective/i)) {
+
+  if (!variant.match(/close-up|wide angle|overhead|perspective|top-down/i)) {
     variant = `${randomAngle} ${variant}`;
   }
 
-  // Adiciona variação na iluminação
-  if (!variant.includes("lighting")) {
-    variant = variant.replace(
-      /(9:16 aspect ratio)/i,
-      "soft natural lighting, $1"
-    );
+  if (!variant.includes("lighting") && !variant.includes("light")) {
+    variant = variant.replace(/(9:16 aspect ratio)/i, "natural window light, $1");
   }
 
   return variant;
 }
 
-/**
- * 🌅 NOVA: Cria VARIANTE B com iluminação/atmosfera diferente
- */
 function createVariantB(basePrompt: string, params: LookupParams): string {
   let variant = basePrompt;
 
-  // Modificadores de ILUMINAÇÃO para Variante B
   const lightingStyles = [
-    "golden hour warm lighting",
-    "soft window light from side",
-    "dramatic side lighting with shadows",
-    "bright even professional lighting",
-    "ambient candlelight atmosphere",
+    "golden hour warm glow",
+    "soft diffused lighting",
+    "dramatic side lighting",
+    "bright professional lights",
+    "warm ambient atmosphere",
   ];
 
   const randomLighting = lightingStyles[Math.floor(Math.random() * lightingStyles.length)];
 
-  // Adiciona iluminação específica
-  variant = variant.replace(
-    /(9:16 aspect ratio)/i,
-    `${randomLighting}, $1`
-  );
+  variant = variant.replace(/(9:16 aspect ratio)/i, `${randomLighting}, $1`);
 
-  // Adiciona detalhe atmosférico extra
   const atmosphereDetails = [
-    "happy client reflection in mirror",
-    "before after transformation split",
     "satisfied customer smiling",
-    "peaceful zen atmosphere",
-    "energetic vibrant mood",
+    "before after transformation visible",
+    "happy client in mirror reflection",
+    "peaceful calm mood",
+    "professional confident atmosphere",
   ];
 
   const randomAtmosphere = atmosphereDetails[Math.floor(Math.random() * atmosphereDetails.length)];
-  
-  if (!variant.includes("atmosphere") && !variant.includes("reflection")) {
-    variant = variant.replace(
-      /(photorealistic)/i,
-      `${randomAtmosphere}, $1`
-    );
+
+  if (!variant.includes("atmosphere") && !variant.includes("reflection") && !variant.includes("smiling")) {
+    variant = variant.replace(/(photorealistic)/i, `${randomAtmosphere}, $1`);
   }
 
   return variant;
@@ -177,20 +141,11 @@ export function useImageLookup() {
     try {
       const { categoria, estilo, proporcao } = params;
 
-      // 🔍 Progressive filtering
-      const filters = [
-        { categoria, estilo, proporcao },
-        { categoria, estilo },
-        { categoria },
-        {},
-      ];
+      const filters = [{ categoria, estilo, proporcao }, { categoria, estilo }, { categoria }, {}];
 
       let row: any = null;
       for (const filter of filters) {
-        let query = supabase
-          .from("image_prompts_library")
-          .select("*")
-          .eq("is_active", true);
+        let query = supabase.from("image_prompts_library").select("*").eq("is_active", true);
 
         if (filter.categoria) query = query.eq("categoria", filter.categoria);
         if (filter.estilo) query = query.eq("estilo", filter.estilo);
@@ -205,7 +160,7 @@ export function useImageLookup() {
 
         if (data) {
           row = data;
-          console.log(`✅ Template: ${data.titulo} (${Object.keys(filter).join(", ")})`);
+          console.log(`✅ Template: ${data.titulo}`);
           break;
         }
       }
@@ -219,38 +174,26 @@ export function useImageLookup() {
         return null;
       }
 
-      // 📊 Increment usage
       supabase
         .from("image_prompts_library")
         .update({ usage_count: (row.usage_count || 0) + 1 })
         .eq("id", row.id)
         .then();
 
-      // 🎨 PROCESSAMENTO DAS 3 PROMPTS DE FORMA DIFERENTE
-
-      // 1️⃣ PROMPT PRINCIPAL: Base + User Inputs
       let promptPrincipal = replacePlaceholders(row.prompt_principal, params);
       promptPrincipal = enrichPromptWithUserInputs(promptPrincipal, params);
 
-      // 2️⃣ VARIANTE A: Se existe na BD, usa; senão cria com foco em ÂNGULO
-      let varianteA = row.variante_a 
-        ? replacePlaceholders(row.variante_a, params)
-        : promptPrincipal;
-      
+      let varianteA = row.variante_a ? replacePlaceholders(row.variante_a, params) : promptPrincipal;
       varianteA = enrichPromptWithUserInputs(varianteA, params);
       varianteA = createVariantA(varianteA, params);
 
-      // 3️⃣ VARIANTE B: Se existe na BD, usa; senão cria com foco em ILUMINAÇÃO
-      let varianteB = row.variante_b
-        ? replacePlaceholders(row.variante_b, params)
-        : promptPrincipal;
-      
+      let varianteB = row.variante_b ? replacePlaceholders(row.variante_b, params) : promptPrincipal;
       varianteB = enrichPromptWithUserInputs(varianteB, params);
       varianteB = createVariantB(varianteB, params);
 
-      console.log("🎯 Principal:", promptPrincipal.substring(0, 80) + "...");
-      console.log("🔄 Variante A:", varianteA.substring(0, 80) + "...");
-      console.log("🌅 Variante B:", varianteB.substring(0, 80) + "...");
+      console.log("🎯 Principal:", promptPrincipal.substring(0, 60));
+      console.log("🔄 Variante A:", varianteA.substring(0, 60));
+      console.log("🌅 Variante B:", varianteB.substring(0, 60));
 
       return {
         prompt_principal: promptPrincipal,
@@ -275,35 +218,3 @@ export function useImageLookup() {
 
   return { lookupPrompt, isLoading };
 }
-```
-
----
-
-## **🎯 O QUE MUDOU:**
-
-### **Antes:**
-- ❌ As 3 prompts recebiam o mesmo tratamento
-- ❌ Variantes A e B eram quase idênticas
-
-### **Agora:**
-- ✅ **Prompt Principal**: Base da BD + inputs do user
-- ✅ **Variante A**: Adiciona **modificadores de ÂNGULO** (close-up, wide angle, overhead, etc.)
-- ✅ **Variante B**: Adiciona **modificadores de ILUMINAÇÃO** (golden hour, dramatic side light, etc.)
-
----
-
-## **📸 EXEMPLO DE RESULTADO (Flor de Lótus):**
-
-**Prompt Principal:**
-```
-Profissional de estética a aplicar extensões de pestanas em cliente relaxada, Técnica de estética profissional, cliente feminina relaxada na maca de tratamento, ambiente sereno de salão com decoração inspirada em lótus, produtos de beleza holísticos visíveis, atmosfera zen e acolhedora, Interior de salão de beleza moderno e sereno em Vila Franca de Xira, decoração com elementos naturais e flor de lótus, iluminação suave e ambiente holístico, Flor de Lótus, 9:16 aspect ratio, photorealistic
-```
-
-**Variante A — Ângulo diferente:**
-```
-close-up hands applying Profissional de estética a aplicar extensões de pestanas em cliente relaxada, Técnica de estética profissional, cliente feminina relaxada na maca de tratamento, ambiente sereno de salão com decoração inspirada em lótus, produtos de beleza holísticos visíveis, atmosfera zen e acolhedora, Interior de salão de beleza moderno e sereno em Vila Franca de Xira, decoração com elementos naturais e flor de lótus, iluminação suave e ambiente holístico, Flor de Lótus, soft natural lighting, 9:16 aspect ratio, photorealistic
-```
-
-**Variante B — Iluminação diferente:**
-```
-Profissional de estética a aplicar extensões de pestanas em cliente relaxada, Técnica de estética profissional, cliente feminina relaxada na maca de tratamento, ambiente sereno de salão com decoração inspirada em lótus, produtos de beleza holísticos visíveis, atmosfera zen e acolhedora, Interior de salão de beleza moderno e sereno em Vila Franca de Xira, decoração com elementos naturais e flor de lótus, iluminação suave e ambiente holístico, Flor de Lótus, golden hour warm lighting, happy client reflection in mirror, 9:16 aspect ratio, photorealistic
