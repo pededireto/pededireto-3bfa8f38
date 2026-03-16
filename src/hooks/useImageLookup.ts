@@ -35,130 +35,99 @@ function replacePlaceholders(text: string | null, params: LookupParams): string 
     .replace(/\{\{textoSobreposto\}\}/gi, params.textoSobreposto || "");
 }
 
-/**
- * 🎯 VERSÃO ROBUSTA: Enriquece QUALQUER tipo de prompt
- */
 function enrichPromptWithUserInputs(basePrompt: string, params: LookupParams): string {
   let enriched = basePrompt;
 
-  // 1️⃣ DESCRIÇÃO: Injeta logo após a primeira vírgula (universal)
   if (params.descricao && params.descricao.trim()) {
-    // Se já contém a descrição, skip
-    if (!enriched.toLowerCase().includes(params.descricao.toLowerCase())) {
-      // Injeta após a primeira vírgula ou no início
-      const firstCommaIndex = enriched.indexOf(",");
-      if (firstCommaIndex > 0) {
-        enriched = enriched.slice(0, firstCommaIndex) + `, ${params.descricao}` + enriched.slice(firstCommaIndex);
-      } else {
-        enriched = `${params.descricao}, ${enriched}`;
-      }
+    enriched = enriched.replace(/professional .+ in .+ setting/i, params.descricao);
+    if (!enriched.includes(params.descricao)) {
+      enriched = `${params.descricao}, ${enriched}`;
     }
   }
 
-  // 2️⃣ PERSONAGENS: Substitui padrões genéricos OU injeta
   if (params.personagens && params.personagens.trim()) {
-    // Tenta substituir padrões comuns
-    const personPatterns = [
-      /professional \w+/i,
-      /\w+ worker/i,
-      /\w+ specialist/i,
-      /chef/i,
-      /barista/i,
-      /mechanic/i,
-      /doctor/i,
-    ];
-
-    let replaced = false;
-    for (const pattern of personPatterns) {
-      if (pattern.test(enriched)) {
-        enriched = enriched.replace(pattern, params.personagens);
-        replaced = true;
-        break;
-      }
-    }
-
-    // Se não substituiu, adiciona
-    if (!replaced && !enriched.toLowerCase().includes(params.personagens.toLowerCase())) {
+    enriched = enriched.replace(/(professional|worker|specialist|technician|person)[^,]*/i, params.personagens);
+    if (!enriched.includes(params.personagens)) {
       enriched = enriched.replace(/,\s*/, `, ${params.personagens}, `);
     }
   }
 
-  // 3️⃣ AMBIENTE: Injeta antes da proporção
   if (params.ambiente && params.ambiente.trim()) {
-    if (!enriched.toLowerCase().includes(params.ambiente.toLowerCase())) {
-      enriched = enriched.replace(/(,?\s*9:16|1:1|16:9)/i, `, ${params.ambiente}, 9:16`);
+    enriched = enriched.replace(
+      /(modern|traditional|clean|warm|bright)\s+(salon|office|shop|restaurant|space|interior|setting)[^,]*/gi,
+      params.ambiente,
+    );
+    if (!enriched.includes(params.ambiente)) {
+      enriched = enriched.replace(/(,?\s*9:16 aspect ratio)/i, `, ${params.ambiente}, 9:16 aspect ratio`);
     }
   }
 
-  // 4️⃣ NOME: Garante que aparece (se ainda não estiver)
   if (params.nome && params.nome.trim()) {
     if (!enriched.toLowerCase().includes(params.nome.toLowerCase())) {
-      enriched = enriched.replace(/(Portuguese|Portugal|setting)/i, `${params.nome} $1`);
+      enriched = enriched.replace(/(Portuguese|Portugal)/i, `${params.nome} $1`);
     }
   }
 
-  // 5️⃣ Limpeza final
   enriched = enriched
     .replace(/,\s*,/g, ",")
     .replace(/\s{2,}/g, " ")
-    .replace(/,\s*9:16/g, ", 9:16")
     .trim();
 
   return enriched;
 }
 
-/**
- * 🎨 Variante A: SEMPRE diferente (foco em ÂNGULO/COMPOSIÇÃO)
- */
-function createVariantA(basePrompt: string): string {
+function createVariantA(basePrompt: string, params: LookupParams): string {
+  let variant = basePrompt;
+
   const angleModifiers = [
-    "close-up shot of",
-    "wide angle view showing",
-    "overhead top-down perspective of",
+    "close-up hands working on",
+    "over-the-shoulder view of",
+    "wide angle showing full",
     "detail shot focusing on",
-    "eye-level composition of",
+    "top-down perspective of",
   ];
 
-  // Escolhe um ângulo aleatório
-  const angle = angleModifiers[Math.floor(Math.random() * angleModifiers.length)];
+  const randomAngle = angleModifiers[Math.floor(Math.random() * angleModifiers.length)];
 
-  // Adiciona NO INÍCIO (sempre visível)
-  let variant = `${angle} ${basePrompt}`;
+  if (!variant.match(/close-up|wide angle|overhead|perspective|top-down/i)) {
+    variant = `${randomAngle} ${variant}`;
+  }
 
-  // Remove duplicações de ângulo (caso o base já tenha)
-  variant = variant.replace(
-    /(close-up|wide angle|overhead|detail shot)\s+(close-up|wide angle|overhead|detail shot)/gi,
-    "$1",
-  );
+  if (!variant.includes("lighting") && !variant.includes("light")) {
+    variant = variant.replace(/(9:16 aspect ratio)/i, "natural window light, $1");
+  }
 
   return variant;
 }
 
-/**
- * 🌅 Variante B: SEMPRE diferente (foco em ILUMINAÇÃO/MOOD)
- */
-function createVariantB(basePrompt: string): string {
-  const lightingMoods = [
-    "golden hour warm lighting, ",
-    "soft diffused natural light, ",
-    "dramatic side lighting with shadows, ",
-    "bright professional studio lighting, ",
-    "warm ambient candlelight atmosphere, ",
+function createVariantB(basePrompt: string, params: LookupParams): string {
+  let variant = basePrompt;
+
+  const lightingStyles = [
+    "golden hour warm glow",
+    "soft diffused lighting",
+    "dramatic side lighting",
+    "bright professional lights",
+    "warm ambient atmosphere",
   ];
 
-  const extraDetails = [
-    "satisfied customer visible, ",
-    "transformation result highlighted, ",
-    "happy client smiling, ",
-    "professional atmosphere evident, ",
-    "inviting welcoming mood, ",
+  const randomLighting = lightingStyles[Math.floor(Math.random() * lightingStyles.length)];
+
+  variant = variant.replace(/(9:16 aspect ratio)/i, `${randomLighting}, $1`);
+
+  const atmosphereDetails = [
+    "satisfied customer smiling",
+    "before after transformation visible",
+    "happy client in mirror reflection",
+    "peaceful calm mood",
+    "professional confident atmosphere",
   ];
 
-  const lighting = lightingMoods[Math.floor(Math.random() * lightingMoods.length)];
-  const detail = extraDetails[Math.floor(Math.random() * extraDetails.length)];
+  const randomAtmosphere = atmosphereDetails[Math.floor(Math.random() * atmosphereDetails.length)];
 
-  // Injeta ANTES do aspect ratio
-  let variant = basePrompt.replace(/(9:16|1:1|16:9)/i, `${lighting}${detail}$1`);
+  if (!variant.includes("atmosphere") && !variant.includes("reflection") && !variant.includes("smiling")) {
+    variant = variant.replace(/(photorealistic)/i, `${randomAtmosphere}, $1`);
+  }
 
   return variant;
 }
@@ -191,7 +160,7 @@ export function useImageLookup() {
 
         if (data) {
           row = data;
-          console.log(`✅ Template encontrado: ${data.titulo}`);
+          console.log(`✅ Template: ${data.titulo}`);
           break;
         }
       }
@@ -211,25 +180,20 @@ export function useImageLookup() {
         .eq("id", row.id)
         .then();
 
-      // 📝 PROCESSAMENTO:
-
-      // 1️⃣ Prompt Principal = Base + User Inputs
       let promptPrincipal = replacePlaceholders(row.prompt_principal, params);
       promptPrincipal = enrichPromptWithUserInputs(promptPrincipal, params);
 
-      // 2️⃣ Variante A = (Base da BD OU Principal) + Ângulo SEMPRE diferente
-      let baseForA = row.variante_a ? replacePlaceholders(row.variante_a, params) : promptPrincipal;
-      baseForA = enrichPromptWithUserInputs(baseForA, params);
-      const varianteA = createVariantA(baseForA);
+      let varianteA = row.variante_a ? replacePlaceholders(row.variante_a, params) : promptPrincipal;
+      varianteA = enrichPromptWithUserInputs(varianteA, params);
+      varianteA = createVariantA(varianteA, params);
 
-      // 3️⃣ Variante B = (Base da BD OU Principal) + Iluminação SEMPRE diferente
-      let baseForB = row.variante_b ? replacePlaceholders(row.variante_b, params) : promptPrincipal;
-      baseForB = enrichPromptWithUserInputs(baseForB, params);
-      const varianteB = createVariantB(baseForB);
+      let varianteB = row.variante_b ? replacePlaceholders(row.variante_b, params) : promptPrincipal;
+      varianteB = enrichPromptWithUserInputs(varianteB, params);
+      varianteB = createVariantB(varianteB, params);
 
-      console.log("🎯 Principal:", promptPrincipal.substring(0, 80));
-      console.log("🔄 Variante A:", varianteA.substring(0, 80));
-      console.log("🌅 Variante B:", varianteB.substring(0, 80));
+      console.log("🎯 Principal:", promptPrincipal.substring(0, 60));
+      console.log("🔄 Variante A:", varianteA.substring(0, 60));
+      console.log("🌅 Variante B:", varianteB.substring(0, 60));
 
       return {
         prompt_principal: promptPrincipal,
