@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useImageLookup } from "@/hooks/useImageLookup";
 import { useSaveGeneration } from "@/hooks/useGenerations";
-import { useCategories } from "@/hooks/useCategories"; // 👈 NOVO
 import GrokBox from "@/components/studio/GrokBox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ESTILOS = [
   { key: "moderno", label: "Moderno & Escuro", emoji: "🌑", desc: "Fundo escuro, neon verde/laranja" },
@@ -35,14 +33,27 @@ const PROPORCOES = [
   { key: "16:9", label: "16:9 Horizontal", desc: "YouTube & Web" },
 ];
 
+const CATEGORIAS = [
+  { key: "restaurantes", label: "Restauração", emoji: "🍽️" },
+  { key: "beleza-bem-estar", label: "Beleza & Bem-estar", emoji: "💇" },
+  { key: "saude", label: "Saúde", emoji: "🏥" },
+  { key: "reparacoes-servicos-urgentes", label: "Reparações & Urgentes", emoji: "🔧" },
+  { key: "limpezas-manutencao", label: "Limpezas & Manutenção", emoji: "🧹" },
+  { key: "servicos-profissionais-empresariais", label: "Serv. Profissionais", emoji: "💼" },
+  { key: "eventos", label: "Eventos", emoji: "🎉" },
+  { key: "lojas", label: "Lojas", emoji: "🛍️" },
+  { key: "tecnologia-informatica", label: "Tecnologia", emoji: "💻" },
+  { key: "pet-animais", label: "Pet & Animais", emoji: "🐾" },
+  { key: "imobiliario", label: "Imobiliário", emoji: "🏠" },
+  { key: "servicos-automovel", label: "Automóvel", emoji: "🚗" },
+];
+
 const StudioImagePage = () => {
-  const { lookupPrompt } = useImageLookup();
+  const { lookupPrompt, isLoading: lookupLoading } = useImageLookup();
   const saveGen = useSaveGeneration();
   const navigate = useNavigate();
-  const { data: categories, isLoading: categoriesLoading } = useCategoriesWithSubcategories(); // 👈 CARREGAR DO SUPABASE
 
-  const [categoriaSlug, setCategoriaSlug] = useState("");
-  const [subcategoriaSlug, setSubcategoriaSlug] = useState("");
+  const [categoria, setCategoria] = useState("");
   const [objectivoImagem, setObjectivoImagem] = useState("");
   const [nome, setNome] = useState("");
   const [sector, setSector] = useState("");
@@ -56,23 +67,13 @@ const StudioImagePage = () => {
   const [result, setResult] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
 
-  const categoriaAtual = useMemo(() => categories?.find((c) => c.slug === categoriaSlug), [categories, categoriaSlug]);
-
-  const subcategoriasDisponiveis = useMemo(() => categoriaAtual?.subcategories || [], [categoriaAtual]);
-
-  const handleCategoriaChange = (newSlug: string) => {
-    setCategoriaSlug(newSlug);
-    setSubcategoriaSlug("");
-  };
-
   const handleGenerate = async () => {
     if (generating) return;
     setGenerating(true);
     setResult(null);
 
     const data = await lookupPrompt({
-      categoria: categoriaSlug,
-      subcategoria: subcategoriaSlug || undefined,
+      categoria: categoria || "restaurantes",
       estilo,
       proporcao,
       objectivo: OBJECTIVOS.find((o) => o.key === objectivoImagem)?.label || objectivoImagem || undefined,
@@ -90,7 +91,7 @@ const StudioImagePage = () => {
 
     saveGen.mutate({
       type: "image",
-      title: `${nome || categoriaAtual?.name || "Imagem"} · ${sector || estilo}`,
+      title: `${nome || categoria || "Imagem"} · ${sector || estilo}`,
       subtitle: `${proporcao} · ${estilo}`,
       data,
     });
@@ -139,50 +140,28 @@ const StudioImagePage = () => {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6 max-w-[1400px]">
+      {/* LEFT: Form */}
       <div className="space-y-4">
         {/* Categoria do negócio */}
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
           <p className="text-sm font-display font-semibold">Categoria do negócio</p>
-
-          {categoriesLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (
-            <>
-              <Select value={categoriaSlug} onValueChange={handleCategoriaChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleciona a categoria..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories?.map((cat) => (
-                    <SelectItem key={cat.slug} value={cat.slug}>
-                      <span className="flex items-center gap-2">
-                        {cat.icon && <span>{cat.icon}</span>}
-                        <span>{cat.name}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {categoriaAtual && subcategoriasDisponiveis.length > 0 && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Subcategoria (opcional)</p>
-                  <Select value={subcategoriaSlug} onValueChange={setSubcategoriaSlug}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleciona a subcategoria..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subcategoriasDisponiveis.map((sub) => (
-                        <SelectItem key={sub.slug} value={sub.slug}>
-                          {sub.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIAS.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => setCategoria(categoria === c.key ? "" : c.key)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5",
+                  categoria === c.key
+                    ? "bg-primary/10 border-primary text-primary font-medium"
+                    : "border-border hover:border-primary/30",
+                )}
+              >
+                <span>{c.emoji}</span>
+                <span>{c.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* O que queres criar? */}
@@ -299,32 +278,14 @@ const StudioImagePage = () => {
           </div>
         </div>
 
-        {!generating && (nome || descricao || personagens || ambiente || categoriaAtual || subcategoriaSlug) && (
+        {/* Feedback visual das personalizações ativas */}
+        {!generating && (nome || descricao || personagens || ambiente) && (
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
             <p className="font-semibold text-primary mb-1.5 flex items-center gap-1.5">
               <span>✨</span>
               <span>Personalizações ativas</span>
             </p>
             <div className="space-y-0.5 text-muted-foreground">
-              {categoriaAtual && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-primary">•</span>
-                  <span>
-                    Categoria: <span className="text-foreground font-medium">{categoriaAtual.name}</span>
-                  </span>
-                </div>
-              )}
-              {subcategoriaSlug && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-primary">•</span>
-                  <span>
-                    Subcategoria:{" "}
-                    <span className="text-foreground font-medium">
-                      {subcategoriasDisponiveis.find((s) => s.slug === subcategoriaSlug)?.name}
-                    </span>
-                  </span>
-                </div>
-              )}
               {nome && (
                 <div className="flex items-start gap-1.5">
                   <span className="text-primary">•</span>
@@ -357,7 +318,7 @@ const StudioImagePage = () => {
 
         <Button
           onClick={handleGenerate}
-          disabled={generating || !categoriaSlug}
+          disabled={generating}
           className="w-full h-12 font-display font-bold text-base"
           size="lg"
         >

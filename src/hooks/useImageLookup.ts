@@ -5,7 +5,6 @@ import { formatSupabaseError } from "@/utils/supabaseError";
 
 interface LookupParams {
   categoria: string;
-  subcategoria?: string;
   estilo: string;
   proporcao: string;
   objectivo?: string;
@@ -27,26 +26,26 @@ interface LookupResult {
 
 function replacePlaceholders(text: string | null, params: LookupParams): string {
   if (!text) return "";
-
-  let result = text;
-  result = result.replace(/\{\{nome\}\}/gi, params.nome || "the business");
-  result = result.replace(/\{\{sector\}\}/gi, params.sector || "");
-  result = result.replace(/\{\{descricao\}\}/gi, params.descricao || "");
-  result = result.replace(/\{\{personagens\}\}/gi, params.personagens || "");
-  result = result.replace(/\{\{ambiente\}\}/gi, params.ambiente || "");
-  result = result.replace(/\{\{textoSobreposto\}\}/gi, params.textoSobreposto || "");
-
-  return result;
+  return text
+    .replace(/\{\{nome\}\}/gi, params.nome || "the business")
+    .replace(/\{\{sector\}\}/gi, params.sector || "")
+    .replace(/\{\{descricao\}\}/gi, params.descricao || "")
+    .replace(/\{\{personagens\}\}/gi, params.personagens || "")
+    .replace(/\{\{ambiente\}\}/gi, params.ambiente || "")
+    .replace(/\{\{textoSobreposto\}\}/gi, params.textoSobreposto || "");
 }
 
+/**
+ * 🎯 VERSÃO ROBUSTA: Enriquece QUALQUER tipo de prompt
+ */
 function enrichPromptWithUserInputs(basePrompt: string, params: LookupParams): string {
   let enriched = basePrompt;
 
+  // 1️⃣ DESCRIÇÃO: Injeta logo após a primeira vírgula (universal)
   if (params.descricao && params.descricao.trim()) {
-    const lowerEnriched = enriched.toLowerCase();
-    const lowerDesc = params.descricao.toLowerCase();
-
-    if (!lowerEnriched.includes(lowerDesc)) {
+    // Se já contém a descrição, skip
+    if (!enriched.toLowerCase().includes(params.descricao.toLowerCase())) {
+      // Injeta após a primeira vírgula ou no início
       const firstCommaIndex = enriched.indexOf(",");
       if (firstCommaIndex > 0) {
         enriched = enriched.slice(0, firstCommaIndex) + `, ${params.descricao}` + enriched.slice(firstCommaIndex);
@@ -56,7 +55,9 @@ function enrichPromptWithUserInputs(basePrompt: string, params: LookupParams): s
     }
   }
 
+  // 2️⃣ PERSONAGENS: Substitui padrões genéricos OU injeta
   if (params.personagens && params.personagens.trim()) {
+    // Tenta substituir padrões comuns
     const personPatterns = [
       /professional \w+/i,
       /\w+ worker/i,
@@ -76,44 +77,39 @@ function enrichPromptWithUserInputs(basePrompt: string, params: LookupParams): s
       }
     }
 
-    if (!replaced) {
-      const lowerEnriched = enriched.toLowerCase();
-      const lowerPers = params.personagens.toLowerCase();
-      if (!lowerEnriched.includes(lowerPers)) {
-        const firstComma = enriched.indexOf(",");
-        if (firstComma > 0) {
-          enriched = enriched.slice(0, firstComma + 1) + ` ${params.personagens},` + enriched.slice(firstComma + 1);
-        }
-      }
+    // Se não substituiu, adiciona
+    if (!replaced && !enriched.toLowerCase().includes(params.personagens.toLowerCase())) {
+      enriched = enriched.replace(/,\s*/, `, ${params.personagens}, `);
     }
   }
 
+  // 3️⃣ AMBIENTE: Injeta antes da proporção
   if (params.ambiente && params.ambiente.trim()) {
-    const lowerEnriched = enriched.toLowerCase();
-    const lowerAmb = params.ambiente.toLowerCase();
-
-    if (!lowerEnriched.includes(lowerAmb)) {
+    if (!enriched.toLowerCase().includes(params.ambiente.toLowerCase())) {
       enriched = enriched.replace(/(,?\s*9:16|1:1|16:9)/i, `, ${params.ambiente}, 9:16`);
     }
   }
 
+  // 4️⃣ NOME: Garante que aparece (se ainda não estiver)
   if (params.nome && params.nome.trim()) {
-    const lowerEnriched = enriched.toLowerCase();
-    const lowerNome = params.nome.toLowerCase();
-
-    if (!lowerEnriched.includes(lowerNome)) {
+    if (!enriched.toLowerCase().includes(params.nome.toLowerCase())) {
       enriched = enriched.replace(/(Portuguese|Portugal|setting)/i, `${params.nome} $1`);
     }
   }
 
+  // 5️⃣ Limpeza final
   enriched = enriched
     .replace(/,\s*,/g, ",")
     .replace(/\s{2,}/g, " ")
+    .replace(/,\s*9:16/g, ", 9:16")
     .trim();
 
   return enriched;
 }
 
+/**
+ * 🎨 Variante A: SEMPRE diferente (foco em ÂNGULO/COMPOSIÇÃO)
+ */
 function createVariantA(basePrompt: string): string {
   const angleModifiers = [
     "close-up shot of",
@@ -123,10 +119,24 @@ function createVariantA(basePrompt: string): string {
     "eye-level composition of",
   ];
 
+  // Escolhe um ângulo aleatório
   const angle = angleModifiers[Math.floor(Math.random() * angleModifiers.length)];
-  return `${angle} ${basePrompt}`;
+
+  // Adiciona NO INÍCIO (sempre visível)
+  let variant = `${angle} ${basePrompt}`;
+
+  // Remove duplicações de ângulo (caso o base já tenha)
+  variant = variant.replace(
+    /(close-up|wide angle|overhead|detail shot)\s+(close-up|wide angle|overhead|detail shot)/gi,
+    "$1",
+  );
+
+  return variant;
 }
 
+/**
+ * 🌅 Variante B: SEMPRE diferente (foco em ILUMINAÇÃO/MOOD)
+ */
 function createVariantB(basePrompt: string): string {
   const lightingMoods = [
     "golden hour warm lighting, ",
@@ -147,7 +157,10 @@ function createVariantB(basePrompt: string): string {
   const lighting = lightingMoods[Math.floor(Math.random() * lightingMoods.length)];
   const detail = extraDetails[Math.floor(Math.random() * extraDetails.length)];
 
-  return basePrompt.replace(/(9:16|1:1|16:9)/i, `${lighting}${detail}$1`);
+  // Injeta ANTES do aspect ratio
+  let variant = basePrompt.replace(/(9:16|1:1|16:9)/i, `${lighting}${detail}$1`);
+
+  return variant;
 }
 
 export function useImageLookup() {
@@ -157,24 +170,15 @@ export function useImageLookup() {
   const lookupPrompt = async (params: LookupParams): Promise<LookupResult | null> => {
     setIsLoading(true);
     try {
-      const { categoria, subcategoria, estilo, proporcao } = params;
+      const { categoria, estilo, proporcao } = params;
 
-      const filters: Array<Record<string, string>> = [
-        { categoria, subcategoria: subcategoria || "", estilo, proporcao },
-        { categoria, subcategoria: subcategoria || "", estilo },
-        { categoria, estilo, proporcao },
-        { categoria, estilo },
-        { categoria },
-        {},
-      ];
+      const filters = [{ categoria, estilo, proporcao }, { categoria, estilo }, { categoria }, {}];
 
       let row: any = null;
-
       for (const filter of filters) {
         let query = supabase.from("image_prompts_library").select("*").eq("is_active", true);
 
         if (filter.categoria) query = query.eq("categoria", filter.categoria);
-        if (filter.subcategoria) query = query.eq("subcategoria", filter.subcategoria);
         if (filter.estilo) query = query.eq("estilo", filter.estilo);
         if (filter.proporcao) query = query.eq("proporcao", filter.proporcao);
 
@@ -187,7 +191,7 @@ export function useImageLookup() {
 
         if (data) {
           row = data;
-          console.log(`✅ Template: ${data.titulo}`);
+          console.log(`✅ Template encontrado: ${data.titulo}`);
           break;
         }
       }
@@ -207,16 +211,25 @@ export function useImageLookup() {
         .eq("id", row.id)
         .then();
 
+      // 📝 PROCESSAMENTO:
+
+      // 1️⃣ Prompt Principal = Base + User Inputs
       let promptPrincipal = replacePlaceholders(row.prompt_principal, params);
       promptPrincipal = enrichPromptWithUserInputs(promptPrincipal, params);
 
+      // 2️⃣ Variante A = (Base da BD OU Principal) + Ângulo SEMPRE diferente
       let baseForA = row.variante_a ? replacePlaceholders(row.variante_a, params) : promptPrincipal;
       baseForA = enrichPromptWithUserInputs(baseForA, params);
       const varianteA = createVariantA(baseForA);
 
+      // 3️⃣ Variante B = (Base da BD OU Principal) + Iluminação SEMPRE diferente
       let baseForB = row.variante_b ? replacePlaceholders(row.variante_b, params) : promptPrincipal;
       baseForB = enrichPromptWithUserInputs(baseForB, params);
       const varianteB = createVariantB(baseForB);
+
+      console.log("🎯 Principal:", promptPrincipal.substring(0, 80));
+      console.log("🔄 Variante A:", varianteA.substring(0, 80));
+      console.log("🌅 Variante B:", varianteB.substring(0, 80));
 
       return {
         prompt_principal: promptPrincipal,
@@ -227,7 +240,11 @@ export function useImageLookup() {
       };
     } catch (err: any) {
       const detail = formatSupabaseError(err, "Erro ao procurar template");
-      toast({ title: "Erro — Biblioteca de Imagem", description: detail, variant: "destructive" });
+      toast({
+        title: "Erro — Biblioteca de Imagem",
+        description: detail,
+        variant: "destructive",
+      });
       console.error("[useImageLookup] error:", err);
       return null;
     } finally {
