@@ -74,7 +74,7 @@ const StudioImagePage = () => {
 
     const data = await lookupPrompt({
       categoria: categoria || "restauracao",
-      estilo: ESTILOS.find((e) => e.key === estilo)?.label || estilo,
+      estilo,
       proporcao,
       objectivo: OBJECTIVOS.find((o) => o.key === objectivoImagem)?.label || objectivoImagem || undefined,
       nome,
