@@ -85,18 +85,34 @@ const UserDashboard = () => {
     enabled: !!user,
   });
 
-  const { data: businessInfo } = useQuery({
-    queryKey: ["business-name", membership?.business_id],
+  // Fetch ALL businesses linked to this user via business_users
+  const { data: myBusinesses = [] } = useQuery({
+    queryKey: ["my-businesses-list", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("name, slug")
-        .eq("id", membership!.business_id)
+      if (!user?.id) return [];
+      // Get profile id first
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
         .single();
-      if (error) throw error;
-      return data;
+      if (!prof) return [];
+      
+      const { data, error } = await supabase
+        .from("business_users")
+        .select("business_id, role, businesses:business_id(id, name, slug)")
+        .eq("user_id", prof.id);
+      if (error) {
+        console.error("myBusinesses error:", error);
+        return [];
+      }
+      return (data ?? []).filter((d: any) => d.businesses) as Array<{
+        business_id: string;
+        role: string;
+        businesses: { id: string; name: string; slug: string };
+      }>;
     },
-    enabled: !!membership?.business_id,
+    enabled: !!user?.id,
   });
 
   const profileIncomplete = profile && (!profile.full_name?.trim() || !profile.phone?.trim());
@@ -157,8 +173,8 @@ const UserDashboard = () => {
           </p>
         </div>
 
-        {/* ── Banner: Negócio registado ─────────────────────────────────── */}
-        {membership?.business_id && (
+        {/* ── Banner: Negócios registados ─────────────────────────────────── */}
+        {myBusinesses.length === 1 && (
           <Card className="border-primary/40 bg-primary/5 dark:bg-primary/10">
             <CardContent className="py-4 px-6">
               <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -167,8 +183,8 @@ const UserDashboard = () => {
                     <Store className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground text-sm">Tens um negócio registado</p>
-                    {businessInfo?.name && <p className="text-xs text-muted-foreground mt-0.5">{businessInfo.name}</p>}
+                    <p className="font-semibold text-foreground text-sm">Tens 1 negócio registado</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{myBusinesses[0].businesses.name}</p>
                   </div>
                 </div>
                 <Button asChild size="sm" className="gap-2 flex-shrink-0">
@@ -176,6 +192,50 @@ const UserDashboard = () => {
                     <Store className="h-4 w-4" />
                     Painel do Negócio
                     <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {myBusinesses.length > 1 && (
+          <Card className="border-primary/40 bg-primary/5 dark:bg-primary/10">
+            <CardContent className="py-4 px-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-primary/15 rounded-full p-2.5">
+                  <Store className="h-5 w-5 text-primary" />
+                </div>
+                <p className="font-semibold text-foreground text-sm">Tens {myBusinesses.length} negócios registados</p>
+              </div>
+              <div className="space-y-2">
+                {myBusinesses.map((b) => (
+                  <div key={b.business_id} className="flex items-center justify-between bg-background/60 rounded-lg px-4 py-2.5">
+                    <span className="text-sm font-medium text-foreground">{b.businesses.name}</span>
+                    <Button asChild size="sm" variant="outline" className="gap-1.5 h-8 text-xs">
+                      <Link to={`/business-dashboard?bid=${b.business_id}`}>
+                        Painel <ChevronRight className="h-3 w-3" />
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {myBusinesses.length === 0 && !membershipLoading && (
+          <Card className="border-dashed border-primary/30">
+            <CardContent className="py-4 px-6">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 rounded-full p-2.5">
+                    <Store className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Ainda não tens nenhum negócio registado</p>
+                </div>
+                <Button asChild size="sm" variant="outline" className="gap-2 flex-shrink-0">
+                  <Link to="/registar-negocio">
+                    <Store className="h-4 w-4" />
+                    Registar Negócio
                   </Link>
                 </Button>
               </div>

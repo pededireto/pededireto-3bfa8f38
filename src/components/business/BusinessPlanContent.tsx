@@ -3,9 +3,10 @@ import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+import { useBusinessAddon, getAddonStatus } from "@/hooks/useBusinessAddons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Check, X, Star, Loader2, Smartphone, Building2 } from "lucide-react";
+import { CreditCard, Check, X, Star, Loader2, Smartphone, Building2, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props { business: BusinessWithCategory; }
@@ -34,6 +35,8 @@ const BusinessPlanContent = ({ business }: Props) => {
 
   const { data: plans = [] } = useCommercialPlans(true);
   const { data: rules } = usePlanRuleByPlanId(business.plan_id);
+  const { data: studioAddon } = useBusinessAddon(business.id, "marketing_ai");
+  const studioStatus = getAddonStatus(studioAddon ?? null);
   const currentPlan = plans.find((p) => p.id === business.plan_id);
   const currentPrice = currentPlan?.price ?? 0;
   const isFreePlan = !business.plan_id || business.plan_id === FREE_PLAN_ID;
@@ -198,6 +201,59 @@ const BusinessPlanContent = ({ business }: Props) => {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* ADD-ONS Disponíveis */}
+      <div className="bg-card rounded-xl p-6 shadow-card">
+        <h2 className="text-lg font-semibold mb-4">ADD-ONS Disponíveis</h2>
+        <div className="border rounded-xl p-5 transition-all border-border hover:border-primary/30">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-start gap-3">
+              <div className="bg-primary/10 rounded-full p-2.5">
+                <Zap className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">Marketing AI Studio</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Cria conteúdo visual profissional para redes sociais com IA.
+                </p>
+                <p className="text-xl font-bold text-primary mt-2">19,90€<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              {studioStatus.status === "active" || studioStatus.status === "expiring" ? (
+                <>
+                  <Badge variant="default" className="bg-green-500 text-white">
+                    ✅ Activo
+                  </Badge>
+                  {studioStatus.expiresAt && (
+                    <span className="text-xs text-muted-foreground">
+                      {studioStatus.status === "expiring" 
+                        ? `⚠️ Expira em ${studioStatus.daysLeft} dias` 
+                        : `Válido até ${studioStatus.expiresAt.toLocaleDateString("pt-PT")}`}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Badge variant="secondary">Não incluído</Badge>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 mt-1"
+                    onClick={() => {
+                      toast({
+                        title: "Contacte-nos",
+                        description: "Para ativar o Marketing AI Studio, contacte a nossa equipa via WhatsApp.",
+                      });
+                    }}
+                  >
+                    <Zap className="h-4 w-4" /> Adicionar ao Plano
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -34,6 +34,20 @@ const BusinessPerformanceCard = ({ data }: BusinessPerformanceCardProps) => {
     { label: "Pesquisas Cidade", value: data.searches_in_city.toLocaleString("pt-PT"), icon: MapPin, current: null, previous: null },
   ];
 
+  const allContactTypes = [
+    { name: "Telefone", value: data.contacts.click_phone, icon: "📞" },
+    { name: "WhatsApp", value: data.contacts.click_whatsapp, icon: "💬" },
+    { name: "Website", value: data.contacts.click_website, icon: "🌐" },
+    { name: "Email", value: data.contacts.click_email, icon: "✉️" },
+    { name: "Instagram", value: data.contacts.click_instagram ?? 0, icon: "📸" },
+    { name: "Facebook", value: data.contacts.click_facebook ?? 0, icon: "📘" },
+    { name: "Reservas", value: data.contacts.click_reservation ?? 0, icon: "📅" },
+    { name: "Pedidos Online", value: data.contacts.click_order ?? 0, icon: "🛒" },
+  ];
+
+  const sortedContacts = [...allContactTypes].sort((a, b) => b.value - a.value);
+  const maxContactValue = Math.max(...sortedContacts.map((c) => c.value), 1);
+
   const contactPieData = [
     { name: "Telefone", value: data.contacts.click_phone },
     { name: "Website", value: data.contacts.click_website },
@@ -193,41 +207,44 @@ const BusinessPerformanceCard = ({ data }: BusinessPerformanceCardProps) => {
         </Card>
       </div>
 
-      {/* Breakdown de Contactos */}
+      {/* Breakdown de Contactos — Todos os tipos */}
       <Card className="border-border/50">
         <CardContent className="p-5">
-          <p className="text-xs text-muted-foreground mb-3 text-center">Contactos por Canal</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-            {totalContacts === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4 col-span-2">Sem contactos no período</p>
-            ) : (
-              <>
-                {contactPieData.length > 0 && (
-                  <ResponsiveContainer width="100%" height={140}>
-                    <PieChart>
-                      <Pie data={contactPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
-                        {contactPieData.map((_, index) => (
-                          <Cell key={index} fill={CONTACT_COLORS[index % CONTACT_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value} cliques`, ""]} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: "📞 Telefone", value: data.contacts.click_phone },
-                    { label: "💬 WhatsApp", value: data.contacts.click_whatsapp },
-                    { label: "🌐 Website", value: data.contacts.click_website },
-                    { label: "✉️ Email", value: data.contacts.click_email },
-                  ].map((c) => (
-                    <div key={c.label} className="flex justify-between text-sm px-2 py-1 rounded bg-muted/30">
-                      <span className="text-muted-foreground">{c.label}</span>
-                      <span className="font-semibold">{c.value}</span>
-                    </div>
-                  ))}
+          <p className="text-xs text-muted-foreground mb-4 text-center font-medium">Cliques por Tipo de Contacto</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            {/* Left: Full breakdown list */}
+            <div className="space-y-2">
+              {sortedContacts.map((c) => (
+                <div key={c.name} className={`flex items-center gap-3 text-sm ${c.value === 0 ? "opacity-50" : ""}`}>
+                  <span className="text-base w-6 text-center flex-shrink-0">{c.icon}</span>
+                  <span className="text-muted-foreground min-w-[100px]">{c.name}</span>
+                  <div className="flex-1 bg-muted rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full bg-primary transition-all"
+                      style={{ width: `${(c.value / maxContactValue) * 100}%` }}
+                    />
+                  </div>
+                  <span className="font-semibold text-foreground w-8 text-right">{c.value}</span>
                 </div>
-              </>
+              ))}
+            </div>
+            {/* Right: Pie chart (top 4 only) */}
+            {totalContacts > 0 && contactPieData.length > 0 && (
+              <div className="flex flex-col items-center">
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie data={contactPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
+                      {contactPieData.map((_, index) => (
+                        <Cell key={index} fill={CONTACT_COLORS[index % CONTACT_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} cliques`, ""]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {totalContacts === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Sem contactos no período</p>
             )}
           </div>
         </CardContent>

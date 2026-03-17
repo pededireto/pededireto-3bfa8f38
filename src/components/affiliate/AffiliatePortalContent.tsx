@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Copy, Check, Users, TrendingUp, DollarSign, Target } from "lucide-react";
+import { Loader2, Plus, Copy, Check, Users, TrendingUp, DollarSign, Target, Download, Upload } from "lucide-react";
 import ActiveCampaignBanner from "./ActiveCampaignBanner";
 import AddLeadFullModal from "./AddLeadFullModal";
 import AffiliateLeadsTable from "./AffiliateLeadsTable";
 import AffiliateCommissionsTable from "./AffiliateCommissionsTable";
 import PayoutRequestModal from "./PayoutRequestModal";
+import ImportLeadsExcel, { downloadTemplate } from "./ImportLeadsExcel";
 
 interface AffiliatePortalContentProps {
   showBackButton?: boolean;
@@ -31,6 +32,7 @@ const AffiliatePortalContent = ({ showBackButton, backTo = "/dashboard" }: Affil
   const { data: stats } = useAffiliateStats();
 
   const [addLeadOpen, setAddLeadOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [payoutModal, setPayoutModal] = useState<{ open: boolean; commissionId: string; amount: number } | null>(null);
 
@@ -133,10 +135,18 @@ const AffiliatePortalContent = ({ showBackButton, backTo = "/dashboard" }: Affil
       </div>
 
       {/* Actions + Tabs */}
-      <div className="flex items-center justify-between">
-        <Button onClick={() => setAddLeadOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Registar Lead
-        </Button>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex gap-2">
+          <Button onClick={() => setAddLeadOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Registar Lead
+          </Button>
+          <Button variant="outline" onClick={downloadTemplate} className="gap-1.5">
+            <Download className="h-4 w-4" /> Template Excel
+          </Button>
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
+            <Upload className="h-4 w-4" /> Importar Excel
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="leads">
@@ -175,6 +185,7 @@ const AffiliatePortalContent = ({ showBackButton, backTo = "/dashboard" }: Affil
       </Tabs>
 
       <AddLeadFullModal open={addLeadOpen} onOpenChange={setAddLeadOpen} />
+      <ImportLeadsExcel open={importOpen} onOpenChange={setImportOpen} />
 
       {payoutModal?.open && user?.id && (
         <PayoutRequestModal
