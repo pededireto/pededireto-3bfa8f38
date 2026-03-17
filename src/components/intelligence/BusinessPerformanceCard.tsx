@@ -34,6 +34,20 @@ const BusinessPerformanceCard = ({ data }: BusinessPerformanceCardProps) => {
     { label: "Pesquisas Cidade", value: data.searches_in_city.toLocaleString("pt-PT"), icon: MapPin, current: null, previous: null },
   ];
 
+  const allContactTypes = [
+    { name: "Telefone", value: data.contacts.click_phone, icon: "📞" },
+    { name: "WhatsApp", value: data.contacts.click_whatsapp, icon: "💬" },
+    { name: "Website", value: data.contacts.click_website, icon: "🌐" },
+    { name: "Email", value: data.contacts.click_email, icon: "✉️" },
+    { name: "Instagram", value: data.contacts.click_instagram ?? 0, icon: "📸" },
+    { name: "Facebook", value: data.contacts.click_facebook ?? 0, icon: "📘" },
+    { name: "Reservas", value: data.contacts.click_reservation ?? 0, icon: "📅" },
+    { name: "Pedidos Online", value: data.contacts.click_order ?? 0, icon: "🛒" },
+  ];
+
+  const sortedContacts = [...allContactTypes].sort((a, b) => b.value - a.value);
+  const maxContactValue = Math.max(...sortedContacts.map((c) => c.value), 1);
+
   const contactPieData = [
     { name: "Telefone", value: data.contacts.click_phone },
     { name: "Website", value: data.contacts.click_website },
