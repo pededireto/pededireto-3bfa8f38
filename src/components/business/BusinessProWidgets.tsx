@@ -284,9 +284,11 @@ export const BadgesCard = ({ badges }: { badges: BadgeData[] }) => (
               )}
               <p className="text-xs font-semibold">{b.name}</p>
               {b.description && <p className="text-[10px] text-muted-foreground">{b.description}</p>}
-              <p className="text-[10px] text-muted-foreground/60">
-                {new Date(b.earned_at).toLocaleDateString("pt-PT")}
-              </p>
+              {b.earned_at && new Date(b.earned_at).getFullYear() > 1970 && (
+                <p className="text-[10px] text-muted-foreground/60">
+                  {new Date(b.earned_at).toLocaleDateString("pt-PT")}
+                </p>
+              )}
             </div>
           ))}
         </div>

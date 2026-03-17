@@ -52,7 +52,7 @@ const BadgeCard = ({ badge }: { badge: BadgeWithProgress }) => {
         )}
 
         {/* Earned date */}
-        {badge.earned_at && (
+        {badge.earned_at && new Date(badge.earned_at).getFullYear() > 1970 && (
           <p className="text-xs text-muted-foreground">
             {new Date(badge.earned_at).toLocaleDateString("pt-PT", {
               day: "2-digit", month: "short", year: "numeric"

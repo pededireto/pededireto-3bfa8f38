@@ -185,6 +185,7 @@ const AffiliatePortalContent = ({ showBackButton, backTo = "/dashboard" }: Affil
       </Tabs>
 
       <AddLeadFullModal open={addLeadOpen} onOpenChange={setAddLeadOpen} />
+      <ImportLeadsExcel open={importOpen} onOpenChange={setImportOpen} />
 
       {payoutModal?.open && user?.id && (
         <PayoutRequestModal
