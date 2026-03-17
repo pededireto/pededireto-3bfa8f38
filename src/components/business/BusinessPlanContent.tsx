@@ -35,6 +35,8 @@ const BusinessPlanContent = ({ business }: Props) => {
 
   const { data: plans = [] } = useCommercialPlans(true);
   const { data: rules } = usePlanRuleByPlanId(business.plan_id);
+  const { data: studioAddon } = useBusinessAddon(business.id, "marketing_ai");
+  const studioStatus = getAddonStatus(studioAddon ?? null);
   const currentPlan = plans.find((p) => p.id === business.plan_id);
   const currentPrice = currentPlan?.price ?? 0;
   const isFreePlan = !business.plan_id || business.plan_id === FREE_PLAN_ID;
