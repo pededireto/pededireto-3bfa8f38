@@ -135,10 +135,18 @@ const AffiliatePortalContent = ({ showBackButton, backTo = "/dashboard" }: Affil
       </div>
 
       {/* Actions + Tabs */}
-      <div className="flex items-center justify-between">
-        <Button onClick={() => setAddLeadOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Registar Lead
-        </Button>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex gap-2">
+          <Button onClick={() => setAddLeadOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Registar Lead
+          </Button>
+          <Button variant="outline" onClick={downloadTemplate} className="gap-1.5">
+            <Download className="h-4 w-4" /> Template Excel
+          </Button>
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
+            <Upload className="h-4 w-4" /> Importar Excel
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="leads">
