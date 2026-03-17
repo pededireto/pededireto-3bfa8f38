@@ -32,6 +32,7 @@ const AffiliatePortalContent = ({ showBackButton, backTo = "/dashboard" }: Affil
   const { data: stats } = useAffiliateStats();
 
   const [addLeadOpen, setAddLeadOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [payoutModal, setPayoutModal] = useState<{ open: boolean; commissionId: string; amount: number } | null>(null);
 
