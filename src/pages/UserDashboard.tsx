@@ -86,18 +86,34 @@ const UserDashboard = () => {
     enabled: !!user,
   });
 
-  const { data: businessInfo } = useQuery({
-    queryKey: ["business-name", membership?.business_id],
+  // Fetch ALL businesses linked to this user via business_users
+  const { data: myBusinesses = [] } = useQuery({
+    queryKey: ["my-businesses-list", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("name, slug")
-        .eq("id", membership!.business_id)
+      if (!user?.id) return [];
+      // Get profile id first
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
         .single();
-      if (error) throw error;
-      return data;
+      if (!prof) return [];
+      
+      const { data, error } = await supabase
+        .from("business_users")
+        .select("business_id, role, businesses:business_id(id, name, slug)")
+        .eq("user_id", prof.id);
+      if (error) {
+        console.error("myBusinesses error:", error);
+        return [];
+      }
+      return (data ?? []).filter((d: any) => d.businesses) as Array<{
+        business_id: string;
+        role: string;
+        businesses: { id: string; name: string; slug: string };
+      }>;
     },
-    enabled: !!membership?.business_id,
+    enabled: !!user?.id,
   });
 
   const profileIncomplete = profile && (!profile.full_name?.trim() || !profile.phone?.trim());
