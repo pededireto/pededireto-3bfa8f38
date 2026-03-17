@@ -171,7 +171,7 @@ export function useImageLookup() {
       let row: any = null;
 
       for (const filter of filters) {
-        let query = supabase.from("image_prompts_library").select("*").eq("is_active", true);
+        let query = (supabase as any).from("image_prompts_library").select("*").eq("is_active", true);
 
         if (filter.categoria) query = query.eq("categoria", filter.categoria);
         if (filter.subcategoria) query = query.eq("subcategoria", filter.subcategoria);

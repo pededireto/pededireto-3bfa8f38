@@ -58,7 +58,7 @@ const StudioImagePage = () => {
 
   const categoriaAtual = useMemo(() => categories?.find((c) => c.slug === categoriaSlug), [categories, categoriaSlug]);
 
-  const subcategoriasDisponiveis = useMemo(() => categoriaAtual?.subcategories || [], [categoriaAtual]);
+  const subcategoriasDisponiveis = useMemo(() => (categoriaAtual as any)?.subcategories || [], [categoriaAtual]);
 
   const handleCategoriaChange = (newSlug: string) => {
     setCategoriaSlug(newSlug);
