@@ -3,9 +3,10 @@ import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+import { useBusinessAddon, getAddonStatus } from "@/hooks/useBusinessAddons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Check, X, Star, Loader2, Smartphone, Building2 } from "lucide-react";
+import { CreditCard, Check, X, Star, Loader2, Smartphone, Building2, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props { business: BusinessWithCategory; }
