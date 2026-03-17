@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Copy, Check, Users, TrendingUp, DollarSign, Target } from "lucide-react";
+import { Loader2, Plus, Copy, Check, Users, TrendingUp, DollarSign, Target, Download, Upload } from "lucide-react";
 import ActiveCampaignBanner from "./ActiveCampaignBanner";
 import AddLeadFullModal from "./AddLeadFullModal";
 import AffiliateLeadsTable from "./AffiliateLeadsTable";
 import AffiliateCommissionsTable from "./AffiliateCommissionsTable";
 import PayoutRequestModal from "./PayoutRequestModal";
+import ImportLeadsExcel, { downloadTemplate } from "./ImportLeadsExcel";
 
 interface AffiliatePortalContentProps {
   showBackButton?: boolean;
