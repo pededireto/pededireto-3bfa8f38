@@ -146,7 +146,7 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
             <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-foreground mb-1">Dica de Ouro 💡</p>
-              <p className="text-sm text-amber-800 dark:text-amber-200">{data.dica_ouro}</p>
+              <p className="text-sm text-muted-foreground">{data.dica_ouro}</p>
             </div>
           </div>
         </div>
