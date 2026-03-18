@@ -62,6 +62,19 @@ const StudioImagePage = () => {
 
   const subcategoriasDisponiveis = useMemo(() => (categoriaAtual as any)?.subcategories || [], [categoriaAtual]);
 
+  // Pre-fill name and sector from selected business
+  useEffect(() => {
+    if (selectedBusiness) {
+      setNome(selectedBusiness.name || "");
+      if (selectedBusiness.category_id && categories) {
+        const cat = categories.find((c: any) => c.id === selectedBusiness.category_id);
+        if (cat) {
+          setSector(cat.name || "");
+        }
+      }
+    }
+  }, [selectedBusiness?.id, categories]);
+
   const handleCategoriaChange = (newSlug: string) => {
     setCategoriaSlug(newSlug);
     setSubcategoriaSlug("");
