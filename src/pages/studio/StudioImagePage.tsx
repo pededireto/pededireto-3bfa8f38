@@ -40,7 +40,8 @@ const StudioImagePage = () => {
   const { lookupPrompt } = useImageLookup();
   const saveGen = useSaveGeneration();
   const navigate = useNavigate();
-  const { data: categories, isLoading: categoriesLoading } = useCategories(); // 👈 CARREGAR DO SUPABASE
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const { selectedBusiness } = useStudioContext();
 
   const [categoriaSlug, setCategoriaSlug] = useState("");
   const [subcategoriaSlug, setSubcategoriaSlug] = useState("");
