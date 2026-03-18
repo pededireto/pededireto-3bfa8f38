@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useImageLookup } from "@/hooks/useImageLookup";
 import { useSaveGeneration } from "@/hooks/useGenerations";
-import { useCategories } from "@/hooks/useCategories"; // 👈 NOVO
+import { useCategories } from "@/hooks/useCategories";
+import { useStudioContext } from "@/pages/studio/StudioLayout";
 import GrokBox from "@/components/studio/GrokBox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
