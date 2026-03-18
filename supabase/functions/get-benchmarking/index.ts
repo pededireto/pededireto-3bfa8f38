@@ -1,7 +1,11 @@
-import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -9,7 +13,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { category, subcategory, business_id } = await req.json();
+    const { category, subcategory } = await req.json();
 
     if (!category || !subcategory) {
       return new Response(
@@ -51,7 +55,6 @@ Deno.serve(async (req) => {
     const zhipuSecret = Deno.env.get("ZHIPU_API_SECRET");
 
     if (!zhipuId || !zhipuSecret) {
-      console.error("ZHIPU_API_ID or ZHIPU_API_SECRET not configured");
       console.error("ZHIPU_API_ID exists:", !!zhipuId);
       console.error("ZHIPU_API_SECRET exists:", !!zhipuSecret);
       return new Response(
@@ -119,7 +122,6 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
       const content = apiJson?.choices?.[0]?.message?.content || "";
       console.log("Z.AI API raw response:", content);
 
-      // Extract JSON from response (may be wrapped in markdown code blocks)
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         benchmarkData = JSON.parse(jsonMatch[0]);
@@ -139,7 +141,7 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
       );
     }
 
-    // 3. Save to cache (upsert)
+    // 3. Save to cache
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -159,7 +161,7 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
         { onConflict: "category,subcategory" }
       );
 
-    console.log("Cache saved successfully for:", category, subcategory);
+    console.log("Cache saved for:", category, subcategory);
 
     return new Response(
       JSON.stringify({ data: benchmarkData, source: "api" }),
@@ -174,12 +176,3 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
     );
   }
 });
-```
-
----
-
-## Como substituir sem créditos Lovable
-
-No Lovable vai a:
-```
-Cloud → Edge Functions → get-benchmarking → Edit
