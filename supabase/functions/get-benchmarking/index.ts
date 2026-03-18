@@ -16,10 +16,10 @@ Deno.serve(async (req) => {
     const { category, subcategory } = await req.json();
 
     if (!category || !subcategory) {
-      return new Response(
-        JSON.stringify({ error: "category and subcategory are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "category and subcategory are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -40,14 +40,13 @@ Deno.serve(async (req) => {
         .from("benchmarking_cache")
         .update({
           hit_count: (cached.hit_count || 0) + 1,
-          last_hit_at: new Date().toISOString()
+          last_hit_at: new Date().toISOString(),
         })
         .eq("id", cached.id);
 
-      return new Response(
-        JSON.stringify({ data: cached.data, source: "cache" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ data: cached.data, source: "cache" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // 2. Build Z.AI API key from two secrets
@@ -57,10 +56,9 @@ Deno.serve(async (req) => {
     if (!zhipuId || !zhipuSecret) {
       console.error("ZHIPU_API_ID exists:", !!zhipuId);
       console.error("ZHIPU_API_SECRET exists:", !!zhipuSecret);
-      return new Response(
-        JSON.stringify({ error: "unavailable" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "unavailable" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const zhipuKey = `${zhipuId}.${zhipuSecret}`;
@@ -112,10 +110,9 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
       if (!apiRes.ok) {
         const errText = await apiRes.text();
         console.error("Z.AI API error:", apiRes.status, errText);
-        return new Response(
-          JSON.stringify({ error: "unavailable" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "unavailable" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       const apiJson = await apiRes.json();
@@ -128,51 +125,45 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
         console.log("Benchmark data parsed successfully");
       } else {
         console.error("Could not parse Z.AI response:", content);
-        return new Response(
-          JSON.stringify({ error: "unavailable" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "unavailable" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     } catch (apiErr) {
       console.error("Z.AI API call failed:", apiErr);
-      return new Response(
-        JSON.stringify({ error: "unavailable" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "unavailable" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // 3. Save to cache
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    await supabase
-      .from("benchmarking_cache")
-      .upsert(
-        {
-          category,
-          subcategory,
-          data: benchmarkData,
-          created_at: now.toISOString(),
-          expires_at: expiresAt.toISOString(),
-          hit_count: 1,
-          last_hit_at: now.toISOString(),
-          renewed_by: "lazy",
-        },
-        { onConflict: "category,subcategory" }
-      );
+    await supabase.from("benchmarking_cache").upsert(
+      {
+        category,
+        subcategory,
+        data: benchmarkData,
+        created_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        hit_count: 1,
+        last_hit_at: now.toISOString(),
+        renewed_by: "lazy",
+      },
+      { onConflict: "category,subcategory" },
+    );
 
     console.log("Cache saved for:", category, subcategory);
 
-    return new Response(
-      JSON.stringify({ data: benchmarkData, source: "api" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
+    return new Response(JSON.stringify({ data: benchmarkData, source: "api" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("get-benchmarking error:", err);
-    return new Response(
-      JSON.stringify({ error: "unavailable" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "unavailable" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
