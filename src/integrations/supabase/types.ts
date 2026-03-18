@@ -537,6 +537,42 @@ export type Database = {
         }
         Relationships: []
       }
+      benchmarking_cache: {
+        Row: {
+          category: string
+          created_at: string
+          data: Json
+          expires_at: string
+          hit_count: number
+          id: string
+          last_hit_at: string | null
+          renewed_by: string
+          subcategory: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          hit_count?: number
+          id?: string
+          last_hit_at?: string | null
+          renewed_by?: string
+          subcategory: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          hit_count?: number
+          id?: string
+          last_hit_at?: string | null
+          renewed_by?: string
+          subcategory?: string
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           author_avatar_url: string | null
