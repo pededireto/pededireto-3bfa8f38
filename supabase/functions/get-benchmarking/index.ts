@@ -32,10 +32,12 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (cached && !cacheErr) {
-      // Increment hit_count
       await supabase
         .from("benchmarking_cache")
-        .update({ hit_count: (cached.hit_count || 0) + 1, last_hit_at: new Date().toISOString() })
+        .update({
+          hit_count: (cached.hit_count || 0) + 1,
+          last_hit_at: new Date().toISOString()
+        })
         .eq("id", cached.id);
 
       return new Response(
@@ -44,15 +46,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Call Z.AI API
-    const zhipuKey = Deno.env.get("ZHIPU_API_KEY");
-    if (!zhipuKey) {
-      console.error("ZHIPU_API_KEY not configured");
+    // 2. Build Z.AI API key from two secrets
+    const zhipuId = Deno.env.get("ZHIPU_API_ID");
+    const zhipuSecret = Deno.env.get("ZHIPU_API_SECRET");
+
+    if (!zhipuId || !zhipuSecret) {
+      console.error("ZHIPU_API_ID or ZHIPU_API_SECRET not configured");
+      console.error("ZHIPU_API_ID exists:", !!zhipuId);
+      console.error("ZHIPU_API_SECRET exists:", !!zhipuSecret);
       return new Response(
         JSON.stringify({ error: "unavailable" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const zhipuKey = `${zhipuId}.${zhipuSecret}`;
+    console.log("ZHIPU key constructed successfully");
 
     const prompt = `És um especialista em análise de mercado para pequenos e médios negócios em Portugal.
 
@@ -79,6 +88,8 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
     let benchmarkData: Record<string, unknown> | null = null;
 
     try {
+      console.log("Calling Z.AI API for:", category, subcategory);
+
       const apiRes = await fetch(ZHIPU_API_URL, {
         method: "POST",
         headers: {
@@ -93,6 +104,8 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
         }),
       });
 
+      console.log("Z.AI API status:", apiRes.status);
+
       if (!apiRes.ok) {
         const errText = await apiRes.text();
         console.error("Z.AI API error:", apiRes.status, errText);
@@ -104,11 +117,13 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
 
       const apiJson = await apiRes.json();
       const content = apiJson?.choices?.[0]?.message?.content || "";
+      console.log("Z.AI API raw response:", content);
 
       // Extract JSON from response (may be wrapped in markdown code blocks)
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         benchmarkData = JSON.parse(jsonMatch[0]);
+        console.log("Benchmark data parsed successfully");
       } else {
         console.error("Could not parse Z.AI response:", content);
         return new Response(
@@ -144,10 +159,13 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
         { onConflict: "category,subcategory" }
       );
 
+    console.log("Cache saved successfully for:", category, subcategory);
+
     return new Response(
       JSON.stringify({ data: benchmarkData, source: "api" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (err) {
     console.error("get-benchmarking error:", err);
     return new Response(
@@ -156,3 +174,12 @@ Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portuga
     );
   }
 });
+```
+
+---
+
+## Como substituir sem créditos Lovable
+
+No Lovable vai a:
+```
+Cloud → Edge Functions → get-benchmarking → Edit
