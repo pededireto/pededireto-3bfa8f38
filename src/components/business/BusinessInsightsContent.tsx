@@ -17,6 +17,7 @@ import BusinessPerformanceCard from "@/components/intelligence/BusinessPerforman
 import BusinessBenchmarkCard from "@/components/intelligence/BusinessBenchmarkCard";
 import BenchmarkInsightsPanel from "@/components/intelligence/BenchmarkInsightsPanel";
 import UpgradeAnalyticsCard from "@/components/intelligence/UpgradeAnalyticsCard";
+import SectorBenchmarkPanel from "@/components/intelligence/SectorBenchmarkPanel";
 import {
   FavoritesCard,
   ProfileScoreCard,
@@ -233,6 +234,11 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
         <BusinessBenchmarkCard businessId={businessId} days={days} />
         <BenchmarkInsightsPanel data={benchmarkData} isLoading={benchmarkLoading} />
       </div>
+
+      <div className="border-t border-border/50" />
+
+      {/* Benchmarking Sectorial Z.AI */}
+      <SectorBenchmarkPanel businessId={businessId} />
 
     </div>
   );

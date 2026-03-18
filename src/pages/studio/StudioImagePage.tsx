@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useImageLookup } from "@/hooks/useImageLookup";
 import { useSaveGeneration } from "@/hooks/useGenerations";
-import { useCategories } from "@/hooks/useCategories"; // 👈 NOVO
+import { useCategories } from "@/hooks/useCategories";
+import { useStudioContext } from "@/pages/studio/StudioLayout";
 import GrokBox from "@/components/studio/GrokBox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -39,7 +40,8 @@ const StudioImagePage = () => {
   const { lookupPrompt } = useImageLookup();
   const saveGen = useSaveGeneration();
   const navigate = useNavigate();
-  const { data: categories, isLoading: categoriesLoading } = useCategories(); // 👈 CARREGAR DO SUPABASE
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const { selectedBusiness } = useStudioContext();
 
   const [categoriaSlug, setCategoriaSlug] = useState("");
   const [subcategoriaSlug, setSubcategoriaSlug] = useState("");
@@ -59,6 +61,19 @@ const StudioImagePage = () => {
   const categoriaAtual = useMemo(() => categories?.find((c) => c.slug === categoriaSlug), [categories, categoriaSlug]);
 
   const subcategoriasDisponiveis = useMemo(() => (categoriaAtual as any)?.subcategories || [], [categoriaAtual]);
+
+  // Pre-fill name and sector from selected business
+  useEffect(() => {
+    if (selectedBusiness) {
+      setNome(selectedBusiness.name || "");
+      if (selectedBusiness.category_id && categories) {
+        const cat = categories.find((c: any) => c.id === selectedBusiness.category_id);
+        if (cat) {
+          setSector(cat.name || "");
+        }
+      }
+    }
+  }, [selectedBusiness?.id, categories]);
 
   const handleCategoriaChange = (newSlug: string) => {
     setCategoriaSlug(newSlug);
@@ -155,10 +170,7 @@ const StudioImagePage = () => {
                 <SelectContent>
                   {categories?.map((cat) => (
                     <SelectItem key={cat.slug} value={cat.slug}>
-                      <span className="flex items-center gap-2">
-                        {cat.icon && <span>{cat.icon}</span>}
-                        <span>{cat.name}</span>
-                      </span>
+                      {cat.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
