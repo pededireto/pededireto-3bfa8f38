@@ -176,7 +176,7 @@ const PresenceBar = ({ label, percent, has }: { label: string; percent: number; 
 );
 
 const PresenceStatus = ({ has, label, percent }: { has: boolean; label: string; percent: number }) => (
-  <p className={has ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}>
+  <p className={has ? "text-primary" : "text-destructive"}>
     {has
       ? `O teu perfil tem ${label} ✅ — estás acima da média do sector`
       : `Ainda não tens ${label} ❌ — ${percent}% do sector já tem`}

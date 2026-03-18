@@ -18,23 +18,21 @@ export interface SectorBenchmarkData {
 }
 
 interface BusinessProfile {
-  website?: string | null;
-  whatsapp?: string | null;
-  instagram?: string | null;
-  facebook?: string | null;
-  tiktok?: string | null;
+  website: string | null;
+  whatsapp: string | null;
+  instagram: string | null;
+  facebook: string | null;
 }
 
 export const useBusinessBenchmarkSector = (
   businessId: string | null | undefined
 ) => {
-  // First get category/subcategory names for this business
   const { data: bizInfo } = useQuery({
     queryKey: ["biz-sector-info", businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("businesses")
-        .select("category_id, subcategory_id, website, whatsapp, instagram, facebook, tiktok")
+        .select("category_id, subcategory_id, cta_website, cta_whatsapp, instagram_url, facebook_url")
         .eq("id", businessId!)
         .single();
       if (error) throw error;
@@ -64,11 +62,10 @@ export const useBusinessBenchmarkSector = (
         category: categoryName,
         subcategory: subcategoryName,
         profile: {
-          website: data.website,
-          whatsapp: data.whatsapp,
-          instagram: data.instagram,
-          facebook: data.facebook,
-          tiktok: data.tiktok,
+          website: data.cta_website,
+          whatsapp: data.cta_whatsapp,
+          instagram: data.instagram_url,
+          facebook: data.facebook_url,
         } as BusinessProfile,
       };
     },
