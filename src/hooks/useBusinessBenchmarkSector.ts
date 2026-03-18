@@ -24,48 +24,105 @@ interface BusinessProfile {
   facebook: string | null;
 }
 
-export const useBusinessBenchmarkSector = (
-  businessId: string | null | undefined
-) => {
+interface SubcategoryInfo {
+  category: string;
+  subcategory: string;
+}
+
+export const useBusinessBenchmarkSector = (businessId: string | null | undefined) => {
   const { data: bizInfo } = useQuery({
     queryKey: ["biz-sector-info", businessId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      // 1. Buscar dados base do negócio
+      const { data: biz, error: bizErr } = await (supabase as any)
         .from("businesses")
-        .select("category_id, subcategory_id, cta_website, cta_whatsapp, instagram_url, facebook_url")
+        .select("cta_website, cta_whatsapp, instagram_url, facebook_url")
         .eq("id", businessId!)
         .single();
-      if (error) throw error;
 
-      let categoryName = "";
-      let subcategoryName = "";
+      if (bizErr) throw bizErr;
 
-      if (data.category_id) {
-        const { data: cat } = await supabase
-          .from("categories")
-          .select("name")
-          .eq("id", data.category_id)
-          .single();
-        categoryName = cat?.name || "";
+      // 2. Buscar TODAS as subcategorias de business_subcategories
+      const { data: bizSubs, error: subsErr } = await (supabase as any)
+        .from("business_subcategories")
+        .select("subcategory_id")
+        .eq("business_id", businessId!);
+
+      if (subsErr) throw subsErr;
+      if (!bizSubs || bizSubs.length === 0) {
+        return {
+          category: "",
+          subcategory: "",
+          allSubcategories: [] as SubcategoryInfo[],
+          profile: {
+            website: biz.cta_website,
+            whatsapp: biz.cta_whatsapp,
+            instagram: biz.instagram_url,
+            facebook: biz.facebook_url,
+          } as BusinessProfile,
+        };
       }
 
-      if (data.subcategory_id) {
-        const { data: sub } = await supabase
-          .from("subcategories")
-          .select("name")
-          .eq("id", data.subcategory_id)
-          .single();
-        subcategoryName = sub?.name || "";
+      // 3. Para cada subcategoria, buscar nome e categoria
+      const subcategoryIds = bizSubs.map((s: any) => s.subcategory_id);
+      const { data: subs, error: subNamesErr } = await supabase
+        .from("subcategories")
+        .select("id, name, category_id")
+        .in("id", subcategoryIds);
+
+      if (subNamesErr) throw subNamesErr;
+
+      // 4. Buscar nomes das categorias
+      const categoryIds = [...new Set(subs?.map((s: any) => s.category_id) || [])];
+      const { data: cats, error: catErr } = await supabase.from("categories").select("id, name").in("id", categoryIds);
+
+      if (catErr) throw catErr;
+
+      // 5. Montar lista de subcategorias com categoria
+      const allSubcategories: SubcategoryInfo[] = (subs || []).map((sub: any) => {
+        const cat = cats?.find((c: any) => c.id === sub.category_id);
+        return {
+          category: cat?.name || "",
+          subcategory: sub.name || "",
+        };
+      });
+
+      // 6. Verificar qual subcategoria tem cache disponível
+      for (const item of allSubcategories) {
+        const { data: cached } = await (supabase as any)
+          .from("benchmarking_cache")
+          .select("id")
+          .eq("category", item.category)
+          .eq("subcategory", item.subcategory)
+          .gt("expires_at", new Date().toISOString())
+          .maybeSingle();
+
+        if (cached) {
+          // Usar a primeira com cache disponível
+          return {
+            category: item.category,
+            subcategory: item.subcategory,
+            allSubcategories,
+            profile: {
+              website: biz.cta_website,
+              whatsapp: biz.cta_whatsapp,
+              instagram: biz.instagram_url,
+              facebook: biz.facebook_url,
+            } as BusinessProfile,
+          };
+        }
       }
 
+      // 7. Nenhuma tem cache — usar a primeira subcategoria
       return {
-        category: categoryName,
-        subcategory: subcategoryName,
+        category: allSubcategories[0]?.category || "",
+        subcategory: allSubcategories[0]?.subcategory || "",
+        allSubcategories,
         profile: {
-          website: data.cta_website,
-          whatsapp: data.cta_whatsapp,
-          instagram: data.instagram_url,
-          facebook: data.facebook_url,
+          website: biz.cta_website,
+          whatsapp: biz.cta_whatsapp,
+          instagram: biz.instagram_url,
+          facebook: biz.facebook_url,
         } as BusinessProfile,
       };
     },
@@ -76,20 +133,15 @@ export const useBusinessBenchmarkSector = (
   const { data, isLoading, error } = useQuery({
     queryKey: ["sector-benchmark", bizInfo?.category, bizInfo?.subcategory],
     queryFn: async () => {
-      const { data: res, error: fnErr } = await supabase.functions.invoke(
-        "get-benchmarking",
-        {
-          body: {
-            category: bizInfo!.category,
-            subcategory: bizInfo!.subcategory,
-            business_id: businessId,
-          },
-        }
-      );
-
+      const { data: res, error: fnErr } = await supabase.functions.invoke("get-benchmarking", {
+        body: {
+          category: bizInfo!.category,
+          subcategory: bizInfo!.subcategory,
+          business_id: businessId,
+        },
+      });
       if (fnErr) throw fnErr;
       if (res?.error) throw new Error(res.error);
-
       return res.data as SectorBenchmarkData;
     },
     enabled: !!bizInfo?.category && !!bizInfo?.subcategory,
@@ -104,5 +156,6 @@ export const useBusinessBenchmarkSector = (
     profile: bizInfo?.profile,
     category: bizInfo?.category,
     subcategory: bizInfo?.subcategory,
+    allSubcategories: bizInfo?.allSubcategories || [],
   };
 };
