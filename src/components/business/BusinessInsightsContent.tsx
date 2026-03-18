@@ -17,6 +17,7 @@ import BusinessPerformanceCard from "@/components/intelligence/BusinessPerforman
 import BusinessBenchmarkCard from "@/components/intelligence/BusinessBenchmarkCard";
 import BenchmarkInsightsPanel from "@/components/intelligence/BenchmarkInsightsPanel";
 import UpgradeAnalyticsCard from "@/components/intelligence/UpgradeAnalyticsCard";
+import SectorBenchmarkPanel from "@/components/intelligence/SectorBenchmarkPanel";
 import {
   FavoritesCard,
   ProfileScoreCard,
