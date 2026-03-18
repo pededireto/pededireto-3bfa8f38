@@ -103,7 +103,7 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
 
         <div className="space-y-3">
           <PresenceBar label="Negócios com Website" percent={websitePct} has={!!profile?.website} />
-          <PresenceBar label="Negócios com Redes Sociais" percent={socialPct} has={!!(profile?.instagram || profile?.facebook || profile?.tiktok)} />
+          <PresenceBar label="Negócios com Redes Sociais" percent={socialPct} has={!!(profile?.instagram || profile?.facebook)} />
         </div>
 
         <div className="space-y-1 text-xs">
