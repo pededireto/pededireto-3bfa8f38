@@ -36,18 +36,10 @@ interface BusinessInsightsContentProps {
   forceProAccess?: boolean;
 }
 
-const BusinessInsightsContent = ({
-  businessId,
-  planId,
-  claimStatus = "verified",
-  forceProAccess = false,
-}: BusinessInsightsContentProps) => {
+const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified", forceProAccess = false }: BusinessInsightsContentProps) => {
   const [days, setDays] = useState(30);
   const { data: planRule, isLoading: ruleLoading } = usePlanRuleByPlanId(planId);
-  const { data: analytics } = useBusinessAnalytics(
-    claimStatus === "verified" || forceProAccess ? businessId : null,
-    days,
-  );
+  const { data: analytics } = useBusinessAnalytics(claimStatus === "verified" || forceProAccess ? businessId : null, days);
 
   const isVerified = claimStatus === "verified" || forceProAccess;
   const hasProAccess = forceProAccess || !!(planRule as any)?.allow_analytics_pro;
@@ -60,12 +52,12 @@ const BusinessInsightsContent = ({
   const { data: reviewsData } = useBusinessReviewsData(isVerified && hasProAccess ? businessId : null);
   const { data: badges } = useBusinessBadges(isVerified && hasProAccess ? businessId : null);
   const { data: monthlyHistory } = useBusinessMonthlyHistory(isVerified && hasProAccess ? businessId : null);
-  const { data: benchmarkData, isLoading: benchmarkLoading } = useBusinessBenchmark(
-    isVerified && hasProAccess ? businessId : null,
-    days,
-  );
+  const { data: benchmarkData, isLoading: benchmarkLoading } = useBusinessBenchmark(isVerified && hasProAccess ? businessId : null, days);
 
-  const { data, isLoading, error } = useBusinessIntelligence(isVerified && hasProAccess ? businessId : null, days);
+  const { data, isLoading, error } = useBusinessIntelligence(
+    isVerified && hasProAccess ? businessId : null,
+    days
+  );
 
   // Bloqueado se não verificado
   if (!isVerified) {
@@ -112,9 +104,7 @@ const BusinessInsightsContent = ({
             <div className="bg-card rounded-xl p-5 shadow-card">
               <p className="text-sm text-muted-foreground">Contactos</p>
               <p className="text-2xl font-bold">{analytics?.totalContacts ?? 0}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                📞{analytics?.breakdown.phone ?? 0} · 💬{analytics?.breakdown.whatsapp ?? 0}
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">📞{analytics?.breakdown.phone ?? 0} · 💬{analytics?.breakdown.whatsapp ?? 0}</p>
             </div>
             <div className="bg-card rounded-xl p-5 shadow-card">
               <p className="text-sm text-muted-foreground">Cliques Website</p>
@@ -162,34 +152,35 @@ const BusinessInsightsContent = ({
   const exportToCSV = () => {
     if (!data) return;
     const rows = [
-      ["Métrica", "Valor", "Período"],
-      ["Impressões", data.impressions ?? 0, `Últimos ${days} dias`],
-      ["Cliques", data.clicks ?? 0, `Últimos ${days} dias`],
-      ["CTR", (data.ctr ?? 0) + "%", `Últimos ${days} dias`],
-      ["Pesquisas na categoria", data.searches_in_category ?? 0, `Últimos ${days} dias`],
-      ["Pesquisas na cidade", data.searches_in_city ?? 0, `Últimos ${days} dias`],
-      ["Posição média", data.position_average ?? "-", `Últimos ${days} dias`],
-      ["Cliques Telefone", data.contacts?.click_phone ?? 0, "Total"],
-      ["Cliques WhatsApp", data.contacts?.click_whatsapp ?? 0, "Total"],
-      ["Cliques Email", data.contacts?.click_email ?? 0, "Total"],
-      ["Cliques Website", data.contacts?.click_website ?? 0, "Total"],
-      ["Hora de pico", getPeakHourLabel(data.peak_hour), "-"],
-      ["Dia mais activo", getPeakDowLabel(data.peak_dow), "-"],
-      ["Impressões período anterior", data.previous?.impressions ?? 0, "Anterior"],
-      ["Cliques período anterior", data.previous?.clicks ?? 0, "Anterior"],
+      ['Métrica', 'Valor', 'Período'],
+      ['Impressões', data.impressions ?? 0, `Últimos ${days} dias`],
+      ['Cliques', data.clicks ?? 0, `Últimos ${days} dias`],
+      ['CTR', (data.ctr ?? 0) + '%', `Últimos ${days} dias`],
+      ['Pesquisas na categoria', data.searches_in_category ?? 0, `Últimos ${days} dias`],
+      ['Pesquisas na cidade', data.searches_in_city ?? 0, `Últimos ${days} dias`],
+      ['Posição média', data.position_average ?? '-', `Últimos ${days} dias`],
+      ['Cliques Telefone', data.contacts?.click_phone ?? 0, 'Total'],
+      ['Cliques WhatsApp', data.contacts?.click_whatsapp ?? 0, 'Total'],
+      ['Cliques Email', data.contacts?.click_email ?? 0, 'Total'],
+      ['Cliques Website', data.contacts?.click_website ?? 0, 'Total'],
+      ['Hora de pico', getPeakHourLabel(data.peak_hour), '-'],
+      ['Dia mais activo', getPeakDowLabel(data.peak_dow), '-'],
+      ['Impressões período anterior', data.previous?.impressions ?? 0, 'Anterior'],
+      ['Cliques período anterior', data.previous?.clicks ?? 0, 'Anterior'],
     ];
-    const csv = rows.map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = url;
-    link.download = `insights-${businessId}-${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `insights-${businessId}-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
 
   return (
     <div className="space-y-8">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -213,7 +204,9 @@ const BusinessInsightsContent = ({
         <div className="md:col-span-1">
           <FavoritesCard count={favorites ?? 0} />
         </div>
-        <div className="md:col-span-2">{profileScore?.fields && <ProfileScoreCard data={profileScore} />}</div>
+        <div className="md:col-span-2">
+          {profileScore?.fields && <ProfileScoreCard data={profileScore} />}
+        </div>
       </div>
 
       <div className="border-t border-border/50" />
@@ -246,6 +239,7 @@ const BusinessInsightsContent = ({
 
       {/* Benchmarking Sectorial Z.AI */}
       <SectorBenchmarkPanel businessId={businessId} />
+
     </div>
   );
 };
