@@ -235,6 +235,11 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
         <BenchmarkInsightsPanel data={benchmarkData} isLoading={benchmarkLoading} />
       </div>
 
+      <div className="border-t border-border/50" />
+
+      {/* Benchmarking Sectorial Z.AI */}
+      <SectorBenchmarkPanel businessId={businessId} />
+
     </div>
   );
 };

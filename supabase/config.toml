@@ -50,3 +50,9 @@ verify_jwt = false
 
 [functions.studio-generate]
 verify_jwt = false
+
+[functions.get-benchmarking]
+verify_jwt = false
+
+[functions.renew-benchmarking-cache]
+verify_jwt = false

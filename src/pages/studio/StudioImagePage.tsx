@@ -170,10 +170,7 @@ const StudioImagePage = () => {
                 <SelectContent>
                   {categories?.map((cat) => (
                     <SelectItem key={cat.slug} value={cat.slug}>
-                      <span className="flex items-center gap-2">
-                        {cat.icon && <span>{cat.icon}</span>}
-                        <span>{cat.name}</span>
-                      </span>
+                      {cat.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
