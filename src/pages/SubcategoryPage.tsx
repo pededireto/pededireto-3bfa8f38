@@ -183,17 +183,17 @@ const SubcategoryPage = () => {
       <Header />
 
       <main className="flex-1">
-        {/* Subcategory Header */}
-        <section className="section-hero py-8 md:py-12">
-          <div className="container">
-            <Link
-              to={`/categoria/${categorySlug}`}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar a {subcategory.categories?.name || "Categorias"}
-            </Link>
+        {/* Breadcrumbs */}
+        <div className="container pt-6">
+          <Breadcrumbs items={[
+            { label: category?.name || "Categoria", href: `/categoria/${categorySlug}` },
+            { label: subcategory.name },
+          ]} />
+        </div>
 
+        {/* Subcategory Header */}
+        <section className="section-hero py-4 md:py-8">
+          <div className="container">
             <h1 className="text-3xl md:text-4xl font-bold mb-3">{subcategory.name}</h1>
 
             {subcategory.description && (
