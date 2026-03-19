@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useBusinessBenchmarkSector, SectorBenchmarkData } from "@/hooks/useBusinessBenchmarkSector";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, Globe, Lightbulb, Search, Target, Zap } from "lucide-react";
 
 interface SectorBenchmarkPanelProps {
@@ -10,7 +12,8 @@ interface SectorBenchmarkPanelProps {
 }
 
 const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
-  const { data, isLoading, error, profile, category, subcategory } = useBusinessBenchmarkSector(businessId);
+  const [selectedSub, setSelectedSub] = useState<string | undefined>();
+  const { data, isLoading, error, profile, category, subcategory, allSubcategories } = useBusinessBenchmarkSector(businessId, selectedSub);
 
   if (isLoading) {
     return (
