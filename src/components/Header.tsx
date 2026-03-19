@@ -121,14 +121,23 @@ const Header = () => {
               </Button>
             </>
           ) : (
-            <Link
-              to="/login"
-              aria-current={isActive("/login") ? "page" : undefined}
-              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors inline-flex items-center gap-1"
-            >
-              <User className="h-4 w-4" aria-hidden="true" focusable="false" />
-              Entrar
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/register"
+                className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 px-4 py-2 rounded-lg transition-colors inline-flex flex-col items-center leading-tight"
+              >
+                <span>Criar Conta</span>
+                <span className="text-[10px] font-normal opacity-80">É grátis</span>
+              </Link>
+              <Link
+                to="/login"
+                aria-current={isActive("/login") ? "page" : undefined}
+                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors inline-flex items-center gap-1"
+              >
+                <User className="h-4 w-4" aria-hidden="true" focusable="false" />
+                Entrar
+              </Link>
+            </div>
           )}
 
           <ThemeToggle />
