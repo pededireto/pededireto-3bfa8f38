@@ -5,6 +5,7 @@ import { useSearch } from "@/hooks/useSearch";
 import SearchResults from "@/components/SearchResults";
 import { useAutoSaveSearch } from "@/hooks/useSavedSearches";
 import { useCities } from "@/hooks/useCities";
+import { useUserLocation } from "@/hooks/useUserLocation";
 
 const HIDDEN_ROUTES = ["/pesquisa"];
 
