@@ -499,15 +499,14 @@ const BusinessPage = () => {
       <main className="flex-1">
         <section className="section-hero py-8">
           <div className="container">
-            {business.categories && (
-              <Link
-                to={`/categoria/${business.categories.slug}`}
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar a {business.categories.name}
-              </Link>
-            )}
+            <Breadcrumbs
+              items={[
+                ...(business.categories
+                  ? [{ label: business.categories.name, href: `/categoria/${business.categories.slug}` }]
+                  : []),
+                { label: business.name },
+              ]}
+            />
           </div>
         </section>
 
