@@ -485,6 +485,9 @@ const CategoryCard = ({
           <h3 className="font-semibold text-lg group-hover:text-primary transition-colors text-center px-3">
             {category.name}
           </h3>
+          {businessCount !== undefined && businessCount > 0 && (
+            <span className="text-xs text-muted-foreground mt-1">{businessCount} negócio{businessCount !== 1 ? "s" : ""}</span>
+          )}
         </div>
       )}
     </div>
