@@ -27,15 +27,13 @@ export interface PipelineEntry {
     categories?: { name: string } | null;
     subcategories?: { name: string } | null;
   };
-  profiles?: { full_name: string; email: string } | null;
 }
 
-// CORRECÇÃO: removido !inner para não excluir negócios sem categoria
+// CORRECÇÃO: removido !inner e removido JOIN com profiles (sem FK)
 const PIPELINE_SELECT = `
   *,
   businesses(id, name, slug, city, cta_phone, cta_email, commercial_status, subscription_status, subscription_price, logo_url,
-    categories(name), subcategories(name)),
-  profiles:assigned_to(full_name, email)
+    categories(name), subcategories(name))
 `;
 
 // All pipeline entries (admin view)
