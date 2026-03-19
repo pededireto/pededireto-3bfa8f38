@@ -10,10 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Search, Building2, AlertTriangle, UserCheck, Ban, Handshake, UserPlus } from "lucide-react";
+import { Pencil, Search, Building2, AlertTriangle, UserCheck, Ban, Handshake, UserPlus, Check } from "lucide-react";
 import BusinessFileCard from "@/components/admin/BusinessFileCard";
-import { useMyAssignments } from "@/hooks/useCommercialPerformance";
+import { useCommercialAssignments } from "@/hooks/useCommercialPerformance";
 
 interface CommercialBusinessesContentProps {
   businesses: BusinessWithCategory[];
@@ -38,7 +39,23 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
   const createActionRequest = useCreateActionRequest();
   const createAuditLog = useCreateAuditLog();
   const assignToMe = useAssignToMe();
-  const { data: myAssignments = [] } = useMyAssignments();
+  const { data: allAssignments = [] } = useCommercialAssignments();
+
+  // Build maps: business_id → assignment info
+  const assignmentMap = new Map<string, { commercial_id: string; profileName?: string }>();
+  for (const a of allAssignments as any[]) {
+    if (a.is_active) {
+      assignmentMap.set(a.business_id, {
+        commercial_id: a.commercial_id,
+        profileName: a.profiles?.full_name || a.profiles?.email,
+      });
+    }
+  }
+  const myBusinessIds = new Set(
+    (allAssignments as any[])
+      .filter((a: any) => a.is_active && a.commercial_id === user?.id)
+      .map((a: any) => a.business_id)
+  );
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCommercialStatus, setFilterCommercialStatus] = useState("");
@@ -47,8 +64,6 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
   const [filterAssignment, setFilterAssignment] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<BusinessWithCategory | null>(null);
-
-  const myBusinessIds = new Set(myAssignments.map((a: any) => a.businesses?.id).filter(Boolean));
 
   const openEditDialog = (business: BusinessWithCategory) => {
     setEditingBusiness(business);
@@ -78,9 +93,17 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
   const handleAssignToMe = async (businessId: string) => {
     try {
       await assignToMe.mutateAsync(businessId);
-      toast({ title: "Negócio atribuído a si!" });
-    } catch {
-      toast({ title: "Erro ao atribuir", variant: "destructive" });
+      toast({ title: "Negócio atribuído a si com sucesso!" });
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg === "ALREADY_MINE") {
+        toast({ title: "Este negócio já está atribuído a si" });
+      } else if (msg.startsWith("ASSIGNED_OTHER:")) {
+        const name = msg.replace("ASSIGNED_OTHER:", "");
+        toast({ title: `Este negócio já está atribuído a ${name}`, variant: "destructive" });
+      } else {
+        toast({ title: "Erro ao atribuir", variant: "destructive" });
+      }
     }
   };
 
@@ -114,7 +137,7 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
       (filterSubscription === "inactive" && !b.is_active);
     const matchesAssignment = filterAssignment === "all" ||
       (filterAssignment === "mine" && myBusinessIds.has(b.id)) ||
-      (filterAssignment === "unassigned" && !myBusinessIds.has(b.id));
+      (filterAssignment === "unassigned" && !assignmentMap.has(b.id));
     return matchesSearch && matchesCommercial && matchesOrigin && matchesSub && matchesAssignment;
   });
 
@@ -223,11 +246,33 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
                   </td>
                   <td className="p-4">
                     <div className="flex gap-1 flex-wrap">
-                      {!myBusinessIds.has(business.id) && (
-                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleAssignToMe(business.id)} disabled={assignToMe.isPending}>
-                          <UserPlus className="h-3 w-3 mr-1" /> Atribuir
-                        </Button>
-                      )}
+                      {(() => {
+                        const assignment = assignmentMap.get(business.id);
+                        if (!assignment) {
+                          return (
+                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleAssignToMe(business.id)} disabled={assignToMe.isPending}>
+                              <UserPlus className="h-3 w-3 mr-1" /> Atribuir
+                            </Button>
+                          );
+                        }
+                        if (assignment.commercial_id === user?.id) {
+                          return (
+                            <Button size="sm" variant="outline" className="text-xs h-7 text-success border-success/30" disabled>
+                              <Check className="h-3 w-3 mr-1" /> Meu
+                            </Button>
+                          );
+                        }
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="sm" variant="outline" className="text-xs h-7 text-muted-foreground" disabled>
+                                <UserCheck className="h-3 w-3 mr-1" /> Atribuído
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Atribuído a {assignment.profileName || "outro comercial"}</TooltipContent>
+                          </Tooltip>
+                        );
+                      })()}
                       {business.commercial_status === "nao_contactado" && (
                         <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleQuickStatusChange(business, "contactado")}>
                           <UserCheck className="h-3 w-3 mr-1" /> Contactado

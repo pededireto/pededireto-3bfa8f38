@@ -150,22 +150,37 @@ export const useAssignToMe = () => {
     mutationFn: async (business_id: string) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      // Create assignment
-      const { data: existing } = await supabase
+      // Check ALL existing active assignments for this business (not just own)
+      const { data: allAssignments } = await supabase
         .from("business_commercial_assignments" as any)
-        .select("id")
+        .select("id, commercial_id, is_active")
         .eq("business_id", business_id)
-        .eq("commercial_id", user.id)
-        .eq("is_active", true)
-        .maybeSingle();
+        .eq("is_active", true);
 
-      if (!existing) {
-        await supabase
-          .from("business_commercial_assignments" as any)
-          .insert({ business_id, commercial_id: user.id, role: "sales" });
+      const existing = (allAssignments || []) as any[];
+      const myAssignment = existing.find((a: any) => a.commercial_id === user.id);
+      const otherAssignment = existing.find((a: any) => a.commercial_id !== user.id);
+
+      if (myAssignment) {
+        throw new Error("ALREADY_MINE");
       }
 
-      // Create/update pipeline entry
+      if (otherAssignment) {
+        // Fetch the other commercial's name
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", otherAssignment.commercial_id)
+          .maybeSingle();
+        throw new Error(`ASSIGNED_OTHER:${(profile as any)?.full_name || "outro comercial"}`);
+      }
+
+      // Create assignment
+      await supabase
+        .from("business_commercial_assignments" as any)
+        .insert({ business_id, commercial_id: user.id, role: "sales" });
+
+      // Create pipeline entry if not exists
       const { data: pipelineExists } = await supabase
         .from("commercial_pipeline" as any)
         .select("id")
