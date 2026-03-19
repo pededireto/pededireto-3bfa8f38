@@ -237,10 +237,13 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                 {selectedCity && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                     <MapPin className="h-3 w-3" />
-                    {selectedCity}
+                    {isDetecting ? "A detectar..." : `A mostrar negócios em ${selectedCity}`}
                     <button
                       type="button"
-                      onClick={() => setSelectedCity("")}
+                      onClick={() => {
+                        setSelectedCity("");
+                        clearCity();
+                      }}
                       className="ml-1 hover:text-primary/70"
                       aria-label="Remover cidade"
                     >
