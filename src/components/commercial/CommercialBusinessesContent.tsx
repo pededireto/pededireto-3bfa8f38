@@ -137,7 +137,7 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
       (filterSubscription === "inactive" && !b.is_active);
     const matchesAssignment = filterAssignment === "all" ||
       (filterAssignment === "mine" && myBusinessIds.has(b.id)) ||
-      (filterAssignment === "unassigned" && !myBusinessIds.has(b.id));
+      (filterAssignment === "unassigned" && !assignmentMap.has(b.id));
     return matchesSearch && matchesCommercial && matchesOrigin && matchesSub && matchesAssignment;
   });
 
