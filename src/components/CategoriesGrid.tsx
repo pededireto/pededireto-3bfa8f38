@@ -438,11 +438,13 @@ const CategoryCard = ({
   onOpen,
   pattern,
   desktopPattern,
+  businessCount,
 }: {
   category: Category;
   onOpen: () => void;
   pattern: "normal" | "wide";
   desktopPattern?: "normal" | "wide";
+  businessCount?: number;
 }) => {
   const IconComponent = iconMap[category.icon || "Briefcase"] || Briefcase;
   // Cards da grelha: apenas imagem, nunca vídeo
