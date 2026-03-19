@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Category } from "@/hooks/useCategories";
+import { useCategoryCounts } from "@/hooks/useCategoryCounts";
 import {
   UtensilsCrossed,
   Wrench,
