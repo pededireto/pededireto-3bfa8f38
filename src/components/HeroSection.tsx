@@ -76,12 +76,20 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchTerm.trim().length >= 2) {
-      autoSaveSearch.mutate({ searchQuery: searchTerm.trim() });
-      setShowResults(false);
-      const cityParam = selectedCity ? `&cidade=${encodeURIComponent(selectedCity)}` : "";
-      navigate(`/pesquisa?q=${encodeURIComponent(searchTerm.trim())}${cityParam}`);
+    const trimmed = searchTerm.trim();
+    const hasTerm = trimmed.length >= 2;
+    const hasCity = !!selectedCity;
+
+    if (!hasTerm && !hasCity) return;
+
+    setShowResults(false);
+    const params = new URLSearchParams();
+    if (hasTerm) {
+      params.set("q", trimmed);
+      autoSaveSearch.mutate({ searchQuery: trimmed });
     }
+    if (hasCity) params.set("cidade", selectedCity);
+    navigate(`/pesquisa?${params.toString()}`);
   };
 
   const handleCitySelect = (city: string) => {
