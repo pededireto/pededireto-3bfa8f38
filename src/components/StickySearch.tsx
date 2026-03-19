@@ -55,14 +55,20 @@ const StickySearch = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchTerm.trim().length >= 2) {
-      autoSaveSearch.mutate({ searchQuery: searchTerm.trim() });
-      setShowResults(false);
-      const params = new URLSearchParams();
-      params.set("q", searchTerm.trim());
-      if (cityFilter) params.set("cidade", cityFilter);
-      navigate(`/pesquisa?${params.toString()}`);
+    const trimmed = searchTerm.trim();
+    const hasTerm = trimmed.length >= 2;
+    const hasCity = !!cityFilter;
+
+    if (!hasTerm && !hasCity) return;
+
+    setShowResults(false);
+    const params = new URLSearchParams();
+    if (hasTerm) {
+      params.set("q", trimmed);
+      autoSaveSearch.mutate({ searchQuery: trimmed });
     }
+    if (hasCity) params.set("cidade", cityFilter);
+    navigate(`/pesquisa?${params.toString()}`);
   };
 
   if (!isVisible || isHiddenRoute) return null;
