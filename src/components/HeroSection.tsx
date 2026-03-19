@@ -199,7 +199,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                       >
                         Qualquer cidade
                       </button>
-                      {POPULAR_CITIES.map((city) => (
+                      {dynamicCities.map(({ name: city }) => (
                         <button
                           key={city}
                           type="button"
