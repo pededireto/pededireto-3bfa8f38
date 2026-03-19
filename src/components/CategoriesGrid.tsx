@@ -535,6 +535,7 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
                 pattern="normal"
                 desktopPattern={BENTO[index % BENTO.length]}
                 onOpen={() => setModalIndex(index)}
+                businessCount={counts?.get(category.id)}
               />
             ))}
           </div>
