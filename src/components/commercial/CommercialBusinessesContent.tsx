@@ -93,9 +93,17 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
   const handleAssignToMe = async (businessId: string) => {
     try {
       await assignToMe.mutateAsync(businessId);
-      toast({ title: "Negócio atribuído a si!" });
-    } catch {
-      toast({ title: "Erro ao atribuir", variant: "destructive" });
+      toast({ title: "Negócio atribuído a si com sucesso!" });
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg === "ALREADY_MINE") {
+        toast({ title: "Este negócio já está atribuído a si" });
+      } else if (msg.startsWith("ASSIGNED_OTHER:")) {
+        const name = msg.replace("ASSIGNED_OTHER:", "");
+        toast({ title: `Este negócio já está atribuído a ${name}`, variant: "destructive" });
+      } else {
+        toast({ title: "Erro ao atribuir", variant: "destructive" });
+      }
     }
   };
 
