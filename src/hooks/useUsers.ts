@@ -23,7 +23,7 @@ export const useAllUsers = () => {
     queryKey: ["admin-users"],
     queryFn: async () => {
       const { data: profiles, error } = await (supabase as any)
-        .from("profiles_with_confirmation")
+        .from("profiles")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
