@@ -29,7 +29,10 @@ interface SubcategoryInfo {
   subcategory: string;
 }
 
-export const useBusinessBenchmarkSector = (businessId: string | null | undefined) => {
+export const useBusinessBenchmarkSector = (
+  businessId: string | null | undefined,
+  selectedSubcategory?: string
+) => {
   const { data: bizInfo } = useQuery({
     queryKey: ["biz-sector-info", businessId],
     queryFn: async () => {
