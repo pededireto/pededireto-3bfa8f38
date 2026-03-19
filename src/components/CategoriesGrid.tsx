@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Category } from "@/hooks/useCategories";
+import { useCategoryCounts } from "@/hooks/useCategoryCounts";
 import {
   UtensilsCrossed,
   Wrench,
@@ -437,11 +438,13 @@ const CategoryCard = ({
   onOpen,
   pattern,
   desktopPattern,
+  businessCount,
 }: {
   category: Category;
   onOpen: () => void;
   pattern: "normal" | "wide";
   desktopPattern?: "normal" | "wide";
+  businessCount?: number;
 }) => {
   const IconComponent = iconMap[category.icon || "Briefcase"] || Briefcase;
   // Cards da grelha: apenas imagem, nunca vídeo
@@ -460,7 +463,7 @@ const CategoryCard = ({
             <CardMedia videoUrl={null} imageUrl={category.image_url} name={category.name} />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent transition-opacity duration-300 group-hover:from-black/90" />
-          <div className="relative z-10 flex flex-col justify-end h-full p-4">
+           <div className="relative z-10 flex flex-col justify-end h-full p-4">
             <h3
               className={`font-semibold text-white drop-shadow-md transition-transform duration-300 group-hover:-translate-y-0.5 ${
                 isDesktopWide ? "text-base md:text-xl" : "text-sm md:text-base"
@@ -469,6 +472,9 @@ const CategoryCard = ({
             >
               {category.name}
             </h3>
+            {businessCount !== undefined && businessCount > 0 && (
+              <span className="text-xs text-white/70 mt-0.5">{businessCount} negócio{businessCount !== 1 ? "s" : ""}</span>
+            )}
           </div>
         </>
       ) : (
@@ -479,6 +485,9 @@ const CategoryCard = ({
           <h3 className="font-semibold text-lg group-hover:text-primary transition-colors text-center px-3">
             {category.name}
           </h3>
+          {businessCount !== undefined && businessCount > 0 && (
+            <span className="text-xs text-muted-foreground mt-1">{businessCount} negócio{businessCount !== 1 ? "s" : ""}</span>
+          )}
         </div>
       )}
     </div>
@@ -488,6 +497,7 @@ const CategoryCard = ({
 // ─── Grid principal ───────────────────────────────────────────────────────────
 const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
   const [modalIndex, setModalIndex] = useState<number | null>(null);
+  const { data: counts } = useCategoryCounts();
 
   if (isLoading) {
     return (
@@ -525,6 +535,7 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
                 pattern="normal"
                 desktopPattern={BENTO[index % BENTO.length]}
                 onOpen={() => setModalIndex(index)}
+                businessCount={counts?.get(category.id)}
               />
             ))}
           </div>

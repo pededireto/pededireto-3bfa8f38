@@ -6,6 +6,7 @@ import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SubcategoriesGrid from "@/components/SubcategoriesGrid";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -228,13 +229,7 @@ const CategoryPage = () => {
         {/* Category Header */}
         <section className="section-hero py-8 md:py-12">
           <div className="container">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar às categorias
-            </Link>
+            <Breadcrumbs items={[{ label: category.name }]} />
 
             {videoUrl ? (
               /* ── Layout split com vídeo ── */

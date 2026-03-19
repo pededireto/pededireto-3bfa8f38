@@ -13,6 +13,7 @@ import { useBusinessResponseTime } from "@/hooks/useBusinessResponseTime";
 import { useBusinessCityNames } from "@/hooks/useBusinessCities";
 
 import Header from "@/components/Header";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
 import FavoriteButton from "@/components/FavoriteButton";
 import ShareButton from "@/components/ShareButton";
@@ -382,7 +383,9 @@ const BusinessPage = () => {
     ? business.description.slice(0, 155)
     : "Encontre serviços e profissionais diretamente no Pede Direto.";
   const pageUrl = `${BASE_URL}/negocio/${business?.slug}`;
-  const pageImage = business?.logo_url || `${BASE_URL}/og-default.jpg`;
+  const pageImage = business?.logo_url
+    ? `https://pnrqahgvhddhcucmccjp.supabase.co/functions/v1/og-image?name=${encodeURIComponent(business.name)}&logo=${encodeURIComponent(business.logo_url)}&city=${encodeURIComponent(business.city || "")}&category=${encodeURIComponent(business.categories?.name || "")}`
+    : `${BASE_URL}/og-default.jpg`;
 
   const schemaData = business
     ? {
@@ -498,15 +501,14 @@ const BusinessPage = () => {
       <main className="flex-1">
         <section className="section-hero py-8">
           <div className="container">
-            {business.categories && (
-              <Link
-                to={`/categoria/${business.categories.slug}`}
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar a {business.categories.name}
-              </Link>
-            )}
+            <Breadcrumbs
+              items={[
+                ...(business.categories
+                  ? [{ label: business.categories.name, href: `/categoria/${business.categories.slug}` }]
+                  : []),
+                { label: business.name },
+              ]}
+            />
           </div>
         </section>
 
