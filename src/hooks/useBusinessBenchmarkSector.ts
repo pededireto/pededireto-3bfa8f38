@@ -29,7 +29,10 @@ interface SubcategoryInfo {
   subcategory: string;
 }
 
-export const useBusinessBenchmarkSector = (businessId: string | null | undefined) => {
+export const useBusinessBenchmarkSector = (
+  businessId: string | null | undefined,
+  selectedSubcategory?: string
+) => {
   const { data: bizInfo } = useQuery({
     queryKey: ["biz-sector-info", businessId],
     queryFn: async () => {
@@ -131,13 +134,22 @@ export const useBusinessBenchmarkSector = (businessId: string | null | undefined
     staleTime: 10 * 60 * 1000,
   });
 
+  // Resolve active subcategory: selected override or auto-detected
+  const activeSubcategory = (() => {
+    if (selectedSubcategory && bizInfo?.allSubcategories) {
+      const match = bizInfo.allSubcategories.find(s => s.subcategory === selectedSubcategory);
+      if (match) return { category: match.category, subcategory: match.subcategory };
+    }
+    return { category: bizInfo?.category || "", subcategory: bizInfo?.subcategory || "" };
+  })();
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["sector-benchmark", bizInfo?.category, bizInfo?.subcategory],
+    queryKey: ["sector-benchmark", activeSubcategory.category, activeSubcategory.subcategory],
     queryFn: async () => {
       const { data: res, error: fnErr } = await supabase.functions.invoke("get-benchmarking", {
         body: {
-          category: bizInfo!.category,
-          subcategory: bizInfo!.subcategory,
+          category: activeSubcategory.category,
+          subcategory: activeSubcategory.subcategory,
           business_id: businessId,
         },
       });
@@ -151,7 +163,7 @@ export const useBusinessBenchmarkSector = (businessId: string | null | undefined
       }
       return res.data as SectorBenchmarkData;
     },
-    enabled: !!(bizInfo?.category && bizInfo.category.length > 0 && bizInfo?.subcategory && bizInfo.subcategory.length > 0),
+    enabled: !!(activeSubcategory.category.length > 0 && activeSubcategory.subcategory.length > 0),
     staleTime: 30 * 60 * 1000,
     retry: false,
   });
@@ -161,8 +173,8 @@ export const useBusinessBenchmarkSector = (businessId: string | null | undefined
     isLoading: isLoading || !bizInfo,
     error,
     profile: bizInfo?.profile,
-    category: bizInfo?.category,
-    subcategory: bizInfo?.subcategory,
+    category: activeSubcategory.category,
+    subcategory: activeSubcategory.subcategory,
     allSubcategories: bizInfo?.allSubcategories || [],
   };
 };
