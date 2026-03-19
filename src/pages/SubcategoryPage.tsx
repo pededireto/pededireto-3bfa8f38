@@ -72,9 +72,12 @@ const useCitiesForSubcategory = (subcategoryId?: string) =>
     enabled: !!subcategoryId,
   });
 
+const PAGE_SIZE = 12;
+
 const SubcategoryPage = () => {
   const { categorySlug, subcategorySlug } = useParams<{ categorySlug: string; subcategorySlug: string }>();
   const [cityFilter, setCityFilter] = useState("");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const { data: subcategory, isLoading: subcategoryLoading } = useSubcategory(subcategorySlug);
   const { data: category } = useCategory(categorySlug);
@@ -95,6 +98,8 @@ const SubcategoryPage = () => {
   // Separar destacados dos normais
   const subcategoryFeatured = allBusinesses.filter((b) => b.is_featured);
   const regularBusinesses = allBusinesses.filter((b) => !b.is_featured);
+  const visibleBusinesses = regularBusinesses.slice(0, visibleCount);
+  const hasMore = visibleCount < regularBusinesses.length;
 
   // Show text filter only if fewer than 3 cities
   const showTextFilter = cities.length < 3;
