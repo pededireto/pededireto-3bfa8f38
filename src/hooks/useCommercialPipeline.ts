@@ -30,9 +30,10 @@ export interface PipelineEntry {
   profiles?: { full_name: string; email: string } | null;
 }
 
+// CORRECÇÃO: removido !inner para não excluir negócios sem categoria
 const PIPELINE_SELECT = `
   *,
-  businesses!inner(id, name, slug, city, cta_phone, cta_email, commercial_status, subscription_status, subscription_price, logo_url,
+  businesses(id, name, slug, city, cta_phone, cta_email, commercial_status, subscription_status, subscription_price, logo_url,
     categories(name), subcategories(name)),
   profiles:assigned_to(full_name, email)
 `;
@@ -64,7 +65,10 @@ export const useMyPipeline = () => {
         .select(PIPELINE_SELECT)
         .eq("assigned_to", user.id)
         .order("updated_at", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error("[useMyPipeline] error:", error);
+        throw error;
+      }
       return data as unknown as PipelineEntry[];
     },
     enabled: !!user?.id,
@@ -96,9 +100,7 @@ export const useUpsertPipeline = () => {
           .eq("business_id", params.business_id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("commercial_pipeline" as any)
-          .insert(params);
+        const { error } = await supabase.from("commercial_pipeline" as any).insert(params);
         if (error) throw error;
       }
     },
@@ -114,7 +116,6 @@ export const useUpdatePipelinePhase = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ business_id, phase }: { business_id: string; phase: CommercialStatus }) => {
-      // Update pipeline
       const { data: existing } = await supabase
         .from("commercial_pipeline" as any)
         .select("id")
@@ -128,7 +129,6 @@ export const useUpdatePipelinePhase = () => {
           .eq("business_id", business_id);
       }
 
-      // Also update business commercial_status
       await supabase
         .from("businesses")
         .update({ commercial_status: phase } as any)
@@ -150,7 +150,6 @@ export const useAssignToMe = () => {
     mutationFn: async (business_id: string) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      // Check ALL existing active assignments for this business (not just own)
       const { data: allAssignments } = await supabase
         .from("business_commercial_assignments" as any)
         .select("id, commercial_id, is_active")
@@ -166,7 +165,6 @@ export const useAssignToMe = () => {
       }
 
       if (otherAssignment) {
-        // Fetch the other commercial's name
         const { data: profile } = await supabase
           .from("profiles")
           .select("full_name")
@@ -176,11 +174,12 @@ export const useAssignToMe = () => {
       }
 
       // Create assignment
-      await supabase
+      const { error: assignError } = await supabase
         .from("business_commercial_assignments" as any)
         .insert({ business_id, commercial_id: user.id, role: "sales" });
+      if (assignError) throw assignError;
 
-      // Create pipeline entry if not exists
+      // Create or update pipeline entry
       const { data: pipelineExists } = await supabase
         .from("commercial_pipeline" as any)
         .select("id")
@@ -188,9 +187,10 @@ export const useAssignToMe = () => {
         .maybeSingle();
 
       if (!pipelineExists) {
-        await supabase
+        const { error: pipelineError } = await supabase
           .from("commercial_pipeline" as any)
           .insert({ business_id, assigned_to: user.id, phase: "nao_contactado" });
+        if (pipelineError) throw pipelineError;
       } else {
         await supabase
           .from("commercial_pipeline" as any)
