@@ -9,6 +9,7 @@ import SearchResults from "@/components/SearchResults";
 import pedeDiretoMascot from "@/assets/pede-direto-mascot.png";
 import { getYouTubeEmbedUrl } from "@/utils/youtube";
 import { useCities } from "@/hooks/useCities";
+import { useUserLocation } from "@/hooks/useUserLocation";
 
 interface HeroSectionProps {
   onSearch?: (term: string) => void;
