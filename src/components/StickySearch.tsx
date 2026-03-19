@@ -5,6 +5,7 @@ import { useSearch } from "@/hooks/useSearch";
 import SearchResults from "@/components/SearchResults";
 import { useAutoSaveSearch } from "@/hooks/useSavedSearches";
 import { useCities } from "@/hooks/useCities";
+import { useUserLocation } from "@/hooks/useUserLocation";
 
 const HIDDEN_ROUTES = ["/pesquisa"];
 
@@ -17,9 +18,19 @@ const StickySearch = () => {
   const { data: searchResults = [], isLoading } = useSearch(searchTerm);
   const { data: cities = [] } = useCities(12);
   const autoSaveSearch = useAutoSaveSearch();
+  const { city: detectedCity } = useUserLocation();
   const navigate = useNavigate();
   const location = useLocation();
   const searchRef = useRef<HTMLDivElement>(null);
+  const [hasInitCity, setHasInitCity] = useState(false);
+
+  // Pre-fill detected city once
+  useEffect(() => {
+    if (detectedCity && !hasInitCity && !cityFilter) {
+      setCityFilter(detectedCity);
+      setHasInitCity(true);
+    }
+  }, [detectedCity, hasInitCity, cityFilter]);
 
   const isHiddenRoute = HIDDEN_ROUTES.some((r) => location.pathname.startsWith(r));
 

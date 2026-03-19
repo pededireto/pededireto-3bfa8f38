@@ -185,12 +185,20 @@ const UserLogin = () => {
           </div>
         </div>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          Não tens conta?{" "}
-          <Link to="/register" className="text-primary hover:underline">
-            Cria uma aqui
-          </Link>
-        </p>
+        <div className="mt-6 space-y-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            Não tens conta?{" "}
+            <Link to="/register" className="text-primary font-semibold hover:underline">
+              Cria uma aqui — é grátis!
+            </Link>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Tens um negócio?{" "}
+            <Link to="/claim-business" className="text-primary hover:underline">
+              Registar negócio →
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

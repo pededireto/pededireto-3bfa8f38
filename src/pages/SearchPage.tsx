@@ -79,16 +79,40 @@ const SearchPage = () => {
 
   const currentUrl = `${BASE_URL}/pesquisa${debouncedTerm ? `?q=${encodeURIComponent(debouncedTerm)}` : ""}${cityFilter ? `${debouncedTerm ? "&" : "?"}cidade=${encodeURIComponent(cityFilter)}` : ""}`;
 
-  const seoTitle = debouncedTerm
-    ? `Resultados para "${debouncedTerm}" | PedeDireto`
-    : "Pesquisa | PedeDireto";
+  // Dynamic SEO based on parameters
+  const seoTitle = debouncedTerm && cityFilter
+    ? `${debouncedTerm} em ${cityFilter} — PedeDireto`
+    : debouncedTerm
+    ? `Resultados para "${debouncedTerm}" — PedeDireto`
+    : cityFilter
+    ? `Negócios em ${cityFilter} — PedeDireto`
+    : "Pesquisa de Negócios — PedeDireto";
+
+  const seoDescription = debouncedTerm && cityFilter
+    ? `Encontrámos ${totalFound} profissionais de ${debouncedTerm} em ${cityFilter}. Contacte directamente.`
+    : debouncedTerm
+    ? `Encontrámos ${totalFound} profissionais de ${debouncedTerm} em Portugal. Contacte directamente.`
+    : cityFilter
+    ? `Encontra os melhores negócios em ${cityFilter}. Contacto directo, sem intermediários.`
+    : "Pesquise profissionais e serviços locais em Portugal.";
+
+  const canonicalUrl = cityFilter && !debouncedTerm
+    ? `${BASE_URL}/pesquisa?cidade=${encodeURIComponent(cityFilter)}`
+    : debouncedTerm
+    ? undefined // noindex for search queries
+    : `${BASE_URL}/pesquisa`;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Helmet>
         <title>{seoTitle}</title>
-        <meta name="description" content={debouncedTerm ? `Encontrámos ${totalFound} profissionais de ${debouncedTerm} em Portugal. Contacte directamente.` : "Pesquise profissionais e serviços locais em Portugal."} />
-        <meta name="robots" content="noindex, follow" />
+        <meta name="description" content={seoDescription} />
+        {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+        {!cityFilter && <meta name="robots" content="noindex, follow" />}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:url" content={currentUrl} />
       </Helmet>
 
       <Header />

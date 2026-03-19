@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Subcategory } from "@/hooks/useSubcategories";
+import { useSubcategoryCounts } from "@/hooks/useSubcategoryCounts";
 import { ArrowRight, ArrowLeft, X } from "lucide-react";
 
 interface SubcategoriesGridProps {
@@ -164,8 +165,8 @@ const SubcategoryModal = ({
   );
 };
 
-// ─── Card sem hover delay ─────────────────────────────────────────────────────
-const SubcategoryCard = ({ sub, onOpen }: { sub: Subcategory; onOpen: () => void }) => {
+// ─── Card sem descrição — apenas nome + badge ─────────────────────────────────
+const SubcategoryCard = ({ sub, onOpen, businessCount }: { sub: Subcategory; onOpen: () => void; businessCount?: number }) => {
   const [imgError, setImgError] = useState(false);
   const hasImage = sub.image_url && !imgError;
 
@@ -194,23 +195,20 @@ const SubcategoryCard = ({ sub, onOpen }: { sub: Subcategory; onOpen: () => void
               </h3>
               <ArrowRight className="w-5 h-5 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all flex-shrink-0 ml-2" />
             </div>
-            {sub.description && (
-              <p
-                className="text-xs md:text-sm text-white/80 line-clamp-2 mt-1"
-                style={{ textShadow: "0 1px 4px rgba(0,0,0,0.7)" }}
-              >
-                {sub.description}
-              </p>
+            {businessCount !== undefined && businessCount > 0 && (
+              <span className="text-xs text-white/70 mt-0.5">{businessCount} negócio{businessCount !== 1 ? "s" : ""}</span>
             )}
           </div>
         </>
       ) : (
         <div className="p-6 min-h-[160px] md:min-h-[180px] flex flex-col justify-center">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-1">
             <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{sub.name}</h3>
             <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
           </div>
-          {sub.description && <p className="text-sm text-muted-foreground line-clamp-2">{sub.description}</p>}
+          {businessCount !== undefined && businessCount > 0 && (
+            <span className="text-xs text-muted-foreground">{businessCount} negócio{businessCount !== 1 ? "s" : ""}</span>
+          )}
         </div>
       )}
     </div>
@@ -220,6 +218,7 @@ const SubcategoryCard = ({ sub, onOpen }: { sub: Subcategory; onOpen: () => void
 // ─── Grid principal ───────────────────────────────────────────────────────────
 const SubcategoriesGrid = ({ subcategories, categorySlug, isLoading }: SubcategoriesGridProps) => {
   const [modalIndex, setModalIndex] = useState<number | null>(null);
+  const { data: counts } = useSubcategoryCounts();
 
   if (isLoading) {
     return (
@@ -244,7 +243,12 @@ const SubcategoriesGrid = ({ subcategories, categorySlug, isLoading }: Subcatego
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {subcategories.map((sub, index) => (
-          <SubcategoryCard key={sub.id} sub={sub} onOpen={() => setModalIndex(index)} />
+          <SubcategoryCard
+            key={sub.id}
+            sub={sub}
+            onOpen={() => setModalIndex(index)}
+            businessCount={counts?.get(sub.id)}
+          />
         ))}
       </div>
 

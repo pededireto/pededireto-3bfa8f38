@@ -10,7 +10,8 @@ import Footer from "@/components/Footer";
 import BusinessGrid from "@/components/BusinessGrid";
 import FeaturedSection from "@/components/FeaturedSection";
 import SuggestionForm from "@/components/SuggestionForm";
-import { ArrowLeft, ArrowRight, MapPin } from "lucide-react";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import { ArrowLeft, ArrowRight, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -71,9 +72,12 @@ const useCitiesForSubcategory = (subcategoryId?: string) =>
     enabled: !!subcategoryId,
   });
 
+const PAGE_SIZE = 12;
+
 const SubcategoryPage = () => {
   const { categorySlug, subcategorySlug } = useParams<{ categorySlug: string; subcategorySlug: string }>();
   const [cityFilter, setCityFilter] = useState("");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const { data: subcategory, isLoading: subcategoryLoading } = useSubcategory(subcategorySlug);
   const { data: category } = useCategory(categorySlug);
@@ -94,6 +98,8 @@ const SubcategoryPage = () => {
   // Separar destacados dos normais
   const subcategoryFeatured = allBusinesses.filter((b) => b.is_featured);
   const regularBusinesses = allBusinesses.filter((b) => !b.is_featured);
+  const visibleBusinesses = regularBusinesses.slice(0, visibleCount);
+  const hasMore = visibleCount < regularBusinesses.length;
 
   // Show text filter only if fewer than 3 cities
   const showTextFilter = cities.length < 3;
@@ -177,17 +183,17 @@ const SubcategoryPage = () => {
       <Header />
 
       <main className="flex-1">
-        {/* Subcategory Header */}
-        <section className="section-hero py-8 md:py-12">
-          <div className="container">
-            <Link
-              to={`/categoria/${categorySlug}`}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar a {subcategory.categories?.name || "Categorias"}
-            </Link>
+        {/* Breadcrumbs */}
+        <div className="container pt-6">
+          <Breadcrumbs items={[
+            { label: category?.name || "Categoria", href: `/categoria/${categorySlug}` },
+            { label: subcategory.name },
+          ]} />
+        </div>
 
+        {/* Subcategory Header */}
+        <section className="section-hero py-4 md:py-8">
+          <div className="container">
             <h1 className="text-3xl md:text-4xl font-bold mb-3">{subcategory.name}</h1>
 
             {subcategory.description && (
@@ -237,13 +243,28 @@ const SubcategoryPage = () => {
         {/* Featured */}
         {subcategoryFeatured.length > 0 && <FeaturedSection businesses={subcategoryFeatured} />}
 
-        {/* All Businesses */}
+        {/* All Businesses with pagination */}
         <BusinessGrid
-          businesses={regularBusinesses}
+          businesses={visibleBusinesses}
           title={`${subcategory.name}`}
+          subtitle={regularBusinesses.length > 0 ? `A mostrar ${Math.min(visibleCount, regularBusinesses.length)} de ${regularBusinesses.length} negócio${regularBusinesses.length !== 1 ? "s" : ""}` : undefined}
           isLoading={businessesLoading}
           emptyMessage={`Ainda não temos negócios de ${subcategory.name.toLowerCase()} registados.`}
         />
+
+        {hasMore && (
+          <div className="container pb-8 text-center">
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2"
+              onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+            >
+              <Loader2 className="h-4 w-4 hidden" />
+              Carregar mais negócios
+            </Button>
+          </div>
+        )}
 
         {allBusinesses.length === 0 && !businessesLoading && (
           <div className="container pb-12">

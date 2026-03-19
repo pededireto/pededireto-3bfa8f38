@@ -121,14 +121,23 @@ const Header = () => {
               </Button>
             </>
           ) : (
-            <Link
-              to="/login"
-              aria-current={isActive("/login") ? "page" : undefined}
-              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors inline-flex items-center gap-1"
-            >
-              <User className="h-4 w-4" aria-hidden="true" focusable="false" />
-              Entrar
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/register"
+                className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 px-4 py-2 rounded-lg transition-colors inline-flex flex-col items-center leading-tight"
+              >
+                <span>Criar Conta</span>
+                <span className="text-[10px] font-normal opacity-80">É grátis</span>
+              </Link>
+              <Link
+                to="/login"
+                aria-current={isActive("/login") ? "page" : undefined}
+                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors inline-flex items-center gap-1"
+              >
+                <User className="h-4 w-4" aria-hidden="true" focusable="false" />
+                Entrar
+              </Link>
+            </div>
           )}
 
           <ThemeToggle />
@@ -250,15 +259,25 @@ const Header = () => {
                   </button>
                 </>
               ) : (
-                <Link
-                  to="/login"
-                  aria-current={isActive("/login") ? "page" : undefined}
-                  className="text-lg font-medium text-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <User className="h-5 w-5" aria-hidden="true" focusable="false" />
-                  Entrar
-                </Link>
+                <div className="border-t border-border pt-4 mt-2 space-y-3">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Novo aqui?</p>
+                  <Link
+                    to="/register"
+                    className="w-full text-center text-base font-semibold text-primary-foreground bg-primary hover:bg-primary/90 px-4 py-3 rounded-lg transition-colors block"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Criar Conta — É grátis
+                  </Link>
+                  <Link
+                    to="/login"
+                    aria-current={isActive("/login") ? "page" : undefined}
+                    className="text-lg font-medium text-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <User className="h-5 w-5" aria-hidden="true" focusable="false" />
+                    Entrar
+                  </Link>
+                </div>
               )}
 
               <ThemeToggle />

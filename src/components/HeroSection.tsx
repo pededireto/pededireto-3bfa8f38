@@ -9,6 +9,7 @@ import SearchResults from "@/components/SearchResults";
 import pedeDiretoMascot from "@/assets/pede-direto-mascot.png";
 import { getYouTubeEmbedUrl } from "@/utils/youtube";
 import { useCities } from "@/hooks/useCities";
+import { useUserLocation } from "@/hooks/useUserLocation";
 
 interface HeroSectionProps {
   onSearch?: (term: string) => void;
@@ -30,10 +31,18 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   const { data: settings } = useSiteSettings();
   const autoSaveSearch = useAutoSaveSearch();
   const { data: dynamicCities = [] } = useCities(15);
+  const { city: detectedCity, isDetecting, hasAsked, detectLocation, setManualCity, clearCity } = useUserLocation();
 
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cityRef = useRef<HTMLDivElement>(null);
+
+  // Pre-select detected city
+  useEffect(() => {
+    if (detectedCity && !selectedCity) {
+      setSelectedCity(detectedCity);
+    }
+  }, [detectedCity]);
 
   const heroTitle = settings?.hero_title || "Tem um Problema?\nNós Mostramos quem Resolve";
   const heroSubtitle = settings?.hero_subtitle || "Restaurantes, serviços, lojas e profissionais — tudo num só sítio.";
@@ -76,8 +85,15 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   };
 
   const handleCitySelect = (city: string) => {
-    setSelectedCity(city === selectedCity ? "" : city);
+    const newCity = city === selectedCity ? "" : city;
+    setSelectedCity(newCity);
+    if (newCity) setManualCity(newCity);
+    else clearCity();
     setShowCityDropdown(false);
+  };
+
+  const handleSearchFocus = () => {
+    if (!hasAsked) detectLocation();
   };
 
   const renderTitle = () => {
@@ -145,6 +161,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                   }}
                   onFocus={() => {
                     if (searchTerm.length >= 2) setShowResults(true);
+                    handleSearchFocus();
                   }}
                 />
                 {showResults && searchTerm.length >= 2 && (
@@ -220,10 +237,13 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                 {selectedCity && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                     <MapPin className="h-3 w-3" />
-                    {selectedCity}
+                    {isDetecting ? "A detectar..." : `A mostrar negócios em ${selectedCity}`}
                     <button
                       type="button"
-                      onClick={() => setSelectedCity("")}
+                      onClick={() => {
+                        setSelectedCity("");
+                        clearCity();
+                      }}
                       className="ml-1 hover:text-primary/70"
                       aria-label="Remover cidade"
                     >
