@@ -497,6 +497,7 @@ const CategoryCard = ({
 // ─── Grid principal ───────────────────────────────────────────────────────────
 const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
   const [modalIndex, setModalIndex] = useState<number | null>(null);
+  const { data: counts } = useCategoryCounts();
 
   if (isLoading) {
     return (
