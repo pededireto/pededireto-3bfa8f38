@@ -85,8 +85,15 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   };
 
   const handleCitySelect = (city: string) => {
-    setSelectedCity(city === selectedCity ? "" : city);
+    const newCity = city === selectedCity ? "" : city;
+    setSelectedCity(newCity);
+    if (newCity) setManualCity(newCity);
+    else clearCity();
     setShowCityDropdown(false);
+  };
+
+  const handleSearchFocus = () => {
+    if (!hasAsked) detectLocation();
   };
 
   const renderTitle = () => {
