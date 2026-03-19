@@ -10,10 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Search, Building2, AlertTriangle, UserCheck, Ban, Handshake, UserPlus } from "lucide-react";
+import { Pencil, Search, Building2, AlertTriangle, UserCheck, Ban, Handshake, UserPlus, Check } from "lucide-react";
 import BusinessFileCard from "@/components/admin/BusinessFileCard";
-import { useMyAssignments } from "@/hooks/useCommercialPerformance";
+import { useCommercialAssignments } from "@/hooks/useCommercialPerformance";
 
 interface CommercialBusinessesContentProps {
   businesses: BusinessWithCategory[];
