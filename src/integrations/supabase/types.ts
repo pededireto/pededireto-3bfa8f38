@@ -4751,6 +4751,30 @@ export type Database = {
           },
         ]
       }
+      monthly_digest_logs: {
+        Row: {
+          business_id: string
+          id: string
+          recipient_email: string
+          sent_at: string | null
+          sent_for_month: string
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          recipient_email: string
+          sent_at?: string | null
+          sent_for_month: string
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          recipient_email?: string
+          sent_at?: string | null
+          sent_for_month?: string
+        }
+        Relationships: []
+      }
       newsletter_subscribers: {
         Row: {
           created_at: string | null
