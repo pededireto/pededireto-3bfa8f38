@@ -31,10 +31,18 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   const { data: settings } = useSiteSettings();
   const autoSaveSearch = useAutoSaveSearch();
   const { data: dynamicCities = [] } = useCities(15);
+  const { city: detectedCity, isDetecting, hasAsked, detectLocation, setManualCity, clearCity } = useUserLocation();
 
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cityRef = useRef<HTMLDivElement>(null);
+
+  // Pre-select detected city
+  useEffect(() => {
+    if (detectedCity && !selectedCity) {
+      setSelectedCity(detectedCity);
+    }
+  }, [detectedCity]);
 
   const heroTitle = settings?.hero_title || "Tem um Problema?\nNós Mostramos quem Resolve";
   const heroSubtitle = settings?.hero_subtitle || "Restaurantes, serviços, lojas e profissionais — tudo num só sítio.";
