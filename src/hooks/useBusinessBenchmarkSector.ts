@@ -89,6 +89,7 @@ export const useBusinessBenchmarkSector = (businessId: string | null | undefined
 
       // 6. Verificar qual subcategoria tem cache disponível
       for (const item of allSubcategories) {
+        if (!item.category || !item.subcategory) continue;
         const { data: cached } = await (supabase as any)
           .from("benchmarking_cache")
           .select("id")
@@ -98,7 +99,6 @@ export const useBusinessBenchmarkSector = (businessId: string | null | undefined
           .maybeSingle();
 
         if (cached) {
-          // Usar a primeira com cache disponível
           return {
             category: item.category,
             subcategory: item.subcategory,
@@ -113,10 +113,11 @@ export const useBusinessBenchmarkSector = (businessId: string | null | undefined
         }
       }
 
-      // 7. Nenhuma tem cache — usar a primeira subcategoria
+      // 7. Nenhuma tem cache — usar a primeira subcategoria com dados válidos
+      const first = allSubcategories.find(s => s.category.length > 0 && s.subcategory.length > 0);
       return {
-        category: allSubcategories[0]?.category || "",
-        subcategory: allSubcategories[0]?.subcategory || "",
+        category: first?.category || "",
+        subcategory: first?.subcategory || "",
         allSubcategories,
         profile: {
           website: biz.cta_website,
@@ -140,13 +141,19 @@ export const useBusinessBenchmarkSector = (businessId: string | null | undefined
           business_id: businessId,
         },
       });
-      if (fnErr) throw fnErr;
-      if (res?.error) throw new Error(res.error);
+      if (fnErr) {
+        console.error("[useBusinessBenchmarkSector] Edge function error:", fnErr);
+        return null;
+      }
+      if (res?.error) {
+        console.warn("[useBusinessBenchmarkSector] API unavailable:", res.error);
+        return null;
+      }
       return res.data as SectorBenchmarkData;
     },
-    enabled: !!bizInfo?.category && !!bizInfo?.subcategory,
+    enabled: !!(bizInfo?.category && bizInfo.category.length > 0 && bizInfo?.subcategory && bizInfo.subcategory.length > 0),
     staleTime: 30 * 60 * 1000,
-    retry: 1,
+    retry: false,
   });
 
   return {
