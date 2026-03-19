@@ -5208,6 +5208,7 @@ export type Database = {
           consumer_plan_id: string | null
           created_at: string
           email: string | null
+          email_confirmed_at: string | null
           full_name: string | null
           id: string
           last_activity_at: string | null
@@ -5224,6 +5225,7 @@ export type Database = {
           consumer_plan_id?: string | null
           created_at?: string
           email?: string | null
+          email_confirmed_at?: string | null
           full_name?: string | null
           id?: string
           last_activity_at?: string | null
@@ -5240,6 +5242,7 @@ export type Database = {
           consumer_plan_id?: string | null
           created_at?: string
           email?: string | null
+          email_confirmed_at?: string | null
           full_name?: string | null
           id?: string
           last_activity_at?: string | null
@@ -7287,6 +7290,32 @@ export type Database = {
           status: string | null
           updated_at: string | null
           user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          email_confirmed_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          last_activity_at?: string | null
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          email_confirmed_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          last_activity_at?: string | null
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
