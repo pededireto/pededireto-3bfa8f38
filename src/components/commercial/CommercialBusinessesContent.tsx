@@ -57,6 +57,14 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
       .map((a: any) => a.business_id)
   );
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCommercialStatus, setFilterCommercialStatus] = useState("");
+  const [filterOrigin, setFilterOrigin] = useState("");
+  const [filterSubscription, setFilterSubscription] = useState("");
+  const [filterAssignment, setFilterAssignment] = useState("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingBusiness, setEditingBusiness] = useState<BusinessWithCategory | null>(null);
+
   const openEditDialog = (business: BusinessWithCategory) => {
     setEditingBusiness(business);
     setDialogOpen(true);
