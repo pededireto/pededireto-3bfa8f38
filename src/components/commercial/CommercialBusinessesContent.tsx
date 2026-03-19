@@ -39,17 +39,23 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
   const createActionRequest = useCreateActionRequest();
   const createAuditLog = useCreateAuditLog();
   const assignToMe = useAssignToMe();
-  const { data: myAssignments = [] } = useMyAssignments();
+  const { data: allAssignments = [] } = useCommercialAssignments();
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterCommercialStatus, setFilterCommercialStatus] = useState("");
-  const [filterOrigin, setFilterOrigin] = useState("");
-  const [filterSubscription, setFilterSubscription] = useState("");
-  const [filterAssignment, setFilterAssignment] = useState("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingBusiness, setEditingBusiness] = useState<BusinessWithCategory | null>(null);
-
-  const myBusinessIds = new Set(myAssignments.map((a: any) => a.businesses?.id).filter(Boolean));
+  // Build maps: business_id → assignment info
+  const assignmentMap = new Map<string, { commercial_id: string; profileName?: string }>();
+  for (const a of allAssignments as any[]) {
+    if (a.is_active) {
+      assignmentMap.set(a.business_id, {
+        commercial_id: a.commercial_id,
+        profileName: a.profiles?.full_name || a.profiles?.email,
+      });
+    }
+  }
+  const myBusinessIds = new Set(
+    (allAssignments as any[])
+      .filter((a: any) => a.is_active && a.commercial_id === user?.id)
+      .map((a: any) => a.business_id)
+  );
 
   const openEditDialog = (business: BusinessWithCategory) => {
     setEditingBusiness(business);
