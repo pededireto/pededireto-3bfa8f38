@@ -3056,6 +3056,78 @@ export type Database = {
           },
         ]
       }
+      commercial_checklist: {
+        Row: {
+          business_id: string
+          commercial_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          objections_checked: Json
+          questions_checked: Json
+          updated_at: string
+          visit_result: string | null
+        }
+        Insert: {
+          business_id: string
+          commercial_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          objections_checked?: Json
+          questions_checked?: Json
+          updated_at?: string
+          visit_result?: string | null
+        }
+        Update: {
+          business_id?: string
+          commercial_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          objections_checked?: Json
+          questions_checked?: Json
+          updated_at?: string
+          visit_result?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_checklist_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_checklist_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_checklist_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_checklist_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_checklist_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_commissions: {
         Row: {
           adjustment_type: string | null
@@ -3172,6 +3244,78 @@ export type Database = {
           },
         ]
       }
+      commercial_pipeline: {
+        Row: {
+          assigned_to: string | null
+          business_id: string
+          created_at: string
+          followup_note: string | null
+          id: string
+          next_followup_date: string | null
+          phase: Database["public"]["Enums"]["commercial_status_tipo"]
+          updated_at: string
+          visit_result: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          business_id: string
+          created_at?: string
+          followup_note?: string | null
+          id?: string
+          next_followup_date?: string | null
+          phase?: Database["public"]["Enums"]["commercial_status_tipo"]
+          updated_at?: string
+          visit_result?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          business_id?: string
+          created_at?: string
+          followup_note?: string | null
+          id?: string
+          next_followup_date?: string | null
+          phase?: Database["public"]["Enums"]["commercial_status_tipo"]
+          updated_at?: string
+          visit_result?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_pipeline_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_pipeline_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_pipeline_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_pipeline_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_pipeline_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_plans: {
         Row: {
           created_at: string
@@ -3222,6 +3366,87 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      commercial_proposals: {
+        Row: {
+          business_id: string
+          commercial_id: string
+          created_at: string
+          discount_percentage: number | null
+          email_to: string | null
+          html_content: string | null
+          id: string
+          personal_message: string | null
+          plan_recommended: string
+          price: number
+          sent_at: string | null
+          valid_until: string
+        }
+        Insert: {
+          business_id: string
+          commercial_id: string
+          created_at?: string
+          discount_percentage?: number | null
+          email_to?: string | null
+          html_content?: string | null
+          id?: string
+          personal_message?: string | null
+          plan_recommended: string
+          price?: number
+          sent_at?: string | null
+          valid_until?: string
+        }
+        Update: {
+          business_id?: string
+          commercial_id?: string
+          created_at?: string
+          discount_percentage?: number | null
+          email_to?: string | null
+          html_content?: string | null
+          id?: string
+          personal_message?: string | null
+          plan_recommended?: string
+          price?: number
+          sent_at?: string | null
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_proposals_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_proposals_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_proposals_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_proposals_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_proposals_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       commission_audit_logs: {
         Row: {
@@ -7624,6 +7849,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_business_member: { Args: { p_business_id: string }; Returns: boolean }
       is_commercial: { Args: never; Returns: boolean }
+      is_commercial_or_admin: { Args: { _user_id: string }; Returns: boolean }
       link_affiliate_referral: {
         Args: {
           p_business_id: string
@@ -7820,6 +8046,9 @@ export type Database = {
         | "interessado"
         | "cliente"
         | "perdido"
+        | "proposta_enviada"
+        | "negociacao"
+        | "followup_agendado"
       match_status:
         | "enviado"
         | "visualizado"
@@ -7999,6 +8228,9 @@ export const Constants = {
         "interessado",
         "cliente",
         "perdido",
+        "proposta_enviada",
+        "negociacao",
+        "followup_agendado",
       ],
       match_status: [
         "enviado",

@@ -11,11 +11,13 @@ import {
   Ticket,
   MailPlus,
   Handshake,
+  Target,
+  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-export type CommercialTab = "dashboard" | "businesses" | "my-businesses" | "my-commissions" | "my-requests" | "claim-requests" | "tickets" | "emails" | "affiliates";
+export type CommercialTab = "dashboard" | "pipeline" | "businesses" | "my-businesses" | "my-commissions" | "my-requests" | "claim-requests" | "tickets" | "emails" | "affiliates";
 
 interface CommercialSidebarProps {
   activeTab: CommercialTab;
@@ -25,8 +27,9 @@ interface CommercialSidebarProps {
 
 const sidebarItems: { id: CommercialTab; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+  { id: "pipeline", label: "Pipeline", icon: Target },
   { id: "businesses", label: "Negócios", icon: Building2 },
-  { id: "my-businesses", label: "Meus Negócios", icon: Building2 },
+  { id: "my-businesses", label: "Meus Negócios", icon: UserPlus },
   { id: "my-commissions", label: "Minhas Comissões", icon: DollarSign },
   { id: "my-requests", label: "Os Meus Pedidos", icon: ClipboardList },
   { id: "claim-requests", label: "Pedidos de Claim", icon: ShieldCheck },
