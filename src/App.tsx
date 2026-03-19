@@ -13,6 +13,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import CookieConsent from "@/components/CookieConsent";
 import SessionExpiredModal from "@/components/SessionExpiredModal";
+import StickySearch from "@/components/StickySearch";
 
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
