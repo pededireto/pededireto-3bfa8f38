@@ -243,13 +243,28 @@ const SubcategoryPage = () => {
         {/* Featured */}
         {subcategoryFeatured.length > 0 && <FeaturedSection businesses={subcategoryFeatured} />}
 
-        {/* All Businesses */}
+        {/* All Businesses with pagination */}
         <BusinessGrid
-          businesses={regularBusinesses}
+          businesses={visibleBusinesses}
           title={`${subcategory.name}`}
+          subtitle={regularBusinesses.length > 0 ? `A mostrar ${Math.min(visibleCount, regularBusinesses.length)} de ${regularBusinesses.length} negócio${regularBusinesses.length !== 1 ? "s" : ""}` : undefined}
           isLoading={businessesLoading}
           emptyMessage={`Ainda não temos negócios de ${subcategory.name.toLowerCase()} registados.`}
         />
+
+        {hasMore && (
+          <div className="container pb-8 text-center">
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2"
+              onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+            >
+              <Loader2 className="h-4 w-4 hidden" />
+              Carregar mais negócios
+            </Button>
+          </div>
+        )}
 
         {allBusinesses.length === 0 && !businessesLoading && (
           <div className="container pb-12">

@@ -259,15 +259,25 @@ const Header = () => {
                   </button>
                 </>
               ) : (
-                <Link
-                  to="/login"
-                  aria-current={isActive("/login") ? "page" : undefined}
-                  className="text-lg font-medium text-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <User className="h-5 w-5" aria-hidden="true" focusable="false" />
-                  Entrar
-                </Link>
+                <div className="border-t border-border pt-4 mt-2 space-y-3">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Novo aqui?</p>
+                  <Link
+                    to="/register"
+                    className="w-full text-center text-base font-semibold text-primary-foreground bg-primary hover:bg-primary/90 px-4 py-3 rounded-lg transition-colors block"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Criar Conta — É grátis
+                  </Link>
+                  <Link
+                    to="/login"
+                    aria-current={isActive("/login") ? "page" : undefined}
+                    className="text-lg font-medium text-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <User className="h-5 w-5" aria-hidden="true" focusable="false" />
+                    Entrar
+                  </Link>
+                </div>
               )}
 
               <ThemeToggle />
