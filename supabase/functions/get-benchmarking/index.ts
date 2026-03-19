@@ -6,6 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 const ZHIPU_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
@@ -44,6 +45,96 @@ function extractJson(text: string): Record<string, unknown> | null {
 }
 
 const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+
+async function tryLovableAI(prompt: string, apiKey: string): Promise<Record<string, unknown> | null> {
+  try {
+    console.log("[get-benchmarking] Trying Lovable AI Gateway...");
+    const res = await fetch(LOVABLE_AI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[get-benchmarking] Lovable AI error:", res.status, errText.substring(0, 300));
+      return null;
+    }
+
+    const json = await res.json();
+    const content = json?.choices?.[0]?.message?.content || "";
+    console.log("[get-benchmarking] Lovable AI response length:", content.length);
+    return extractJson(content);
+  } catch (e) {
+    console.error("[get-benchmarking] Lovable AI call failed:", e);
+    return null;
+  }
+}
+
+async function tryGemini(prompt: string, apiKey: string): Promise<Record<string, unknown> | null> {
+  try {
+    console.log("[get-benchmarking] Trying Gemini API (fallback 1)...");
+    const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[get-benchmarking] Gemini error:", res.status, errText.substring(0, 200));
+      return null;
+    }
+
+    const json = await res.json();
+    const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    return extractJson(text);
+  } catch (e) {
+    console.error("[get-benchmarking] Gemini call failed:", e);
+    return null;
+  }
+}
+
+async function tryZhipu(prompt: string, apiKey: string): Promise<Record<string, unknown> | null> {
+  try {
+    console.log("[get-benchmarking] Trying Z.AI API (fallback 2)...");
+    const res = await fetch(ZHIPU_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "glm-4-flash",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+        max_tokens: 2048,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[get-benchmarking] Z.AI error:", res.status, errText.substring(0, 200));
+      return null;
+    }
+
+    const json = await res.json();
+    const content = json?.choices?.[0]?.message?.content || "";
+    return extractJson(content);
+  } catch (e) {
+    console.error("[get-benchmarking] Z.AI call failed:", e);
+    return null;
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -95,86 +186,32 @@ Deno.serve(async (req) => {
     let benchmarkData: Record<string, unknown> | null = null;
     let source = "";
 
-    // 2. Try Gemini (primary)
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
-    if (geminiKey) {
-      try {
-        console.log("[get-benchmarking] Trying Gemini API...");
-        const geminiRes = await fetch(`${GEMINI_URL}?key=${geminiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
-          }),
-        });
-
-        if (geminiRes.ok) {
-          const geminiJson = await geminiRes.json();
-          const text = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          console.log("[get-benchmarking] Gemini raw response length:", text.length);
-          benchmarkData = extractJson(text);
-          if (benchmarkData) {
-            source = "gemini";
-            console.log("[get-benchmarking] Gemini parsed successfully");
-          } else {
-            console.error("[get-benchmarking] Gemini response could not be parsed:", text.substring(0, 200));
-          }
-        } else {
-          const errText = await geminiRes.text();
-          console.error("[get-benchmarking] Gemini error:", geminiRes.status, errText.substring(0, 200));
-        }
-      } catch (geminiErr) {
-        console.error("[get-benchmarking] Gemini call failed:", geminiErr);
-      }
-    } else {
-      console.log("[get-benchmarking] GEMINI_API_KEY not configured, skipping");
+    // 2. Try Lovable AI Gateway (primary — pre-configured, no quota issues)
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    if (lovableKey) {
+      benchmarkData = await tryLovableAI(prompt, lovableKey);
+      if (benchmarkData) source = "lovable-ai";
     }
 
-    // 3. Try Z.AI (fallback)
+    // 3. Try Gemini (fallback 1)
+    if (!benchmarkData) {
+      const geminiKey = Deno.env.get("GEMINI_API_KEY");
+      if (geminiKey) {
+        benchmarkData = await tryGemini(prompt, geminiKey);
+        if (benchmarkData) source = "gemini";
+      }
+    }
+
+    // 4. Try Z.AI (fallback 2)
     if (!benchmarkData) {
       const zhipuKey = Deno.env.get("ZHIPU_API_KEY");
       if (zhipuKey) {
-        try {
-          console.log("[get-benchmarking] Trying Z.AI API (fallback)...");
-          const zaiRes = await fetch(ZHIPU_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${zhipuKey}`,
-            },
-            body: JSON.stringify({
-              model: "glm-4-flash",
-              messages: [{ role: "user", content: prompt }],
-              temperature: 0.3,
-              max_tokens: 2048,
-            }),
-          });
-
-          if (zaiRes.ok) {
-            const zaiJson = await zaiRes.json();
-            const content = zaiJson?.choices?.[0]?.message?.content || "";
-            console.log("[get-benchmarking] Z.AI raw response length:", content.length);
-            benchmarkData = extractJson(content);
-            if (benchmarkData) {
-              source = "zai";
-              console.log("[get-benchmarking] Z.AI parsed successfully");
-            } else {
-              console.error("[get-benchmarking] Z.AI response could not be parsed:", content.substring(0, 200));
-            }
-          } else {
-            const errText = await zaiRes.text();
-            console.error("[get-benchmarking] Z.AI error:", zaiRes.status, errText.substring(0, 200));
-          }
-        } catch (zaiErr) {
-          console.error("[get-benchmarking] Z.AI call failed:", zaiErr);
-        }
-      } else {
-        console.log("[get-benchmarking] ZHIPU_API_KEY not configured, skipping");
+        benchmarkData = await tryZhipu(prompt, zhipuKey);
+        if (benchmarkData) source = "zai";
       }
     }
 
-    // 4. Both failed
+    // 5. All failed
     if (!benchmarkData) {
       console.error("[get-benchmarking] All AI APIs failed for:", category, subcategory);
       return new Response(
@@ -183,7 +220,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 5. Save to cache
+    // 6. Save to cache
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
