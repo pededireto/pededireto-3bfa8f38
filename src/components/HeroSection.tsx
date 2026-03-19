@@ -8,6 +8,7 @@ import { useAutoSaveSearch } from "@/hooks/useSavedSearches";
 import SearchResults from "@/components/SearchResults";
 import pedeDiretoMascot from "@/assets/pede-direto-mascot.png";
 import { getYouTubeEmbedUrl } from "@/utils/youtube";
+import { useCities } from "@/hooks/useCities";
 
 interface HeroSectionProps {
   onSearch?: (term: string) => void;
@@ -16,7 +17,6 @@ interface HeroSectionProps {
 }
 
 const PLACEHOLDER_WORDS = ["canalizador", "eletricista", "restaurante", "cabeleireiro", "mecânico", "clínica"];
-const POPULAR_CITIES = ["Lisboa", "Porto", "Braga", "Coimbra", "Setúbal", "Faro", "Évora", "Aveiro", "Viseu", "Leiria"];
 
 const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionProps) => {
   const navigate = useNavigate();
