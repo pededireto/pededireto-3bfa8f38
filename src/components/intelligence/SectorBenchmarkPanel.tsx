@@ -1,8 +1,10 @@
-import { useBusinessBenchmarkSector, SectorBenchmarkData } from "@/hooks/useBusinessBenchmarkSector";
+import { useState } from "react";
+import { useBusinessBenchmarkSector } from "@/hooks/useBusinessBenchmarkSector";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, Globe, Lightbulb, Search, Target, Zap } from "lucide-react";
 
 interface SectorBenchmarkPanelProps {
@@ -10,7 +12,14 @@ interface SectorBenchmarkPanelProps {
 }
 
 const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
-  const { data, isLoading, error, profile, category, subcategory } = useBusinessBenchmarkSector(businessId);
+  const { data, isLoading, error, profile, category, subcategory, allSubcategories } =
+    useBusinessBenchmarkSector(businessId);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+
+  // Subcategoria activa — a seleccionada pelo utilizador ou a primeira com cache
+  const activeSubcategory = selectedSubcategory
+    ? allSubcategories.find((s) => s.subcategory === selectedSubcategory)
+    : { category, subcategory };
 
   if (isLoading) {
     return (
@@ -50,10 +59,8 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
   const websitePct = parsePercent(data.presenca_digital?.website || "0");
   const socialPct = parsePercent(data.presenca_digital?.redes_sociais || "0");
 
-  // Formata a dica de ouro separando os pontos numerados em blocos
   const formatDica = (text: string) => {
     if (!text) return null;
-    const lines = text.split(/\\n|(\d+\.)/);
     const points = text.split(/(?=\d+\.\s[A-Z])/);
 
     if (points.length <= 1) {
@@ -66,7 +73,6 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
           const trimmed = point.trim();
           if (!trimmed) return null;
 
-          // Verifica se é um ponto numerado
           const isNumbered = /^\d+\./.test(trimmed);
 
           if (isNumbered) {
@@ -95,13 +101,31 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <TrendingUp className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold">Benchmarking do Sector</h2>
-        <Badge variant="outline" className="text-xs">
-          {category} / {subcategory}
-        </Badge>
+      {/* Header com dropdown se houver múltiplas subcategorias */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Benchmarking do Sector</h2>
+        </div>
+
+        {allSubcategories.length > 1 ? (
+          <Select value={selectedSubcategory || subcategory || ""} onValueChange={(val) => setSelectedSubcategory(val)}>
+            <SelectTrigger className="w-auto min-w-[200px] h-8 text-xs">
+              <SelectValue placeholder="Selecciona subcategoria" />
+            </SelectTrigger>
+            <SelectContent>
+              {allSubcategories.map((item, i) => (
+                <SelectItem key={i} value={item.subcategory} className="text-xs">
+                  {item.subcategory}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Badge variant="outline" className="text-xs">
+            {category} / {subcategory}
+          </Badge>
+        )}
       </div>
 
       {/* Block 1 — Market Metrics */}
