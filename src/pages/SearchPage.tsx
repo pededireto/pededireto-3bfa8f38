@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Search, Loader2, MapPin, Star, ArrowRight, Share2, ChevronDown, Lightbulb } from "lucide-react";
+import { Search, Loader2, MapPin, Star, ArrowRight, ChevronDown, Lightbulb, Building2 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import SmartSearchBanner from "@/components/SmartSearchBanner";
 import ShareButton from "@/components/ShareButton";
 import { useSmartSearch } from "@/hooks/useSmartSearch";
+import { useCityBusinesses } from "@/hooks/useCityBusinesses";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/hooks/useAuth";
 import type { SmartBusiness } from "@/hooks/useSmartSearch";
@@ -29,10 +30,48 @@ const SearchPage = () => {
   const [inputValue, setInputValue] = useState(urlQuery);
   const [cityFilter, setCityFilter] = useState(urlCity);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [cityPage, setCityPage] = useState(1);
+  const [allCityBusinesses, setAllCityBusinesses] = useState<SmartBusiness[]>([]);
   const debouncedTerm = useDebounce(inputValue, 400);
+  const debouncedCity = useDebounce(cityFilter, 400);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: result, isPending } = useSmartSearch(debouncedTerm, cityFilter || null);
+  // Mode: city-only vs text search
+  const isCityOnlyMode = !debouncedTerm && debouncedCity.length >= 2;
+  const isTextSearchMode = debouncedTerm.length >= 2;
+
+  // Text search (existing logic)
+  const { data: result, isPending: isSearchPending } = useSmartSearch(
+    isTextSearchMode ? debouncedTerm : "",
+    cityFilter || null
+  );
+
+  // City-only mode
+  const { data: cityResult, isPending: isCityPending } = useCityBusinesses(
+    isCityOnlyMode ? debouncedCity : "",
+    cityPage
+  );
+
+  // Accumulate paginated city results
+  useEffect(() => {
+    if (cityResult && isCityOnlyMode) {
+      if (cityPage === 1) {
+        setAllCityBusinesses(cityResult.businesses);
+      } else {
+        setAllCityBusinesses((prev) => {
+          const ids = new Set(prev.map((b) => b.id));
+          const newOnes = cityResult.businesses.filter((b) => !ids.has(b.id));
+          return [...prev, ...newOnes];
+        });
+      }
+    }
+  }, [cityResult, cityPage, isCityOnlyMode]);
+
+  // Reset city page when city changes
+  useEffect(() => {
+    setCityPage(1);
+    setAllCityBusinesses([]);
+  }, [debouncedCity]);
 
   // Sync from URL
   useEffect(() => {
@@ -44,18 +83,23 @@ const SearchPage = () => {
   useEffect(() => {
     const currentQ = searchParams.get("q") ?? "";
     const currentCity = searchParams.get("cidade") ?? "";
-    if (debouncedTerm !== currentQ || cityFilter !== currentCity) {
+    if (debouncedTerm !== currentQ || debouncedCity !== currentCity) {
       const params: Record<string, string> = {};
       if (debouncedTerm) params.q = debouncedTerm;
-      if (cityFilter) params.cidade = cityFilter;
+      if (debouncedCity) params.cidade = debouncedCity;
       setSearchParams(params, { replace: true });
     }
-  }, [debouncedTerm, cityFilter]);
+  }, [debouncedTerm, debouncedCity]);
 
   const handleComplementaryClick = (service: string) => {
     setInputValue(service);
     setSearchParams({ q: service, ...(cityFilter ? { cidade: cityFilter } : {}) });
     inputRef.current?.focus();
+  };
+
+  const handleViewAllCityBusinesses = () => {
+    setInputValue("");
+    setSearchParams({ cidade: cityFilter });
   };
 
   const toggleGroup = (label: string) => {
@@ -67,40 +111,48 @@ const SearchPage = () => {
     });
   };
 
-  const showResults = debouncedTerm.length >= 2;
+  // Text search data
   const businessGroups = result?.businessGroups ?? [];
   const totalFound = result?.totalFound ?? 0;
   const complementaryServices = result?.complementaryServices ?? [];
   const suggestionGroups = result?.suggestionGroups ?? [];
-
   const firstBusiness = businessGroups[0]?.businesses[0] ?? null;
   const categorySlug = firstBusiness?.category_slug ?? null;
   const categoryName = firstBusiness?.category_name ?? null;
 
-  const currentUrl = `${BASE_URL}/pesquisa${debouncedTerm ? `?q=${encodeURIComponent(debouncedTerm)}` : ""}${cityFilter ? `${debouncedTerm ? "&" : "?"}cidade=${encodeURIComponent(cityFilter)}` : ""}`;
+  // City-only data
+  const cityTotalCount = cityResult?.totalCount ?? 0;
+  const cityHasMore = cityResult?.hasMore ?? false;
 
-  // Dynamic SEO based on parameters
-  const seoTitle = debouncedTerm && cityFilter
-    ? `${debouncedTerm} em ${cityFilter} — PedeDireto`
+  const currentUrl = `${BASE_URL}/pesquisa${debouncedTerm ? `?q=${encodeURIComponent(debouncedTerm)}` : ""}${debouncedCity ? `${debouncedTerm ? "&" : "?"}cidade=${encodeURIComponent(debouncedCity)}` : ""}`;
+
+  // Dynamic SEO
+  const seoTitle = debouncedTerm && debouncedCity
+    ? `${debouncedTerm} em ${debouncedCity} — PedeDireto`
     : debouncedTerm
     ? `Resultados para "${debouncedTerm}" — PedeDireto`
-    : cityFilter
-    ? `Negócios em ${cityFilter} — PedeDireto`
+    : debouncedCity
+    ? `Negócios em ${debouncedCity} — PedeDireto`
     : "Pesquisa de Negócios — PedeDireto";
 
-  const seoDescription = debouncedTerm && cityFilter
-    ? `Encontrámos ${totalFound} profissionais de ${debouncedTerm} em ${cityFilter}. Contacte directamente.`
+  const displayTotal = isCityOnlyMode ? cityTotalCount : totalFound;
+
+  const seoDescription = debouncedTerm && debouncedCity
+    ? `Encontrámos ${displayTotal} profissionais de ${debouncedTerm} em ${debouncedCity}. Contacte directamente.`
     : debouncedTerm
-    ? `Encontrámos ${totalFound} profissionais de ${debouncedTerm} em Portugal. Contacte directamente.`
-    : cityFilter
-    ? `Encontra os melhores negócios em ${cityFilter}. Contacto directo, sem intermediários.`
+    ? `Encontrámos ${displayTotal} profissionais de ${debouncedTerm} em Portugal. Contacte directamente.`
+    : debouncedCity
+    ? `Encontra os melhores negócios em ${debouncedCity}. Contacto directo, sem intermediários.`
     : "Pesquise profissionais e serviços locais em Portugal.";
 
-  const canonicalUrl = cityFilter && !debouncedTerm
-    ? `${BASE_URL}/pesquisa?cidade=${encodeURIComponent(cityFilter)}`
+  const canonicalUrl = debouncedCity && !debouncedTerm
+    ? `${BASE_URL}/pesquisa?cidade=${encodeURIComponent(debouncedCity)}`
     : debouncedTerm
-    ? undefined // noindex for search queries
+    ? undefined
     : `${BASE_URL}/pesquisa`;
+
+  const isPending = isCityOnlyMode ? isCityPending : isSearchPending;
+  const showEmptyState = !isCityOnlyMode && !isTextSearchMode;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -108,7 +160,7 @@ const SearchPage = () => {
         <title>{seoTitle}</title>
         <meta name="description" content={seoDescription} />
         {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
-        {!cityFilter && <meta name="robots" content="noindex, follow" />}
+        {!debouncedCity && <meta name="robots" content="noindex, follow" />}
         <meta property="og:type" content="website" />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDescription} />
@@ -135,7 +187,7 @@ const SearchPage = () => {
             </div>
           </div>
 
-          {/* City filter always visible */}
+          {/* City filter */}
           <div className="max-w-3xl mx-auto mt-2">
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -156,12 +208,26 @@ const SearchPage = () => {
               )}
             </div>
           </div>
+
+          {/* CTA: View all businesses in city */}
+          {cityFilter && debouncedTerm && (
+            <div className="max-w-3xl mx-auto mt-2">
+              <button
+                onClick={handleViewAllCityBusinesses}
+                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                <Building2 className="h-3.5 w-3.5" />
+                Ver todos os negócios em {cityFilter}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="container flex-1 py-6">
-        {/* Empty state */}
-        {!showResults && (
+        {/* Empty state - no search term and no city */}
+        {showEmptyState && (
           <div className="text-center py-16">
             <Search className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2">O que precisa hoje?</h2>
@@ -184,15 +250,78 @@ const SearchPage = () => {
         )}
 
         {/* Loading */}
-        {showResults && isPending && (
+        {!showEmptyState && isPending && (
           <div className="py-16 flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-muted-foreground">A procurar...</p>
           </div>
         )}
 
-        {/* Results */}
-        {showResults && !isPending && result && (
+        {/* ═══ CITY-ONLY MODE ═══ */}
+        {isCityOnlyMode && !isCityPending && (
+          <>
+            {allCityBusinesses.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h1 className="text-xl font-bold text-foreground">
+                      Todos os negócios em {debouncedCity}
+                    </h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      A mostrar {allCityBusinesses.length} de {cityTotalCount} negócio{cityTotalCount !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <ShareButton url={currentUrl} title={`Negócios em ${debouncedCity}`} variant="outline" />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {allCityBusinesses.map((biz) => (
+                    <SearchResultCard key={biz.id} business={biz} searchTerm="" cityFilter={debouncedCity} isAuthenticated={!!user} />
+                  ))}
+                </div>
+
+                {cityHasMore && (
+                  <div className="mt-8 text-center">
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => setCityPage((p) => p + 1)}
+                      disabled={isCityPending}
+                    >
+                      {isCityPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                      Carregar mais negócios
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* City with no businesses */
+              <div className="text-center py-16">
+                <Building2 className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-foreground mb-2">
+                  Ainda não temos negócios registados em {debouncedCity}
+                </h2>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  Conheces algum negócio em {debouncedCity}? Recomenda-o!
+                </p>
+                <Link
+                  to="/claim-business"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Registar Negócio
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ═══ TEXT SEARCH MODE ═══ */}
+        {isTextSearchMode && !isSearchPending && result && (
           <>
             <SmartSearchBanner
               result={result}
@@ -260,7 +389,7 @@ const SearchPage = () => {
                   })}
                 </div>
 
-                {/* Complementary section after results */}
+                {/* Complementary section */}
                 {complementaryServices.length > 0 && (
                   <div className="mt-10 rounded-2xl border border-border bg-muted/30 p-5">
                     <div className="flex items-center gap-2 mb-3">
@@ -282,7 +411,7 @@ const SearchPage = () => {
                   </div>
                 )}
 
-                {/* Fallback popular categories when no complementary */}
+                {/* Fallback popular categories */}
                 {complementaryServices.length === 0 && totalFound > 0 && (
                   <div className="mt-10 rounded-2xl border border-border bg-muted/30 p-5">
                     <div className="flex items-center gap-2 mb-3">
@@ -300,7 +429,7 @@ const SearchPage = () => {
                   </div>
                 )}
 
-                {/* Suggestion groups from related subcategories */}
+                {/* Suggestion groups */}
                 {suggestionGroups.length > 0 && (
                   <div className="mt-10 space-y-8">
                     <div className="flex items-center gap-3">
