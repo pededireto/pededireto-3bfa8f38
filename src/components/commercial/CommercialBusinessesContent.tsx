@@ -246,11 +246,33 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
                   </td>
                   <td className="p-4">
                     <div className="flex gap-1 flex-wrap">
-                      {!myBusinessIds.has(business.id) && (
-                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleAssignToMe(business.id)} disabled={assignToMe.isPending}>
-                          <UserPlus className="h-3 w-3 mr-1" /> Atribuir
-                        </Button>
-                      )}
+                      {(() => {
+                        const assignment = assignmentMap.get(business.id);
+                        if (!assignment) {
+                          return (
+                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleAssignToMe(business.id)} disabled={assignToMe.isPending}>
+                              <UserPlus className="h-3 w-3 mr-1" /> Atribuir
+                            </Button>
+                          );
+                        }
+                        if (assignment.commercial_id === user?.id) {
+                          return (
+                            <Button size="sm" variant="outline" className="text-xs h-7 text-success border-success/30" disabled>
+                              <Check className="h-3 w-3 mr-1" /> Meu
+                            </Button>
+                          );
+                        }
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="sm" variant="outline" className="text-xs h-7 text-muted-foreground" disabled>
+                                <UserCheck className="h-3 w-3 mr-1" /> Atribuído
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Atribuído a {assignment.profileName || "outro comercial"}</TooltipContent>
+                          </Tooltip>
+                        );
+                      })()}
                       {business.commercial_status === "nao_contactado" && (
                         <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleQuickStatusChange(business, "contactado")}>
                           <UserCheck className="h-3 w-3 mr-1" /> Contactado
