@@ -173,8 +173,8 @@ export const useBusinessBenchmarkSector = (
     isLoading: isLoading || !bizInfo,
     error,
     profile: bizInfo?.profile,
-    category: bizInfo?.category,
-    subcategory: bizInfo?.subcategory,
+    category: activeSubcategory.category,
+    subcategory: activeSubcategory.subcategory,
     allSubcategories: bizInfo?.allSubcategories || [],
   };
 };

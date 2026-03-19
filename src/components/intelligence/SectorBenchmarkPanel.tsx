@@ -56,12 +56,27 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <TrendingUp className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold">Benchmarking do Sector</h2>
-        <Badge variant="outline" className="text-xs">
-          {category} / {subcategory}
-        </Badge>
+        {allSubcategories.length > 1 ? (
+          <Select value={selectedSub || subcategory} onValueChange={setSelectedSub}>
+            <SelectTrigger className="w-auto min-w-[180px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {allSubcategories.map((s, i) => (
+                <SelectItem key={i} value={s.subcategory}>
+                  {s.category} / {s.subcategory}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Badge variant="outline" className="text-xs">
+            {category} / {subcategory}
+          </Badge>
+        )}
       </div>
 
       {/* Block 1 — Market Metrics */}
