@@ -12,14 +12,13 @@ interface SectorBenchmarkPanelProps {
 }
 
 const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
-  const { data, isLoading, error, profile, category, subcategory, allSubcategories } =
-    useBusinessBenchmarkSector(businessId);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
 
-  // Subcategoria activa — a seleccionada pelo utilizador ou a primeira com cache
-  const activeSubcategory = selectedSubcategory
-    ? allSubcategories.find((s) => s.subcategory === selectedSubcategory)
-    : { category, subcategory };
+  // Passa selectedSubcategory ao hook — chave da correcção!
+  const { data, isLoading, error, profile, category, subcategory, allSubcategories } = useBusinessBenchmarkSector(
+    businessId,
+    selectedSubcategory,
+  );
 
   if (isLoading) {
     return (
@@ -101,7 +100,7 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Header com dropdown se houver múltiplas subcategorias */}
+      {/* Header com dropdown */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
@@ -167,7 +166,6 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
           <Globe className="h-4 w-4 text-primary" />
           <p className="text-sm font-semibold">Presença Digital do Sector</p>
         </div>
-
         <div className="space-y-3">
           <PresenceBar label="Negócios com Website" percent={websitePct} has={!!profile?.website} />
           <PresenceBar
@@ -176,7 +174,6 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
             has={!!(profile?.instagram || profile?.facebook)}
           />
         </div>
-
         <div className="space-y-1 text-xs">
           <PresenceStatus has={!!profile?.website} label="Website" percent={websitePct} />
           <PresenceStatus has={!!profile?.whatsapp} label="WhatsApp" percent={73} />
