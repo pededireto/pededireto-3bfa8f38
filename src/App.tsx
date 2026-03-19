@@ -151,7 +151,7 @@ const App = () => {
                 <RouteFocusHandler />
                 <ScrollToTop />
                 <SessionExpiredModal />
-
+                <StickySearch />
                 {/* ✅ SKIP LINK (primeiro elemento focável real da página) */}
                 <a
                   href="#main-content"

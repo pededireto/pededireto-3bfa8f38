@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useSearch } from "@/hooks/useSearch";
 import SearchResults from "@/components/SearchResults";
 import { useAutoSaveSearch } from "@/hooks/useSavedSearches";
+
+const HIDDEN_ROUTES = ["/pesquisa"];
 
 const StickySearch = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -12,7 +14,10 @@ const StickySearch = () => {
   const { data: searchResults = [], isLoading } = useSearch(searchTerm);
   const autoSaveSearch = useAutoSaveSearch();
   const navigate = useNavigate();
+  const location = useLocation();
   const searchRef = useRef<HTMLDivElement>(null);
+
+  const isHiddenRoute = HIDDEN_ROUTES.some((r) => location.pathname.startsWith(r));
 
   useEffect(() => {
     const handleScroll = () => {
@@ -41,7 +46,7 @@ const StickySearch = () => {
     }
   };
 
-  if (!isVisible) return null;
+  if (!isVisible || isHiddenRoute) return null;
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border shadow-sm animate-in slide-in-from-top duration-300">
