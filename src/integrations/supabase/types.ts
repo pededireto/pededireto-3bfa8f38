@@ -7820,6 +7820,9 @@ export type Database = {
         | "interessado"
         | "cliente"
         | "perdido"
+        | "proposta_enviada"
+        | "negociacao"
+        | "followup_agendado"
       match_status:
         | "enviado"
         | "visualizado"
@@ -7999,6 +8002,9 @@ export const Constants = {
         "interessado",
         "cliente",
         "perdido",
+        "proposta_enviada",
+        "negociacao",
+        "followup_agendado",
       ],
       match_status: [
         "enviado",
