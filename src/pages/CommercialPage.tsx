@@ -14,6 +14,7 @@ import CommercialDashboardContent from "@/components/commercial/CommercialDashbo
 import CommercialMyBusinessesContent from "@/components/commercial/CommercialMyBusinessesContent";
 import CommercialCommissionsContent from "@/components/commercial/CommercialCommissionsContent";
 import CommercialClaimRequestsContent from "@/components/commercial/CommercialClaimRequestsContent";
+import CommercialPipelineContent from "@/components/commercial/CommercialPipelineContent";
 import TicketsTable from "@/components/tickets/TicketsTable";
 import EmailHub from "@/components/email/EmailHub";
 import AffiliatePortalContent from "@/components/affiliate/AffiliatePortalContent";
@@ -28,6 +29,7 @@ const CommercialPage = () => {
   const isLoading = businessesLoading || categoriesLoading;
 
   const renderContent = () => {
+    if (activeTab === "pipeline") return <CommercialPipelineContent />;
     if (activeTab === "my-requests") return <CommercialRequestsContent />;
     if (activeTab === "dashboard") return <CommercialDashboardContent />;
     if (activeTab === "my-businesses") return <CommercialMyBusinessesContent />;
