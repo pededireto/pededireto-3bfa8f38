@@ -1,7 +1,8 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const ZHIPU_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
 const PRELOAD_CATEGORIES = [
   { category: "Beleza", subcategory: "Barbeiro" },
@@ -16,8 +17,8 @@ const PRELOAD_CATEGORIES = [
   { category: "Serviços Profissionais", subcategory: "Contabilidade" },
 ];
 
-async function callZhipuAPI(category: string, subcategory: string, apiKey: string) {
-  const prompt = `És um especialista em análise de mercado para pequenos e médios negócios em Portugal.
+function buildPrompt(category: string, subcategory: string): string {
+  return `És um especialista em análise de mercado para pequenos e médios negócios em Portugal.
 
 Para o sector ${subcategory} na categoria ${category}, devolve dados de benchmarking em formato JSON com esta estrutura exacta:
 
@@ -38,32 +39,71 @@ Para o sector ${subcategory} na categoria ${category}, devolve dados de benchmar
 }
 
 Responde APENAS com o JSON, sem texto adicional. Dados específicos para Portugal, actualizados 2024/2025.`;
+}
 
-  const res = await fetch(ZHIPU_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "glm-4-flash",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      max_tokens: 2048,
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error(`Z.AI error for ${category}/${subcategory}:`, res.status, errText);
+function extractJson(text: string): Record<string, unknown> | null {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch {
     return null;
   }
+}
 
-  const json = await res.json();
-  const content = json?.choices?.[0]?.message?.content || "";
-  const match = content.match(/\{[\s\S]*\}/);
-  if (!match) return null;
-  return JSON.parse(match[0]);
+async function callAI(category: string, subcategory: string, geminiKey: string | undefined, zhipuKey: string | undefined): Promise<{ data: Record<string, unknown>; source: string } | null> {
+  const prompt = buildPrompt(category, subcategory);
+
+  // Try Gemini first
+  if (geminiKey) {
+    try {
+      const res = await fetch(`${GEMINI_URL}?key=${geminiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const data = extractJson(text);
+        if (data) return { data, source: "gemini" };
+      }
+    } catch (e) {
+      console.error(`Gemini failed for ${category}/${subcategory}:`, e);
+    }
+  }
+
+  // Fallback to Z.AI
+  if (zhipuKey) {
+    try {
+      const res = await fetch(ZHIPU_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${zhipuKey}`,
+        },
+        body: JSON.stringify({
+          model: "glm-4-flash",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.3,
+          max_tokens: 2048,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const content = json?.choices?.[0]?.message?.content || "";
+        const data = extractJson(content);
+        if (data) return { data, source: "zai" };
+      }
+    } catch (e) {
+      console.error(`Z.AI failed for ${category}/${subcategory}:`, e);
+    }
+  }
+
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -74,11 +114,12 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
     const zhipuKey = Deno.env.get("ZHIPU_API_KEY");
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    if (!zhipuKey) {
-      return new Response(JSON.stringify({ error: "ZHIPU_API_KEY not set" }), {
+    if (!geminiKey && !zhipuKey) {
+      return new Response(JSON.stringify({ error: "No AI API keys configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -91,14 +132,14 @@ Deno.serve(async (req) => {
 
     if (count === 0) {
       for (const item of PRELOAD_CATEGORIES) {
-        const data = await callZhipuAPI(item.category, item.subcategory, zhipuKey);
-        if (data) {
+        const result = await callAI(item.category, item.subcategory, geminiKey, zhipuKey);
+        if (result) {
           const now = new Date();
           await supabase.from("benchmarking_cache").upsert(
             {
               category: item.category,
               subcategory: item.subcategory,
-              data,
+              data: result.data,
               created_at: now.toISOString(),
               expires_at: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
               hit_count: 0,
@@ -106,10 +147,9 @@ Deno.serve(async (req) => {
             },
             { onConflict: "category,subcategory" }
           );
-          results.push(`preloaded: ${item.category}/${item.subcategory}`);
+          results.push(`preloaded (${result.source}): ${item.category}/${item.subcategory}`);
         }
-        // Rate limiting: wait 1s between calls
-        await new Promise((r) => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 1500));
       }
       return new Response(JSON.stringify({ preloaded: results }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -127,25 +167,25 @@ Deno.serve(async (req) => {
 
     if (popular) {
       for (const row of popular) {
-        const data = await callZhipuAPI(row.category, row.subcategory, zhipuKey);
-        if (data) {
+        const result = await callAI(row.category, row.subcategory, geminiKey, zhipuKey);
+        if (result) {
           const now = new Date();
           await supabase
             .from("benchmarking_cache")
             .update({
-              data,
+              data: result.data,
               created_at: now.toISOString(),
               expires_at: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
               renewed_by: "cron",
             })
             .eq("id", row.id);
-          results.push(`renewed: ${row.category}/${row.subcategory}`);
+          results.push(`renewed (${result.source}): ${row.category}/${row.subcategory}`);
         }
-        await new Promise((r) => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 1500));
       }
     }
 
-    // 3. Check expired caches >5 days without renewal → admin notification
+    // 3. Check expired caches >5 days → admin notification
     const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
     const { data: stale } = await supabase
       .from("benchmarking_cache")
