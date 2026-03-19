@@ -161,6 +161,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                   }}
                   onFocus={() => {
                     if (searchTerm.length >= 2) setShowResults(true);
+                    handleSearchFocus();
                   }}
                 />
                 {showResults && searchTerm.length >= 2 && (
