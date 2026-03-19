@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,7 +32,7 @@ interface SubcategoryInfo {
 
 export const useBusinessBenchmarkSector = (
   businessId: string | null | undefined,
-  selectedSubcategory?: string
+  selectedSubcategory?: string | null,
 ) => {
   const { data: bizInfo } = useQuery({
     queryKey: ["biz-sector-info", businessId],
@@ -117,7 +118,7 @@ export const useBusinessBenchmarkSector = (
       }
 
       // 7. Nenhuma tem cache — usar a primeira subcategoria com dados válidos
-      const first = allSubcategories.find(s => s.category.length > 0 && s.subcategory.length > 0);
+      const first = allSubcategories.find((s) => s.category.length > 0 && s.subcategory.length > 0);
       return {
         category: first?.category || "",
         subcategory: first?.subcategory || "",
@@ -134,22 +135,26 @@ export const useBusinessBenchmarkSector = (
     staleTime: 10 * 60 * 1000,
   });
 
-  // Resolve active subcategory: selected override or auto-detected
-  const activeSubcategory = (() => {
-    if (selectedSubcategory && bizInfo?.allSubcategories) {
-      const match = bizInfo.allSubcategories.find(s => s.subcategory === selectedSubcategory);
-      if (match) return { category: match.category, subcategory: match.subcategory };
-    }
-    return { category: bizInfo?.category || "", subcategory: bizInfo?.subcategory || "" };
-  })();
+  // Determinar categoria e subcategoria activas
+  // Se o utilizador seleccionou uma subcategoria, usar essa
+  const activeInfo =
+    selectedSubcategory && bizInfo?.allSubcategories
+      ? (bizInfo.allSubcategories.find((s) => s.subcategory === selectedSubcategory) ?? {
+          category: bizInfo.category || "",
+          subcategory: bizInfo.subcategory || "",
+        })
+      : {
+          category: bizInfo?.category || "",
+          subcategory: bizInfo?.subcategory || "",
+        };
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["sector-benchmark", activeSubcategory.category, activeSubcategory.subcategory],
+    queryKey: ["sector-benchmark", activeInfo.category, activeInfo.subcategory],
     queryFn: async () => {
       const { data: res, error: fnErr } = await supabase.functions.invoke("get-benchmarking", {
         body: {
-          category: activeSubcategory.category,
-          subcategory: activeSubcategory.subcategory,
+          category: activeInfo.category,
+          subcategory: activeInfo.subcategory,
           business_id: businessId,
         },
       });
@@ -163,7 +168,12 @@ export const useBusinessBenchmarkSector = (
       }
       return res.data as SectorBenchmarkData;
     },
-    enabled: !!(activeSubcategory.category.length > 0 && activeSubcategory.subcategory.length > 0),
+    enabled: !!(
+      activeInfo.category &&
+      activeInfo.category.length > 0 &&
+      activeInfo.subcategory &&
+      activeInfo.subcategory.length > 0
+    ),
     staleTime: 30 * 60 * 1000,
     retry: false,
   });
@@ -173,8 +183,8 @@ export const useBusinessBenchmarkSector = (
     isLoading: isLoading || !bizInfo,
     error,
     profile: bizInfo?.profile,
-    category: activeSubcategory.category,
-    subcategory: activeSubcategory.subcategory,
+    category: activeInfo.category,
+    subcategory: activeInfo.subcategory,
     allSubcategories: bizInfo?.allSubcategories || [],
   };
 };
