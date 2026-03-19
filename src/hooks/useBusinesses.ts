@@ -5,7 +5,7 @@ import type { Json } from "@/integrations/supabase/types";
 
 export type SubscriptionPlan = "free" | "1_month" | "3_months" | "6_months" | "1_year";
 export type SubscriptionStatus = "inactive" | "active" | "expired";
-export type CommercialStatus = "nao_contactado" | "contactado" | "interessado" | "cliente" | "perdido";
+export type CommercialStatus = "nao_contactado" | "contactado" | "interessado" | "proposta_enviada" | "negociacao" | "cliente" | "perdido" | "followup_agendado";
 export type PremiumLevel = "SUPER" | "CATEGORIA" | "SUBCATEGORIA";
 
 export interface Business {
