@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { useBusinessBenchmarkSector, SectorBenchmarkData } from "@/hooks/useBusinessBenchmarkSector";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, Globe, Lightbulb, Search, Target, Zap } from "lucide-react";
 
 interface SectorBenchmarkPanelProps {
@@ -12,8 +10,7 @@ interface SectorBenchmarkPanelProps {
 }
 
 const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
-  const [selectedSub, setSelectedSub] = useState<string | undefined>();
-  const { data, isLoading, error, profile, category, subcategory, allSubcategories } = useBusinessBenchmarkSector(businessId, selectedSub);
+  const { data, isLoading, error, profile, category, subcategory } = useBusinessBenchmarkSector(businessId);
 
   if (isLoading) {
     return (
@@ -53,30 +50,58 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
   const websitePct = parsePercent(data.presenca_digital?.website || "0");
   const socialPct = parsePercent(data.presenca_digital?.redes_sociais || "0");
 
+  // Formata a dica de ouro separando os pontos numerados em blocos
+  const formatDica = (text: string) => {
+    if (!text) return null;
+    const lines = text.split(/\\n|(\d+\.)/);
+    const points = text.split(/(?=\d+\.\s[A-Z])/);
+
+    if (points.length <= 1) {
+      return <p className="text-sm text-muted-foreground whitespace-pre-line">{text}</p>;
+    }
+
+    return (
+      <div className="space-y-3">
+        {points.map((point, i) => {
+          const trimmed = point.trim();
+          if (!trimmed) return null;
+
+          // Verifica se é um ponto numerado
+          const isNumbered = /^\d+\./.test(trimmed);
+
+          if (isNumbered) {
+            const titleMatch = trimmed.match(/^(\d+\.\s[^—]+—)/);
+            if (titleMatch) {
+              const title = titleMatch[1];
+              const content = trimmed.replace(title, "").trim();
+              return (
+                <div key={i} className="border-l-2 border-primary/30 pl-3">
+                  <p className="text-xs font-semibold text-primary mb-1">{title}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{content}</p>
+                </div>
+              );
+            }
+          }
+
+          return (
+            <p key={i} className="text-sm text-muted-foreground leading-relaxed">
+              {trimmed}
+            </p>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2">
         <TrendingUp className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold">Benchmarking do Sector</h2>
-        {allSubcategories.length > 1 ? (
-          <Select value={selectedSub || subcategory} onValueChange={setSelectedSub}>
-            <SelectTrigger className="w-auto min-w-[180px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {allSubcategories.map((s, i) => (
-                <SelectItem key={i} value={s.subcategory}>
-                  {s.category} / {s.subcategory}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <Badge variant="outline" className="text-xs">
-            {category} / {subcategory}
-          </Badge>
-        )}
+        <Badge variant="outline" className="text-xs">
+          {category} / {subcategory}
+        </Badge>
       </div>
 
       {/* Block 1 — Market Metrics */}
@@ -121,7 +146,11 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
 
         <div className="space-y-3">
           <PresenceBar label="Negócios com Website" percent={websitePct} has={!!profile?.website} />
-          <PresenceBar label="Negócios com Redes Sociais" percent={socialPct} has={!!(profile?.instagram || profile?.facebook)} />
+          <PresenceBar
+            label="Negócios com Redes Sociais"
+            percent={socialPct}
+            has={!!(profile?.instagram || profile?.facebook)}
+          />
         </div>
 
         <div className="space-y-1 text-xs">
@@ -159,12 +188,12 @@ const SectorBenchmarkPanel = ({ businessId }: SectorBenchmarkPanelProps) => {
 
       {/* Block 5 — Golden Tip */}
       {data.dica_ouro && (
-      <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-5">
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-5">
           <div className="flex items-start gap-3">
             <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-foreground mb-1">Dica de Ouro 💡</p>
-              <p className="text-sm text-muted-foreground">{data.dica_ouro}</p>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground mb-3">Dica de Ouro 💡</p>
+              {formatDica(data.dica_ouro)}
             </div>
           </div>
         </div>
