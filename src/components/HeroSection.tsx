@@ -8,6 +8,7 @@ import { useAutoSaveSearch } from "@/hooks/useSavedSearches";
 import SearchResults from "@/components/SearchResults";
 import pedeDiretoMascot from "@/assets/pede-direto-mascot.png";
 import { getYouTubeEmbedUrl } from "@/utils/youtube";
+import { useCities } from "@/hooks/useCities";
 
 interface HeroSectionProps {
   onSearch?: (term: string) => void;
@@ -16,7 +17,6 @@ interface HeroSectionProps {
 }
 
 const PLACEHOLDER_WORDS = ["canalizador", "eletricista", "restaurante", "cabeleireiro", "mecânico", "clínica"];
-const POPULAR_CITIES = ["Lisboa", "Porto", "Braga", "Coimbra", "Setúbal", "Faro", "Évora", "Aveiro", "Viseu", "Leiria"];
 
 const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionProps) => {
   const navigate = useNavigate();
@@ -29,6 +29,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   const { data: searchResults = [], isLoading: searchLoading } = useSearch(searchTerm);
   const { data: settings } = useSiteSettings();
   const autoSaveSearch = useAutoSaveSearch();
+  const { data: dynamicCities = [] } = useCities(15);
 
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -198,7 +199,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
                       >
                         Qualquer cidade
                       </button>
-                      {POPULAR_CITIES.map((city) => (
+                      {dynamicCities.map(({ name: city }) => (
                         <button
                           key={city}
                           type="button"

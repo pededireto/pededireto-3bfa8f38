@@ -13,7 +13,7 @@ import HowItWorks from "@/components/HowItWorks";
 import BusinessCTA from "@/components/BusinessCTA";
 import LatestBlogPosts from "@/components/LatestBlogPosts";
 import HomepageBlockRenderer from "@/components/HomepageBlockRenderer";
-import StickySearch from "@/components/StickySearch";
+import CityFilterBar from "@/components/CityFilterBar";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,7 +37,6 @@ const Index = () => {
 
       <Header />
 
-      <StickySearch />
       <main id="main-content" className="flex-1" tabIndex={-1}>
         {useBlocks ? (
           blocks.map((block) => (
@@ -51,6 +50,7 @@ const Index = () => {
         ) : (
           <>
             <HeroSection searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+            <CityFilterBar />
             <PlatformStats />
             <FeaturedCategoriesSection />
             <HowItWorks />
