@@ -13,6 +13,7 @@ import { useBusinessResponseTime } from "@/hooks/useBusinessResponseTime";
 import { useBusinessCityNames } from "@/hooks/useBusinessCities";
 
 import Header from "@/components/Header";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import Footer from "@/components/Footer";
 import FavoriteButton from "@/components/FavoriteButton";
 import ShareButton from "@/components/ShareButton";
