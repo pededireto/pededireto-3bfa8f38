@@ -1,5 +1,3 @@
-CommercialBusinessSheet.tsx	MarketExpertPanel + ConversationCards antes do Script; dicas contextuais verdes nas perguntas de diagnóstico; enriquecimento das contra-objecções com dados de benchmarking; botão "📱 Preparar Visita" no header
-
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,11 +12,30 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useUpsertPipeline, PIPELINE_PHASES } from "@/hooks/useCommercialPipeline";
-import { useChecklist, useUpsertChecklist, DIAGNOSIS_QUESTIONS, OBJECTIONS, VISIT_RESULTS } from "@/hooks/useCommercialChecklist";
+import {
+  useChecklist,
+  useUpsertChecklist,
+  DIAGNOSIS_QUESTIONS,
+  OBJECTIONS,
+  VISIT_RESULTS,
+} from "@/hooks/useCommercialChecklist";
 import { useContactLogs, useCreateContactLog } from "@/hooks/useContactLogs";
 import { useProposals } from "@/hooks/useCommercialProposals";
 import { useCommercialBenchmark, CommercialBenchmarkData } from "@/hooks/useCommercialBenchmark";
-import { Loader2, Building2, MapPin, Phone, Mail, Globe, Calendar, MessageSquare, FileText, CheckCircle, AlertCircle, Smartphone } from "lucide-react";
+import {
+  Loader2,
+  Building2,
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
+  Calendar,
+  MessageSquare,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  Smartphone,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CommercialStatus } from "@/hooks/useBusinesses";
 import CommercialProposalForm from "./CommercialProposalForm";
@@ -41,14 +58,18 @@ const getDiagnosisHint = (question: string, benchmark: CommercialBenchmarkData |
   if (question.includes("plataforma online") && benchmark.presenca_digital) {
     const parts: string[] = [];
     if (benchmark.presenca_digital.website) parts.push(`website ${benchmark.presenca_digital.website}`);
-    if (benchmark.presenca_digital.redes_sociais) parts.push(`redes sociais ${benchmark.presenca_digital.redes_sociais}`);
+    if (benchmark.presenca_digital.redes_sociais)
+      parts.push(`redes sociais ${benchmark.presenca_digital.redes_sociais}`);
     if (parts.length > 0) return `Presença digital neste sector: ${parts.join(", ")}`;
   }
   return null;
 };
 
 // Helper: get enrichment text for an objection from benchmark data
-const getObjectionEnrichment = (label: string, benchmark: CommercialBenchmarkData | null | undefined): string | null => {
+const getObjectionEnrichment = (
+  label: string,
+  benchmark: CommercialBenchmarkData | null | undefined,
+): string | null => {
   if (!benchmark) return null;
   if (label === "Já tenho clientes suficientes" && benchmark.tendencia_2025) {
     const firstSentence = benchmark.tendencia_2025.split(/[.!?]/)[0]?.trim();
@@ -189,21 +210,23 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
   };
 
   const toggleQuestion = (q: string) => {
-    setQuestions(prev => prev.includes(q) ? prev.filter(x => x !== q) : [...prev, q]);
+    setQuestions((prev) => (prev.includes(q) ? prev.filter((x) => x !== q) : [...prev, q]));
   };
 
   const toggleObjection = (o: string) => {
-    setObjections(prev => prev.includes(o) ? prev.filter(x => x !== o) : [...prev, o]);
+    setObjections((prev) => (prev.includes(o) ? prev.filter((x) => x !== o) : [...prev, o]));
   };
 
-  const phaseConf = PIPELINE_PHASES.find(p => p.value === (pipelineData?.phase || business?.commercial_status));
+  const phaseConf = PIPELINE_PHASES.find((p) => p.value === (pipelineData?.phase || business?.commercial_status));
 
   return (
     <>
       <Sheet open={!!businessId} onOpenChange={(open) => !open && onClose()}>
         <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           {bizLoading ? (
-            <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
           ) : business ? (
             <>
               <SheetHeader className="pb-4">
@@ -218,7 +241,12 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                   <div className="flex-1">
                     <SheetTitle className="text-lg">{business.name}</SheetTitle>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {business.city && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{business.city}</span>}
+                      {business.city && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {business.city}
+                        </span>
+                      )}
                       {business.categories?.name && <span>• {business.categories.name}</span>}
                       {business.subcategories?.name && <span>• {business.subcategories.name}</span>}
                     </div>
@@ -245,11 +273,21 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
                 <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="dados" className="text-xs">Dados</TabsTrigger>
-                  <TabsTrigger value="script" className="text-xs">Script</TabsTrigger>
-                  <TabsTrigger value="historico" className="text-xs">Histórico</TabsTrigger>
-                  <TabsTrigger value="proposta" className="text-xs">Proposta</TabsTrigger>
-                  <TabsTrigger value="followup" className="text-xs">Follow-up</TabsTrigger>
+                  <TabsTrigger value="dados" className="text-xs">
+                    Dados
+                  </TabsTrigger>
+                  <TabsTrigger value="script" className="text-xs">
+                    Script
+                  </TabsTrigger>
+                  <TabsTrigger value="historico" className="text-xs">
+                    Histórico
+                  </TabsTrigger>
+                  <TabsTrigger value="proposta" className="text-xs">
+                    Proposta
+                  </TabsTrigger>
+                  <TabsTrigger value="followup" className="text-xs">
+                    Follow-up
+                  </TabsTrigger>
                 </TabsList>
 
                 {/* TAB: Dados */}
@@ -258,19 +296,22 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Telefone</Label>
                       <p className="text-sm font-medium flex items-center gap-1">
-                        <Phone className="h-3 w-3" />{business.cta_phone || "—"}
+                        <Phone className="h-3 w-3" />
+                        {business.cta_phone || "—"}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Email</Label>
                       <p className="text-sm font-medium flex items-center gap-1">
-                        <Mail className="h-3 w-3" />{business.cta_email || business.owner_email || "—"}
+                        <Mail className="h-3 w-3" />
+                        {business.cta_email || business.owner_email || "—"}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Website</Label>
                       <p className="text-sm font-medium flex items-center gap-1">
-                        <Globe className="h-3 w-3" />{business.cta_website || "—"}
+                        <Globe className="h-3 w-3" />
+                        {business.cta_website || "—"}
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -280,16 +321,12 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Plano</Label>
                       <p className="text-sm font-medium">
-                        {business.subscription_status === "active"
-                          ? `${business.subscription_price}€/mês`
-                          : "Gratuito"}
+                        {business.subscription_status === "active" ? `${business.subscription_price}€/mês` : "Gratuito"}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Registado em</Label>
-                      <p className="text-sm font-medium">
-                        {new Date(business.created_at).toLocaleDateString("pt-PT")}
-                      </p>
+                      <p className="text-sm font-medium">{new Date(business.created_at).toLocaleDateString("pt-PT")}</p>
                     </div>
                   </div>
                 </TabsContent>
@@ -311,7 +348,7 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                       Diagnóstico — Perguntas
                     </h3>
                     <div className="space-y-2">
-                      {DIAGNOSIS_QUESTIONS.map(q => {
+                      {DIAGNOSIS_QUESTIONS.map((q) => {
                         const hint = getDiagnosisHint(q, benchmark);
                         return (
                           <div key={q}>
@@ -323,9 +360,7 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                               />
                               <span className="text-sm">{q}</span>
                             </label>
-                            {hint && (
-                              <p className="ml-6 mt-0.5 text-xs italic text-success">{hint}</p>
-                            )}
+                            {hint && <p className="ml-6 mt-0.5 text-xs italic text-success">{hint}</p>}
                           </div>
                         );
                       })}
@@ -339,7 +374,7 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                       Objecções Identificadas
                     </h3>
                     <div className="space-y-3">
-                      {OBJECTIONS.map(obj => {
+                      {OBJECTIONS.map((obj) => {
                         const enrichment = getObjectionEnrichment(obj.label, benchmark);
                         return (
                           <div key={obj.label} className="space-y-1">
@@ -372,7 +407,7 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                   <div className="space-y-2">
                     <Label className="font-semibold text-sm">Resultado da Visita</Label>
                     <div className="space-y-2">
-                      {VISIT_RESULTS.map(vr => (
+                      {VISIT_RESULTS.map((vr) => (
                         <label key={vr.value} className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
@@ -412,7 +447,9 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     <h3 className="font-semibold text-sm">Registar Contacto</h3>
                     <div className="grid grid-cols-2 gap-3">
                       <Select value={contactType} onValueChange={setContactType}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="telefone">📞 Telefone</SelectItem>
                           <SelectItem value="email">📧 Email</SelectItem>
@@ -439,18 +476,23 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     {contactLogs.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">Sem histórico.</p>
                     ) : (
-                      contactLogs.map(log => (
+                      contactLogs.map((log) => (
                         <div key={log.id} className="flex gap-3 p-3 rounded-lg bg-muted/50">
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                             <MessageSquare className="w-4 h-4 text-primary" />
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="secondary" className="text-xs capitalize">{log.tipo_contacto}</Badge>
+                              <Badge variant="secondary" className="text-xs capitalize">
+                                {log.tipo_contacto}
+                              </Badge>
                               <span className="text-xs text-muted-foreground">
                                 {new Date(log.created_at).toLocaleDateString("pt-PT", {
-                                  day: "2-digit", month: "2-digit", year: "numeric",
-                                  hour: "2-digit", minute: "2-digit",
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
                                 })}
                               </span>
                             </div>
@@ -482,7 +524,7 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                       {proposals.length > 0 && (
                         <div className="space-y-3">
                           <h3 className="font-semibold text-sm">Propostas Anteriores ({proposals.length})</h3>
-                          {proposals.map(p => (
+                          {proposals.map((p) => (
                             <div key={p.id} className="p-3 rounded-lg border border-border">
                               <div className="flex items-center justify-between">
                                 <div>
@@ -495,9 +537,7 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                                   {p.sent_at ? "Enviada" : "Rascunho"}
                                 </Badge>
                               </div>
-                              {p.email_to && (
-                                <p className="text-xs text-muted-foreground mt-1">Para: {p.email_to}</p>
-                              )}
+                              {p.email_to && <p className="text-xs text-muted-foreground mt-1">Para: {p.email_to}</p>}
                             </div>
                           ))}
                         </div>
@@ -511,11 +551,7 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                   <div className="space-y-3">
                     <div className="space-y-2">
                       <Label>Data do próximo follow-up</Label>
-                      <Input
-                        type="date"
-                        value={followupDate}
-                        onChange={(e) => setFollowupDate(e.target.value)}
-                      />
+                      <Input type="date" value={followupDate} onChange={(e) => setFollowupDate(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label>O que ficou combinado</Label>
@@ -535,10 +571,12 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                   {/* Follow-up templates */}
                   <div className="space-y-3">
                     <h3 className="font-semibold text-sm">📋 Templates de Follow-up</h3>
-                    {FOLLOWUP_TEMPLATES.map(t => (
+                    {FOLLOWUP_TEMPLATES.map((t) => (
                       <div key={t.day} className="p-3 rounded-lg border border-border">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium">Dia {t.day} — {t.channel}</span>
+                          <span className="text-sm font-medium">
+                            Dia {t.day} — {t.channel}
+                          </span>
                         </div>
                         <p className="text-xs text-muted-foreground">{t.message}</p>
                       </div>
@@ -576,27 +614,32 @@ const FOLLOWUP_TEMPLATES = [
   {
     day: 0,
     channel: "WhatsApp",
-    message: "Olá [Nome]! Obrigado pelo tempo hoje. Como combinado, fica o link para o registo gratuito: pededireto.pt/register. Qualquer dúvida, estou disponível!",
+    message:
+      "Olá [Nome]! Obrigado pelo tempo hoje. Como combinado, fica o link para o registo gratuito: pededireto.pt/register. Qualquer dúvida, estou disponível!",
   },
   {
     day: 2,
     channel: "WhatsApp",
-    message: "Olá [Nome]! Queria partilhar um exemplo de como fica o perfil de um negócio na PedeDireto. Veja aqui: [link perfil exemplo]. O que acha?",
+    message:
+      "Olá [Nome]! Queria partilhar um exemplo de como fica o perfil de um negócio na PedeDireto. Veja aqui: [link perfil exemplo]. O que acha?",
   },
   {
     day: 5,
     channel: "Email",
-    message: "Olá [Nome], sabia que na sua zona há [X] pesquisas mensais por serviços como o seu? A PedeDireto pode direccionar esses clientes para o seu negócio.",
+    message:
+      "Olá [Nome], sabia que na sua zona há [X] pesquisas mensais por serviços como o seu? A PedeDireto pode direccionar esses clientes para o seu negócio.",
   },
   {
     day: 10,
     channel: "WhatsApp",
-    message: "Olá [Nome]! Já teve oportunidade de pensar na proposta? Estou disponível para esclarecer qualquer dúvida. Posso ligar-lhe amanhã?",
+    message:
+      "Olá [Nome]! Já teve oportunidade de pensar na proposta? Estou disponível para esclarecer qualquer dúvida. Posso ligar-lhe amanhã?",
   },
   {
     day: 20,
     channel: "WhatsApp/Email",
-    message: "Olá [Nome]! Último contacto sobre a PedeDireto. Temos neste momento condições especiais PRO Pioneiro para os primeiros parceiros da sua zona. Interesse?",
+    message:
+      "Olá [Nome]! Último contacto sobre a PedeDireto. Temos neste momento condições especiais PRO Pioneiro para os primeiros parceiros da sua zona. Interesse?",
   },
 ];
 
