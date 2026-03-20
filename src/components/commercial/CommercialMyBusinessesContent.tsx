@@ -1,16 +1,22 @@
 import { useMyPipeline, PIPELINE_PHASES } from "@/hooks/useCommercialPipeline";
-import { useAuth } from "@/hooks/useAuth";
+import { useCommercialBenchmark } from "@/hooks/useCommercialBenchmark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, MapPin } from "lucide-react";
+import { Loader2, Building2, MapPin, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import CommercialBusinessSheet from "./CommercialBusinessSheet";
+import PrepareVisitModal from "./PrepareVisitModal";
 
 const CommercialMyBusinessesContent = () => {
   const { data: pipeline = [], isLoading } = useMyPipeline();
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
+  const [prepBusiness, setPrepBusiness] = useState<any>(null);
+
+  // Get category/subcategory from prep business for benchmark lookup
+  const prepCat = prepBusiness?.categories?.name || null;
+  const prepSub = prepBusiness?.subcategories?.name || null;
+  const { data: prepBenchmark } = useCommercialBenchmark(prepCat, prepSub);
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -33,7 +39,7 @@ const CommercialMyBusinessesContent = () => {
                 <th className="text-left p-4 font-medium text-muted-foreground">Categoria</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Fase</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Próx. Follow-up</th>
-                <th className="text-right p-4 font-medium text-muted-foreground">Receita</th>
+                <th className="text-right p-4 font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -72,8 +78,18 @@ const CommercialMyBusinessesContent = () => {
                         ? new Date(item.next_followup_date).toLocaleDateString("pt-PT")
                         : "—"}
                     </td>
-                    <td className="p-4 text-right font-medium">
-                      {biz?.subscription_status === "active" ? `${Number(biz.subscription_price || 0).toFixed(2)}€` : "Gratuito"}
+                    <td className="p-4 text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPrepBusiness(biz);
+                        }}
+                      >
+                        <Smartphone className="h-3 w-3 mr-1" /> Preparar
+                      </Button>
                     </td>
                   </tr>
                 );
@@ -92,6 +108,23 @@ const CommercialMyBusinessesContent = () => {
         businessId={selectedBusinessId}
         onClose={() => setSelectedBusinessId(null)}
       />
+
+      {/* Prepare Visit Modal */}
+      {prepBusiness && prepBenchmark && prepSub && (
+        <PrepareVisitModal
+          open={!!prepBusiness}
+          onClose={() => setPrepBusiness(null)}
+          business={prepBusiness}
+          benchmark={prepBenchmark}
+          subcategory={prepSub}
+          category={prepCat || ""}
+          onOpenFullSheet={() => {
+            const bizId = prepBusiness.id;
+            setPrepBusiness(null);
+            setSelectedBusinessId(bizId);
+          }}
+        />
+      )}
     </div>
   );
 };
