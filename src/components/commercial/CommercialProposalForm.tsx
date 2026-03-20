@@ -90,11 +90,16 @@ const CommercialProposalForm = ({ business, onClose, onSent }: Props) => {
     let benchmarkSection = "";
     if (benchmark) {
       const items: string[] = [];
-      if (benchmark.ticket_medio) items.push(`<li>Ticket médio: ${benchmark.ticket_medio}</li>`);
-      if (benchmark.canal_aquisicao) items.push(`<li>Canal principal: ${benchmark.canal_aquisicao}</li>`);
-      if (benchmark.tendencia_2025) items.push(`<li>Tendência 2025: ${benchmark.tendencia_2025}</li>`);
-      if (benchmark.benchmark_avaliacoes) items.push(`<li>Benchmark avaliações: ${benchmark.benchmark_avaliacoes}</li>`);
-      if (benchmark.dica_ouro) items.push(`<li>💡 ${benchmark.dica_ouro}</li>`);
+      if (benchmark.ticket_medio) items.push(`<li>💰 Ticket médio: ${benchmark.ticket_medio}</li>`);
+      if (benchmark.canal_aquisicao_principal) items.push(`<li>🎯 Como chegam os clientes: ${benchmark.canal_aquisicao_principal}</li>`);
+      if (benchmark.tendencia_2025) items.push(`<li>⚡ Tendência 2025: ${benchmark.tendencia_2025}</li>`);
+      if (benchmark.diferencial_competitivo) items.push(`<li>🏆 O que os melhores fazem: ${benchmark.diferencial_competitivo}</li>`);
+      if (benchmark.benchmark_avaliacoes) items.push(`<li>⭐ O que dizem os clientes: ${benchmark.benchmark_avaliacoes}</li>`);
+      if (benchmark.dica_ouro) {
+        // Only include the most relevant point, not the full text
+        const firstPoint = benchmark.dica_ouro.split(/[.!?]/)[0]?.trim();
+        if (firstPoint) items.push(`<li>💡 ${firstPoint}.</li>`);
+      }
       if (items.length > 0) {
         benchmarkSection = `
           <div style="background:#f0f9f0;padding:20px;border-radius:12px;margin:20px 0;">
