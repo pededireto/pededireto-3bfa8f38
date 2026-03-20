@@ -85,7 +85,7 @@ const PrepareVisitModal = ({ open, onClose, business, benchmark, subcategory, ca
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg w-full max-h-[95vh] overflow-y-auto p-0 gap-0 bg-slate-900 text-white border-0 [&>button]:hidden">
+      <DialogContent className="max-w-lg w-full max-h-[95vh] overflow-y-auto p-0 gap-0 bg-foreground text-background border-0 [&>button]:hidden">
         {/* Header */}
         <div className="p-5 border-b border-white/10">
           <div className="flex items-center justify-between mb-3">
