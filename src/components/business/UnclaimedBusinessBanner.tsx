@@ -22,9 +22,7 @@ export function UnclaimedBusinessBanner({ businessId, claimStatus, isClaimed }: 
         <div className="flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0" />
           <div>
-            <p className="font-semibold text-blue-400">
-              Pedido de reclamação pendente
-            </p>
+            <p className="font-semibold text-blue-400">Pedido de reclamação pendente</p>
             <p className="text-sm text-muted-foreground">
               Este negócio tem um pedido de reclamação em análise pela nossa equipa.
             </p>
@@ -40,12 +38,10 @@ export function UnclaimedBusinessBanner({ businessId, claimStatus, isClaimed }: 
       <div className="flex items-center gap-3 flex-1">
         <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
         <div>
-          <p className="font-semibold text-yellow-400">
-            Negócio não reclamado
-          </p>
+          <p className="font-semibold text-yellow-400">Negócio não reclamado</p>
           <p className="text-sm text-muted-foreground">
-            Este negócio ainda não está a ser gerido pelo proprietário.
-            É o seu negócio? Reclame gratuitamente e comece a receber clientes.
+            Sugerir edição · É o proprietário desta empresa? Associe WhatsApp, Redes Sociais, Botões de Reserva, Fotos e
+            Video! Registe-te este negócio gratuitamente e comece a receber clientes.
           </p>
         </div>
       </div>
