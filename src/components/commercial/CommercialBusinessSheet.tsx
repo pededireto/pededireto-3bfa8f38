@@ -48,7 +48,6 @@ interface Props {
   onClose: () => void;
 }
 
-// Helper: get contextual hint for a diagnosis question from benchmark data
 const getDiagnosisHint = (question: string, benchmark: CommercialBenchmarkData | null | undefined): string | null => {
   if (!benchmark) return null;
   if (question.includes("De onde vêm") && benchmark.canal_aquisicao_principal) {
@@ -65,7 +64,6 @@ const getDiagnosisHint = (question: string, benchmark: CommercialBenchmarkData |
   return null;
 };
 
-// Helper: get enrichment text for an objection from benchmark data
 const getObjectionEnrichment = (
   label: string,
   benchmark: CommercialBenchmarkData | null | undefined,
@@ -84,12 +82,44 @@ const getObjectionEnrichment = (
   return null;
 };
 
+const FOLLOWUP_TEMPLATES = [
+  {
+    day: 0,
+    channel: "WhatsApp",
+    message:
+      "Olá [Nome]! Obrigado pelo tempo hoje. Como combinado, fica o link para o registo gratuito: pededireto.pt/register. Qualquer dúvida, estou disponível!",
+  },
+  {
+    day: 2,
+    channel: "WhatsApp",
+    message:
+      "Olá [Nome]! Queria partilhar um exemplo de como fica o perfil de um negócio na PedeDireto. Veja aqui: [link perfil exemplo]. O que acha?",
+  },
+  {
+    day: 5,
+    channel: "Email",
+    message:
+      "Olá [Nome], sabia que na sua zona há [X] pesquisas mensais por serviços como o seu? A PedeDireto pode direccionar esses clientes para o seu negócio.",
+  },
+  {
+    day: 10,
+    channel: "WhatsApp",
+    message:
+      "Olá [Nome]! Já teve oportunidade de pensar na proposta? Estou disponível para esclarecer qualquer dúvida. Posso ligar-lhe amanhã?",
+  },
+  {
+    day: 20,
+    channel: "WhatsApp/Email",
+    message:
+      "Olá [Nome]! Último contacto sobre a PedeDireto. Temos neste momento condições especiais PRO Pioneiro para os primeiros parceiros da sua zona. Interesse?",
+  },
+];
+
 const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dados");
   const [showPrepareModal, setShowPrepareModal] = useState(false);
 
-  // Fetch business data
   const { data: business, isLoading: bizLoading } = useQuery({
     queryKey: ["commercial-business-detail", businessId],
     queryFn: async () => {
@@ -105,7 +135,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
     enabled: !!businessId,
   });
 
-  // Pipeline data
   const { data: pipelineData } = useQuery({
     queryKey: ["pipeline-detail", businessId],
     queryFn: async () => {
@@ -120,7 +149,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
     enabled: !!businessId,
   });
 
-  // Benchmark data — single query, cached, used by all sub-components
   const categoryName = business?.categories?.name || null;
   const subcategoryName = business?.subcategories?.name || null;
   const { data: benchmark } = useCommercialBenchmark(categoryName, subcategoryName);
@@ -132,7 +160,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
   const createContactLog = useCreateContactLog();
   const { data: proposals = [] } = useProposals(businessId || undefined);
 
-  // Local state for checklist
   const [questions, setQuestions] = useState<string[]>([]);
   const [objections, setObjections] = useState<string[]>([]);
   const [visitResult, setVisitResult] = useState("");
@@ -333,7 +360,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
 
                 {/* TAB: Script de Vendas */}
                 <TabsContent value="script" className="space-y-6 mt-4">
-                  {/* Market Expert Panel — BEFORE script */}
                   {benchmark && subcategoryName && (
                     <div className="space-y-4">
                       <MarketExpertPanel data={benchmark} subcategory={subcategoryName} />
@@ -341,7 +367,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     </div>
                   )}
 
-                  {/* Diagnosis Questions with contextual hints */}
                   <div className="space-y-3">
                     <h3 className="font-semibold text-sm flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-primary" />
@@ -367,7 +392,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     </div>
                   </div>
 
-                  {/* Objections with benchmark enrichment */}
                   <div className="space-y-3">
                     <h3 className="font-semibold text-sm flex items-center gap-2">
                       <AlertCircle className="h-4 w-4 text-warning" />
@@ -403,7 +427,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     </div>
                   </div>
 
-                  {/* Visit Result */}
                   <div className="space-y-2">
                     <Label className="font-semibold text-sm">Resultado da Visita</Label>
                     <div className="space-y-2">
@@ -423,7 +446,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     </div>
                   </div>
 
-                  {/* Notes */}
                   <div className="space-y-2">
                     <Label className="font-semibold text-sm">Notas</Label>
                     <Textarea
@@ -442,7 +464,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
 
                 {/* TAB: Histórico */}
                 <TabsContent value="historico" className="space-y-4 mt-4">
-                  {/* Add contact */}
                   <div className="border border-border rounded-lg p-4 space-y-3">
                     <h3 className="font-semibold text-sm">Registar Contacto</h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -470,7 +491,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     />
                   </div>
 
-                  {/* Timeline */}
                   <div className="space-y-3">
                     <h3 className="font-semibold text-sm">Timeline ({contactLogs.length})</h3>
                     {contactLogs.length === 0 ? (
@@ -568,7 +588,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     </Button>
                   </div>
 
-                  {/* Follow-up templates */}
                   <div className="space-y-3">
                     <h3 className="font-semibold text-sm">📋 Templates de Follow-up</h3>
                     {FOLLOWUP_TEMPLATES.map((t) => (
@@ -591,7 +610,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
         </SheetContent>
       </Sheet>
 
-      {/* Prepare Visit Modal */}
       {benchmark && business && subcategoryName && (
         <PrepareVisitModal
           open={showPrepareModal}
@@ -609,38 +627,5 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
     </>
   );
 };
-
-const FOLLOWUP_TEMPLATES = [
-  {
-    day: 0,
-    channel: "WhatsApp",
-    message:
-      "Olá [Nome]! Obrigado pelo tempo hoje. Como combinado, fica o link para o registo gratuito: pededireto.pt/register. Qualquer dúvida, estou disponível!",
-  },
-  {
-    day: 2,
-    channel: "WhatsApp",
-    message:
-      "Olá [Nome]! Queria partilhar um exemplo de como fica o perfil de um negócio na PedeDireto. Veja aqui: [link perfil exemplo]. O que acha?",
-  },
-  {
-    day: 5,
-    channel: "Email",
-    message:
-      "Olá [Nome], sabia que na sua zona há [X] pesquisas mensais por serviços como o seu? A PedeDireto pode direccionar esses clientes para o seu negócio.",
-  },
-  {
-    day: 10,
-    channel: "WhatsApp",
-    message:
-      "Olá [Nome]! Já teve oportunidade de pensar na proposta? Estou disponível para esclarecer qualquer dúvida. Posso ligar-lhe amanhã?",
-  },
-  {
-    day: 20,
-    channel: "WhatsApp/Email",
-    message:
-      "Olá [Nome]! Último contacto sobre a PedeDireto. Temos neste momento condições especiais PRO Pioneiro para os primeiros parceiros da sua zona. Interesse?",
-  },
-];
 
 export default CommercialBusinessSheet;
