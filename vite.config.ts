@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
-
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -11,6 +10,46 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     hmr: {
       overlay: false,
+    },
+  },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (
+              id.includes("react") ||
+              id.includes("react-dom") ||
+              id.includes("react-router")
+            ) {
+              return "vendor-react";
+            }
+            if (id.includes("@supabase")) {
+              return "vendor-supabase";
+            }
+            if (
+              id.includes("jspdf") ||
+              id.includes("html2canvas")
+            ) {
+              return "vendor-pdf";
+            }
+            if (
+              id.includes("recharts") ||
+              id.includes("d3-")
+            ) {
+              return "vendor-charts";
+            }
+            if (
+              id.includes("@radix-ui") ||
+              id.includes("lucide-react")
+            ) {
+              return "vendor-ui";
+            }
+            return "vendor-misc";
+          }
+        },
+      },
     },
   },
   plugins: [
@@ -22,7 +61,8 @@ export default defineConfig(({ mode }) => ({
       manifest: {
         name: "Pede Direto - Contactos que resolvem",
         short_name: "Pede Direto",
-        description: "Encontre rapidamente o contacto que resolve o seu problema. Restaurantes, serviços, lojas e profissionais.",
+        description:
+          "Encontre rapidamente o contacto que resolve o seu problema. Restaurantes, serviços, lojas e profissionais.",
         theme_color: "#16a34a",
         background_color: "#ffffff",
         display: "standalone",
@@ -51,7 +91,7 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
           {
