@@ -38,10 +38,10 @@ export function UnclaimedBusinessBanner({ businessId, claimStatus, isClaimed }: 
       <div className="flex items-center gap-3 flex-1">
         <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
         <div>
-          <p className="font-semibold text-yellow-400">Negócio não reclamado</p>
+          <p className="font-semibold text-yellow-400">É o proprietário desta empresa?</p>
           <p className="text-sm text-muted-foreground">
-            Sugerir edição · É o proprietário desta empresa? Associe WhatsApp, Redes Sociais, Botões de Reserva, Fotos e
-            Video! Registe-te este negócio gratuitamente e comece a receber clientes.
+            Associe WhatsApp, Redes Sociais, Botões de Reserva, Fotos e Video! Registe este negócio gratuitamente e
+            comece a receber clientes.
           </p>
         </div>
       </div>
