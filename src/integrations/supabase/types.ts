@@ -7810,6 +7810,13 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: string[]
       }
+      get_subcategory_business_counts: {
+        Args: never
+        Returns: {
+          count: number
+          subcategory_id: string
+        }[]
+      }
       get_unlinked_businesses: {
         Args: { p_limit?: number; p_q?: string }
         Returns: {
