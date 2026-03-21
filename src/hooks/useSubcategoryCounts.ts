@@ -10,12 +10,12 @@ export const useSubcategoryCounts = () => {
   return useQuery({
     queryKey: ["subcategory-business-counts"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_subcategory_business_counts");
+      const { data, error } = await (supabase.rpc as any)("get_subcategory_business_counts");
 
       if (error) throw error;
 
       const counts = new Map<string, number>();
-      for (const row of data ?? []) {
+      for (const row of (data ?? []) as { subcategory_id: string; count: number }[]) {
         counts.set(row.subcategory_id, Number(row.count));
       }
       return counts;
