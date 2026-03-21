@@ -11,10 +11,29 @@ interface Props {
   subcategory: string;
 }
 
+// Extrai apenas o primeiro intervalo de preços de um texto longo
+// Ex: "11€ a 16€/noite por cão em canil standard; 12€ a 30€..." → "11€ a 16€/noite por cão"
+const extractShortTicket = (ticket: string): string => {
+  if (!ticket) return "—";
+  const untilSemicolon = ticket.split(";")[0].trim();
+  if (untilSemicolon.length <= 80) return untilSemicolon;
+  return untilSemicolon.slice(0, 77) + "...";
+};
+
+// Extrai apenas a primeira ideia de um texto longo (até ao primeiro " — " ou ".")
+const extractFirstIdea = (text: string, maxChars = 100): string => {
+  if (!text) return "";
+  const firstDash = text.indexOf(" — ");
+  const firstPeriod = text.indexOf(".");
+  const firstSemicolon = text.indexOf(";");
+  const candidates = [firstDash, firstPeriod, firstSemicolon].filter((i) => i > 10);
+  const cutAt = candidates.length > 0 ? Math.min(...candidates) : maxChars;
+  return text.slice(0, Math.min(cutAt, maxChars)).trim();
+};
+
 const TruncatedText = ({ text, maxLength = 300 }: { text: string; maxLength?: number }) => {
   const [expanded, setExpanded] = useState(false);
   if (text.length <= maxLength) return <p className="text-sm">{text}</p>;
-
   return (
     <div>
       <p className="text-sm">{expanded ? text : `${text.slice(0, maxLength)}…`}</p>
@@ -39,6 +58,10 @@ const HintBox = ({ text }: { text: string }) => (
 const MarketExpertPanel = ({ data, subcategory }: Props) => {
   const [open, setOpen] = useState(false);
 
+  const ticketCurto = extractShortTicket(data.ticket_medio || "");
+  const tendenciaCurta = extractFirstIdea(data.tendencia_2025 || "");
+  const diferencialCurto = extractFirstIdea(data.diferencial_competitivo || "", 60);
+
   const sections = [
     {
       id: "ticket",
@@ -46,7 +69,7 @@ const MarketExpertPanel = ({ data, subcategory }: Props) => {
       title: "O QUE ESTE NEGÓCIO PODE GANHAR",
       field: data.ticket_medio,
       label: "Ticket médio neste sector:",
-      hint: `💬 Como usar: Menciona estes valores para mostrar que conheces o mercado deles. Ex: Sabes que um ${subcategory} em Portugal cobra em média ${data.ticket_medio || "—"}? A Pede Direto ajuda-te a aparecer a esses clientes.`,
+      hint: `💬 Como usar: Ex: "Sabes que um ${subcategory} em Portugal cobra em média ${ticketCurto}? A Pede Direto ajuda-te a aparecer a esses clientes."`,
     },
     {
       id: "canal",
@@ -54,7 +77,7 @@ const MarketExpertPanel = ({ data, subcategory }: Props) => {
       title: "COMO CHEGAM OS CLIENTES",
       field: data.canal_aquisicao_principal,
       label: "Canal principal de aquisição:",
-      hint: "💬 Como usar: Pergunta ao negócio como chegam os clientes novos. Quando ele responder, tens aqui o contexto para complementar com o que a Pede Direto adiciona a esses canais.",
+      hint: "💬 Como usar: Pergunta como chegam os clientes novos. Quando ele responder, complementa com o que a Pede Direto acrescenta a esses canais.",
     },
     {
       id: "tendencia",
@@ -62,7 +85,9 @@ const MarketExpertPanel = ({ data, subcategory }: Props) => {
       title: "TENDÊNCIAS 2025",
       field: data.tendencia_2025,
       label: "O que está a mudar neste mercado:",
-      hint: "💬 Como usar: Abre a conversa com uma tendência do sector. Posiciona a Pede Direto como a resposta a essa tendência. Mostra que estás informado — não és um vendedor, és um consultor.",
+      hint: tendenciaCurta
+        ? `💬 Como usar: Ex: "Sabes que ${tendenciaCurta}...?" — abre com isto e posiciona a Pede Direto como a resposta.`
+        : "💬 Como usar: Abre a conversa com uma tendência. Mostra que és consultor, não vendedor.",
     },
     {
       id: "diferencial",
@@ -70,7 +95,9 @@ const MarketExpertPanel = ({ data, subcategory }: Props) => {
       title: "O QUE OS MELHORES FAZEM",
       field: data.diferencial_competitivo,
       label: "O que diferencia os líderes do sector:",
-      hint: `💬 Como usar: Usa este ponto para fazer o negócio sonhar com o que pode ser. Ex: Os melhores ${subcategory} em Portugal fazem isto — a Pede Direto ajuda-te a chegar lá.`,
+      hint: diferencialCurto
+        ? `💬 Como usar: Ex: "Os melhores ${subcategory} fazem ${diferencialCurto}... — a Pede Direto ajuda-te a chegar lá."`
+        : `💬 Como usar: Faz o negócio sonhar com o que pode ser. A Pede Direto é o caminho.`,
     },
     {
       id: "avaliacoes",
@@ -78,7 +105,7 @@ const MarketExpertPanel = ({ data, subcategory }: Props) => {
       title: "BENCHMARK DE AVALIAÇÕES",
       field: data.benchmark_avaliacoes,
       label: "O que dizem os clientes neste sector:",
-      hint: "💬 Como usar: Mostra que as avaliações reais de clientes são o motor de crescimento do sector. A Pede Direto dá-lhe esse sistema de avaliações verificadas que os melhores já usam.",
+      hint: "💬 Como usar: Mostra que avaliações reais são o motor de crescimento do sector. A Pede Direto dá-lhe esse sistema verificado que os líderes já usam.",
     },
   ].filter((s) => s.field);
 
@@ -127,7 +154,7 @@ const MarketExpertPanel = ({ data, subcategory }: Props) => {
                   </AccordionTrigger>
                   <AccordionContent className="pb-3">
                     <p className="text-xs font-medium text-muted-foreground mb-1">{section.label}</p>
-                    <p className="text-sm font-medium">{section.field}</p>
+                    <p className="text-sm">{section.field}</p>
                     <HintBox text={section.hint} />
                   </AccordionContent>
                 </AccordionItem>
