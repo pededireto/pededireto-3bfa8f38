@@ -8,6 +8,58 @@ interface Props {
   subcategory: string;
 }
 
+// Extrai a primeira frase curta de um texto longo
+const firstShortSentence = (text: string, maxChars = 120): string => {
+  if (!text) return "";
+  // Tenta primeiro até ao " — " (travessão com espaços)
+  const dashIdx = text.indexOf(" — ");
+  if (dashIdx > 10 && dashIdx < maxChars) return text.slice(0, dashIdx).trim();
+  // Depois até ao primeiro ";"
+  const semiIdx = text.indexOf(";");
+  if (semiIdx > 10 && semiIdx < maxChars) return text.slice(0, semiIdx).trim();
+  // Depois até ao primeiro "."
+  const dotIdx = text.indexOf(".");
+  if (dotIdx > 10 && dotIdx < maxChars) return text.slice(0, dotIdx).trim();
+  // Fallback: truncar em maxChars
+  return text.slice(0, maxChars).trim() + (text.length > maxChars ? "..." : "");
+};
+
+// Extrai apenas o primeiro valor de preço de um ticket_medio longo
+// Ex: "11€ a 16€/noite por cão em canil; 12€ a 30€..." → "11€ a 16€/noite"
+const extractTicketValue = (ticket: string): string => {
+  if (!ticket) return "";
+  // Pega texto até ao primeiro ";"
+  const part = ticket.split(";")[0].trim();
+  // Se ainda for longo (>70 chars), corta na primeira vírgula ou parêntese
+  if (part.length > 70) {
+    const commaIdx = part.indexOf(",");
+    const parenIdx = part.indexOf("(");
+    const candidates = [commaIdx, parenIdx].filter((i) => i > 5);
+    if (candidates.length > 0) return part.slice(0, Math.min(...candidates)).trim();
+    return part.slice(0, 67).trim() + "...";
+  }
+  return part;
+};
+
+// Extrai a primeira frase da benchmark_avaliacoes (até ao primeiro " — " ou ".")
+const extractFirstAvaliacao = (text: string): string => {
+  if (!text) return "";
+  // Pega até ao primeiro " — " que geralmente separa nota da explicação
+  const dashIdx = text.indexOf(" — ");
+  if (dashIdx > 5 && dashIdx < 80) {
+    // Inclui o que vem a seguir até ao próximo separador
+    const after = text.slice(dashIdx + 3);
+    const nextSemi = after.indexOf(";");
+    if (nextSemi > 0 && nextSemi < 100) {
+      return text.slice(0, dashIdx + 3 + nextSemi).trim();
+    }
+  }
+  // Fallback: primeira frase até ao ";"
+  const semiIdx = text.indexOf(";");
+  if (semiIdx > 0 && semiIdx < 150) return text.slice(0, semiIdx).trim();
+  return text.slice(0, 140).trim() + (text.length > 140 ? "..." : "");
+};
+
 const CopyCard = ({ title, icon, label, content }: { title: string; icon: string; label: string; content: string }) => {
   const [copied, setCopied] = useState(false);
 
@@ -52,50 +104,56 @@ const ConversationCards = ({ data, subcategory }: Props) => {
     content: string;
   }[] = [];
 
-  // Cartão 1 — Abertura (das primeiras frases de tendencia_2025)
+  // Cartão 1 — Abertura: apenas a primeira frase curta da tendencia_2025
   if (data.tendencia_2025) {
-    const sentences = data.tendencia_2025.split(/[.!?]+/).filter((s) => s.trim().length > 5);
-    const opening = sentences.slice(0, 2).join(". ").trim();
+    const opening = firstShortSentence(data.tendencia_2025, 120);
     if (opening) {
       cards.push({
         title: "Frase de Abertura",
         icon: "🗣️",
         label: "Começa assim a conversa:",
-        content: opening.endsWith(".") ? opening : `${opening}.`,
+        content: opening.endsWith(".") || opening.endsWith("?") ? opening : `${opening}.`,
       });
     }
   }
 
-  // Cartão 2 — Prova Social (de benchmark_avaliacoes)
+  // Cartão 2 — Prova Social: apenas a primeira ideia da benchmark_avaliacoes
   if (data.benchmark_avaliacoes) {
-    cards.push({
-      title: "Prova Social",
-      icon: "📊",
-      label: "Quando precisares de mostrar resultados reais:",
-      content: data.benchmark_avaliacoes,
-    });
+    const avaliacao = extractFirstAvaliacao(data.benchmark_avaliacoes);
+    if (avaliacao) {
+      cards.push({
+        title: "Prova Social",
+        icon: "📊",
+        label: "Quando precisares de mostrar resultados reais:",
+        content: avaliacao,
+      });
+    }
   }
 
-  // Cartão 3 — Urgência (da última frase de tendencia_2025)
+  // Cartão 3 — Urgência: primeira frase da tendencia + frase fixa
   if (data.tendencia_2025) {
-    const sentences = data.tendencia_2025.split(/[.!?]+/).filter((s) => s.trim().length > 5);
-    const trend = sentences.length > 0 ? sentences[sentences.length - 1].trim() : data.tendencia_2025.slice(0, 80);
-    cards.push({
-      title: "Criar Urgência",
-      icon: "⚡",
-      label: "Para criar sentido de urgência:",
-      content: `O mercado de ${subcategory} está a mudar — ${trend}. Quem aparecer agora na Pede Direto tem vantagem sobre quem aparecer daqui a 6 meses.`,
-    });
+    const trend = firstShortSentence(data.tendencia_2025, 80);
+    if (trend) {
+      cards.push({
+        title: "Criar Urgência",
+        icon: "⚡",
+        label: "Para criar sentido de urgência:",
+        content: `O mercado de ${subcategory} está a mudar — ${trend}. Quem aparecer agora na Pede Direto tem vantagem sobre quem aparecer daqui a 6 meses.`,
+      });
+    }
   }
 
-  // Cartão 4 — Objecção de Preço (de ticket_medio)
+  // Cartão 4 — Objecção de Preço: apenas o primeiro valor do ticket_medio
   if (data.ticket_medio) {
-    cards.push({
-      title: "Objecção de Preço",
-      icon: "💰",
-      label: "Quando disserem que 9,90€ é caro:",
-      content: `Um cliente novo neste sector vale em média ${data.ticket_medio}. A mensalidade da Pede Direto custa menos do que 10% de uma única venda. O retorno é imediato.`,
-    });
+    const ticketValor = extractTicketValue(data.ticket_medio);
+    if (ticketValor) {
+      cards.push({
+        title: "Objecção de Preço",
+        icon: "💰",
+        label: "Quando disserem que 9,90€ é caro:",
+        content: `Um cliente novo neste sector vale em média ${ticketValor}. A mensalidade da Pede Direto é menos do que uma única transacção. O retorno é imediato.`,
+      });
+    }
   }
 
   if (cards.length === 0) return null;
