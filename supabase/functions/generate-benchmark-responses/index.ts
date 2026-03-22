@@ -1,5 +1,10 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -9,7 +14,6 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemi
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// Tipos de respostas a gerar por sector
 const TIPOS = [
   {
     tipo: "abertura",
@@ -24,24 +28,21 @@ Exemplo de formato: "Tenho estado a analisar o mercado de [sector] e reparei que
     chave: "Prova social com dados de avaliações do sector",
     instrucao: `Cria UMA frase de prova social baseada nos dados de avaliações e benchmark do sector.
 Deve ser concreta, com dados reais do benchmark fornecido.
-Máximo 2 frases. Em português de Portugal.
-Exemplo de formato: "Os negócios de [sector] com perfil verificado têm em média [X] estrelas — e os donos dizem que [insight das reviews]."`,
+Máximo 2 frases. Em português de Portugal.`,
   },
   {
     tipo: "urgencia",
     chave: "Criar sentido de urgência",
     instrucao: `Cria UMA frase para criar sentido de urgência genuíno (não artificial) baseado nas tendências reais do sector.
 Deve ser baseada em factos do benchmark, não em pressão artificial.
-Máximo 2 frases. Em português de Portugal.
-Exemplo de formato: "O mercado de [sector] está a mudar — [tendência real]. Quem aparecer agora tem vantagem sobre quem aparecer daqui a 6 meses."`,
+Máximo 2 frases. Em português de Portugal.`,
   },
   {
     tipo: "objeccao_preco",
     chave: "9,90€ é caro para mim agora",
     instrucao: `Cria UMA resposta curta e accionável à objecção de preço "9,90€ é caro para mim agora".
 Usa o ticket médio real do sector para mostrar que um único cliente recupera o investimento.
-Máximo 2 frases. Tom empático. Em português de Portugal.
-Exemplo de formato: "Neste sector uma [transacção/sessão/reserva] vale em média [valor real]. Um único cliente novo paga vários meses da Pede Direto."`,
+Máximo 2 frases. Tom empático. Em português de Portugal.`,
   },
   {
     tipo: "objeccao_clientes",
@@ -98,7 +99,6 @@ Máximo 2 frases. Em português de Portugal.`,
     chave: "De onde vêm a maioria dos clientes novos?",
     instrucao: `Cria UMA dica contextual curta para o comercial usar quando pergunta "De onde vêm a maioria dos clientes novos?".
 Baseada no canal de aquisição principal do sector.
-É uma nota interna para o comercial, não uma resposta ao cliente.
 Máximo 1 frase. Começa com "Neste sector:". Em português de Portugal.`,
   },
   {
@@ -106,7 +106,6 @@ Máximo 1 frase. Começa com "Neste sector:". Em português de Portugal.`,
     chave: "Usas alguma plataforma online?",
     instrucao: `Cria UMA dica contextual curta para o comercial usar quando pergunta "Usas alguma plataforma online?".
 Baseada nos dados de presença digital do sector (website % e redes sociais %).
-É uma nota interna para o comercial, não uma resposta ao cliente.
 Máximo 1 frase. Começa com "Neste sector:". Em português de Portugal.`,
   },
   {
@@ -143,14 +142,8 @@ async function callGemini(prompt: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
-  // CORS
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "authorization, content-type",
-      },
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -159,11 +152,10 @@ Deno.serve(async (req) => {
     if (!category || !subcategory) {
       return new Response(
         JSON.stringify({ error: "category e subcategory são obrigatórios" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Ir buscar o benchmark do sector
     const { data: benchmarkRow, error: benchErr } = await supabase
       .from("benchmarking_cache")
       .select("data")
@@ -174,13 +166,12 @@ Deno.serve(async (req) => {
     if (benchErr || !benchmarkRow) {
       return new Response(
         JSON.stringify({ error: `Benchmark não encontrado para ${category} / ${subcategory}` }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const benchmark = benchmarkRow.data as any;
 
-    // Contexto do sector para passar à IA
     const contexto = `
 SECTOR: ${category} — ${subcategory}
 
@@ -201,18 +192,15 @@ CONTEXTO DA PEDE DIRETO:
 - Clientes com intenção de compra activa (não branding passivo)
 `;
 
-    // Gerar respostas para cada tipo
     const resultados: any[] = [];
     const erros: string[] = [];
 
     for (const tipo of TIPOS) {
       try {
         const prompt = `${contexto}\n\nTAREFA:\n${tipo.instrucao}\n\nResponde APENAS com o texto da resposta, sem introdução, sem aspas, sem formatação extra.`;
-
         const resposta = await callGemini(prompt);
 
         if (resposta) {
-          // Upsert — se já existir, actualiza
           const { error: upsertErr } = await supabase
             .from("benchmarking_responses")
             .upsert(
@@ -251,23 +239,12 @@ CONTEXTO DA PEDE DIRETO:
         erros: erros.length > 0 ? erros : undefined,
         detalhes: resultados,
       }),
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e: any) {
     return new Response(
       JSON.stringify({ error: e.message }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
