@@ -183,8 +183,8 @@ export const useServiceRequestStats = () => {
 
       const total = requests.length;
       const thisMonth = requests.filter((r) => r.created_at >= startOfMonth).length;
-      const concluded = requests.filter((r) => r.status === "concluido").length;
-      const forwarded = requests.filter((r) => r.status === "encaminhado" || r.status === "concluido").length;
+      const concluded = requests.filter((r) => r.status === "fechado").length;
+      const forwarded = requests.filter((r) => r.status === "em_conversa" || r.status === "em_negociacao" || r.status === "fechado").length;
 
       // By category
       const byCat: Record<string, number> = {};
