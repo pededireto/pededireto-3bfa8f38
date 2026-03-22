@@ -175,12 +175,17 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
       <PopoverContent className="w-80 p-0 max-h-96 overflow-y-auto" align="end">
         <div className="p-3 border-b border-border flex items-center justify-between">
           <p className="font-semibold text-sm text-foreground">Notificações</p>
-          {ticketUnread > 0 && (
+          {totalUnread > 0 && (
             <Button
               variant="ghost"
               size="sm"
               className="text-xs h-6"
-              onClick={() => markAllTicketRead.mutate()}
+              onClick={() => {
+                // Mark all types as read
+                internalNotifications.filter((n: any) => !n.is_read).forEach((n: any) => markInternalRead.mutate(n.id));
+                ticketNotifications.filter((n: any) => !n.is_read).forEach((n: any) => markTicketRead.mutate(n.id));
+                userNotifications.filter((n: any) => !n.is_read).forEach((n: any) => markUserRead.mutate(n.id));
+              }}
             >
               Marcar todas lidas
             </Button>
