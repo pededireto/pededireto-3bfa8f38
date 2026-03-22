@@ -77,14 +77,13 @@ interface RatingState {
 // --- Configs visuais ---
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  novo: { label: "Novo", variant: "secondary" },
-  em_contacto: { label: "Em Contacto", variant: "outline" },
-  encaminhado: { label: "Encaminhado", variant: "default" },
   aberto: { label: "Aberto", variant: "secondary" },
   em_conversa: { label: "Em Conversa", variant: "outline" },
-  fechado: { label: "Resolvido", variant: "default" },
+  propostas_recebidas: { label: "Propostas Recebidas", variant: "default" },
+  em_negociacao: { label: "Em Negociação", variant: "default" },
+  fechado: { label: "Fechado", variant: "default" },
   cancelado: { label: "Cancelado", variant: "destructive" },
-  concluido: { label: "Concluido", variant: "default" },
+  expirado: { label: "Expirado", variant: "outline" },
 };
 
 const matchStatusConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
