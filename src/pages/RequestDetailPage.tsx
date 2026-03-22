@@ -508,7 +508,7 @@ const RequestDetailPage = () => {
   }
 
   const cfg = statusConfig[request.status] || { label: request.status, variant: "secondary" as const };
-  const isResolved = request.status === "fechado" || request.status === "concluido";
+  const isResolved = request.status === "fechado";
   const hasAcceptedMatch = matches.some((m) => m.status === "aceite");
   const allRefused = matches.length > 0 && matches.every((m) => m.status === "recusado" || m.status === "expirado");
 
