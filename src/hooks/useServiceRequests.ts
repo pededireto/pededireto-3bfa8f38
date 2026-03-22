@@ -78,8 +78,8 @@ export const useUpdateRequestStatus = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updates: any = { status };
-      if (status === "concluido" || status === "cancelado") {
+      const updates: any = { status, updated_at: new Date().toISOString() };
+      if (status === "fechado" || status === "cancelado") {
         updates.closed_at = new Date().toISOString();
       }
       const { error } = await supabase
