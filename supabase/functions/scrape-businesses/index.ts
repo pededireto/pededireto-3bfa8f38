@@ -19,7 +19,6 @@ serve(async (req) => {
   }
 
   try {
-    // Validate admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("Não autorizado");
 
@@ -39,7 +38,6 @@ serve(async (req) => {
 
     const { source, url, limit = 50 } = await req.json();
 
-    // Validate source
     const sourceConfig = SOURCES[source];
     if (!sourceConfig) {
       return new Response(JSON.stringify({ error: "Fonte inválida" }), {
@@ -48,7 +46,6 @@ serve(async (req) => {
       });
     }
 
-    // Validate URL domain
     if (!url || !url.includes(sourceConfig.domain)) {
       return new Response(
         JSON.stringify({ error: `URL deve pertencer a ${sourceConfig.domain}` }),
@@ -56,10 +53,8 @@ serve(async (req) => {
       );
     }
 
-    // Validate limit
     const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 50);
 
-    // Scrape with Firecrawl
     const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
     if (!firecrawlKey) {
       return new Response(JSON.stringify({ error: "Firecrawl não configurado" }), {
@@ -103,7 +98,6 @@ serve(async (req) => {
       );
     }
 
-    // Extract structured data with Lovable AI
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY não configurado" }), {
@@ -115,14 +109,39 @@ serve(async (req) => {
     const extractionPrompt = `Analisa o seguinte conteúdo de uma página web da fonte "${sourceConfig.label}" e extrai uma lista de negócios/empresas.
 
 Para cada negócio encontrado, extrai os seguintes campos (usa null quando não disponível):
+
+IDENTIDADE:
 - name: nome do negócio (obrigatório)
+- description: descrição do negócio
+- logo_url: URL directo de imagem de logótipo (.jpg, .png, .webp, .svg)
+- nif: número de identificação fiscal
+
+LOCALIZAÇÃO:
 - address: morada completa
 - city: cidade
-- phone: número de telefone
-- whatsapp: número de WhatsApp (geralmente igual ao telefone)
+
+CONTACTOS:
+- phone: número de telefone (padrões PT: 9XXXXXXXX, +351XXXXXXXXX, 2XXXXXXXX)
+- whatsapp: número de WhatsApp (wa.me/[numero] ou número com contexto WhatsApp)
 - email: email de contacto
+- owner_email: email do responsável/proprietário (se diferente do email público)
+- owner_name: nome do responsável/proprietário
+- owner_phone: telefone do responsável (se diferente do telefone público)
 - website: URL do website
-- nif: número de identificação fiscal
+
+REDES SOCIAIS:
+- instagram_url: URL Instagram (instagram.com/[handle])
+- facebook_url: URL Facebook (facebook.com/[pagina])
+- other_social_url: outra rede social (linkedin.com, tiktok.com, youtube.com, pinterest.com)
+
+HORÁRIOS:
+- opening_hours: horários de funcionamento em formato JSON por dia da semana
+  Exemplo: {"segunda": "09:00-18:00", "sabado": "10:00-13:00", "domingo": "fechado"}
+  Detectar padrões como "Seg-Sex: 9h-18h", "Segunda a Sexta das 9 às 18 horas", "Fechado ao domingo"
+
+CTAs DE ACÇÃO DIRECTA:
+- cta_booking_url: URL de reserva (calendly.com, doctolib.pt, thefork.pt, booking.com, setmore.com, doctoralia.pt)
+- cta_order_url: URL de pedido online (ubereats.com, glovoapp.com, bolt.food, takeaway.com, zomato.com, URLs com /order, /menu, /pedido)
 
 REGRAS:
 - Retorna no MÁXIMO ${safeLimit} negócios
@@ -130,6 +149,7 @@ REGRAS:
 - O campo "name" é obrigatório; ignora entradas sem nome
 - Não inventes dados; extrai apenas o que está explicitamente no conteúdo
 - Números de telefone devem incluir indicativo se disponível
+- URLs de redes sociais devem ser completas (com https://)
 
 Conteúdo da página:
 ${markdown.substring(0, 15000)}`;
@@ -164,13 +184,36 @@ ${markdown.substring(0, 15000)}`;
                       type: "object",
                       properties: {
                         name: { type: "string" },
+                        description: { type: "string", nullable: true },
+                        logo_url: { type: "string", nullable: true },
+                        nif: { type: "string", nullable: true },
                         address: { type: "string", nullable: true },
                         city: { type: "string", nullable: true },
                         phone: { type: "string", nullable: true },
                         whatsapp: { type: "string", nullable: true },
                         email: { type: "string", nullable: true },
+                        owner_email: { type: "string", nullable: true },
+                        owner_name: { type: "string", nullable: true },
+                        owner_phone: { type: "string", nullable: true },
                         website: { type: "string", nullable: true },
-                        nif: { type: "string", nullable: true },
+                        instagram_url: { type: "string", nullable: true },
+                        facebook_url: { type: "string", nullable: true },
+                        other_social_url: { type: "string", nullable: true },
+                        opening_hours: {
+                          type: "object",
+                          nullable: true,
+                          properties: {
+                            segunda: { type: "string" },
+                            terca: { type: "string" },
+                            quarta: { type: "string" },
+                            quinta: { type: "string" },
+                            sexta: { type: "string" },
+                            sabado: { type: "string" },
+                            domingo: { type: "string" },
+                          },
+                        },
+                        cta_booking_url: { type: "string", nullable: true },
+                        cta_order_url: { type: "string", nullable: true },
                       },
                       required: ["name"],
                     },
@@ -224,7 +267,6 @@ ${markdown.substring(0, 15000)}`;
       );
     }
 
-    // Limit results
     businesses = businesses.slice(0, safeLimit).filter((b: any) => b.name && b.name.trim());
 
     console.log(`Extracted ${businesses.length} businesses from ${source}`);

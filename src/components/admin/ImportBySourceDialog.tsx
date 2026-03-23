@@ -5,11 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useAllCategories, Category } from "@/hooks/useCategories";
+import { useAllCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
-import { useCreateBusiness } from "@/hooks/useBusinesses";
 import { supabase } from "@/integrations/supabase/client";
-import { Bug, Loader2, ArrowLeft, ArrowRight, Check, X } from "lucide-react";
+import { Bug, Loader2, ArrowLeft, ArrowRight, Check, X, CheckCircle2, Circle } from "lucide-react";
 
 const SOURCES = {
   guianet: { label: "Guianet", domain: "guianet.pt" },
@@ -21,13 +20,24 @@ type SourceKey = keyof typeof SOURCES;
 
 interface ScrapedBusiness {
   name: string;
+  description: string | null;
   address: string | null;
   city: string | null;
   phone: string | null;
   whatsapp: string | null;
   email: string | null;
+  owner_email: string | null;
+  owner_name: string | null;
+  owner_phone: string | null;
   website: string | null;
   nif: string | null;
+  instagram_url: string | null;
+  facebook_url: string | null;
+  other_social_url: string | null;
+  opening_hours: Record<string, string> | null;
+  cta_booking_url: string | null;
+  cta_order_url: string | null;
+  logo_url: string | null;
 }
 
 const generateSlug = (name: string) =>
@@ -38,10 +48,34 @@ const generateSlug = (name: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
+const FieldValue = ({ label, value }: { label: string; value: string | null | undefined }) => (
+  <div className="flex items-center gap-2 py-1">
+    {value ? (
+      <CheckCircle2 className="h-3.5 w-3.5 text-success flex-shrink-0" />
+    ) : (
+      <Circle className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
+    )}
+    <span className="text-xs text-muted-foreground min-w-[80px]">{label}</span>
+    <span className={`text-xs truncate ${value ? "text-foreground font-medium" : "text-muted-foreground/50 italic"}`}>
+      {value || "não detectado"}
+    </span>
+  </div>
+);
+
+const formatOpeningHours = (hours: Record<string, string> | null): string => {
+  if (!hours) return "";
+  const dayNames: Record<string, string> = {
+    segunda: "Seg", terca: "Ter", quarta: "Qua", quinta: "Qui",
+    sexta: "Sex", sabado: "Sáb", domingo: "Dom",
+  };
+  return Object.entries(hours)
+    .map(([day, time]) => `${dayNames[day] || day}: ${time}`)
+    .join(" · ");
+};
+
 export default function ImportBySourceDialog() {
   const { toast } = useToast();
   const { data: categories = [] } = useAllCategories();
-  const createBusiness = useCreateBusiness();
 
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -50,6 +84,7 @@ export default function ImportBySourceDialog() {
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
   const [businesses, setBusinesses] = useState<ScrapedBusiness[]>([]);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
 
@@ -62,6 +97,7 @@ export default function ImportBySourceDialog() {
     setCategoryId("");
     setSubcategoryId("");
     setBusinesses([]);
+    setSelected(new Set());
     setLoading(false);
     setImporting(false);
   };
@@ -85,6 +121,7 @@ export default function ImportBySourceDialog() {
         return;
       }
       setBusinesses(results);
+      setSelected(new Set(results.map((_: any, i: number) => i)));
       setStep(4);
     } catch (err: any) {
       toast({ title: "Erro no scraping", description: err.message || "Erro desconhecido", variant: "destructive" });
@@ -93,47 +130,56 @@ export default function ImportBySourceDialog() {
     }
   };
 
+  const toggleSelect = (idx: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === businesses.length) setSelected(new Set());
+    else setSelected(new Set(businesses.map((_, i) => i)));
+  };
+
   const handleImport = async () => {
-    if (businesses.length === 0) return;
+    const toImport = businesses.filter((_, i) => selected.has(i));
+    if (toImport.length === 0) return;
     setImporting(true);
     let success = 0;
     const errors: string[] = [];
 
-    for (const biz of businesses) {
+    for (const biz of toImport) {
       try {
-        await createBusiness.mutateAsync({
-          name: biz.name.trim(),
-          slug: generateSlug(biz.name.trim()),
-          category_id: categoryId,
-          subcategory_id: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
-          description: null,
-          city: biz.city || null,
-          zone: null,
-          alcance: "local",
-          logo_url: null,
-          cta_whatsapp: biz.whatsapp || null,
-          cta_phone: biz.phone || null,
-          cta_email: biz.email || null,
-          cta_website: biz.website || null,
-          cta_app: null,
-          images: [],
-          coordinates: null,
-          schedule_weekdays: null,
-          schedule_weekend: null,
-          is_active: false,
-          is_featured: false,
-          is_premium: false,
-          premium_level: null,
-          commercial_status: "nao_contactado",
-          display_order: 0,
-          plan_id: null,
-          subscription_plan: "free",
-          subscription_price: 0,
-          subscription_start_date: null,
-          subscription_end_date: null,
-          subscription_status: "inactive",
-        } as any);
-        success++;
+        const slug = generateSlug(biz.name.trim());
+        const { data, error } = await supabase.rpc("upsert_business_from_import", {
+          p_name: biz.name.trim(),
+          p_slug: slug,
+          p_city: biz.city || null,
+          p_address: biz.address || null,
+          p_cta_phone: biz.phone || null,
+          p_cta_whatsapp: biz.whatsapp || null,
+          p_cta_email: biz.email || null,
+          p_owner_email: biz.owner_email || null,
+          p_owner_name: biz.owner_name || null,
+          p_owner_phone: biz.owner_phone || null,
+          p_cta_website: biz.website || null,
+          p_nif: biz.nif || null,
+          p_description: biz.description || null,
+          p_instagram_url: biz.instagram_url || null,
+          p_facebook_url: biz.facebook_url || null,
+          p_category_id: categoryId || null,
+          p_subcategory_id: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
+          p_registration_source: `scraping_${source}`,
+        });
+
+        if (error) {
+          errors.push(`${biz.name}: ${error.message}`);
+        } else {
+          success++;
+        }
       } catch (err: any) {
         errors.push(`${biz.name}: ${err.message}`);
       }
@@ -150,14 +196,14 @@ export default function ImportBySourceDialog() {
           target_table: "businesses",
           target_id: source as string,
           target_name: `Importação ${SOURCES[source as SourceKey]?.label}: ${success} negócios`,
-          changes: { source, url, total: businesses.length, success, errors: errors.length } as any,
+          changes: { source, url, total: toImport.length, success, errors: errors.length } as any,
         });
       }
     } catch {}
 
     toast({
       title: "Importação concluída",
-      description: `${success} importados, ${errors.length} erros`,
+      description: `✅ ${success} importados${errors.length > 0 ? ` · ❌ ${errors.length} erros` : ""}`,
       variant: errors.length > 0 ? "destructive" : "default",
     });
 
@@ -173,7 +219,7 @@ export default function ImportBySourceDialog() {
           Importar por Fonte
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Importar por Fonte — Passo {step}/4</DialogTitle>
         </DialogHeader>
@@ -274,55 +320,100 @@ export default function ImportBySourceDialog() {
           </div>
         )}
 
-        {/* Step 4: Preview */}
+        {/* Step 4: Preview organised by sections */}
         {step === 4 && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">{businesses.length} negócios encontrados</Badge>
-              <span className="text-xs text-muted-foreground">
-                Fonte: {SOURCES[source as SourceKey]?.label}
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{businesses.length} negócios encontrados</Badge>
+                <Badge variant="outline">{selected.size} selecionados</Badge>
+              </div>
+              <Button variant="ghost" size="sm" onClick={toggleAll}>
+                {selected.size === businesses.length ? "Desselecionar todos" : "Selecionar todos"}
+              </Button>
             </div>
-            <div className="overflow-x-auto max-h-[50vh]">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr>
-                    <th className="text-left p-2 font-medium text-muted-foreground">Nome</th>
-                    <th className="text-left p-2 font-medium text-muted-foreground">Cidade</th>
-                    <th className="text-left p-2 font-medium text-muted-foreground">Telefone</th>
-                    <th className="text-left p-2 font-medium text-muted-foreground">Email</th>
-                    <th className="text-left p-2 font-medium text-muted-foreground">Website</th>
-                    <th className="text-left p-2 font-medium text-muted-foreground">Morada</th>
-                    <th className="text-left p-2 font-medium text-muted-foreground">NIF</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {businesses.map((b, i) => (
-                    <tr key={i} className="border-t border-border">
-                      <td className="p-2 font-medium">{b.name}</td>
-                      <td className="p-2 text-muted-foreground">{b.city || "-"}</td>
-                      <td className="p-2 text-muted-foreground">{b.phone || "-"}</td>
-                      <td className="p-2 text-muted-foreground">{b.email || "-"}</td>
-                      <td className="p-2 text-muted-foreground">{b.website ? <a href={b.website} target="_blank" rel="noopener noreferrer" className="text-primary underline truncate max-w-[120px] inline-block">{b.website}</a> : "-"}</td>
-                      <td className="p-2 text-muted-foreground">{b.address || "-"}</td>
-                      <td className="p-2 text-muted-foreground">{b.nif || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+              {businesses.map((b, i) => (
+                <div
+                  key={i}
+                  className={`rounded-lg border p-4 cursor-pointer transition-colors ${
+                    selected.has(i) ? "border-primary bg-primary/5" : "border-border opacity-50"
+                  }`}
+                  onClick={() => toggleSelect(i)}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <input type="checkbox" checked={selected.has(i)} readOnly className="pointer-events-none" />
+                    <span className="font-semibold text-sm">{b.name}</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0">
+                    {/* Identidade */}
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">Identidade</p>
+                      <FieldValue label="Descrição" value={b.description} />
+                      <FieldValue label="NIF" value={b.nif} />
+                      <FieldValue label="Logótipo" value={b.logo_url} />
+                    </div>
+
+                    {/* Localização */}
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">Localização</p>
+                      <FieldValue label="Cidade" value={b.city} />
+                      <FieldValue label="Morada" value={b.address} />
+                    </div>
+
+                    {/* Contactos */}
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">Contactos</p>
+                      <FieldValue label="Telefone" value={b.phone} />
+                      <FieldValue label="WhatsApp" value={b.whatsapp} />
+                      <FieldValue label="Email" value={b.email} />
+                      <FieldValue label="Website" value={b.website} />
+                    </div>
+
+                    {/* Redes Sociais */}
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">Redes Sociais</p>
+                      <FieldValue label="Instagram" value={b.instagram_url} />
+                      <FieldValue label="Facebook" value={b.facebook_url} />
+                      <FieldValue label="Outra" value={b.other_social_url} />
+                    </div>
+
+                    {/* Horários */}
+                    {b.opening_hours && (
+                      <div className="sm:col-span-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">Horários</p>
+                        <p className="text-xs text-foreground">{formatOpeningHours(b.opening_hours)}</p>
+                      </div>
+                    )}
+
+                    {/* CTAs */}
+                    {(b.cta_booking_url || b.cta_order_url) && (
+                      <div className="sm:col-span-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">CTAs</p>
+                        <FieldValue label="Reservar" value={b.cta_booking_url} />
+                        <FieldValue label="Pedir Online" value={b.cta_order_url} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
+
             <p className="text-xs text-muted-foreground">
-              ⚠️ Todos os negócios serão importados como <strong>inativos</strong> com registo <code>scraping_{source}</code>.
+              ⚠️ Negócios importados como <strong>inativos</strong> com registo <code>scraping_{source}</code>.
+              Se já existirem pelo nome, os dados serão atualizados.
             </p>
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => { setStep(3); setBusinesses([]); }}>
+              <Button variant="outline" onClick={() => { setStep(3); setBusinesses([]); setSelected(new Set()); }}>
                 <X className="h-4 w-4 mr-2" /> Cancelar
               </Button>
-              <Button onClick={handleImport} disabled={importing} className="btn-cta-primary">
+              <Button onClick={handleImport} disabled={importing || selected.size === 0} className="btn-cta-primary">
                 {importing ? (
                   <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> A importar...</>
                 ) : (
-                  <><Check className="h-4 w-4 mr-2" /> Confirmar Importação ({businesses.length})</>
+                  <><Check className="h-4 w-4 mr-2" /> Importar Selecionados ({selected.size})</>
                 )}
               </Button>
             </div>

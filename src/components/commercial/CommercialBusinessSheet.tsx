@@ -34,6 +34,7 @@ import {
   CheckCircle,
   AlertCircle,
   Eye,
+  BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CommercialProposalForm from "./CommercialProposalForm";
@@ -46,7 +47,6 @@ interface Props {
   onClose: () => void;
 }
 
-// Extrai a primeira frase curta de um texto — até ao primeiro " — " ou ";"
 const extractFirstShort = (text: string, maxChars = 100): string => {
   if (!text) return "";
   const dashIdx = text.indexOf(" — ");
@@ -57,12 +57,10 @@ const extractFirstShort = (text: string, maxChars = 100): string => {
   return text.slice(0, Math.min(cutAt, maxChars)).trim();
 };
 
-// Extrai apenas o primeiro valor de preço de um ticket_medio longo
 const extractTicketShort = (ticket: string): string => {
   if (!ticket) return "";
   const part = ticket.split(";")[0].trim();
   if (part.length <= 60) return part;
-  // Se ainda longo, corta na primeira vírgula ou parêntese
   const commaIdx = part.indexOf(",");
   const parenIdx = part.indexOf("(");
   const candidates = [commaIdx, parenIdx].filter((i) => i > 5);
@@ -199,7 +197,6 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
     setObjections((prev) => (prev.includes(o) ? prev.filter((x) => x !== o) : [...prev, o]));
   };
 
-  // Dica contextual nas perguntas de diagnóstico — curta e discreta
   const getQuestionHint = (q: string): string | null => {
     if (!benchmark) return null;
     if (q.includes("clientes novos") && benchmark.canal_aquisicao_principal) {
@@ -216,26 +213,21 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
     return null;
   };
 
-  // Enriquecimento das objecções — UMA frase curta e accionável, não um parágrafo
   const getObjectionEnrichment = (label: string): string | null => {
     if (!benchmark) return null;
-
     if (label === "Já tenho clientes suficientes" && benchmark.tendencia_2025) {
       const short = extractFirstShort(benchmark.tendencia_2025, 100);
       return short ? `📊 O mercado está a mudar: ${short}.` : null;
     }
-
     if (label === "Já uso redes sociais e Google" && benchmark.presenca_digital?.redes_sociais) {
-      return `📊 ${benchmark.presenca_digital.redes_sociais} dos negócios do sector já estão nas redes — a diferença está em aparecer a quem já quer comprar. É isso que a Pede Direto faz.`;
+      return `📊 ${benchmark.presenca_digital.redes_sociais} dos negócios do sector já estão nas redes — a diferença está em aparecer a quem já quer comprar.`;
     }
-
     if (label === "9,90€ é caro para mim agora" && benchmark.ticket_medio) {
       const ticketShort = extractTicketShort(benchmark.ticket_medio);
       return ticketShort
         ? `📊 Neste sector uma transacção vale em média ${ticketShort}. Um único cliente novo paga vários meses da Pede Direto.`
         : null;
     }
-
     return null;
   };
 
@@ -294,12 +286,15 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
               </SheetHeader>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="dados" className="text-xs">
                     Dados
                   </TabsTrigger>
                   <TabsTrigger value="script" className="text-xs">
                     Script
+                  </TabsTrigger>
+                  <TabsTrigger value="mercado" className="text-xs">
+                    Mercado
                   </TabsTrigger>
                   <TabsTrigger value="historico" className="text-xs">
                     Histórico
@@ -353,15 +348,8 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                   </div>
                 </TabsContent>
 
-                {/* TAB: Script de Vendas */}
+                {/* TAB: Script de Vendas — SEM MarketExpertPanel/ConversationCards */}
                 <TabsContent value="script" className="space-y-6 mt-4">
-                  {benchmark && subcategoryName && (
-                    <div className="space-y-4">
-                      <MarketExpertPanel data={benchmark} subcategory={subcategoryName} />
-                      <ConversationCards data={benchmark} subcategory={subcategoryName} />
-                    </div>
-                  )}
-
                   {/* Perguntas de diagnóstico */}
                   <div className="space-y-3">
                     <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -381,7 +369,11 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                               />
                               <span className="text-sm">{q}</span>
                             </label>
-                            {hint && <p className="ml-6 mt-1 text-xs italic text-success">{hint}</p>}
+                            {hint && (
+                              <div className="ml-6 mt-1 p-2 rounded bg-muted/50 border border-border">
+                                <p className="text-xs italic text-success">{hint}</p>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -409,12 +401,10 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                             </label>
                             {objections.includes(obj.label) && (
                               <div className="ml-6 space-y-2">
-                                {/* Contra-objecção base */}
                                 <div className="p-3 rounded-lg bg-success/5 border border-success/20">
                                   <p className="text-xs text-success font-medium mb-1">💡 Contra-objecção:</p>
                                   <p className="text-sm">{obj.response}</p>
                                 </div>
-                                {/* Dado do sector — separado visualmente, opcional */}
                                 {enrichment && (
                                   <div className="p-2 rounded-lg bg-muted/50 border border-border">
                                     <p className="text-xs text-muted-foreground italic leading-relaxed">{enrichment}</p>
@@ -463,6 +453,36 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
                     {upsertChecklist.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                     Guardar Script
                   </Button>
+                </TabsContent>
+
+                {/* TAB: Mercado — dedicated tab for MarketExpertPanel + ConversationCards */}
+                <TabsContent value="mercado" className="space-y-4 mt-4">
+                  {benchmark && subcategoryName ? (
+                    <>
+                      {/* Botão Preparar Visita */}
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2"
+                        onClick={() => setShowPrepareModal(true)}
+                      >
+                        <Eye className="h-4 w-4" />
+                        Preparar Visita — {subcategoryName}
+                      </Button>
+
+                      <MarketExpertPanel data={benchmark} subcategory={subcategoryName} />
+                      <ConversationCards data={benchmark} subcategory={subcategoryName} />
+                    </>
+                  ) : (
+                    <div className="text-center py-12 space-y-3">
+                      <BarChart2 className="h-10 w-10 mx-auto text-muted-foreground/40" />
+                      <p className="text-sm text-muted-foreground">
+                        Ainda não temos dados de mercado para esta subcategoria.
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Os dados são adicionados progressivamente.
+                      </p>
+                    </div>
+                  )}
                 </TabsContent>
 
                 {/* TAB: Histórico */}
@@ -622,7 +642,7 @@ const CommercialBusinessSheet = ({ businessId, onClose }: Props) => {
           category={categoryName || ""}
           onOpenFullSheet={() => {
             setShowPrepareModal(false);
-            setActiveTab("script");
+            setActiveTab("mercado");
           }}
         />
       )}
