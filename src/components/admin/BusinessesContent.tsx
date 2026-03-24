@@ -277,7 +277,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             alcance,
             logo_url: row.logo_url?.trim() || null,
             cta_whatsapp: row.whatsapp?.trim() || null,
-            cta_phone: row.telefone?.trim() || null,
+            cta_phone: row.telefone?.trim() || row.phone?.trim() || null,
             cta_email: row.email?.trim() || null,
             cta_website: row.website?.trim() || null,
             cta_app: null,
@@ -298,6 +298,16 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             subscription_end_date: null,
             subscription_status: "inactive" as SubscriptionStatus,
             public_address: null,
+            address: row.address?.trim() || row.morada?.trim() || null,
+            owner_name: row.owner_name?.trim() || row.responsavel?.trim() || null,
+            owner_email: row.owner_email?.trim() || null,
+            owner_phone: row.owner_phone?.trim() || null,
+            nif: row.nif?.trim() || null,
+            instagram_url: row.instagram_url?.trim() || row.instagram?.trim() || null,
+            facebook_url: row.facebook_url?.trim() || row.facebook?.trim() || null,
+            other_social_url: row.other_social_url?.trim() || null,
+            cta_booking_url: row.cta_booking_url?.trim() || row.booking_url?.trim() || null,
+            cta_order_url: row.cta_order_url?.trim() || row.order_url?.trim() || null,
           };
 
           const result = await createBusiness.mutateAsync(businessData);
@@ -437,8 +447,11 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                   <p className="font-medium">Formato esperado (.xlsx):</p>
                   <p className="text-muted-foreground">
                     Colunas: <code>name</code>, <code>category</code>, <code>subcategories</code>,{" "}
-                    <code>description</code>,<code>city</code>, <code>alcance</code>, <code>whatsapp</code>,{" "}
-                    <code>telefone</code>,<code>email</code>, <code>website</code>, <code>logo_url</code>
+                    <code>description</code>, <code>city</code>, <code>alcance</code>, <code>whatsapp</code>,{" "}
+                    <code>telefone</code>, <code>email</code>, <code>website</code>, <code>logo_url</code>,{" "}
+                    <code>address</code>, <code>owner_name</code>, <code>owner_email</code>, <code>owner_phone</code>,{" "}
+                    <code>nif</code>, <code>instagram</code>, <code>facebook</code>, <code>other_social_url</code>,{" "}
+                    <code>cta_booking_url</code>, <code>cta_order_url</code>
                   </p>
                   <p className="text-muted-foreground text-xs">
                     • Subcategorias separadas por <code>|</code> (ex: Canalizadores|Eletricidade)

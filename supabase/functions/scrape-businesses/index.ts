@@ -7,12 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SOURCES: Record<string, { label: string; domain: string }> = {
-  guianet: { label: "Guianet", domain: "guianet.pt" },
-  ubereats: { label: "UberEats", domain: "ubereats.com" },
-  bolt_food: { label: "Bolt Food", domain: "food.bolt.eu" },
-};
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -31,24 +25,15 @@ serve(async (req) => {
     const { data: isAdmin } = await supabase.rpc("is_admin");
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Apenas administradores" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { source, url, limit = 50 } = await req.json();
 
-    const sourceConfig = SOURCES[source];
-    if (!sourceConfig) {
-      return new Response(JSON.stringify({ error: "Fonte inválida" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (!url || !url.includes(sourceConfig.domain)) {
+    if (!url || (!url.startsWith("https://") && !url.startsWith("http://"))) {
       return new Response(
-        JSON.stringify({ error: `URL deve pertencer a ${sourceConfig.domain}` }),
+        JSON.stringify({ error: "URL deve começar com https:// ou http://" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -58,8 +43,7 @@ serve(async (req) => {
     const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
     if (!firecrawlKey) {
       return new Response(JSON.stringify({ error: "Firecrawl não configurado" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -71,12 +55,7 @@ serve(async (req) => {
         Authorization: `Bearer ${firecrawlKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        url,
-        formats: ["markdown"],
-        onlyMainContent: true,
-        waitFor: 3000,
-      }),
+      body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true, waitFor: 3000 }),
     });
 
     if (!scrapeResponse.ok) {
@@ -101,12 +80,11 @@ serve(async (req) => {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY não configurado" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const extractionPrompt = `Analisa o seguinte conteúdo de uma página web da fonte "${sourceConfig.label}" e extrai uma lista de negócios/empresas.
+    const extractionPrompt = `Analisa o seguinte conteúdo de uma página web e extrai uma lista de negócios/empresas.
 
 Para cada negócio encontrado, extrai os seguintes campos (usa null quando não disponível):
 
@@ -137,18 +115,16 @@ REDES SOCIAIS:
 HORÁRIOS:
 - opening_hours: horários de funcionamento em formato JSON por dia da semana
   Exemplo: {"segunda": "09:00-18:00", "sabado": "10:00-13:00", "domingo": "fechado"}
-  Detectar padrões como "Seg-Sex: 9h-18h", "Segunda a Sexta das 9 às 18 horas", "Fechado ao domingo"
 
 CTAs DE ACÇÃO DIRECTA:
 - cta_booking_url: URL de reserva (calendly.com, doctolib.pt, thefork.pt, booking.com, setmore.com, doctoralia.pt)
-- cta_order_url: URL de pedido online (ubereats.com, glovoapp.com, bolt.food, takeaway.com, zomato.com, URLs com /order, /menu, /pedido)
+- cta_order_url: URL de pedido online (ubereats.com, glovoapp.com, bolt.food, takeaway.com, zomato.com)
 
 REGRAS:
 - Retorna no MÁXIMO ${safeLimit} negócios
 - Campos não encontrados devem ser null
 - O campo "name" é obrigatório; ignora entradas sem nome
 - Não inventes dados; extrai apenas o que está explicitamente no conteúdo
-- Números de telefone devem incluir indicativo se disponível
 - URLs de redes sociais devem ser completas (com https://)
 
 Conteúdo da página:
@@ -163,68 +139,51 @@ ${markdown.substring(0, 15000)}`;
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          {
-            role: "system",
-            content: "Extrais dados estruturados de páginas web. Respondes APENAS com JSON válido.",
-          },
+          { role: "system", content: "Extrais dados estruturados de páginas web. Respondes APENAS com JSON válido." },
           { role: "user", content: extractionPrompt },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_businesses",
-              description: "Extrai lista de negócios do conteúdo",
-              parameters: {
-                type: "object",
-                properties: {
-                  businesses: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        description: { type: "string", nullable: true },
-                        logo_url: { type: "string", nullable: true },
-                        nif: { type: "string", nullable: true },
-                        address: { type: "string", nullable: true },
-                        city: { type: "string", nullable: true },
-                        phone: { type: "string", nullable: true },
-                        whatsapp: { type: "string", nullable: true },
-                        email: { type: "string", nullable: true },
-                        owner_email: { type: "string", nullable: true },
-                        owner_name: { type: "string", nullable: true },
-                        owner_phone: { type: "string", nullable: true },
-                        website: { type: "string", nullable: true },
-                        instagram_url: { type: "string", nullable: true },
-                        facebook_url: { type: "string", nullable: true },
-                        other_social_url: { type: "string", nullable: true },
-                        opening_hours: {
-                          type: "object",
-                          nullable: true,
-                          properties: {
-                            segunda: { type: "string" },
-                            terca: { type: "string" },
-                            quarta: { type: "string" },
-                            quinta: { type: "string" },
-                            sexta: { type: "string" },
-                            sabado: { type: "string" },
-                            domingo: { type: "string" },
-                          },
-                        },
-                        cta_booking_url: { type: "string", nullable: true },
-                        cta_order_url: { type: "string", nullable: true },
-                      },
-                      required: ["name"],
+        tools: [{
+          type: "function",
+          function: {
+            name: "extract_businesses",
+            description: "Extrai lista de negócios do conteúdo",
+            parameters: {
+              type: "object",
+              properties: {
+                businesses: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      description: { type: "string", nullable: true },
+                      logo_url: { type: "string", nullable: true },
+                      nif: { type: "string", nullable: true },
+                      address: { type: "string", nullable: true },
+                      city: { type: "string", nullable: true },
+                      phone: { type: "string", nullable: true },
+                      whatsapp: { type: "string", nullable: true },
+                      email: { type: "string", nullable: true },
+                      owner_email: { type: "string", nullable: true },
+                      owner_name: { type: "string", nullable: true },
+                      owner_phone: { type: "string", nullable: true },
+                      website: { type: "string", nullable: true },
+                      instagram_url: { type: "string", nullable: true },
+                      facebook_url: { type: "string", nullable: true },
+                      other_social_url: { type: "string", nullable: true },
+                      opening_hours: { type: "object", nullable: true },
+                      cta_booking_url: { type: "string", nullable: true },
+                      cta_order_url: { type: "string", nullable: true },
                     },
+                    required: ["name"],
                   },
                 },
-                required: ["businesses"],
-                additionalProperties: false,
               },
+              required: ["businesses"],
+              additionalProperties: false,
             },
           },
-        ],
+        }],
         tool_choice: { type: "function", function: { name: "extract_businesses" } },
       }),
     });
@@ -232,14 +191,12 @@ ${markdown.substring(0, 15000)}`;
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit excedido, tente novamente mais tarde" }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (aiResponse.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos AI insuficientes" }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errText = await aiResponse.text();

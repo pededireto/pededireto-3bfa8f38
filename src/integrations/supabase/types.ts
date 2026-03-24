@@ -2669,6 +2669,7 @@ export type Database = {
           logo_url: string | null
           name: string
           nif: string | null
+          opening_hours: Json | null
           other_social_url: string | null
           owner_email: string | null
           owner_id: string | null
@@ -2745,6 +2746,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           nif?: string | null
+          opening_hours?: Json | null
           other_social_url?: string | null
           owner_email?: string | null
           owner_id?: string | null
@@ -2821,6 +2823,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           nif?: string | null
+          opening_hours?: Json | null
           other_social_url?: string | null
           owner_email?: string | null
           owner_id?: string | null
@@ -7991,49 +7994,34 @@ export type Database = {
         }
         Returns: undefined
       }
-      upsert_business_from_import:
-        | {
-            Args: {
-              p_address?: string
-              p_category_id?: string
-              p_city?: string
-              p_cta_email?: string
-              p_cta_phone?: string
-              p_cta_website?: string
-              p_cta_whatsapp?: string
-              p_name: string
-              p_owner_email?: string
-              p_owner_name?: string
-              p_owner_phone?: string
-              p_registration_source?: string
-              p_slug?: string
-              p_subcategory_id?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_address?: string
-              p_category_id?: string
-              p_city?: string
-              p_cta_email?: string
-              p_cta_phone?: string
-              p_cta_website?: string
-              p_cta_whatsapp?: string
-              p_description?: string
-              p_facebook_url?: string
-              p_instagram_url?: string
-              p_name: string
-              p_nif?: string
-              p_owner_email?: string
-              p_owner_name?: string
-              p_owner_phone?: string
-              p_registration_source?: string
-              p_slug?: string
-              p_subcategory_id?: string
-            }
-            Returns: Json
-          }
+      upsert_business_from_import: {
+        Args: {
+          p_address?: string
+          p_category_id?: string
+          p_city?: string
+          p_cta_booking_url?: string
+          p_cta_email?: string
+          p_cta_order_url?: string
+          p_cta_phone?: string
+          p_cta_website?: string
+          p_cta_whatsapp?: string
+          p_description?: string
+          p_facebook_url?: string
+          p_instagram_url?: string
+          p_logo_url?: string
+          p_name: string
+          p_nif?: string
+          p_opening_hours?: Json
+          p_other_social_url?: string
+          p_owner_email?: string
+          p_owner_name?: string
+          p_owner_phone?: string
+          p_registration_source?: string
+          p_slug?: string
+          p_subcategory_id?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       alcance_tipo: "local" | "nacional" | "hibrido"
