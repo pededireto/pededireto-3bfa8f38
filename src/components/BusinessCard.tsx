@@ -2,8 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { PublicBusinessWithCategory } from "@/hooks/usePublicBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
-import { useBusinessPublicBadges } from "@/hooks/usePublicBadges";
-import { useBusinessCityNames } from "@/hooks/useBusinessCities";
+import { PublicBadge } from "@/hooks/usePublicBadges";
+import { BusinessCity } from "@/hooks/useBusinessCities";
 import { MapPin, Globe, Phone, MessageCircle, ExternalLink, Star as StarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FavoriteButton from "@/components/FavoriteButton";
@@ -11,6 +11,10 @@ import BadgePills from "@/components/BadgePills";
 
 interface BusinessCardProps {
   business: BusinessWithCategory | PublicBusinessWithCategory;
+  /** Pré-carregados pelo componente pai via useBatchPublicBadges */
+  badges?: PublicBadge[];
+  /** Pré-carregadas pelo componente pai via useBusinessCityNamesBatch */
+  cities?: BusinessCity[];
 }
 
 const StarRating = ({ rating, count }: { rating: number; count: number }) => (
@@ -31,15 +35,16 @@ const StarRating = ({ rating, count }: { rating: number; count: number }) => (
   </div>
 );
 
-const BusinessCard = ({ business }: BusinessCardProps) => {
+const BusinessCard = ({ business, badges = [], cities = [] }: BusinessCardProps) => {
   const trackEvent = useTrackEvent();
   const navigate = useNavigate();
-  const { data: publicBadges = [] } = useBusinessPublicBadges(business.id);
-  const { data: businessCities = [] } = useBusinessCityNames(business.id);
 
+  // Hooks removidos daqui — dados chegam via props do componente pai (batch)
   const stats = (business as any).business_review_stats;
 
-  const handleCtaClick = (type: "whatsapp" | "phone" | "website" | "email" | "app" | "instagram" | "facebook" | "reservation" | "order") => {
+  const handleCtaClick = (
+    type: "whatsapp" | "phone" | "website" | "email" | "app" | "instagram" | "facebook" | "reservation" | "order",
+  ) => {
     trackEvent.mutate({
       event_type: `click_${type}` as any,
       business_id: business.id,
@@ -49,9 +54,7 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
   };
 
   const getAlcanceLabel = () => {
-    const cityNames = businessCities.length > 1
-      ? businessCities.map((c) => c.city_name).join(", ")
-      : null;
+    const cityNames = cities.length > 1 ? cities.map((c) => c.city_name).join(", ") : null;
 
     switch (business.alcance) {
       case "nacional":
@@ -60,14 +63,14 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
         return cityNames
           ? `Atende em ${cityNames}`
           : business.city
-          ? `Atende em ${business.city}`
-          : "Atendimento local";
+            ? `Atende em ${business.city}`
+            : "Atendimento local";
       case "hibrido":
         return cityNames
           ? `${cityNames} + envios nacionais`
           : business.city
-          ? `${business.city} + envios nacionais`
-          : "Local + envios nacionais";
+            ? `${business.city} + envios nacionais`
+            : "Local + envios nacionais";
       default:
         return null;
     }
@@ -79,7 +82,9 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
 
   return (
     <div
-      className={`card-business cursor-pointer transition-shadow hover:shadow-md ${business.is_featured ? "card-featured" : ""}`}
+      className={`card-business cursor-pointer transition-shadow hover:shadow-md ${
+        business.is_featured ? "card-featured" : ""
+      }`}
       onClick={handleCardClick}
     >
       {/* Featured Badge */}
@@ -114,7 +119,9 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-primary/10 p-3">
-            <span className="text-base font-bold text-primary/40 text-center leading-tight line-clamp-3">{business.name}</span>
+            <span className="text-base font-bold text-primary/40 text-center leading-tight line-clamp-3">
+              {business.name}
+            </span>
           </div>
         )}
       </div>
@@ -132,9 +139,9 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
         </h3>
 
         {/* Earned Badges */}
-        {publicBadges.length > 0 && (
+        {badges.length > 0 && (
           <div className="mb-2">
-            <BadgePills badges={publicBadges} max={2} />
+            <BadgePills badges={badges} max={2} />
           </div>
         )}
 
@@ -144,9 +151,7 @@ const BusinessCard = ({ business }: BusinessCardProps) => {
         )}
 
         {/* Rating Stars */}
-        {stats && stats.total_reviews > 0 && (
-          <StarRating rating={stats.average_rating} count={stats.total_reviews} />
-        )}
+        {stats && stats.total_reviews > 0 && <StarRating rating={stats.average_rating} count={stats.total_reviews} />}
 
         {/* Location */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
