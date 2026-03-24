@@ -1,6 +1,7 @@
 // Hook especializado para o owner atualizar o seu negócio
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+
 interface OwnerBusinessUpdate {
   id: string;
   name: string;
@@ -40,11 +41,14 @@ interface OwnerBusinessUpdate {
   // Admin
   is_active?: boolean;
 }
+
 export const useUpdateBusinessOwner = () => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: OwnerBusinessUpdate) => {
-      const { data, error } = await supabase.from("businesses").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabase.from("businesses").update(updates).eq("id", id).select().maybeSingle(); // .single() lançava PGRST116 quando RLS bloqueava ou não retornava rows
+
       if (error) throw error;
       return data;
     },
