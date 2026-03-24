@@ -5,7 +5,15 @@ import type { Json } from "@/integrations/supabase/types";
 
 export type SubscriptionPlan = "free" | "1_month" | "3_months" | "6_months" | "1_year";
 export type SubscriptionStatus = "inactive" | "active" | "expired";
-export type CommercialStatus = "nao_contactado" | "contactado" | "interessado" | "proposta_enviada" | "negociacao" | "cliente" | "perdido" | "followup_agendado";
+export type CommercialStatus =
+  | "nao_contactado"
+  | "contactado"
+  | "interessado"
+  | "proposta_enviada"
+  | "negociacao"
+  | "cliente"
+  | "perdido"
+  | "followup_agendado";
 export type PremiumLevel = "SUPER" | "CATEGORIA" | "SUBCATEGORIA";
 
 export interface Business {
@@ -138,7 +146,8 @@ export const useBusinesses = (categoryId?: string, city?: string, subcategoryId?
               .select(BUSINESS_SELECT)
               .eq("is_active", true)
               .in("id", missingIds);
-            if (extra) return [...(data as unknown as BusinessWithCategory[]), ...(extra as unknown as BusinessWithCategory[])];
+            if (extra)
+              return [...(data as unknown as BusinessWithCategory[]), ...(extra as unknown as BusinessWithCategory[])];
           }
 
           return data as unknown as BusinessWithCategory[];
@@ -252,6 +261,7 @@ export const useCreateBusiness = () => {
 
   return useMutation({
     mutationFn: async (business: Omit<Business, "id" | "created_at" | "updated_at">) => {
+      // 1. Criar o negócio
       const { data, error } = await supabase
         .from("businesses")
         .insert(business as any)
@@ -259,6 +269,16 @@ export const useCreateBusiness = () => {
         .single();
 
       if (error) throw error;
+
+      // 2. Registar o utilizador autenticado como owner
+      const { error: rpcError } = await supabase.rpc("register_business_and_set_owner", { p_business_id: data.id });
+
+      if (rpcError) {
+        // Negócio foi criado mas o owner não foi definido — logar o erro
+        // mas não bloquear (pode ser resolvido manualmente)
+        console.error("[useCreateBusiness] erro ao definir owner:", rpcError);
+      }
+
       return data;
     },
     onSuccess: () => {
