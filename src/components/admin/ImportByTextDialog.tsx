@@ -25,6 +25,13 @@ interface ScrapedBusiness {
   nif: string | null;
   instagram_url: string | null;
   facebook_url: string | null;
+  // ── 5 campos novos ──
+  other_social_url: string | null;
+  logo_url: string | null;
+  opening_hours: Record<string, string> | null;
+  cta_booking_url: string | null;
+  cta_order_url: string | null;
+  // categorização
   category_id: string | null;
   subcategory_id: string | null;
   category: string | null;
@@ -58,7 +65,6 @@ export default function ImportByTextDialog() {
     setImporting(false);
   };
 
-  // ── PASSO 2 → 3: Extração via Edge Function (só preview, sem gravar) ──
   const handleExtract = async () => {
     if (!text.trim() || !categoryId) return;
     setLoading(true);
@@ -69,7 +75,7 @@ export default function ImportByTextDialog() {
           limit: 200,
           categoryId:    categoryId    || null,
           subcategoryId: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
-          saveToDatabase: false, // ← só extrai, não grava ainda
+          saveToDatabase: false,
         },
       });
 
@@ -101,14 +107,10 @@ export default function ImportByTextDialog() {
   };
 
   const toggleAll = () => {
-    if (selected.size === businesses.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(businesses.map((_, i) => i)));
-    }
+    if (selected.size === businesses.length) setSelected(new Set());
+    else setSelected(new Set(businesses.map((_, i) => i)));
   };
 
-  // ── PASSO 3: Importação real via Edge Function (saveToDatabase: true) ──
   const handleImport = async () => {
     const toImport = businesses.filter((_, i) => selected.has(i));
     if (toImport.length === 0) return;
@@ -121,8 +123,8 @@ export default function ImportByTextDialog() {
           limit: 200,
           categoryId:    categoryId    || null,
           subcategoryId: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
-          saveToDatabase: true,         // ← agora grava na BD
-          businesses:    toImport,      // ← só os selecionados
+          saveToDatabase: true,
+          businesses:    toImport,
         },
       });
 
@@ -131,7 +133,6 @@ export default function ImportByTextDialog() {
 
       const results = data?.results || { inserted: 0, updated: 0, errors: [] };
 
-      // Audit log
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -181,7 +182,6 @@ export default function ImportByTextDialog() {
           <DialogTitle>Importar por Texto — Passo {step}/3</DialogTitle>
         </DialogHeader>
 
-        {/* ── Step 1: Texto + Categoria ── */}
         {step === 1 && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -225,7 +225,6 @@ export default function ImportByTextDialog() {
           </div>
         )}
 
-        {/* ── Step 2: Extração ── */}
         {step === 2 && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -255,7 +254,6 @@ export default function ImportByTextDialog() {
           </div>
         )}
 
-        {/* ── Step 3: Preview + Importar ── */}
         {step === 3 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -281,7 +279,6 @@ export default function ImportByTextDialog() {
                     <th className="text-left p-2 font-medium text-muted-foreground">Website</th>
                     <th className="text-left p-2 font-medium text-muted-foreground">Morada</th>
                     <th className="text-left p-2 font-medium text-muted-foreground">Responsável</th>
-                    <th className="text-left p-2 font-medium text-muted-foreground">Tel. Resp.</th>
                     <th className="text-left p-2 font-medium text-muted-foreground">NIF</th>
                   </tr>
                 </thead>
@@ -302,7 +299,7 @@ export default function ImportByTextDialog() {
                       <td className="p-2 text-muted-foreground">{b.cta_email || "-"}</td>
                       <td className="p-2 text-muted-foreground">
                         {b.cta_website ? (
-                          <a
+                          
                             href={b.cta_website.startsWith("http") ? b.cta_website : `https://${b.cta_website}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -315,7 +312,6 @@ export default function ImportByTextDialog() {
                       </td>
                       <td className="p-2 text-muted-foreground">{b.address || "-"}</td>
                       <td className="p-2 text-muted-foreground">{b.owner_name || "-"}</td>
-                      <td className="p-2 text-muted-foreground">{b.owner_phone || "-"}</td>
                       <td className="p-2 text-muted-foreground">{b.nif || "-"}</td>
                     </tr>
                   ))}
