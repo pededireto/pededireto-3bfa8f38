@@ -46,9 +46,7 @@ const ProgressBar = ({ step }: { step: Step }) => (
         <div key={s} className="flex items-center gap-2">
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
-              s <= step
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
+              s <= step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
             }`}
           >
             {s < step ? <CheckCircle className="h-4 w-4" /> : s}
@@ -88,7 +86,7 @@ const RegisterBusiness = () => {
     subcategoryIds: [],
   });
 
-  // Prefill from ClaimBusiness or localStorage
+  // Prefill from ClaimBusiness ou localStorage
   useEffect(() => {
     const prefill = location.state?.prefill;
     const stored = localStorage.getItem("registerBusinessPrefill");
@@ -110,13 +108,10 @@ const RegisterBusiness = () => {
   const { data: allSubcategories = [] } = useAllSubcategories();
   const syncCategories = useSyncBusinessCategories();
 
-  // Subcategories filtered by ALL selected categories
-  const subcategories = allSubcategories.filter((s) =>
-    formData.categoryIds.includes(s.category_id)
-  );
+  // Subcategorias filtradas pelas categorias seleccionadas
+  const subcategories = allSubcategories.filter((s) => formData.categoryIds.includes(s.category_id));
 
-  const updateField = (field: keyof FormData, value: string) =>
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const updateField = (field: keyof FormData, value: string) => setFormData((prev) => ({ ...prev, [field]: value }));
 
   const toggleSubcategory = (id: string) => {
     setFormData((prev) => {
@@ -129,7 +124,7 @@ const RegisterBusiness = () => {
     });
   };
 
-  // Reset subcategories when categories change — remove subcats from removed categories
+  // Reset subcategorias quando categorias mudam
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -144,7 +139,7 @@ const RegisterBusiness = () => {
     setFormData((prev) => ({ ...prev, categoryIds, primaryCategoryId }));
   };
 
-  // Validation
+  // Validação
   const isStep1Valid = () => {
     const nameOk = formData.name.trim().length >= 2;
     const phoneOk = formData.phone.trim().length >= 9;
@@ -165,7 +160,7 @@ const RegisterBusiness = () => {
     try {
       let currentUser = user;
 
-      // Create account if not authenticated
+      // Criar conta se não autenticado
       if (!currentUser) {
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
@@ -178,24 +173,34 @@ const RegisterBusiness = () => {
         if (signUpError) throw signUpError;
 
         const { data: sessionData } = await supabase.auth.getSession();
+
         if (!sessionData?.session) {
-          // Save data for after email confirmation
-          localStorage.setItem(
-            "pendingBusinessRegistration",
-            JSON.stringify({
-              name: formData.name,
-              city: formData.city,
-              cta_phone: formData.phone,
-              category_id: formData.primaryCategoryId,
-              category_ids: formData.categoryIds,
-              subcategory_ids: formData.subcategoryIds,
-              owner_email: formData.email,
-            })
-          );
+          // --- FIX: guardar na tabela pending_registrations em vez de só localStorage ---
+          const pendingPayload = {
+            name: formData.name,
+            city: formData.city,
+            cta_phone: formData.phone,
+            category_id: formData.primaryCategoryId,
+            subcategory_ids: formData.subcategoryIds,
+            owner_email: formData.email,
+          };
+
+          // Tenta guardar na BD (robusto entre dispositivos/sessões)
+          try {
+            await (supabase as any).from("pending_registrations").insert({
+              user_id: signUpData.user?.id,
+              payload: pendingPayload,
+            });
+          } catch (dbErr) {
+            console.warn("[RegisterBusiness] Fallback para localStorage:", dbErr);
+          }
+
+          // Mantém localStorage como fallback
+          localStorage.setItem("pendingBusinessRegistration", JSON.stringify(pendingPayload));
+
           toast({
             title: "Verifique o seu email",
-            description:
-              "Enviámos um email de confirmação. Após confirmar, o seu negócio será criado automaticamente.",
+            description: "Enviámos um email de confirmação. Após confirmar, o seu negócio será criado automaticamente.",
           });
           setSubmitted(true);
           return;
@@ -206,23 +211,20 @@ const RegisterBusiness = () => {
       const slug = generateSlug(formData.name);
       const primarySubcategoryId = formData.subcategoryIds[0];
 
-      const { data: businessId, error: rpcError } = await supabase.rpc(
-        "register_business_with_owner" as any,
-        {
-          p_name: formData.name,
-          p_slug: slug,
-          p_city: formData.city,
-          p_cta_phone: formData.phone,
-          p_category_id: formData.primaryCategoryId,
-          p_subcategory_id: primarySubcategoryId,
-          p_owner_email: currentUser?.email || formData.email,
-          p_registration_source: "onboarding_wizard",
-        }
-      );
+      const { data: businessId, error: rpcError } = await supabase.rpc("register_business_with_owner" as any, {
+        p_name: formData.name,
+        p_slug: slug,
+        p_city: formData.city,
+        p_cta_phone: formData.phone,
+        p_category_id: formData.primaryCategoryId,
+        p_subcategory_id: primarySubcategoryId,
+        p_owner_email: currentUser?.email || formData.email,
+        p_registration_source: "onboarding_wizard",
+      });
 
       if (rpcError) throw rpcError;
 
-      // Insert categories into junction table (RPC already set businesses.category_id = primaryCategoryId)
+      // Categorias na junction table
       if (businessId) {
         await syncCategories.mutateAsync({
           businessId,
@@ -231,7 +233,7 @@ const RegisterBusiness = () => {
         });
       }
 
-      // Insert additional subcategories into junction table
+      // Subcategorias adicionais
       if (businessId && formData.subcategoryIds.length > 1) {
         const additionalRows = formData.subcategoryIds.slice(1).map((subId) => ({
           business_id: businessId,
@@ -240,7 +242,7 @@ const RegisterBusiness = () => {
         await supabase.from("business_subcategories").insert(additionalRows);
       }
 
-      // Link affiliate referral if present
+      // Afiliado
       const refCode = localStorage.getItem("affiliate_ref");
       if (refCode && businessId) {
         try {
@@ -255,7 +257,6 @@ const RegisterBusiness = () => {
         localStorage.removeItem("affiliate_ref");
       }
 
-      // Set flag for welcome banner
       localStorage.setItem("onboarding_complete", "true");
 
       toast({
@@ -278,7 +279,7 @@ const RegisterBusiness = () => {
     }
   };
 
-  // Email confirmation success screen
+  // Ecrã de confirmação de email
   if (submitted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -286,8 +287,8 @@ const RegisterBusiness = () => {
           <CheckCircle className="mx-auto h-16 w-16 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">Quase lá!</h1>
           <p className="text-muted-foreground">
-            Enviámos um email de confirmação para <strong>{formData.email}</strong>.
-            Após confirmar, o seu negócio será criado automaticamente.
+            Enviámos um email de confirmação para <strong>{formData.email}</strong>. Após confirmar, o seu negócio será
+            criado automaticamente.
           </p>
           <Button variant="outline" onClick={() => navigate("/")}>
             Voltar ao início
@@ -297,7 +298,6 @@ const RegisterBusiness = () => {
     );
   }
 
-  // Get selected subcategory names for preview
   const selectedSubcategoryNames = formData.subcategoryIds
     .map((id) => subcategories.find((s) => s.id === id)?.name)
     .filter(Boolean);
@@ -305,7 +305,6 @@ const RegisterBusiness = () => {
   const selectedCategoryNames = formData.categoryIds
     .map((id) => categories.find((c) => c.id === id)?.name)
     .filter(Boolean);
-  const primaryCategoryName = categories.find((c) => c.id === formData.primaryCategoryId)?.name;
 
   const maskPhone = (phone: string) => {
     if (phone.length < 3) return phone;
@@ -314,7 +313,7 @@ const RegisterBusiness = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Minimal header */}
+      {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="container flex items-center justify-between py-3">
           <img src={logo} alt="Pede Direto" className="h-8" />
@@ -336,9 +335,7 @@ const RegisterBusiness = () => {
         <div className="w-full max-w-md">
           <ProgressBar step={step} />
 
-          {/* ═══════════════════════════════════════
-              STEP 1 — O seu negócio
-          ═══════════════════════════════════════ */}
+          {/* ═══════════ STEP 1 ═══════════ */}
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="text-center">
@@ -381,7 +378,6 @@ const RegisterBusiness = () => {
                 </div>
               </div>
 
-              {/* Auth section — only if not logged in */}
               {!user && (
                 <>
                   <div className="relative">
@@ -428,9 +424,7 @@ const RegisterBusiness = () => {
             </div>
           )}
 
-          {/* ═══════════════════════════════════════
-              STEP 2 — Área de atuação
-          ═══════════════════════════════════════ */}
+          {/* ═══════════ STEP 2 ═══════════ */}
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="text-center">
@@ -454,7 +448,6 @@ const RegisterBusiness = () => {
                       Subcategorias * <span className="text-muted-foreground font-normal">(até 3)</span>
                     </Label>
 
-                    {/* Selected chips */}
                     {formData.subcategoryIds.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-2">
                         {formData.subcategoryIds.map((id) => {
@@ -475,7 +468,6 @@ const RegisterBusiness = () => {
                       </div>
                     )}
 
-                    {/* Subcategory list grouped by category */}
                     <div className="border border-border rounded-xl max-h-56 overflow-y-auto divide-y divide-border">
                       {formData.categoryIds.map((catId) => {
                         const cat = categories.find((c) => c.id === catId);
@@ -504,7 +496,6 @@ const RegisterBusiness = () => {
                                         ? "opacity-40 cursor-not-allowed"
                                         : "hover:bg-muted"
                                   }`}
-                                  title={isDisabled ? "Máximo 3 subcategorias" : undefined}
                                 >
                                   <span>{sub.name}</span>
                                   {isSelected && <CheckCircle className="h-4 w-4 text-primary" />}
@@ -516,8 +507,7 @@ const RegisterBusiness = () => {
                       })}
                       {subcategories.length === 0 && (
                         <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                          <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                          A carregar subcategorias...
+                          <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />A carregar subcategorias...
                         </div>
                       )}
                     </div>
@@ -536,31 +526,21 @@ const RegisterBusiness = () => {
             </div>
           )}
 
-          {/* ═══════════════════════════════════════
-              STEP 3 — Preview & Publish
-          ═══════════════════════════════════════ */}
+          {/* ═══════════ STEP 3 ═══════════ */}
           {step === 3 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-foreground">Pronto para publicar!</h1>
-                <p className="text-muted-foreground mt-1">
-                  É assim que o seu negócio vai aparecer
-                </p>
+                <p className="text-muted-foreground mt-1">É assim que o seu negócio vai aparecer</p>
               </div>
 
-              {/* Business card preview */}
               <div className="bg-card rounded-2xl border-2 border-primary/20 shadow-lg p-6 space-y-4">
                 <div className="flex items-start gap-4">
-                  {/* Avatar initial */}
                   <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-2xl font-bold text-primary">
-                      {formData.name.charAt(0).toUpperCase()}
-                    </span>
+                    <span className="text-2xl font-bold text-primary">{formData.name.charAt(0).toUpperCase()}</span>
                   </div>
                   <div className="min-w-0">
-                    <h2 className="text-lg font-bold text-foreground truncate">
-                      {formData.name}
-                    </h2>
+                    <h2 className="text-lg font-bold text-foreground truncate">{formData.name}</h2>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
                       <MapPin className="h-3.5 w-3.5" />
                       {formData.city}
@@ -568,7 +548,6 @@ const RegisterBusiness = () => {
                   </div>
                 </div>
 
-                {/* Subcategory badges */}
                 <div className="flex flex-wrap gap-1.5">
                   {selectedSubcategoryNames.map((name) => (
                     <Badge key={name} variant="secondary" className="text-xs">
@@ -577,13 +556,11 @@ const RegisterBusiness = () => {
                   ))}
                 </div>
 
-                {/* Phone masked */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Phone className="h-4 w-4" />
                   <span>{maskPhone(formData.phone)}</span>
                 </div>
 
-                {/* Category labels */}
                 <div className="text-xs text-muted-foreground">
                   <Building2 className="h-3 w-3 inline mr-1" />
                   {selectedCategoryNames.join(" · ")}
@@ -594,15 +571,10 @@ const RegisterBusiness = () => {
                 Pode completar o perfil com logo, descrição e mais detalhes após publicar.
               </p>
 
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="w-full h-14 text-base font-bold"
-              >
+              <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full h-14 text-base font-bold">
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    A publicar...
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />A publicar...
                   </>
                 ) : (
                   "🚀 Publicar o meu negócio agora"
