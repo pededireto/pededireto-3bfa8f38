@@ -298,18 +298,20 @@ export default function ImportByTextDialog() {
                       <td className="p-2 text-muted-foreground">{b.cta_whatsapp || "-"}</td>
                       <td className="p-2 text-muted-foreground">{b.cta_email || "-"}</td>
                       <td className="p-2 text-muted-foreground">
-                        {b.cta_website ? (
-                          
-                            href={b.cta_website.startsWith("http") ? b.cta_website : `https://${b.cta_website}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary underline truncate max-w-[120px] inline-block"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {b.cta_website}
-                          </a>
-                        ) : "-"}
-                      </td>
+                       <td className="p-2 text-muted-foreground">
+<td className="p-2 text-muted-foreground">
+  {b.cta_website ? (
+    
+      href={b.cta_website.startsWith("http") ? b.cta_website : `https://${b.cta_website}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary underline truncate max-w-[120px] inline-block"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {b.cta_website}
+    </a>
+  ) : "-"}
+</td>
                       <td className="p-2 text-muted-foreground">{b.address || "-"}</td>
                       <td className="p-2 text-muted-foreground">{b.owner_name || "-"}</td>
                       <td className="p-2 text-muted-foreground">{b.nif || "-"}</td>
