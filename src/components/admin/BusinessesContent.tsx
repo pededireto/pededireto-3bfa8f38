@@ -447,8 +447,11 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
                   <p className="font-medium">Formato esperado (.xlsx):</p>
                   <p className="text-muted-foreground">
                     Colunas: <code>name</code>, <code>category</code>, <code>subcategories</code>,{" "}
-                    <code>description</code>,<code>city</code>, <code>alcance</code>, <code>whatsapp</code>,{" "}
-                    <code>telefone</code>,<code>email</code>, <code>website</code>, <code>logo_url</code>
+                    <code>description</code>, <code>city</code>, <code>alcance</code>, <code>whatsapp</code>,{" "}
+                    <code>telefone</code>, <code>email</code>, <code>website</code>, <code>logo_url</code>,{" "}
+                    <code>address</code>, <code>owner_name</code>, <code>owner_email</code>, <code>owner_phone</code>,{" "}
+                    <code>nif</code>, <code>instagram</code>, <code>facebook</code>, <code>other_social_url</code>,{" "}
+                    <code>cta_booking_url</code>, <code>cta_order_url</code>
                   </p>
                   <p className="text-muted-foreground text-xs">
                     • Subcategorias separadas por <code>|</code> (ex: Canalizadores|Eletricidade)
