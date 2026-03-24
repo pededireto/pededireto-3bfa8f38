@@ -54,15 +54,15 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!anthropicKey) {
-      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY não configurada" }), {
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!geminiKey) {
+      return new Response(JSON.stringify({ error: "GEMINI_API_KEY não configurada" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const systemPrompt = `És um extractor de dados de negócios para a plataforma Pede Direto Portugal.
+    const prompt = `És um extractor de dados de negócios para a plataforma Pede Direto Portugal.
 Analisa o HTML e extrai informações de negócios/empresas.
 Responde APENAS com JSON válido, sem texto adicional, sem markdown, sem blocos de código.
 Estrutura obrigatória:
@@ -96,34 +96,40 @@ Regras:
 - Campos não encontrados = null, nunca string vazia
 - Não inventes dados — só extrai o que está na página
 - Para opening_hours usa: {"segunda":"09:00-18:00"} ou null
-- Fonte: ${source || "website"}`;
+- Fonte: ${source || "website"}
 
-    const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
+URL: ${url}
+
+${htmlContent}`;
+
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            maxOutputTokens: 8000,
+            temperature: 0.1,
+          },
+        }),
+        signal: AbortSignal.timeout(55000),
       },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 8000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: `URL: ${url}\n\n${htmlContent}` }],
-      }),
-      signal: AbortSignal.timeout(55000),
-    });
+    );
 
-    if (!claudeResponse.ok) {
-      const errText = await claudeResponse.text();
+    if (!geminiResponse.ok) {
+      const errText = await geminiResponse.text();
       return new Response(
-        JSON.stringify({ error: `Erro Claude API: ${claudeResponse.status} — ${errText.substring(0, 200)}` }),
+        JSON.stringify({ error: `Erro Gemini API: ${geminiResponse.status} — ${errText.substring(0, 200)}` }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const claudeData = await claudeResponse.json();
-    const rawText = claudeData?.content?.[0]?.text || "";
+    const geminiData = await geminiResponse.json();
+    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     let parsed: { businesses: any[] };
     try {
