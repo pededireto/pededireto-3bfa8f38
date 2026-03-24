@@ -261,24 +261,17 @@ export const useCreateBusiness = () => {
 
   return useMutation({
     mutationFn: async (business: Omit<Business, "id" | "created_at" | "updated_at">) => {
-      // 1. Criar o negócio
+      // Criar o negócio sempre inativo — a equipa ativa manualmente depois
       const { data, error } = await supabase
         .from("businesses")
-        .insert(business as any)
+        .insert({
+          ...business,
+          is_active: false,
+        } as any)
         .select()
         .single();
 
       if (error) throw error;
-
-      // 2. Registar o utilizador autenticado como owner
-      const { error: rpcError } = await supabase.rpc("register_business_and_set_owner", { p_business_id: data.id });
-
-      if (rpcError) {
-        // Negócio foi criado mas o owner não foi definido — logar o erro
-        // mas não bloquear (pode ser resolvido manualmente)
-        console.error("[useCreateBusiness] erro ao definir owner:", rpcError);
-      }
-
       return data;
     },
     onSuccess: () => {
