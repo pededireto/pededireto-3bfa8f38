@@ -36,7 +36,7 @@ const ClaimBusiness = () => {
   const [newCategoryId, setNewCategoryId] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  // Inline signup fields (for unauthenticated claim)
+  // Campos de signup inline (para utilizador não autenticado)
   const [signupName, setSignupName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
@@ -47,7 +47,7 @@ const ClaimBusiness = () => {
   const { claim, isLoading: isClaiming } = useClaimBusiness();
   const { data: categories = [] } = useCategories();
 
-  // Auto-claim saved business after email verification + login
+  // Auto-claim após confirmação de email + login
   useEffect(() => {
     const savedBusinessId = localStorage.getItem("claimedBusinessId");
     if (!savedBusinessId || !user || membershipLoading) return;
@@ -160,42 +160,8 @@ const ClaimBusiness = () => {
     }
   };
 
-  const handleCreateNew = async () => {
-    if (!newName || !newCategoryId || !newCity || !user) return;
-    setIsCreating(true);
-    try {
-      const slug = newName
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-
-      const { error: rpcError } = await supabase.rpc("register_business_with_owner" as any, {
-        p_name: newName,
-        p_slug: `${slug}-${Date.now()}`,
-        p_city: newCity,
-        p_category_id: newCategoryId,
-        p_owner_email: user.email || "",
-        p_registration_source: "claim_flow",
-      });
-
-      if (rpcError) throw rpcError;
-
-      toast({ title: "Pedido enviado!", description: "O negócio foi criado e está pendente de validação." });
-      window.location.href = BUSINESS_DASHBOARD_URL;
-    } catch (err: any) {
-      const detail = err?.details || err?.hint || err?.message || "Não foi possível criar o negócio.";
-      const code = err?.code ? ` (${err.code})` : "";
-      toast({ title: "Erro ao criar negócio", description: `${detail}${code}`, variant: "destructive" });
-      console.error("[ClaimBusiness] create error:", err);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleCreateOrRedirect = async () => {
-    // Always redirect to the simplified wizard
+  // FIX: redireciona para /register/business (wizard completo) em vez de tentar criar directamente
+  const handleCreateOrRedirect = () => {
     navigate("/register/business", {
       state: {
         prefill: {
@@ -205,10 +171,12 @@ const ClaimBusiness = () => {
         },
       },
     });
-    localStorage.setItem(
-      "registerBusinessPrefill",
-      JSON.stringify({ name: newName, city: newCity, categoryId: newCategoryId })
-    );
+    if (newName || newCity || newCategoryId) {
+      localStorage.setItem(
+        "registerBusinessPrefill",
+        JSON.stringify({ name: newName, city: newCity, categoryId: newCategoryId }),
+      );
+    }
   };
 
   return (
@@ -380,18 +348,10 @@ const ClaimBusiness = () => {
 
               <Button
                 onClick={handleCreateOrRedirect}
-                disabled={isCreating || !newName || !newCategoryId || !newCity}
+                disabled={!newName || !newCategoryId || !newCity}
                 className="w-full btn-cta-primary"
               >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />A criar...
-                  </>
-                ) : user ? (
-                  "Criar Negócio"
-                ) : (
-                  "Continuar para Registo Completo"
-                )}
+                {user ? "Continuar para Registo Completo" : "Continuar para Registo Completo"}
               </Button>
 
               <button
