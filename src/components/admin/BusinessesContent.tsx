@@ -277,7 +277,7 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             alcance,
             logo_url: row.logo_url?.trim() || null,
             cta_whatsapp: row.whatsapp?.trim() || null,
-            cta_phone: row.telefone?.trim() || null,
+            cta_phone: row.telefone?.trim() || row.phone?.trim() || null,
             cta_email: row.email?.trim() || null,
             cta_website: row.website?.trim() || null,
             cta_app: null,
@@ -298,6 +298,16 @@ const BusinessesContent = ({ businesses, categories }: BusinessesContentProps) =
             subscription_end_date: null,
             subscription_status: "inactive" as SubscriptionStatus,
             public_address: null,
+            address: row.address?.trim() || row.morada?.trim() || null,
+            owner_name: row.owner_name?.trim() || row.responsavel?.trim() || null,
+            owner_email: row.owner_email?.trim() || null,
+            owner_phone: row.owner_phone?.trim() || null,
+            nif: row.nif?.trim() || null,
+            instagram_url: row.instagram_url?.trim() || row.instagram?.trim() || null,
+            facebook_url: row.facebook_url?.trim() || row.facebook?.trim() || null,
+            other_social_url: row.other_social_url?.trim() || null,
+            cta_booking_url: row.cta_booking_url?.trim() || row.booking_url?.trim() || null,
+            cta_order_url: row.cta_order_url?.trim() || row.order_url?.trim() || null,
           };
 
           const result = await createBusiness.mutateAsync(businessData);
