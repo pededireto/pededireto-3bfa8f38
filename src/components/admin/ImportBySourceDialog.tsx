@@ -48,29 +48,160 @@ const generateSlug = (name: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
+// Indicador visual de campo preenchido/vazio
 const FieldValue = ({ label, value }: { label: string; value: string | null | undefined }) => (
-  <div className="flex items-center gap-2 py-1">
+  <div className="flex items-center gap-2 py-0.5">
     {value ? (
       <CheckCircle2 className="h-3.5 w-3.5 text-success flex-shrink-0" />
     ) : (
-      <Circle className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
+      <Circle className="h-3.5 w-3.5 text-muted-foreground/30 flex-shrink-0" />
     )}
-    <span className="text-xs text-muted-foreground min-w-[80px]">{label}</span>
-    <span className={`text-xs truncate ${value ? "text-foreground font-medium" : "text-muted-foreground/50 italic"}`}>
-      {value || "não detectado"}
+    <span className="text-xs text-muted-foreground min-w-[90px] flex-shrink-0">{label}</span>
+    <span
+      className={`text-xs truncate ${value ? "text-foreground font-medium" : "text-muted-foreground/40 italic"}`}
+      title={value || undefined}
+    >
+      {value || "—"}
     </span>
   </div>
 );
 
+// Formata horários de JSON para texto legível
 const formatOpeningHours = (hours: Record<string, string> | null): string => {
   if (!hours) return "";
   const dayNames: Record<string, string> = {
-    segunda: "Seg", terca: "Ter", quarta: "Qua", quinta: "Qui",
-    sexta: "Sex", sabado: "Sáb", domingo: "Dom",
+    segunda: "Seg",
+    terca: "Ter",
+    quarta: "Qua",
+    quinta: "Qui",
+    sexta: "Sex",
+    sabado: "Sáb",
+    domingo: "Dom",
   };
   return Object.entries(hours)
     .map(([day, time]) => `${dayNames[day] || day}: ${time}`)
     .join(" · ");
+};
+
+// Card de preview de um negócio organizado por secções
+const BusinessPreviewCard = ({
+  b,
+  index,
+  selected,
+  onToggle,
+}: {
+  b: ScrapedBusiness;
+  index: number;
+  selected: boolean;
+  onToggle: () => void;
+}) => {
+  const hoursText = formatOpeningHours(b.opening_hours);
+
+  return (
+    <div
+      className={`rounded-lg border p-4 cursor-pointer transition-all ${
+        selected ? "border-primary bg-primary/5" : "border-border opacity-50 hover:opacity-70"
+      }`}
+      onClick={onToggle}
+    >
+      {/* Header do card */}
+      <div className="flex items-center gap-2 mb-3">
+        <input type="checkbox" checked={selected} readOnly className="pointer-events-none accent-primary" />
+        <span className="font-semibold text-sm">{b.name}</span>
+        {/* Contador de campos preenchidos */}
+        <Badge variant="secondary" className="ml-auto text-[10px]">
+          {
+            [
+              b.description,
+              b.phone,
+              b.email,
+              b.address,
+              b.city,
+              b.website,
+              b.instagram_url,
+              b.facebook_url,
+              b.nif,
+              b.logo_url,
+              b.cta_booking_url,
+              b.cta_order_url,
+              b.other_social_url,
+              b.opening_hours ? "ok" : null,
+            ].filter(Boolean).length
+          }{" "}
+          campos detectados
+        </Badge>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+        {/* IDENTIDADE */}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-1">
+            📋 Identidade
+          </p>
+          <FieldValue label="Descrição" value={b.description} />
+          <FieldValue label="NIF" value={b.nif} />
+          <FieldValue label="Logótipo" value={b.logo_url} />
+        </div>
+
+        {/* LOCALIZAÇÃO */}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-1">
+            📍 Localização
+          </p>
+          <FieldValue label="Cidade" value={b.city} />
+          <FieldValue label="Morada" value={b.address} />
+        </div>
+
+        {/* CONTACTOS */}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">
+            📞 Contactos
+          </p>
+          <FieldValue label="Telefone" value={b.phone} />
+          <FieldValue label="WhatsApp" value={b.whatsapp} />
+          <FieldValue label="Email" value={b.email} />
+          <FieldValue label="Website" value={b.website} />
+        </div>
+
+        {/* RESPONSÁVEL */}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">
+            👤 Responsável
+          </p>
+          <FieldValue label="Nome" value={b.owner_name} />
+          <FieldValue label="Email" value={b.owner_email} />
+          <FieldValue label="Telefone" value={b.owner_phone} />
+        </div>
+
+        {/* REDES SOCIAIS */}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">
+            🌐 Redes Sociais
+          </p>
+          <FieldValue label="Instagram" value={b.instagram_url} />
+          <FieldValue label="Facebook" value={b.facebook_url} />
+          <FieldValue label="Outra" value={b.other_social_url} />
+        </div>
+
+        {/* CTAs */}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">🔗 CTAs</p>
+          <FieldValue label="Reservar" value={b.cta_booking_url} />
+          <FieldValue label="Pedir Online" value={b.cta_order_url} />
+        </div>
+
+        {/* HORÁRIOS — largura total */}
+        {hoursText && (
+          <div className="sm:col-span-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">
+              🕐 Horários
+            </p>
+            <p className="text-xs text-foreground leading-relaxed">{hoursText}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default function ImportBySourceDialog() {
@@ -117,21 +248,29 @@ export default function ImportBySourceDialog() {
 
       const results = data?.businesses || [];
       if (results.length === 0) {
-        toast({ title: "Sem resultados", description: "Nenhum negócio encontrado nesta página", variant: "destructive" });
+        toast({
+          title: "Sem resultados",
+          description: "Nenhum negócio encontrado nesta página",
+          variant: "destructive",
+        });
         return;
       }
       setBusinesses(results);
       setSelected(new Set(results.map((_: any, i: number) => i)));
       setStep(4);
     } catch (err: any) {
-      toast({ title: "Erro no scraping", description: err.message || "Erro desconhecido", variant: "destructive" });
+      toast({
+        title: "Erro no scraping",
+        description: err.message || "Erro desconhecido",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const toggleSelect = (idx: number) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(idx)) next.delete(idx);
       else next.add(idx);
@@ -154,7 +293,8 @@ export default function ImportBySourceDialog() {
     for (const biz of toImport) {
       try {
         const slug = generateSlug(biz.name.trim());
-        const { data, error } = await supabase.rpc("upsert_business_from_import", {
+
+        const { error } = await supabase.rpc("upsert_business_from_import" as any, {
           p_name: biz.name.trim(),
           p_slug: slug,
           p_city: biz.city || null,
@@ -170,8 +310,13 @@ export default function ImportBySourceDialog() {
           p_description: biz.description || null,
           p_instagram_url: biz.instagram_url || null,
           p_facebook_url: biz.facebook_url || null,
+          p_other_social_url: biz.other_social_url || null,
+          p_logo_url: biz.logo_url || null,
+          p_opening_hours: biz.opening_hours || null,
+          p_cta_booking_url: biz.cta_booking_url || null,
+          p_cta_order_url: biz.cta_order_url || null,
           p_category_id: categoryId || null,
-          p_subcategory_id: (subcategoryId && subcategoryId !== "none") ? subcategoryId : null,
+          p_subcategory_id: subcategoryId && subcategoryId !== "none" ? subcategoryId : null,
           p_registration_source: `scraping_${source}`,
         });
 
@@ -187,7 +332,9 @@ export default function ImportBySourceDialog() {
 
     // Audit log
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         await supabase.from("audit_logs").insert({
           user_id: user.id,
@@ -196,7 +343,13 @@ export default function ImportBySourceDialog() {
           target_table: "businesses",
           target_id: source as string,
           target_name: `Importação ${SOURCES[source as SourceKey]?.label}: ${success} negócios`,
-          changes: { source, url, total: toImport.length, success, errors: errors.length } as any,
+          changes: {
+            source,
+            url,
+            total: toImport.length,
+            success,
+            errors: errors.length,
+          } as any,
         });
       }
     } catch {}
@@ -212,27 +365,39 @@ export default function ImportBySourceDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (loading || importing) return; setOpen(o); if (!o) reset(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (loading || importing) return;
+        setOpen(o);
+        if (!o) reset();
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline">
           <Bug className="h-4 w-4 mr-2" />
           Importar por Fonte
         </Button>
       </DialogTrigger>
+
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Importar por Fonte — Passo {step}/4</DialogTitle>
         </DialogHeader>
 
-        {/* Step 1: Source */}
+        {/* ── Passo 1: Fonte ─────────────────────────────────── */}
         {step === 1 && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">Escolhe a fonte de dados para importação.</p>
             <Select value={source} onValueChange={(v) => setSource(v as SourceKey)}>
-              <SelectTrigger><SelectValue placeholder="Selecionar fonte..." /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar fonte..." />
+              </SelectTrigger>
               <SelectContent>
                 {Object.entries(SOURCES).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {cfg.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -244,12 +409,12 @@ export default function ImportBySourceDialog() {
           </div>
         )}
 
-        {/* Step 2: URL */}
+        {/* ── Passo 2: URL ───────────────────────────────────── */}
         {step === 2 && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Insere o URL da listagem ou negócio de <strong>{SOURCES[source as SourceKey]?.label}</strong>.
-              O domínio deve conter <code>{SOURCES[source as SourceKey]?.domain}</code>.
+              Insere o URL da listagem ou negócio de <strong>{SOURCES[source as SourceKey]?.label}</strong>. O domínio
+              deve conter <code>{SOURCES[source as SourceKey]?.domain}</code>.
             </p>
             <Input
               placeholder={`https://www.${SOURCES[source as SourceKey]?.domain}/...`}
@@ -270,25 +435,40 @@ export default function ImportBySourceDialog() {
           </div>
         )}
 
-        {/* Step 3: Category */}
+        {/* ── Passo 3: Categoria ─────────────────────────────── */}
         {step === 3 && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">Associa uma categoria Pede Direto aos negócios importados.</p>
-            <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubcategoryId(""); }}>
-              <SelectTrigger><SelectValue placeholder="Categoria (obrigatória)" /></SelectTrigger>
+            <Select
+              value={categoryId}
+              onValueChange={(v) => {
+                setCategoryId(v);
+                setSubcategoryId("");
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Categoria (obrigatória)" />
+              </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
             {categoryId && subcategories.length > 0 && (
               <Select value={subcategoryId} onValueChange={setSubcategoryId}>
-                <SelectTrigger><SelectValue placeholder="Subcategoria (opcional)" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Subcategoria (opcional)" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhuma</SelectItem>
                   {subcategories.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -299,8 +479,9 @@ export default function ImportBySourceDialog() {
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
                 <p className="font-medium text-foreground">A extrair negócios...</p>
                 <p className="text-sm text-muted-foreground">
-                  Este processo pode demorar até 60 segundos dependendo da página.
-                  <br />Por favor aguarda e não feches esta janela.
+                  Este processo pode demorar até 60 segundos.
+                  <br />
+                  Por favor aguarda e não feches esta janela.
                 </p>
               </div>
             )}
@@ -311,16 +492,20 @@ export default function ImportBySourceDialog() {
               </Button>
               <Button onClick={handleScrape} disabled={!categoryId || loading}>
                 {loading ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> A extrair...</>
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> A extrair...
+                  </>
                 ) : (
-                  <>Pré-visualizar <ArrowRight className="h-4 w-4 ml-2" /></>
+                  <>
+                    Pré-visualizar <ArrowRight className="h-4 w-4 ml-2" />
+                  </>
                 )}
               </Button>
             </div>
           </div>
         )}
 
-        {/* Step 4: Preview organised by sections */}
+        {/* ── Passo 4: Preview por secções ───────────────────── */}
         {step === 4 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -335,85 +520,41 @@ export default function ImportBySourceDialog() {
 
             <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
               {businesses.map((b, i) => (
-                <div
+                <BusinessPreviewCard
                   key={i}
-                  className={`rounded-lg border p-4 cursor-pointer transition-colors ${
-                    selected.has(i) ? "border-primary bg-primary/5" : "border-border opacity-50"
-                  }`}
-                  onClick={() => toggleSelect(i)}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <input type="checkbox" checked={selected.has(i)} readOnly className="pointer-events-none" />
-                    <span className="font-semibold text-sm">{b.name}</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0">
-                    {/* Identidade */}
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">Identidade</p>
-                      <FieldValue label="Descrição" value={b.description} />
-                      <FieldValue label="NIF" value={b.nif} />
-                      <FieldValue label="Logótipo" value={b.logo_url} />
-                    </div>
-
-                    {/* Localização */}
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">Localização</p>
-                      <FieldValue label="Cidade" value={b.city} />
-                      <FieldValue label="Morada" value={b.address} />
-                    </div>
-
-                    {/* Contactos */}
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">Contactos</p>
-                      <FieldValue label="Telefone" value={b.phone} />
-                      <FieldValue label="WhatsApp" value={b.whatsapp} />
-                      <FieldValue label="Email" value={b.email} />
-                      <FieldValue label="Website" value={b.website} />
-                    </div>
-
-                    {/* Redes Sociais */}
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">Redes Sociais</p>
-                      <FieldValue label="Instagram" value={b.instagram_url} />
-                      <FieldValue label="Facebook" value={b.facebook_url} />
-                      <FieldValue label="Outra" value={b.other_social_url} />
-                    </div>
-
-                    {/* Horários */}
-                    {b.opening_hours && (
-                      <div className="sm:col-span-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">Horários</p>
-                        <p className="text-xs text-foreground">{formatOpeningHours(b.opening_hours)}</p>
-                      </div>
-                    )}
-
-                    {/* CTAs */}
-                    {(b.cta_booking_url || b.cta_order_url) && (
-                      <div className="sm:col-span-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-2">CTAs</p>
-                        <FieldValue label="Reservar" value={b.cta_booking_url} />
-                        <FieldValue label="Pedir Online" value={b.cta_order_url} />
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  b={b}
+                  index={i}
+                  selected={selected.has(i)}
+                  onToggle={() => toggleSelect(i)}
+                />
               ))}
             </div>
 
             <p className="text-xs text-muted-foreground">
-              ⚠️ Negócios importados como <strong>inativos</strong> com registo <code>scraping_{source}</code>.
-              Se já existirem pelo nome, os dados serão atualizados.
+              ⚠️ Negócios importados como <strong>inativos</strong> com registo <code>scraping_{source}</code>. Se já
+              existirem pelo nome, os dados serão actualizados sem sobrescrever campos já preenchidos.
             </p>
+
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => { setStep(3); setBusinesses([]); setSelected(new Set()); }}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStep(3);
+                  setBusinesses([]);
+                  setSelected(new Set());
+                }}
+              >
                 <X className="h-4 w-4 mr-2" /> Cancelar
               </Button>
               <Button onClick={handleImport} disabled={importing || selected.size === 0} className="btn-cta-primary">
                 {importing ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> A importar...</>
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> A importar...
+                  </>
                 ) : (
-                  <><Check className="h-4 w-4 mr-2" /> Importar Selecionados ({selected.size})</>
+                  <>
+                    <Check className="h-4 w-4 mr-2" /> Importar Selecionados ({selected.size})
+                  </>
                 )}
               </Button>
             </div>
