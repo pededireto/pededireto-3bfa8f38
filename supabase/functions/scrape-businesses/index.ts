@@ -95,7 +95,8 @@ Regras:
 - Máximo ${limit} negócios
 - Campos não encontrados = null, nunca string vazia
 - Não inventes dados — só extrai o que está na página
-- Para opening_hours usa: {"segunda":"09:00-18:00"} ou null`;
+- Para opening_hours usa: {"segunda":"09:00-18:00"} ou null
+- Fonte: ${source || "website"}`;
 
     const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
