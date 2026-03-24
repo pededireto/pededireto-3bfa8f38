@@ -4,7 +4,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { useSavedSearches, useDeleteSavedSearch } from "@/hooks/useSavedSearches";
 import { useUserFavorites, useToggleFavorite } from "@/hooks/useUserFavorites";
-import { useConsumerRequests, useConsumerRequestsMeta, useConsumerRequestReviews, type RequestReviewInfo } from "@/hooks/useServiceRequests";
+import {
+  useConsumerRequests,
+  useConsumerRequestsMeta,
+  useConsumerRequestReviews,
+  type RequestReviewInfo,
+} from "@/hooks/useServiceRequests";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
@@ -91,13 +96,9 @@ const UserDashboard = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       // Get profile id first
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
+      const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
       if (!prof) return [];
-      
+
       const { data, error } = await supabase
         .from("business_users")
         .select("business_id, role, businesses:business_id(id, name, slug)")
@@ -161,9 +162,7 @@ const UserDashboard = () => {
       <main className="flex-1 container py-8 space-y-6">
         {/* ── A — Header personalizado ─────────────────────────────────── */}
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            Olá, {firstName}! 👋
-          </h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Olá, {firstName}! 👋</h1>
           <p className="text-muted-foreground mt-0.5 text-sm">
             {new Date().toLocaleDateString("pt-PT", {
               weekday: "long",
@@ -209,7 +208,10 @@ const UserDashboard = () => {
               </div>
               <div className="space-y-2">
                 {myBusinesses.map((b) => (
-                  <div key={b.business_id} className="flex items-center justify-between bg-background/60 rounded-lg px-4 py-2.5">
+                  <div
+                    key={b.business_id}
+                    className="flex items-center justify-between bg-background/60 rounded-lg px-4 py-2.5"
+                  >
                     <span className="text-sm font-medium text-foreground">{b.businesses.name}</span>
                     <Button asChild size="sm" variant="outline" className="gap-1.5 h-8 text-xs">
                       <Link to={`/business-dashboard?bid=${b.business_id}`}>
@@ -233,7 +235,7 @@ const UserDashboard = () => {
                   <p className="text-sm text-muted-foreground">Ainda não tens nenhum negócio registado</p>
                 </div>
                 <Button asChild size="sm" variant="outline" className="gap-2 flex-shrink-0">
-                  <Link to="/registar-negocio">
+                  <Link to="/claim-business">
                     <Store className="h-4 w-4" />
                     Registar Negócio
                   </Link>
@@ -378,14 +380,7 @@ const UserDashboard = () => {
                   const meta = (requestMeta as any)[req.id];
                   const reviews: RequestReviewInfo[] =
                     (requestReviews as Record<string, RequestReviewInfo[]>)[req.id] || [];
-                  return (
-                    <ConsumerRequestCard
-                      key={req.id}
-                      req={req}
-                      meta={meta}
-                      reviews={reviews}
-                    />
-                  );
+                  return <ConsumerRequestCard key={req.id} req={req} meta={meta} reviews={reviews} />;
                 })}
               </div>
             )}
@@ -418,7 +413,9 @@ const UserDashboard = () => {
                         {biz.logo_url ? (
                           <img src={biz.logo_url} alt={biz.name} className="max-w-full max-h-full object-contain p-2" />
                         ) : (
-                          <span className="text-sm font-bold text-primary/40 text-center leading-tight line-clamp-2 px-2">{biz.name}</span>
+                          <span className="text-sm font-bold text-primary/40 text-center leading-tight line-clamp-2 px-2">
+                            {biz.name}
+                          </span>
                         )}
                       </div>
                       <CardContent className="p-4">
