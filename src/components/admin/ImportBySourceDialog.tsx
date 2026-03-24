@@ -8,15 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAllCategories } from "@/hooks/useCategories";
 import { useSubcategories } from "@/hooks/useSubcategories";
 import { supabase } from "@/integrations/supabase/client";
-import { Bug, Loader2, ArrowLeft, ArrowRight, Check, X, CheckCircle2, Circle } from "lucide-react";
-
-const SOURCES = {
-  guianet: { label: "Guianet", domain: "guianet.pt" },
-  ubereats: { label: "UberEats", domain: "ubereats.com" },
-  bolt_food: { label: "Bolt Food", domain: "food.bolt.eu" },
-} as const;
-
-type SourceKey = keyof typeof SOURCES;
+import { Globe, Loader2, ArrowLeft, ArrowRight, Check, X, CheckCircle2, Circle } from "lucide-react";
 
 interface ScrapedBusiness {
   name: string;
@@ -48,7 +40,16 @@ const generateSlug = (name: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-// Indicador visual de campo preenchido/vazio
+// Detect source from URL
+const detectSource = (url: string): { key: string; label: string; icon: string } => {
+  if (url.includes("facebook.com") || url.includes("fb.com")) return { key: "facebook", label: "Facebook", icon: "🟦" };
+  if (url.includes("instagram.com")) return { key: "instagram", label: "Instagram", icon: "🟧" };
+  if (url.includes("ubereats.com")) return { key: "ubereats", label: "UberEats", icon: "🟢" };
+  if (url.includes("bolt.eu") || url.includes("food.bolt")) return { key: "bolt_food", label: "Bolt Food", icon: "⚡" };
+  if (url.includes("guianet.pt")) return { key: "guianet", label: "Guianet", icon: "📋" };
+  return { key: "website", label: "Website", icon: "🌐" };
+};
+
 const FieldValue = ({ label, value }: { label: string; value: string | null | undefined }) => (
   <div className="flex items-center gap-2 py-0.5">
     {value ? (
@@ -66,37 +67,23 @@ const FieldValue = ({ label, value }: { label: string; value: string | null | un
   </div>
 );
 
-// Formata horários de JSON para texto legível
 const formatOpeningHours = (hours: Record<string, string> | null): string => {
   if (!hours) return "";
   const dayNames: Record<string, string> = {
-    segunda: "Seg",
-    terca: "Ter",
-    quarta: "Qua",
-    quinta: "Qui",
-    sexta: "Sex",
-    sabado: "Sáb",
-    domingo: "Dom",
+    segunda: "Seg", terca: "Ter", quarta: "Qua", quinta: "Qui",
+    sexta: "Sex", sabado: "Sáb", domingo: "Dom",
   };
   return Object.entries(hours)
     .map(([day, time]) => `${dayNames[day] || day}: ${time}`)
     .join(" · ");
 };
 
-// Card de preview de um negócio organizado por secções
 const BusinessPreviewCard = ({
-  b,
-  index,
-  selected,
-  onToggle,
+  b, index, selected, onToggle,
 }: {
-  b: ScrapedBusiness;
-  index: number;
-  selected: boolean;
-  onToggle: () => void;
+  b: ScrapedBusiness; index: number; selected: boolean; onToggle: () => void;
 }) => {
   const hoursText = formatOpeningHours(b.opening_hours);
-
   return (
     <div
       className={`rounded-lg border p-4 cursor-pointer transition-all ${
@@ -104,98 +91,56 @@ const BusinessPreviewCard = ({
       }`}
       onClick={onToggle}
     >
-      {/* Header do card */}
       <div className="flex items-center gap-2 mb-3">
         <input type="checkbox" checked={selected} readOnly className="pointer-events-none accent-primary" />
         <span className="font-semibold text-sm">{b.name}</span>
-        {/* Contador de campos preenchidos */}
         <Badge variant="secondary" className="ml-auto text-[10px]">
-          {
-            [
-              b.description,
-              b.phone,
-              b.email,
-              b.address,
-              b.city,
-              b.website,
-              b.instagram_url,
-              b.facebook_url,
-              b.nif,
-              b.logo_url,
-              b.cta_booking_url,
-              b.cta_order_url,
-              b.other_social_url,
-              b.opening_hours ? "ok" : null,
-            ].filter(Boolean).length
-          }{" "}
-          campos detectados
+          {[b.description, b.phone, b.email, b.address, b.city, b.website,
+            b.instagram_url, b.facebook_url, b.nif, b.logo_url,
+            b.cta_booking_url, b.cta_order_url, b.other_social_url,
+            b.opening_hours ? "ok" : null,
+          ].filter(Boolean).length} campos
         </Badge>
       </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-        {/* IDENTIDADE */}
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-1">
-            📋 Identidade
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-1">📋 Identidade</p>
           <FieldValue label="Descrição" value={b.description} />
           <FieldValue label="NIF" value={b.nif} />
           <FieldValue label="Logótipo" value={b.logo_url} />
         </div>
-
-        {/* LOCALIZAÇÃO */}
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-1">
-            📍 Localização
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-1">📍 Localização</p>
           <FieldValue label="Cidade" value={b.city} />
           <FieldValue label="Morada" value={b.address} />
         </div>
-
-        {/* CONTACTOS */}
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">
-            📞 Contactos
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">📞 Contactos</p>
           <FieldValue label="Telefone" value={b.phone} />
           <FieldValue label="WhatsApp" value={b.whatsapp} />
           <FieldValue label="Email" value={b.email} />
           <FieldValue label="Website" value={b.website} />
         </div>
-
-        {/* RESPONSÁVEL */}
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">
-            👤 Responsável
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">👤 Responsável</p>
           <FieldValue label="Nome" value={b.owner_name} />
           <FieldValue label="Email" value={b.owner_email} />
           <FieldValue label="Telefone" value={b.owner_phone} />
         </div>
-
-        {/* REDES SOCIAIS */}
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">
-            🌐 Redes Sociais
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">🌐 Redes Sociais</p>
           <FieldValue label="Instagram" value={b.instagram_url} />
           <FieldValue label="Facebook" value={b.facebook_url} />
           <FieldValue label="Outra" value={b.other_social_url} />
         </div>
-
-        {/* CTAs */}
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">🔗 CTAs</p>
           <FieldValue label="Reservar" value={b.cta_booking_url} />
           <FieldValue label="Pedir Online" value={b.cta_order_url} />
         </div>
-
-        {/* HORÁRIOS — largura total */}
         {hoursText && (
           <div className="sm:col-span-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">
-              🕐 Horários
-            </p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 mt-3">🕐 Horários</p>
             <p className="text-xs text-foreground leading-relaxed">{hoursText}</p>
           </div>
         )}
@@ -210,7 +155,6 @@ export default function ImportBySourceDialog() {
 
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
-  const [source, setSource] = useState<SourceKey | "">("");
   const [url, setUrl] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
@@ -223,7 +167,6 @@ export default function ImportBySourceDialog() {
 
   const reset = () => {
     setStep(1);
-    setSource("");
     setUrl("");
     setCategoryId("");
     setSubcategoryId("");
@@ -233,37 +176,30 @@ export default function ImportBySourceDialog() {
     setImporting(false);
   };
 
-  const urlValid = source && url && url.includes(SOURCES[source as SourceKey]?.domain || "___");
+  const urlValid = url.trim().startsWith("https://") || url.trim().startsWith("http://");
+  const detectedSource = url ? detectSource(url) : null;
 
   const handleScrape = async () => {
-    if (!source || !url || !categoryId) return;
+    if (!url || !categoryId) return;
     setLoading(true);
     try {
+      const source = detectedSource?.key || "website";
       const { data, error } = await supabase.functions.invoke("scrape-businesses", {
         body: { source, url, limit: 50 },
       });
-
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       const results = data?.businesses || [];
       if (results.length === 0) {
-        toast({
-          title: "Sem resultados",
-          description: "Nenhum negócio encontrado nesta página",
-          variant: "destructive",
-        });
+        toast({ title: "Sem resultados", description: "Nenhum negócio encontrado nesta página", variant: "destructive" });
         return;
       }
       setBusinesses(results);
       setSelected(new Set(results.map((_: any, i: number) => i)));
-      setStep(4);
+      setStep(3);
     } catch (err: any) {
-      toast({
-        title: "Erro no scraping",
-        description: err.message || "Erro desconhecido",
-        variant: "destructive",
-      });
+      toast({ title: "Erro no scraping", description: err.message || "Erro desconhecido", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -289,11 +225,11 @@ export default function ImportBySourceDialog() {
     setImporting(true);
     let success = 0;
     const errors: string[] = [];
+    const source = detectedSource?.key || "website";
 
     for (const biz of toImport) {
       try {
         const slug = generateSlug(biz.name.trim());
-
         const { error } = await supabase.rpc("upsert_business_from_import" as any, {
           p_name: biz.name.trim(),
           p_slug: slug,
@@ -319,37 +255,21 @@ export default function ImportBySourceDialog() {
           p_subcategory_id: subcategoryId && subcategoryId !== "none" ? subcategoryId : null,
           p_registration_source: `scraping_${source}`,
         });
-
-        if (error) {
-          errors.push(`${biz.name}: ${error.message}`);
-        } else {
-          success++;
-        }
+        if (error) errors.push(`${biz.name}: ${error.message}`);
+        else success++;
       } catch (err: any) {
         errors.push(`${biz.name}: ${err.message}`);
       }
     }
 
-    // Audit log
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from("audit_logs").insert({
-          user_id: user.id,
-          user_email: user.email,
-          action: "import_scraping",
-          target_table: "businesses",
-          target_id: source as string,
-          target_name: `Importação ${SOURCES[source as SourceKey]?.label}: ${success} negócios`,
-          changes: {
-            source,
-            url,
-            total: toImport.length,
-            success,
-            errors: errors.length,
-          } as any,
+          user_id: user.id, user_email: user.email,
+          action: "import_scraping", target_table: "businesses",
+          target_id: source, target_name: `Importação ${detectedSource?.label || "URL"}: ${success} negócios`,
+          changes: { source, url, total: toImport.length, success, errors: errors.length } as any,
         });
       }
     } catch {}
@@ -359,116 +279,64 @@ export default function ImportBySourceDialog() {
       description: `✅ ${success} importados${errors.length > 0 ? ` · ❌ ${errors.length} erros` : ""}`,
       variant: errors.length > 0 ? "destructive" : "default",
     });
-
     setOpen(false);
     reset();
   };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (loading || importing) return;
-        setOpen(o);
-        if (!o) reset();
-      }}
-    >
+    <Dialog open={open} onOpenChange={(o) => { if (loading || importing) return; setOpen(o); if (!o) reset(); }}>
       <DialogTrigger asChild>
         <Button variant="outline">
-          <Bug className="h-4 w-4 mr-2" />
+          <Globe className="h-4 w-4 mr-2" />
           Importar por Fonte
         </Button>
       </DialogTrigger>
 
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Importar por Fonte — Passo {step}/4</DialogTitle>
+          <DialogTitle>Importar por URL — Passo {step}/3</DialogTitle>
         </DialogHeader>
 
-        {/* ── Passo 1: Fonte ─────────────────────────────────── */}
+        {/* ── Passo 1: URL + Categoria ── */}
         {step === 1 && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Escolhe a fonte de dados para importação.</p>
-            <Select value={source} onValueChange={(v) => setSource(v as SourceKey)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecionar fonte..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(SOURCES).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key}>
-                    {cfg.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex justify-end">
-              <Button onClick={() => setStep(2)} disabled={!source}>
-                Seguinte <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Passo 2: URL ───────────────────────────────────── */}
-        {step === 2 && (
-          <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Insere o URL da listagem ou negócio de <strong>{SOURCES[source as SourceKey]?.label}</strong>. O domínio
-              deve conter <code>{SOURCES[source as SourceKey]?.domain}</code>.
+              Cola o URL de qualquer página — site do negócio, Facebook, Instagram, directório, etc.
             </p>
-            <Input
-              placeholder={`https://www.${SOURCES[source as SourceKey]?.domain}/...`}
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-            />
-            {url && !urlValid && (
-              <p className="text-xs text-destructive">URL deve pertencer a {SOURCES[source as SourceKey]?.domain}</p>
-            )}
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(1)}>
-                <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
-              </Button>
-              <Button onClick={() => setStep(3)} disabled={!urlValid}>
-                Seguinte <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+            <div className="space-y-2">
+              <Input
+                placeholder="https://..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+              />
+              {url && detectedSource && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {detectedSource.icon} {detectedSource.label}
+                  </Badge>
+                  {!urlValid && (
+                    <p className="text-xs text-destructive">URL deve começar com https:// ou http://</p>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        )}
 
-        {/* ── Passo 3: Categoria ─────────────────────────────── */}
-        {step === 3 && (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Associa uma categoria Pede Direto aos negócios importados.</p>
-            <Select
-              value={categoryId}
-              onValueChange={(v) => {
-                setCategoryId(v);
-                setSubcategoryId("");
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Categoria (obrigatória)" />
-              </SelectTrigger>
+            <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubcategoryId(""); }}>
+              <SelectTrigger><SelectValue placeholder="Categoria (obrigatória)" /></SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             {categoryId && subcategories.length > 0 && (
               <Select value={subcategoryId} onValueChange={setSubcategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Subcategoria (opcional)" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Subcategoria (opcional)" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhuma</SelectItem>
                   {subcategories.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -479,34 +347,28 @@ export default function ImportBySourceDialog() {
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
                 <p className="font-medium text-foreground">A extrair negócios...</p>
                 <p className="text-sm text-muted-foreground">
-                  Este processo pode demorar até 60 segundos.
-                  <br />
+                  Este processo pode demorar até 60 segundos.<br />
                   Por favor aguarda e não feches esta janela.
                 </p>
               </div>
             )}
 
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(2)} disabled={loading}>
-                <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
-              </Button>
-              <Button onClick={handleScrape} disabled={!categoryId || loading}>
+            <div className="flex justify-end">
+              <Button onClick={handleScrape} disabled={!urlValid || !categoryId || loading}>
                 {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> A extrair...
-                  </>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> A extrair...</>
                 ) : (
-                  <>
-                    Pré-visualizar <ArrowRight className="h-4 w-4 ml-2" />
-                  </>
+                  <>Pré-visualizar <ArrowRight className="h-4 w-4 ml-2" /></>
                 )}
               </Button>
             </div>
           </div>
         )}
 
-        {/* ── Passo 4: Preview por secções ───────────────────── */}
-        {step === 4 && (
+        {/* ── Passo 2 (skipped — now merged into 1) ── */}
+
+        {/* ── Passo 3: Preview ── */}
+        {step === 3 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -520,41 +382,24 @@ export default function ImportBySourceDialog() {
 
             <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
               {businesses.map((b, i) => (
-                <BusinessPreviewCard
-                  key={i}
-                  b={b}
-                  index={i}
-                  selected={selected.has(i)}
-                  onToggle={() => toggleSelect(i)}
-                />
+                <BusinessPreviewCard key={i} b={b} index={i} selected={selected.has(i)} onToggle={() => toggleSelect(i)} />
               ))}
             </div>
 
             <p className="text-xs text-muted-foreground">
-              ⚠️ Negócios importados como <strong>inativos</strong> com registo <code>scraping_{source}</code>. Se já
-              existirem pelo nome, os dados serão actualizados sem sobrescrever campos já preenchidos.
+              ⚠️ Negócios importados como <strong>inativos</strong> com registo <code>scraping_{detectedSource?.key || "website"}</code>.
+              Se já existirem pelo nome, os dados serão actualizados sem sobrescrever campos já preenchidos.
             </p>
 
             <div className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setStep(3);
-                  setBusinesses([]);
-                  setSelected(new Set());
-                }}
-              >
+              <Button variant="outline" onClick={() => { setStep(1); setBusinesses([]); setSelected(new Set()); }}>
                 <X className="h-4 w-4 mr-2" /> Cancelar
               </Button>
               <Button onClick={handleImport} disabled={importing || selected.size === 0} className="btn-cta-primary">
                 {importing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> A importar...
-                  </>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> A importar...</>
                 ) : (
-                  <>
-                    <Check className="h-4 w-4 mr-2" /> Importar Selecionados ({selected.size})
-                  </>
+                  <><Check className="h-4 w-4 mr-2" /> Importar Selecionados ({selected.size})</>
                 )}
               </Button>
             </div>
