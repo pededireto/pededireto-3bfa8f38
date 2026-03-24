@@ -16,7 +16,6 @@ export const useBusinessCityNames = (businessId: string | undefined) => {
         .select("city_name, is_primary")
         .eq("business_id", businessId)
         .order("is_primary", { ascending: false });
-
       if (error) throw error;
       return (data || []) as BusinessCity[];
     },
@@ -24,9 +23,39 @@ export const useBusinessCityNames = (businessId: string | undefined) => {
   });
 };
 
+/**
+ * Batch fetch cities for multiple businesses — UMA única query para toda a lista.
+ * Devolve Map<business_id, BusinessCity[]>
+ */
+export const useBusinessCityNamesBatch = (businessIds: string[]) => {
+  const ids = businessIds.filter(Boolean);
+  return useQuery({
+    queryKey: ["business_cities_batch", ids.slice().sort().join(",")],
+    queryFn: async (): Promise<Map<string, BusinessCity[]>> => {
+      if (ids.length === 0) return new Map();
+      const { data, error } = await supabase
+        .from("business_cities")
+        .select("business_id, city_name, is_primary")
+        .in("business_id", ids)
+        .order("is_primary", { ascending: false });
+      if (error) throw error;
+      const map = new Map<string, BusinessCity[]>();
+      for (const row of (data || []) as any[]) {
+        if (!map.has(row.business_id)) map.set(row.business_id, []);
+        map.get(row.business_id)!.push({
+          city_name: row.city_name,
+          is_primary: row.is_primary,
+        });
+      }
+      return map;
+    },
+    enabled: ids.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useSyncBusinessCities = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({
       businessId,
@@ -37,33 +66,20 @@ export const useSyncBusinessCities = () => {
       cities: string[];
       primaryCity: string;
     }) => {
-      // 1. Delete existing
-      const { error: deleteError } = await supabase
-        .from("business_cities")
-        .delete()
-        .eq("business_id", businessId);
-
+      const { error: deleteError } = await supabase.from("business_cities").delete().eq("business_id", businessId);
       if (deleteError) throw deleteError;
-
-      // 2. Insert new
       if (cities.length === 0) return;
-
       const rows = cities.map((city) => ({
         business_id: businessId,
         city_name: city.trim(),
         is_primary: city.trim() === primaryCity.trim(),
       }));
-
-      const { error: insertError } = await supabase
-        .from("business_cities")
-        .insert(rows);
-
+      const { error: insertError } = await supabase.from("business_cities").insert(rows);
       if (insertError) throw insertError;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["business_cities", variables.businessId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["business_cities", variables.businessId] });
+      queryClient.invalidateQueries({ queryKey: ["business_cities_batch"] });
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
       queryClient.invalidateQueries({ queryKey: ["business"] });
     },
@@ -73,9 +89,6 @@ export const useSyncBusinessCities = () => {
   });
 };
 
-/**
- * Parse a city string that may contain separators (| or ,) into an array of trimmed city names
- */
 export function parseCityString(cityStr: string): string[] {
   if (!cityStr) return [];
   return cityStr
