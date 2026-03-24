@@ -1,179 +1,241 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-Deno.serve(async (req: Request) => {
+serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { url, source, limit = 20 } = await req.json();
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("Não autorizado");
 
-    if (!url || typeof url !== "string") {
-      return new Response(JSON.stringify({ error: "URL obrigatório" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    try {
-      new URL(url);
-    } catch {
-      return new Response(JSON.stringify({ error: "URL inválido" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    let htmlContent = "";
-    try {
-      const fetchResponse = await fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; PedeDiretoBot/1.0)",
-          Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
-          "Accept-Language": "pt-PT,pt;q=0.9",
-        },
-        signal: AbortSignal.timeout(20000),
-      });
-
-      if (!fetchResponse.ok) {
-        return new Response(JSON.stringify({ error: `Erro ao aceder ao URL: HTTP ${fetchResponse.status}` }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      htmlContent = await fetchResponse.text();
-      if (htmlContent.length > 80000) htmlContent = htmlContent.substring(0, 80000);
-    } catch (fetchErr: any) {
-      return new Response(JSON.stringify({ error: `Não foi possível aceder ao URL: ${fetchErr.message}` }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!anthropicKey) {
-      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY não configurada" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const systemPrompt = `És um extractor de dados de negócios para a plataforma Pede Direto Portugal.
-Analisa o HTML e extrai informações de negócios/empresas.
-Responde APENAS com JSON válido, sem texto adicional, sem markdown, sem blocos de código.
-Estrutura obrigatória:
-{
-  "businesses": [
-    {
-      "name": "string",
-      "description": null,
-      "address": null,
-      "city": null,
-      "phone": null,
-      "whatsapp": null,
-      "email": null,
-      "owner_email": null,
-      "owner_name": null,
-      "owner_phone": null,
-      "website": null,
-      "nif": null,
-      "instagram_url": null,
-      "facebook_url": null,
-      "other_social_url": null,
-      "logo_url": null,
-      "opening_hours": null,
-      "cta_booking_url": null,
-      "cta_order_url": null
-    }
-  ]
-}
-Regras:
-- Máximo ${limit} negócios
-- Campos não encontrados = null, nunca string vazia
-- Não inventes dados — só extrai o que está na página
-- Para opening_hours usa: {"segunda":"09:00-18:00"} ou null
-- Fonte: ${source || "website"}`;
-
-    const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 8000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: `URL: ${url}\n\n${htmlContent}` }],
-      }),
-      signal: AbortSignal.timeout(55000),
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader } },
     });
 
-    if (!claudeResponse.ok) {
-      const errText = await claudeResponse.text();
+    const { data: isAdmin } = await supabase.rpc("is_admin");
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: "Apenas administradores" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { source, url, limit = 50 } = await req.json();
+
+    if (!url || (!url.startsWith("https://") && !url.startsWith("http://"))) {
       return new Response(
-        JSON.stringify({ error: `Erro Claude API: ${claudeResponse.status} — ${errText.substring(0, 200)}` }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "URL deve começar com https:// ou http://" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const claudeData = await claudeResponse.json();
-    const rawText = claudeData?.content?.[0]?.text || "";
+    const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 50);
 
-    let parsed: { businesses: any[] };
-    try {
-      const cleaned = rawText
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-      parsed = JSON.parse(cleaned);
-      if (!Array.isArray(parsed?.businesses)) throw new Error("Estrutura inválida");
-    } catch (parseErr: any) {
-      return new Response(JSON.stringify({ error: `Erro ao interpretar resposta: ${parseErr.message}` }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
+    if (!firecrawlKey) {
+      return new Response(JSON.stringify({ error: "Firecrawl não configurado" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const businesses = parsed.businesses
-      .filter((b) => b?.name?.trim?.())
-      .slice(0, limit)
-      .map((b) => ({
-        name: b.name.trim(),
-        description: b.description || null,
-        address: b.address || null,
-        city: b.city || null,
-        phone: b.phone || null,
-        whatsapp: b.whatsapp || null,
-        email: b.email || null,
-        owner_email: b.owner_email || null,
-        owner_name: b.owner_name || null,
-        owner_phone: b.owner_phone || null,
-        website: b.website || null,
-        nif: b.nif || null,
-        instagram_url: b.instagram_url || null,
-        facebook_url: b.facebook_url || null,
-        other_social_url: b.other_social_url || null,
-        logo_url: b.logo_url || null,
-        opening_hours: b.opening_hours && typeof b.opening_hours === "object" ? b.opening_hours : null,
-        cta_booking_url: b.cta_booking_url || null,
-        cta_order_url: b.cta_order_url || null,
-      }));
+    console.log(`Scraping ${url} (source: ${source})`);
 
-    return new Response(JSON.stringify({ businesses, total: businesses.length }), {
-      status: 200,
+    const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${firecrawlKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true, waitFor: 3000 }),
+    });
+
+    if (!scrapeResponse.ok) {
+      const errText = await scrapeResponse.text();
+      console.error("Firecrawl error:", scrapeResponse.status, errText);
+      return new Response(
+        JSON.stringify({ error: `Erro no scraping: ${scrapeResponse.status}` }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const scrapeData = await scrapeResponse.json();
+    const markdown = scrapeData?.data?.markdown || scrapeData?.markdown || "";
+
+    if (!markdown || markdown.length < 50) {
+      return new Response(
+        JSON.stringify({ error: "Não foi possível extrair conteúdo da página", businesses: [] }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableKey) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY não configurado" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const extractionPrompt = `Analisa o seguinte conteúdo de uma página web e extrai uma lista de negócios/empresas.
+
+Para cada negócio encontrado, extrai os seguintes campos (usa null quando não disponível):
+
+IDENTIDADE:
+- name: nome do negócio (obrigatório)
+- description: descrição do negócio
+- logo_url: URL directo de imagem de logótipo (.jpg, .png, .webp, .svg)
+- nif: número de identificação fiscal
+
+LOCALIZAÇÃO:
+- address: morada completa
+- city: cidade
+
+CONTACTOS:
+- phone: número de telefone (padrões PT: 9XXXXXXXX, +351XXXXXXXXX, 2XXXXXXXX)
+- whatsapp: número de WhatsApp (wa.me/[numero] ou número com contexto WhatsApp)
+- email: email de contacto
+- owner_email: email do responsável/proprietário (se diferente do email público)
+- owner_name: nome do responsável/proprietário
+- owner_phone: telefone do responsável (se diferente do telefone público)
+- website: URL do website
+
+REDES SOCIAIS:
+- instagram_url: URL Instagram (instagram.com/[handle])
+- facebook_url: URL Facebook (facebook.com/[pagina])
+- other_social_url: outra rede social (linkedin.com, tiktok.com, youtube.com, pinterest.com)
+
+HORÁRIOS:
+- opening_hours: horários de funcionamento em formato JSON por dia da semana
+  Exemplo: {"segunda": "09:00-18:00", "sabado": "10:00-13:00", "domingo": "fechado"}
+
+CTAs DE ACÇÃO DIRECTA:
+- cta_booking_url: URL de reserva (calendly.com, doctolib.pt, thefork.pt, booking.com, setmore.com, doctoralia.pt)
+- cta_order_url: URL de pedido online (ubereats.com, glovoapp.com, bolt.food, takeaway.com, zomato.com)
+
+REGRAS:
+- Retorna no MÁXIMO ${safeLimit} negócios
+- Campos não encontrados devem ser null
+- O campo "name" é obrigatório; ignora entradas sem nome
+- Não inventes dados; extrai apenas o que está explicitamente no conteúdo
+- URLs de redes sociais devem ser completas (com https://)
+
+Conteúdo da página:
+${markdown.substring(0, 15000)}`;
+
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: "Extrais dados estruturados de páginas web. Respondes APENAS com JSON válido." },
+          { role: "user", content: extractionPrompt },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "extract_businesses",
+            description: "Extrai lista de negócios do conteúdo",
+            parameters: {
+              type: "object",
+              properties: {
+                businesses: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      description: { type: "string", nullable: true },
+                      logo_url: { type: "string", nullable: true },
+                      nif: { type: "string", nullable: true },
+                      address: { type: "string", nullable: true },
+                      city: { type: "string", nullable: true },
+                      phone: { type: "string", nullable: true },
+                      whatsapp: { type: "string", nullable: true },
+                      email: { type: "string", nullable: true },
+                      owner_email: { type: "string", nullable: true },
+                      owner_name: { type: "string", nullable: true },
+                      owner_phone: { type: "string", nullable: true },
+                      website: { type: "string", nullable: true },
+                      instagram_url: { type: "string", nullable: true },
+                      facebook_url: { type: "string", nullable: true },
+                      other_social_url: { type: "string", nullable: true },
+                      opening_hours: { type: "object", nullable: true },
+                      cta_booking_url: { type: "string", nullable: true },
+                      cta_order_url: { type: "string", nullable: true },
+                    },
+                    required: ["name"],
+                  },
+                },
+              },
+              required: ["businesses"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "extract_businesses" } },
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit excedido, tente novamente mais tarde" }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos AI insuficientes" }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const errText = await aiResponse.text();
+      console.error("AI error:", aiResponse.status, errText);
+      return new Response(
+        JSON.stringify({ error: "Erro na extração de dados" }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const aiData = await aiResponse.json();
+    let businesses: any[] = [];
+
+    try {
+      const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall?.function?.arguments) {
+        const parsed = JSON.parse(toolCall.function.arguments);
+        businesses = parsed.businesses || [];
+      }
+    } catch (parseErr) {
+      console.error("Parse error:", parseErr);
+      return new Response(
+        JSON.stringify({ error: "Erro ao processar dados extraídos", businesses: [] }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    businesses = businesses.slice(0, safeLimit).filter((b: any) => b.name && b.name.trim());
+
+    console.log(`Extracted ${businesses.length} businesses from ${source}`);
+
+    return new Response(JSON.stringify({ businesses, source, url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message || "Erro desconhecido" }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  } catch (e) {
+    console.error("scrape-businesses error:", e);
+    return new Response(
+      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });
