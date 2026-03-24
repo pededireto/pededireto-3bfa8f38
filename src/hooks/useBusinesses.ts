@@ -252,6 +252,7 @@ export const useCreateBusiness = () => {
 
   return useMutation({
     mutationFn: async (business: Omit<Business, "id" | "created_at" | "updated_at">) => {
+      // 1. Criar o negócio
       const { data, error } = await supabase
         .from("businesses")
         .insert(business as any)
@@ -259,6 +260,19 @@ export const useCreateBusiness = () => {
         .single();
 
       if (error) throw error;
+
+      // 2. Registar o utilizador autenticado como owner
+      const { error: rpcError } = await supabase.rpc(
+        "register_business_and_set_owner",
+        { p_business_id: data.id }
+      );
+
+      if (rpcError) {
+        // Negócio foi criado mas o owner não foi definido — logar o erro
+        // mas não bloquear (pode ser resolvido manualmente)
+        console.error("[useCreateBusiness] erro ao definir owner:", rpcError);
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -269,6 +283,17 @@ export const useCreateBusiness = () => {
     },
   });
 };
+```
+
+Depois, também precisas de garantir que o `BusinessOwnerEditForm` **não chama `useUpdateBusinessOwner` antes do negócio existir**. O fluxo correto deve ser:
+```
+Utilizador preenche o formulário
+        ↓
+useCreateBusiness() → INSERT em businesses + RPC define owner
+        ↓
+Redirecionar para o dashboard/edição
+        ↓
+useUpdateBusinessOwner() → UPDATE (o negócio já existe agora ✅)
 
 export const useUpdateBusiness = () => {
   const queryClient = useQueryClient();
