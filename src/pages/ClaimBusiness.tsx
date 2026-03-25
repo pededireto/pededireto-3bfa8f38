@@ -313,8 +313,7 @@ const ClaimBusiness = () => {
                   onClick={() => setShowCreateForm(true)}
                   className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
                 >
-                  <Plus className="h-4 w-4" />
-                  Não encontro o meu negócio — Criar novo
+                  <Plus className="h-4 w-4" />+ O meu negócio não está aqui — quero adicionar
                 </button>
               </div>
             </div>
