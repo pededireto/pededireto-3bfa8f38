@@ -187,8 +187,10 @@ const ClaimBusiness = () => {
             <Link to="/" className="inline-block mb-4">
               <img src={logo} alt="Pede Direto" className="h-10" />
             </Link>
-            <h2 className="text-xl font-semibold text-foreground">Reclame o seu Negócio</h2>
-            <p className="text-muted-foreground mt-1">O seu negócio pode já estar listado. Procure pelo nome abaixo.</p>
+            <h2 className="text-xl font-semibold text-foreground">O teu negócio merece estar aqui</h2>
+            <p className="text-muted-foreground mt-1">
+              Já temos milhares de negócios listados. Verifica se o teu já está — e reclama-o gratuitamente!
+            </p>
           </div>
 
           {!showCreateForm ? (
