@@ -23,11 +23,40 @@ function htmlToCleanText(html: string, maxChars = 16000): string {
 }
 
 /**
+ * Fetch page content via Firecrawl — handles JS-heavy and bot-protected pages.
+ */
+async function fetchWithFirecrawl(url: string, firecrawlKey: string): Promise<string> {
+  const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${firecrawlKey}`,
+    },
+    body: JSON.stringify({
+      url,
+      formats: ["markdown"],
+      onlyMainContent: true,
+      timeout: 30000,
+    }),
+    signal: AbortSignal.timeout(40000),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Firecrawl erro ${response.status}: ${errText.substring(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const content = data?.data?.markdown || data?.markdown || "";
+  if (!content) throw new Error("Firecrawl não retornou conteúdo");
+  return content;
+}
+
+/**
  * Generate Zhipu JWT using djwt library.
- * apiId = ZHIPU_API_ID, apiSecret = ZHIPU_API_KEY
  */
 async function generateZhipuToken(apiId: string, apiSecret: string): Promise<string> {
-  const now = Date.now(); // milliseconds — Zhipu requires ms
+  const now = Date.now();
   const exp = now + 3_600_000;
 
   const key = await crypto.subtle.importKey(
@@ -38,9 +67,7 @@ async function generateZhipuToken(apiId: string, apiSecret: string): Promise<str
     ["sign", "verify"],
   );
 
-  const token = await create({ alg: "HS256", sign_type: "SIGN" }, { api_key: apiId, exp, timestamp: now }, key);
-
-  return token;
+  return await create({ alg: "HS256", sign_type: "SIGN" }, { api_key: apiId, exp, timestamp: now }, key);
 }
 
 async function callZhipu(prompt: string, apiId: string, apiSecret: string): Promise<string> {
@@ -95,98 +122,8 @@ async function callGemini(prompt: string, geminiKey: string): Promise<{ text: st
   return { text: data?.candidates?.[0]?.content?.parts?.[0]?.text || "", rateLimited: false };
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const { url, source, limit = 20 } = await req.json();
-
-    if (!url || typeof url !== "string") {
-      return new Response(JSON.stringify({ error: "URL obrigatório" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    try {
-      new URL(url);
-    } catch {
-      return new Response(JSON.stringify({ error: "URL inválido" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const isSocialBlocked = url.includes("facebook.com") || url.includes("fb.com") || url.includes("instagram.com");
-    if (isSocialBlocked) {
-      return new Response(
-        JSON.stringify({
-          businesses: [
-            {
-              name: "",
-              description: null,
-              address: null,
-              city: null,
-              phone: null,
-              whatsapp: null,
-              email: null,
-              owner_email: null,
-              owner_name: null,
-              owner_phone: null,
-              website: null,
-              nif: null,
-              instagram_url: url.includes("instagram.com") ? url : null,
-              facebook_url: url.includes("facebook.com") || url.includes("fb.com") ? url : null,
-              other_social_url: null,
-              logo_url: null,
-              opening_hours: null,
-              cta_booking_url: null,
-              cta_order_url: null,
-            },
-          ],
-          total: 1,
-          manual_required: true,
-          manual_reason: "Facebook e Instagram bloqueiam scraping. Preencha os dados manualmente.",
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    let htmlContent = "";
-    try {
-      const fetchResponse = await fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; PedeDiretoBot/1.0)",
-          Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
-          "Accept-Language": "pt-PT,pt;q=0.9",
-        },
-        signal: AbortSignal.timeout(20000),
-      });
-      if (!fetchResponse.ok) {
-        return new Response(JSON.stringify({ error: `Erro ao aceder ao URL: HTTP ${fetchResponse.status}` }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      htmlContent = await fetchResponse.text();
-    } catch (fetchErr: any) {
-      return new Response(JSON.stringify({ error: `Não foi possível aceder ao URL: ${fetchErr.message}` }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const cleanText = htmlToCleanText(htmlContent, 16000);
-    if (cleanText.length < 20) {
-      return new Response(JSON.stringify({ error: "Página sem conteúdo útil extraível" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const prompt = `És um extractor de dados de negócios para a plataforma Pede Direto Portugal.
+function buildPrompt(cleanText: string, url: string, source: string, limit: number): string {
+  return `És um extractor de dados de negócios para a plataforma Pede Direto Portugal.
 Analisa o texto extraído de uma página web e extrai informações de negócios/empresas.
 Responde APENAS com JSON válido, sem texto adicional, sem markdown, sem blocos de código.
 Estrutura obrigatória:
@@ -233,7 +170,6 @@ REDES SOCIAIS — MUITO IMPORTANTE:
 - facebook_url: qualquer URL que contenha "facebook.com" ou "fb.com"
 - instagram_url: qualquer URL que contenha "instagram.com"
 - other_social_url: YouTube, TikTok, LinkedIn, Twitter/X — coloca o primeiro URL encontrado
-- Se o texto contiver "linkedin.com/...", "youtube.com/...", "tiktok.com/..." coloca em other_social_url
 - NÃO precisas de entrar nos links — identifica-os no texto da página
 
 TELEFONES:
@@ -249,7 +185,151 @@ URL original: ${url}
 
 Texto da página:
 ${cleanText}`;
+}
 
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { url, source, limit = 20 } = await req.json();
+
+    if (!url || typeof url !== "string") {
+      return new Response(JSON.stringify({ error: "URL obrigatório" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    try {
+      new URL(url);
+    } catch {
+      return new Response(JSON.stringify({ error: "URL inválido" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const isSocial = url.includes("facebook.com") || url.includes("fb.com") || url.includes("instagram.com");
+
+    let cleanText = "";
+
+    if (isSocial) {
+      // Tentar Firecrawl para Facebook/Instagram
+      const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
+      if (!firecrawlKey) {
+        // Sem Firecrawl — retornar manual_required
+        return new Response(
+          JSON.stringify({
+            businesses: [
+              {
+                name: "",
+                description: null,
+                address: null,
+                city: null,
+                phone: null,
+                whatsapp: null,
+                email: null,
+                owner_email: null,
+                owner_name: null,
+                owner_phone: null,
+                website: null,
+                nif: null,
+                instagram_url: url.includes("instagram.com") ? url : null,
+                facebook_url: url.includes("facebook.com") || url.includes("fb.com") ? url : null,
+                other_social_url: null,
+                logo_url: null,
+                opening_hours: null,
+                cta_booking_url: null,
+                cta_order_url: null,
+              },
+            ],
+            total: 1,
+            manual_required: true,
+            manual_reason: "FIRECRAWL_API_KEY não configurada. Preencha os dados manualmente.",
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      try {
+        console.log("A usar Firecrawl para URL social:", url);
+        const markdown = await fetchWithFirecrawl(url, firecrawlKey);
+        // Firecrawl já devolve markdown limpo — truncar apenas se necessário
+        cleanText = markdown.length > 16000 ? markdown.substring(0, 16000) : markdown;
+      } catch (fcErr: any) {
+        console.error("Firecrawl falhou:", fcErr.message);
+        // Fallback para manual_required
+        return new Response(
+          JSON.stringify({
+            businesses: [
+              {
+                name: "",
+                description: null,
+                address: null,
+                city: null,
+                phone: null,
+                whatsapp: null,
+                email: null,
+                owner_email: null,
+                owner_name: null,
+                owner_phone: null,
+                website: null,
+                nif: null,
+                instagram_url: url.includes("instagram.com") ? url : null,
+                facebook_url: url.includes("facebook.com") || url.includes("fb.com") ? url : null,
+                other_social_url: null,
+                logo_url: null,
+                opening_hours: null,
+                cta_booking_url: null,
+                cta_order_url: null,
+              },
+            ],
+            total: 1,
+            manual_required: true,
+            manual_reason: `Não foi possível extrair dados automaticamente: ${fcErr.message}. Preencha manualmente.`,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else {
+      // Fetch HTML normal para outros sites
+      try {
+        const fetchResponse = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; PedeDiretoBot/1.0)",
+            Accept: "text/html,application/xhtml+xml,*/*;q=0.8",
+            "Accept-Language": "pt-PT,pt;q=0.9",
+          },
+          signal: AbortSignal.timeout(20000),
+        });
+        if (!fetchResponse.ok) {
+          return new Response(JSON.stringify({ error: `Erro ao aceder ao URL: HTTP ${fetchResponse.status}` }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const html = await fetchResponse.text();
+        cleanText = htmlToCleanText(html, 16000);
+      } catch (fetchErr: any) {
+        return new Response(JSON.stringify({ error: `Não foi possível aceder ao URL: ${fetchErr.message}` }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (cleanText.length < 20) {
+      return new Response(JSON.stringify({ error: "Página sem conteúdo útil extraível" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const prompt = buildPrompt(cleanText, url, source, limit);
+
+    // --- Gemini primeiro ---
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
     let rawText = "";
     let usedFallback = false;
@@ -271,6 +351,7 @@ ${cleanText}`;
       usedFallback = true;
     }
 
+    // --- Zhipu fallback ---
     if (usedFallback || !rawText) {
       const zhipuId = Deno.env.get("ZHIPU_API_ID");
       const zhipuKey = Deno.env.get("ZHIPU_API_KEY");
@@ -297,6 +378,7 @@ ${cleanText}`;
       }
     }
 
+    // --- Parse ---
     let parsed: { businesses: any[] };
     try {
       const cleaned = rawText
