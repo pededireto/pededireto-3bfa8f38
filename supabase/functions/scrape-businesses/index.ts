@@ -3,6 +3,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Strip HTML to visible text only — removes scripts, styles, SVGs, nav, footer,
+ * collapses whitespace, and truncates to maxChars.
+ */
+function htmlToCleanText(html: string, maxChars = 16000): string {
+  let text = html;
+  // Remove script, style, svg, noscript blocks
+  text = text.replace(/<(script|style|svg|noscript)[^>]*>[\s\S]*?<\/\1>/gi, " ");
+  // Remove HTML comments
+  text = text.replace(/<!--[\s\S]*?-->/g, " ");
+  // Remove all HTML tags
+  text = text.replace(/<[^>]+>/g, " ");
+  // Decode common HTML entities
+  text = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ");
+  // Collapse whitespace
+  text = text.replace(/\s+/g, " ").trim();
+  // Truncate
+  if (text.length > maxChars) text = text.substring(0, maxChars);
+  return text;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -27,6 +49,41 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Facebook/Instagram block scraping — return empty with manual_required flag
+    const isSocialBlocked = url.includes("facebook.com") || url.includes("fb.com") || url.includes("instagram.com");
+    if (isSocialBlocked) {
+      return new Response(JSON.stringify({
+        businesses: [{
+          name: "",
+          description: null,
+          address: null,
+          city: null,
+          phone: null,
+          whatsapp: null,
+          email: null,
+          owner_email: null,
+          owner_name: null,
+          owner_phone: null,
+          website: null,
+          nif: null,
+          instagram_url: url.includes("instagram.com") ? url : null,
+          facebook_url: (url.includes("facebook.com") || url.includes("fb.com")) ? url : null,
+          other_social_url: null,
+          logo_url: null,
+          opening_hours: null,
+          cta_booking_url: null,
+          cta_order_url: null,
+        }],
+        total: 1,
+        manual_required: true,
+        manual_reason: "Facebook e Instagram bloqueiam scraping. Preencha os dados manualmente.",
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Fetch the page HTML
     let htmlContent = "";
     try {
       const fetchResponse = await fetch(url, {
@@ -46,9 +103,18 @@ Deno.serve(async (req: Request) => {
       }
 
       htmlContent = await fetchResponse.text();
-      if (htmlContent.length > 80000) htmlContent = htmlContent.substring(0, 80000);
     } catch (fetchErr: any) {
       return new Response(JSON.stringify({ error: `Não foi possível aceder ao URL: ${fetchErr.message}` }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Strip HTML to clean text — reduces tokens dramatically
+    const cleanText = htmlToCleanText(htmlContent, 16000);
+
+    if (cleanText.length < 20) {
+      return new Response(JSON.stringify({ error: "Página sem conteúdo útil extraível" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -63,7 +129,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const prompt = `És um extractor de dados de negócios para a plataforma Pede Direto Portugal.
-Analisa o HTML e extrai informações de negócios/empresas.
+Analisa o texto extraído de uma página web e extrai informações de negócios/empresas.
 Responde APENAS com JSON válido, sem texto adicional, sem markdown, sem blocos de código.
 Estrutura obrigatória:
 {
@@ -94,21 +160,24 @@ Estrutura obrigatória:
 Regras:
 - Máximo ${limit} negócios
 - Campos não encontrados = null, nunca string vazia
-- Não inventes dados — só extrai o que está na página
+- Não inventes dados — só extrai o que está no texto
 - Para opening_hours usa: {"segunda":"09:00-18:00"} ou null
+- Telefones PT: 9XXXXXXXX, +351XXXXXXXXX, 2XXXXXXXX
+- Detectar URLs de booking: calendly.com, doctolib.pt, thefork.pt, booking.com
+- Detectar URLs de pedido: ubereats.com, glovoapp.com, bolt.food
 - Fonte: ${source || "website"}
 
-URL: ${url}
+URL original: ${url}
 
-${htmlContent}`;
+Texto da página:
+${cleanText}`;
 
+    // Single Gemini API call
     const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {

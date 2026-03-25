@@ -162,6 +162,9 @@ export default function ImportBySourceDialog() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualReason, setManualReason] = useState("");
+  const [scrapeCache] = useState<Map<string, ScrapedBusiness[]>>(new Map());
 
   const { data: subcategories = [] } = useSubcategories(categoryId || undefined);
 
@@ -174,6 +177,8 @@ export default function ImportBySourceDialog() {
     setSelected(new Set());
     setLoading(false);
     setImporting(false);
+    setManualMode(false);
+    setManualReason("");
   };
 
   const urlValid = url.trim().startsWith("https://") || url.trim().startsWith("http://");
@@ -181,6 +186,17 @@ export default function ImportBySourceDialog() {
 
   const handleScrape = async () => {
     if (!url || !categoryId) return;
+
+    // Session cache — don't re-scrape same URL
+    const cacheKey = url.trim().toLowerCase();
+    const cached = scrapeCache.get(cacheKey);
+    if (cached) {
+      setBusinesses(cached);
+      setSelected(new Set(cached.map((_: any, i: number) => i)));
+      setStep(3);
+      return;
+    }
+
     setLoading(true);
     try {
       const source = detectedSource?.key || "website";
@@ -190,16 +206,45 @@ export default function ImportBySourceDialog() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const results = data?.businesses || [];
-      if (results.length === 0) {
-        toast({ title: "Sem resultados", description: "Nenhum negócio encontrado nesta página", variant: "destructive" });
+      // Handle manual_required (Facebook/Instagram)
+      if (data?.manual_required) {
+        setManualMode(true);
+        setManualReason(data.manual_reason || "Preencha os dados manualmente.");
+        const results = data?.businesses || [];
+        setBusinesses(results);
+        setSelected(new Set(results.map((_: any, i: number) => i)));
+        setStep(3);
         return;
       }
+
+      const results = data?.businesses || [];
+      if (results.length === 0) {
+        toast({ title: "Sem resultados", description: "Nenhum negócio encontrado nesta página. Pode preencher manualmente.", variant: "destructive" });
+        // Go to manual mode
+        setManualMode(true);
+        setManualReason("Nenhum negócio detectado automaticamente. Preencha os campos manualmente.");
+        setBusinesses([{
+          name: "", description: null, address: null, city: null,
+          phone: null, whatsapp: null, email: null, owner_email: null,
+          owner_name: null, owner_phone: null, website: url, nif: null,
+          instagram_url: null, facebook_url: null, other_social_url: null,
+          opening_hours: null, cta_booking_url: null, cta_order_url: null, logo_url: null,
+        }]);
+        setSelected(new Set([0]));
+        setStep(3);
+        return;
+      }
+      // Cache results
+      scrapeCache.set(cacheKey, results);
       setBusinesses(results);
       setSelected(new Set(results.map((_: any, i: number) => i)));
       setStep(3);
     } catch (err: any) {
-      toast({ title: "Erro no scraping", description: err.message || "Erro desconhecido", variant: "destructive" });
+      toast({
+        title: "Erro no scraping",
+        description: `${err.message || "Erro desconhecido"}. Pode tentar novamente ou preencher manualmente.`,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -380,6 +425,14 @@ export default function ImportBySourceDialog() {
               </Button>
             </div>
 
+            {manualMode && (
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  ⚠️ {manualReason} Edite os campos abaixo antes de importar.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
               {businesses.map((b, i) => (
                 <BusinessPreviewCard key={i} b={b} index={i} selected={selected.has(i)} onToggle={() => toggleSelect(i)} />
@@ -392,7 +445,7 @@ export default function ImportBySourceDialog() {
             </p>
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => { setStep(1); setBusinesses([]); setSelected(new Set()); }}>
+              <Button variant="outline" onClick={() => { setStep(1); setBusinesses([]); setSelected(new Set()); setManualMode(false); }}>
                 <X className="h-4 w-4 mr-2" /> Cancelar
               </Button>
               <Button onClick={handleImport} disabled={importing || selected.size === 0} className="btn-cta-primary">
