@@ -64,14 +64,12 @@ async function generateZhipuToken(apiId: string, apiSecret: string): Promise<str
 /**
  * Call Zhipu AI (GLM-4-Flash) as fallback.
  */
-async function callZhipu(prompt: string, apiId: string, apiSecret: string): Promise<string> {
-  const token = await generateZhipuToken(apiId, apiSecret);
-
+async function callZhipu(prompt: string, apiKey: string): Promise<string> {
   const response = await fetch("https://open.bigmodel.cn/api/paas/v4/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${apiKey}`, // usar a key completa diretamente
     },
     body: JSON.stringify({
       model: "glm-4-flash",
