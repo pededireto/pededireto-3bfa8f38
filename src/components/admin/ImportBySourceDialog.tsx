@@ -162,6 +162,9 @@ export default function ImportBySourceDialog() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualReason, setManualReason] = useState("");
+  const [scrapeCache] = useState<Map<string, ScrapedBusiness[]>>(new Map());
 
   const { data: subcategories = [] } = useSubcategories(categoryId || undefined);
 
