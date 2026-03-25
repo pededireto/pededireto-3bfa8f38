@@ -177,6 +177,8 @@ export default function ImportBySourceDialog() {
     setSelected(new Set());
     setLoading(false);
     setImporting(false);
+    setManualMode(false);
+    setManualReason("");
   };
 
   const urlValid = url.trim().startsWith("https://") || url.trim().startsWith("http://");
