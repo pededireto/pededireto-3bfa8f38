@@ -215,16 +215,36 @@ Estrutura obrigatória:
     }
   ]
 }
-Regras:
+
+REGRAS GERAIS:
 - Máximo ${limit} negócios
 - Campos não encontrados = null, nunca string vazia
 - Não inventes dados — só extrai o que está no texto
-- Para opening_hours usa: {"segunda":"09:00-18:00"} ou null
-- Telefones PT: 9XXXXXXXX, +351XXXXXXXXX, 2XXXXXXXX
-- Detectar URLs de booking: calendly.com, doctolib.pt, thefork.pt, booking.com
-- Detectar URLs de pedido: ubereats.com, glovoapp.com, bolt.food
-- Fonte: ${source || "website"}
 
+HORÁRIOS (opening_hours) — MUITO IMPORTANTE:
+- Procura por padrões como "Seg-Sex: 09:00-18:00", "Segunda a Sexta", "Mon-Fri", "9h-18h", "09:00 às 18:00"
+- Converte SEMPRE para objeto JSON com chaves em português minúsculo
+- Chaves possíveis: "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo", "segunda_sexta", "sabado_domingo"
+- Exemplo correto: {"segunda_sexta": "09:00-18:00", "sabado": "09:00-13:00"}
+- Se encontrar horário no texto, NUNCA retornes null — extrai sempre
+
+REDES SOCIAIS — MUITO IMPORTANTE:
+- Procura por URLs ou menções a: facebook.com, fb.com, instagram.com, youtube.com, tiktok.com, linkedin.com, twitter.com, x.com
+- facebook_url: qualquer URL que contenha "facebook.com" ou "fb.com"
+- instagram_url: qualquer URL que contenha "instagram.com"
+- other_social_url: YouTube, TikTok, LinkedIn, Twitter/X — coloca o primeiro URL encontrado
+- Se o texto contiver "linkedin.com/...", "youtube.com/...", "tiktok.com/..." coloca em other_social_url
+- NÃO precisas de entrar nos links — identifica-os no texto da página
+
+TELEFONES:
+- Formatos PT: 9XXXXXXXX, +351XXXXXXXXX, 2XXXXXXXX
+- Remove espaços e formata como: 967420606 ou +351967420606
+
+CTAs:
+- cta_booking_url: calendly.com, doctolib.pt, thefork.pt, booking.com, reservas
+- cta_order_url: ubereats.com, glovoapp.com, bolt.food, just-eat
+
+Fonte: ${source || "website"}
 URL original: ${url}
 
 Texto da página:
