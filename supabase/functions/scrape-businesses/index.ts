@@ -53,7 +53,7 @@ async function callZhipu(prompt: string, apiId: string, apiSecret: string): Prom
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
-      model: "glm-4-flash",
+      model: "GLM-4.7-Flash",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 8000,
       temperature: 0.1,
