@@ -425,6 +425,14 @@ export default function ImportBySourceDialog() {
               </Button>
             </div>
 
+            {manualMode && (
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  ⚠️ {manualReason} Edite os campos abaixo antes de importar.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
               {businesses.map((b, i) => (
                 <BusinessPreviewCard key={i} b={b} index={i} selected={selected.has(i)} onToggle={() => toggleSelect(i)} />
@@ -437,7 +445,7 @@ export default function ImportBySourceDialog() {
             </p>
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => { setStep(1); setBusinesses([]); setSelected(new Set()); }}>
+              <Button variant="outline" onClick={() => { setStep(1); setBusinesses([]); setSelected(new Set()); setManualMode(false); }}>
                 <X className="h-4 w-4 mr-2" /> Cancelar
               </Button>
               <Button onClick={handleImport} disabled={importing || selected.size === 0} className="btn-cta-primary">
