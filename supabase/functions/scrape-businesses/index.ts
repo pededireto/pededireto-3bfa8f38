@@ -1,11 +1,10 @@
+import { create } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-/**
- * Strip HTML to visible text only.
- */
 function htmlToCleanText(html: string, maxChars = 16000): string {
   let text = html;
   text = text.replace(/<(script|style|svg|noscript)[^>]*>[\s\S]*?<\/\1>/gi, " ");
@@ -24,52 +23,34 @@ function htmlToCleanText(html: string, maxChars = 16000): string {
 }
 
 /**
- * Encode object to Base64URL — byte-by-byte, safe for Deno.
- */
-function base64urlEncode(obj: object): string {
-  const bytes = new TextEncoder().encode(JSON.stringify(obj));
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-/**
- * Generate Zhipu AI JWT token.
+ * Generate Zhipu JWT using djwt library.
  * apiId = ZHIPU_API_ID, apiSecret = ZHIPU_API_KEY
- * Zhipu requires timestamps in MILLISECONDS.
  */
 async function generateZhipuToken(apiId: string, apiSecret: string): Promise<string> {
-  const now = Date.now();
+  const now = Date.now(); // milliseconds — Zhipu requires ms
   const exp = now + 3_600_000;
 
-  const headerB64 = base64urlEncode({ alg: "HS256", sign_type: "SIGN" });
-  const payloadB64 = base64urlEncode({ api_key: apiId, exp, timestamp: now });
-  const signingInput = `${headerB64}.${payloadB64}`;
-
-  const cryptoKey = await crypto.subtle.importKey(
+  const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(apiSecret),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"],
+    ["sign", "verify"],
   );
-  const sigBytes = new Uint8Array(await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(signingInput)));
-  let sigBinary = "";
-  for (let i = 0; i < sigBytes.length; i++) sigBinary += String.fromCharCode(sigBytes[i]);
-  const sigB64 = btoa(sigBinary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
-  return `${signingInput}.${sigB64}`;
+  const token = await create({ alg: "HS256", sign_type: "SIGN" }, { api_key: apiId, exp, timestamp: now }, key);
+
+  return token;
 }
 
-/**
- * Call Zhipu AI (GLM-4-Flash) as fallback.
- */
-async function callZhipu(prompt: string, apiKey: string): Promise<string> {
+async function callZhipu(prompt: string, apiId: string, apiSecret: string): Promise<string> {
+  const token = await generateZhipuToken(apiId, apiSecret);
+
   const response = await fetch("https://open.bigmodel.cn/api/paas/v4/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`, // usar a key completa diretamente
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       model: "glm-4-flash",
@@ -89,9 +70,6 @@ async function callZhipu(prompt: string, apiKey: string): Promise<string> {
   return data?.choices?.[0]?.message?.content || "";
 }
 
-/**
- * Call Gemini API. Returns { text, rateLimited }.
- */
 async function callGemini(prompt: string, geminiKey: string): Promise<{ text: string; rateLimited: boolean }> {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
@@ -141,7 +119,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Facebook/Instagram — retornar manual_required
     const isSocialBlocked = url.includes("facebook.com") || url.includes("fb.com") || url.includes("instagram.com");
     if (isSocialBlocked) {
       return new Response(
@@ -177,7 +154,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Fetch HTML
     let htmlContent = "";
     try {
       const fetchResponse = await fetch(url, {
@@ -254,7 +230,6 @@ URL original: ${url}
 Texto da página:
 ${cleanText}`;
 
-    // --- Gemini primeiro ---
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
     let rawText = "";
     let usedFallback = false;
@@ -276,7 +251,6 @@ ${cleanText}`;
       usedFallback = true;
     }
 
-    // --- Zhipu fallback ---
     if (usedFallback || !rawText) {
       const zhipuId = Deno.env.get("ZHIPU_API_ID");
       const zhipuKey = Deno.env.get("ZHIPU_API_KEY");
@@ -303,7 +277,6 @@ ${cleanText}`;
       }
     }
 
-    // --- Parse ---
     let parsed: { businesses: any[] };
     try {
       const cleaned = rawText
