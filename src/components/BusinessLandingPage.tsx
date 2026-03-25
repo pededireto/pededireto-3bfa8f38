@@ -2,12 +2,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   Phone,
   Search,
@@ -42,8 +37,7 @@ const PROBLEMS = [
   {
     emoji: "🚫",
     title: "Clientes que não te chegam",
-    description:
-      "As pessoas procuram online, mas sem visibilidade vão ao concorrente que aparece primeiro.",
+    description: "As pessoas procuram online, mas sem visibilidade vão ao concorrente que aparece primeiro.",
   },
   {
     emoji: "💸",
@@ -205,7 +199,7 @@ const STEPS = [
     icon: FileText,
     title: "Reclama o teu perfil",
     description:
-      "O teu negócio pode já estar listado. Reclama-o gratuitamente — o perfil fica activo imediatamente.",
+      "Associe WhatsApp, Redes Sociais, Botões de Reserva, Fotos e Video! Registe este negócio gratuitamente e comece a receber clientes.",
   },
   {
     icon: ClipboardList,
@@ -268,11 +262,7 @@ const FAQ = [
   },
 ];
 
-const TRUST_ITEMS = [
-  "Registo gratuito",
-  "Sem cartão de crédito",
-  "Upgrade a qualquer momento",
-];
+const TRUST_ITEMS = ["Registo gratuito", "Sem cartão de crédito", "Upgrade a qualquer momento"];
 
 /* ═══════════════════════════════════════════
    HELPER: Feature Card
@@ -281,9 +271,7 @@ const TRUST_ITEMS = [
 const FeatureCard = ({ f }: { f: Feature }) => (
   <Card className="relative overflow-hidden hover:shadow-[var(--shadow-card-hover)] transition-shadow">
     {f.isNew && (
-      <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground text-[10px] px-2 py-0.5">
-        Novo
-      </Badge>
+      <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground text-[10px] px-2 py-0.5">Novo</Badge>
     )}
     <CardContent className="p-5 flex gap-4">
       <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 text-xl">
@@ -291,9 +279,7 @@ const FeatureCard = ({ f }: { f: Feature }) => (
       </div>
       <div>
         <h3 className="font-semibold text-sm">{f.title}</h3>
-        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-          {f.description}
-        </p>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{f.description}</p>
       </div>
     </CardContent>
   </Card>
@@ -314,13 +300,11 @@ const BusinessLandingPage = () => {
           </Badge>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight">
             O teu próximo cliente
-            <br className="hidden sm:block" /> está à procura de ti.{" "}
-            <span className="text-primary">Agora.</span>
+            <br className="hidden sm:block" /> está à procura de ti. <span className="text-primary">Agora.</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Todos os dias, pessoas procuram serviços e negócios locais em
-            Portugal. A questão é: quando procuram o que tu ofereces,
-            encontram-te a ti?
+            Todos os dias, pessoas procuram serviços e negócios locais em Portugal. A questão é: quando procuram o que
+            tu ofereces, encontram-te a ti?
           </p>
           <div className="pt-2">
             <Link to="/claim-business">
@@ -333,13 +317,11 @@ const BusinessLandingPage = () => {
             </Link>
           </div>
           <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground">
-            {["Começa grátis", "Sem cartão de crédito", "Upgrade quando quiseres"].map(
-              (t) => (
-                <span key={t} className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-primary" /> {t}
-                </span>
-              )
-            )}
+            {["Começa grátis", "Sem cartão de crédito", "Upgrade quando quiseres"].map((t) => (
+              <span key={t} className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-primary" /> {t}
+              </span>
+            ))}
           </div>
         </div>
       </section>
@@ -349,27 +331,19 @@ const BusinessLandingPage = () => {
         <div className="container max-w-4xl">
           <div className="text-center mb-10">
             <h2 className="text-2xl md:text-3xl font-bold">O problema</h2>
-            <p className="text-lg text-muted-foreground mt-2">
-              Tens um bom negócio. Mas és difícil de encontrar.
-            </p>
+            <p className="text-lg text-muted-foreground mt-2">Tens um bom negócio. Mas és difícil de encontrar.</p>
             <p className="text-sm text-muted-foreground mt-1">
-              O boca a boca já não chega. As redes sociais exigem tempo e
-              orçamento constante. E o teu negócio fica invisível para quem mais
-              precisa de ti.
+              O boca a boca já não chega. As redes sociais exigem tempo e orçamento constante. E o teu negócio fica
+              invisível para quem mais precisa de ti.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {PROBLEMS.map((p) => (
-              <Card
-                key={p.title}
-                className="hover:shadow-[var(--shadow-card-hover)] transition-shadow"
-              >
+              <Card key={p.title} className="hover:shadow-[var(--shadow-card-hover)] transition-shadow">
                 <CardContent className="p-6 text-center space-y-3">
                   <span className="text-4xl">{p.emoji}</span>
                   <h3 className="font-semibold">{p.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {p.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -381,9 +355,7 @@ const BusinessLandingPage = () => {
       <section className="py-16">
         <div className="container max-w-5xl">
           <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold">
-              O teu perfil profissional
-            </h2>
+            <h2 className="text-2xl md:text-3xl font-bold">O teu perfil profissional</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {PROFILE_FEATURES.map((f) => (
@@ -397,9 +369,7 @@ const BusinessLandingPage = () => {
       <section className="py-16 bg-secondary/30">
         <div className="container max-w-5xl">
           <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold">
-              Recebe pedidos de orçamento
-            </h2>
+            <h2 className="text-2xl md:text-3xl font-bold">Recebe pedidos de orçamento</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {QUOTE_FEATURES.map((f) => (
@@ -413,9 +383,7 @@ const BusinessLandingPage = () => {
       <section className="py-16">
         <div className="container max-w-5xl">
           <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold">
-              Analytics e inteligência de negócio
-            </h2>
+            <h2 className="text-2xl md:text-3xl font-bold">Analytics e inteligência de negócio</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {ANALYTICS_FEATURES.map((f) => (
@@ -434,9 +402,7 @@ const BusinessLandingPage = () => {
           <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto text-center">
             {STATS.map((s) => (
               <div key={s.label}>
-                <p className="text-3xl md:text-4xl font-extrabold text-primary">
-                  {s.value}
-                </p>
+                <p className="text-3xl md:text-4xl font-extrabold text-primary">{s.value}</p>
                 <p className="text-sm text-muted-foreground mt-1">{s.label}</p>
               </div>
             ))}
@@ -448,9 +414,7 @@ const BusinessLandingPage = () => {
       <section className="py-16">
         <div className="container max-w-4xl">
           <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold">
-              Do registo ao primeiro cliente
-            </h2>
+            <h2 className="text-2xl md:text-3xl font-bold">Do registo ao primeiro cliente</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {STEPS.map((step, i) => {
@@ -466,9 +430,7 @@ const BusinessLandingPage = () => {
                     </span>
                   </div>
                   <h3 className="font-semibold">{step.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {step.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
                 </div>
               );
             })}
@@ -480,18 +442,12 @@ const BusinessLandingPage = () => {
       <section className="py-16 bg-secondary/30">
         <div className="container max-w-3xl text-center space-y-6">
           <h2 className="text-2xl md:text-3xl font-bold">Planos e preços</h2>
-          <p className="text-muted-foreground">
-            Começa grátis. Cresce quando quiseres.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Planos pagos a partir de
-          </p>
+          <p className="text-muted-foreground">Começa grátis. Cresce quando quiseres.</p>
+          <p className="text-sm text-muted-foreground">Planos pagos a partir de</p>
           <p className="text-4xl md:text-5xl font-extrabold text-primary">
             €9,90<span className="text-lg font-normal text-muted-foreground">/mês</span>
           </p>
-          <p className="text-sm text-muted-foreground">
-            Plano gratuito sempre disponível · Sem cartão de crédito
-          </p>
+          <p className="text-sm text-muted-foreground">Plano gratuito sempre disponível · Sem cartão de crédito</p>
           <div className="max-w-md mx-auto text-left space-y-2">
             {PLAN_FEATURES.map((f) => (
               <div key={f} className="flex items-center gap-2 text-sm">
@@ -501,11 +457,7 @@ const BusinessLandingPage = () => {
             ))}
           </div>
           <Link to="/pricing">
-            <Button
-              variant="outline"
-              size="lg"
-              className="text-base px-8 mt-4"
-            >
+            <Button variant="outline" size="lg" className="text-base px-8 mt-4">
               Ver planos e preços detalhados <ArrowRight className="ml-1 h-5 w-5" />
             </Button>
           </Link>
@@ -515,22 +467,12 @@ const BusinessLandingPage = () => {
       {/* ─── FAQ ─── */}
       <section className="py-16">
         <div className="container max-w-3xl">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">
-            Perguntas frequentes
-          </h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">Perguntas frequentes</h2>
           <Accordion type="single" collapsible className="space-y-2">
             {FAQ.map((item, i) => (
-              <AccordionItem
-                key={i}
-                value={`faq-${i}`}
-                className="border rounded-lg px-4 bg-card"
-              >
-                <AccordionTrigger className="text-left font-medium">
-                  {item.q}
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground leading-relaxed">
-                  {item.a}
-                </AccordionContent>
+              <AccordionItem key={i} value={`faq-${i}`} className="border rounded-lg px-4 bg-card">
+                <AccordionTrigger className="text-left font-medium">{item.q}</AccordionTrigger>
+                <AccordionContent className="text-muted-foreground leading-relaxed">{item.a}</AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
@@ -546,8 +488,8 @@ const BusinessLandingPage = () => {
             <br />o plano inteiro.
           </h2>
           <p className="text-muted-foreground">
-            Regista o teu negócio hoje. Começa grátis e faz upgrade quando
-            estiveres pronto. Sem riscos, sem contratos, sem comissões.
+            Regista o teu negócio hoje. Começa grátis e faz upgrade quando estiveres pronto. Sem riscos, sem contratos,
+            sem comissões.
           </p>
           <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground">
             {TRUST_ITEMS.map((t) => (
