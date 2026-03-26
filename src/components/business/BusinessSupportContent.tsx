@@ -127,7 +127,7 @@ const BusinessSupportContent = ({ businessId }: { businessId: string }) => {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setMessages((data || []) as SupportMessage[]);
+      setMessages((data || []) as unknown as SupportMessage[]);
 
       // Marcar mensagens do staff como lidas
       await supabase
@@ -164,7 +164,7 @@ const BusinessSupportContent = ({ businessId }: { businessId: string }) => {
         .single();
 
       if (error) throw error;
-      setMessages((prev) => [...prev, data as SupportMessage]);
+      setMessages((prev) => [...prev, data as unknown as SupportMessage]);
     } catch (err: any) {
       toast({ title: "Erro ao enviar mensagem", variant: "destructive" });
       setMessageText(text);
