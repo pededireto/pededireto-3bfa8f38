@@ -18,6 +18,9 @@ import ClaimStatusBanner from "@/components/business/ClaimStatusBanner";
 import BusinessReviewsPanel from "@/components/business/BusinessReviewsPanel";
 import BadgesTab from "@/components/business/BadgesTab";
 import AffiliatePortalContent from "@/components/affiliate/AffiliatePortalContent";
+import BusinessQuotesContent from "@/components/business/BusinessQuotesContent";
+import BusinessSupportContent from "@/components/business/BusinessSupportContent";
+import FeaturePopupManager from "@/components/business/FeaturePopupManager";
 
 const BusinessDashboard = () => {
   const [activeTab, setActiveTab] = useState<BusinessTab>("overview");
@@ -72,6 +75,10 @@ const BusinessDashboard = () => {
         return <BadgesTab businessId={business.id} />;
       case "affiliates":
         return <AffiliatePortalContent showBackButton backTo="/business-dashboard" />;
+      case "quotes":
+        return <BusinessQuotesContent businessId={business.id} />;
+      case "support":
+        return <BusinessSupportContent businessId={business.id} />;
       default:
         return null;
     }
@@ -113,6 +120,12 @@ const BusinessDashboard = () => {
           {renderContent()}
         </main>
       </div>
+
+      {/* Feature Popup Manager — max 1 popup per session */}
+      <FeaturePopupManager
+        audience="business"
+        onTabNavigate={(tab) => setActiveTab(tab as BusinessTab)}
+      />
     </div>
   );
 };
