@@ -16,6 +16,8 @@ import {
   ChevronDown,
   Handshake,
   Zap,
+  FileText,
+  MessageCircle,
 } from "lucide-react";
 import { useBusinessAddon, getAddonStatus } from "@/hooks/useBusinessAddons";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,7 +40,9 @@ export type BusinessTab =
   | "reviews"
   | "edit"
   | "badges"
-  | "affiliates";
+  | "affiliates"
+  | "quotes"
+  | "support";
 
 interface BusinessSidebarProps {
   businessName: string;
@@ -53,18 +57,10 @@ interface BusinessSidebarProps {
   isFreePlan?: boolean;
 }
 
-const allItems: { id: BusinessTab; label: string; icon: React.ElementType }[] = [
-  { id: "overview", label: "Dashboard", icon: LayoutDashboard },
-  { id: "requests", label: "Pedidos", icon: Inbox },
-  { id: "notifications", label: "Notificações", icon: Bell },
-  { id: "reviews", label: "Avaliações", icon: Star },
-  { id: "team", label: "Equipa", icon: Users },
-  { id: "badges", label: "Caderneta", icon: Award },
-  { id: "insights", label: "Insights", icon: TrendingUp },
-  { id: "edit", label: "Editar Negócio", icon: Edit3 },
-  { id: "affiliates", label: "Afiliados", icon: Handshake },
-  { id: "plan", label: "O Meu Plano", icon: CreditCard },
-];
+interface SidebarSection {
+  label: string;
+  items: { id: BusinessTab; label: string; icon: React.ElementType; badge?: "notifications" | "requests"; locked?: boolean; isNew?: boolean }[];
+}
 
 const BusinessSidebar = ({
   businessName,
@@ -110,12 +106,60 @@ const BusinessSidebar = ({
 
   const isPending = claimStatus === "pending";
 
-  const visibleItems = allItems.filter((item) => {
-    if (isPending) return item.id === "overview" || item.id === "notifications";
-    if (item.id === "requests" && !canViewRequests) return false;
-    if (item.id === "team" && !canViewTeam) return false;
-    return true;
-  });
+  // Build sections
+  const sections: SidebarSection[] = isPending
+    ? [
+        {
+          label: "VISÃO GERAL",
+          items: [
+            { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+            { id: "notifications", label: "Notificações", icon: Bell, badge: "notifications" },
+          ],
+        },
+      ]
+    : [
+        {
+          label: "VISÃO GERAL",
+          items: [
+            { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+            { id: "notifications", label: "Notificações", icon: Bell, badge: "notifications" },
+          ],
+        },
+        {
+          label: "CLIENTES",
+          items: [
+            ...(canViewRequests
+              ? [{ id: "requests" as BusinessTab, label: "Pedidos", icon: Inbox, badge: "requests" as const }]
+              : []),
+            { id: "reviews", label: "Avaliações", icon: Star },
+          ],
+        },
+        {
+          label: "NEGÓCIO",
+          items: [
+            { id: "quotes", label: "Orçamentos", icon: FileText, isNew: true },
+            { id: "insights", label: "Insights", icon: TrendingUp, locked: isFreePlan },
+          ],
+        },
+        {
+          label: "CRESCIMENTO",
+          items: [
+            { id: "affiliates", label: "Indicações", icon: Handshake },
+            { id: "badges", label: "Badges", icon: Award },
+          ],
+        },
+        {
+          label: "CONTA",
+          items: [
+            { id: "edit", label: "Editar Negócio", icon: Edit3 },
+            ...(canViewTeam
+              ? [{ id: "team" as BusinessTab, label: "Equipa", icon: Users }]
+              : []),
+            { id: "plan", label: "O Meu Plano", icon: CreditCard },
+            { id: "support", label: "Suporte", icon: MessageCircle },
+          ],
+        },
+      ];
 
   return (
     <div className="flex flex-col h-full">
@@ -124,7 +168,7 @@ const BusinessSidebar = ({
           <img src={logo} alt="Pede Direto" className="h-8" />
         </Link>
 
-        {/* Switcher de negócios — só aparece se tiver mais de 1 */}
+        {/* Switcher de negócios */}
         {hasMultiple ? (
           <div className="relative">
             <select
@@ -146,54 +190,74 @@ const BusinessSidebar = ({
         )}
       </div>
 
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {visibleItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => {
-              setActiveTab(item.id);
-              setSidebarOpen(false);
-            }}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-              activeTab === item.id
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent",
-            )}
-          >
-            <item.icon className="h-5 w-5" />
-            {item.label}
+      <nav className="flex-1 p-4 space-y-5 overflow-y-auto">
+        {sections.map((section) => (
+          <div key={section.label}>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 px-4 mb-1.5">
+              {section.label}
+            </p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setSidebarOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    activeTab === item.id
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent",
+                  )}
+                >
+                  <item.icon className="h-4.5 w-4.5" />
+                  {item.label}
 
-            {item.id === "notifications" && unreadNotifications > 0 && (
-              <span className="ml-auto bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
-                {unreadNotifications}
-              </span>
-            )}
-            {item.id === "requests" && unreadRequests > 0 && (
-              <span className="ml-auto bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
-                {unreadRequests}
-              </span>
-            )}
-            {item.id === "insights" && isFreePlan && (
-              <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0">
-                <Lock className="h-3 w-3 mr-0.5" /> Pro
-              </Badge>
-            )}
-          </button>
+                  {item.isNew && (
+                    <Badge variant="outline" className="ml-auto text-[9px] px-1 py-0 border-cta/40 text-cta">
+                      NOVO
+                    </Badge>
+                  )}
+
+                  {item.badge === "notifications" && unreadNotifications > 0 && (
+                    <span className="ml-auto bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
+                      {unreadNotifications}
+                    </span>
+                  )}
+                  {item.badge === "requests" && unreadRequests > 0 && (
+                    <span className="ml-auto bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
+                      {unreadRequests}
+                    </span>
+                  )}
+                  {item.locked && (
+                    <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0">
+                      <Lock className="h-3 w-3 mr-0.5" /> Pro
+                    </Badge>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
 
-        {/* Marketing AI Studio — only if addon active */}
+        {/* Marketing AI Studio */}
         {addonActive && (
-          <Link
-            to="/app/reel"
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground hover:bg-sidebar-accent"
-          >
-            <Zap className="h-5 w-5 text-cta" />
-            Marketing AI
-            <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 border-cta/30 text-cta">
-              AI
-            </Badge>
-          </Link>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 px-4 mb-1.5">
+              FERRAMENTAS
+            </p>
+            <Link
+              to="/app/reel"
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground hover:bg-sidebar-accent"
+            >
+              <Zap className="h-4.5 w-4.5 text-cta" />
+              Marketing AI
+              <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 border-cta/30 text-cta">
+                AI
+              </Badge>
+            </Link>
+          </div>
         )}
       </nav>
 
