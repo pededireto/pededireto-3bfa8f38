@@ -7,10 +7,10 @@ import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
 import { useBusinessPlan } from "@/hooks/useBusinessPlan";
+import { useBusinessResponseTime } from "@/hooks/useBusinessResponseTime";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
 import OnboardingChecklist from "@/components/business/OnboardingChecklist";
 import BusinessProAlerts from "@/components/business/BusinessProAlerts";
-import BusinessSearchPosition from "@/components/business/BusinessSearchPosition";
 import BusinessRankingWidget from "@/components/business/BusinessRankingWidget";
 import ShareProfileCard from "@/components/business/ShareProfileCard";
 import { useBusinessBadges } from "@/hooks/useBusinessDashboardPro";
@@ -30,8 +30,9 @@ import {
   Zap,
   Clock,
   AlertTriangle as AlertTriangleIcon,
-  MessageCircle,
   Trophy,
+  Timer,
+  ChevronRight,
 } from "lucide-react";
 
 interface Props {
@@ -113,6 +114,29 @@ const UpgradeBanner = ({
   );
 };
 
+/* ── Urgency helpers ────────────────────────────────────────── */
+const getRequestUrgencyBadge = (req: any) => {
+  const sr = req.service_requests;
+  if (!sr) return null;
+  if (sr.urgency === "urgent")
+    return (
+      <Badge variant="destructive" className="text-[10px] px-1.5 py-0 animate-pulse">
+        🔴 URGENTE
+      </Badge>
+    );
+  return null;
+};
+
+const getTimeSince = (dateStr: string) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `há ${mins}min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `há ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `há ${days}d`;
+};
+
 const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
   const [showWelcome, setShowWelcome] = useState(false);
 
@@ -129,6 +153,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
   const { data: unreadCount = 0 } = useUnreadNotificationsCount(business.id);
   const { data: analytics, refetch } = useBusinessAnalytics(business.id);
   const permissions = useBusinessClaimPermissions(business);
+  const { data: responseTime } = useBusinessResponseTime(business.id);
   const { isOnTrial, trialDaysLeft } = useBusinessPlan({
     subscription_plan: (business as any).subscription_plan,
     subscription_status: business.subscription_status,
@@ -158,10 +183,21 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
     ? Math.ceil((new Date(business.subscription_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const contactsPerVisit =
-    analytics && analytics.views > 0 ? (analytics.totalContacts / analytics.views).toFixed(1) : null;
-
   const isLocked = permissions.isPreview || permissions.isFreePlan;
+
+  // Recent requests (last 5, sorted by most recent)
+  const recentRequests = requests
+    .filter((r: any) => r.service_requests)
+    .slice(0, 4);
+
+  // Pending responses count
+  const pendingResponses = requests.filter(
+    (r: any) => r.service_requests?.status === "active" && !r.first_response_at
+  ).length;
+
+  // Greeting based on time of day
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bom dia" : hour < 19 ? "Boa tarde" : "Boa noite";
 
   return (
     <div className="space-y-6">
@@ -193,11 +229,34 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
       {/* Onboarding Checklist */}
       <OnboardingChecklist business={business} onNavigate={(tab) => onNavigate?.(tab)} />
 
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Bem-vindo, <span className="font-medium text-foreground">{business.name}</span>
-        </p>
+      {/* ── Hero Greeting ─────────────────────────────── */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            {greeting}, {business.name} 👋
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Aqui está o resumo do teu negócio hoje
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge
+            variant={business.subscription_status === "active" ? "default" : "secondary"}
+            className="text-xs"
+          >
+            {plan?.name || "Gratuito"}
+            {business.subscription_status === "active" ? " ✓" : ""}
+          </Badge>
+          {business.is_active ? (
+            <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+              ✅ Visível
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-xs">
+              🔍 Em verificação
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Trial Banner */}
@@ -254,6 +313,84 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         />
       )}
 
+      {/* ── KPI Cards (4 cols) ───────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-card rounded-xl p-5 shadow-card">
+          <div className="flex items-center gap-2 mb-2">
+            <Eye className="h-4 w-4 text-primary" />
+            <span className="text-xs text-muted-foreground">Visitas hoje</span>
+          </div>
+          <p className="text-2xl font-bold">{analytics?.views ?? "—"}</p>
+          <p className="text-xs text-muted-foreground mt-1">Últimos 30 dias</p>
+        </div>
+
+        {isLocked ? (
+          <LockedCard
+            icon={Inbox}
+            label="Pedidos Ativos"
+            reason="Ativa um plano para receber"
+            onUnlock={() => onNavigate?.("plan")}
+          />
+        ) : (
+          <div className="bg-card rounded-xl p-5 shadow-card">
+            <div className="flex items-center gap-2 mb-2">
+              <Inbox className="h-4 w-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Pedidos Ativos</span>
+            </div>
+            <p className="text-2xl font-bold">{requests.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">Total recebidos</p>
+          </div>
+        )}
+
+        {isLocked ? (
+          <LockedCard
+            icon={MousePointerClick}
+            label="Respostas Pendentes"
+            reason="Ativa um plano para ver"
+            onUnlock={() => onNavigate?.("plan")}
+          />
+        ) : (
+          <div className="bg-card rounded-xl p-5 shadow-card">
+            <div className="flex items-center gap-2 mb-2">
+              <Bell className="h-4 w-4 text-cta" />
+              <span className="text-xs text-muted-foreground">Respostas Pendentes</span>
+            </div>
+            <p className="text-2xl font-bold">{pendingResponses}</p>
+            {pendingResponses > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs p-0 h-auto text-primary mt-1"
+                onClick={() => onNavigate?.("requests")}
+              >
+                Responder agora →
+              </Button>
+            )}
+          </div>
+        )}
+
+        <div className="bg-card rounded-xl p-5 shadow-card">
+          <div className="flex items-center gap-2 mb-2">
+            <Timer className="h-4 w-4 text-primary" />
+            <span className="text-xs text-muted-foreground">Score de Resposta</span>
+          </div>
+          {responseTime ? (
+            <>
+              <p className="text-2xl font-bold">⚡ {responseTime.label}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Tempo médio de resposta
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-bold text-muted-foreground">—</p>
+              <p className="text-xs text-muted-foreground mt-1">Sem dados ainda</p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Ranking + Profile Score row ────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2">
           <BusinessProfileScore
@@ -263,79 +400,194 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
             onUpgradeClick={() => onNavigate?.("plan")}
           />
         </div>
-
-        <div className="space-y-4">
-          <ShareProfileCard
-            slug={business.slug}
-            businessName={business.name}
-          />
-
-          <div className="bg-card rounded-xl p-5 shadow-card flex flex-col justify-between">
-            <div className="flex items-center gap-3 mb-3">
-              <CreditCard className="h-5 w-5 text-primary" />
-              <span className="text-sm text-muted-foreground">Plano Atual</span>
-            </div>
-            <div>
-              <p className="text-lg font-bold">{plan?.name || "Gratuito"}</p>
-              <Badge variant={business.subscription_status === "active" ? "default" : "secondary"} className="mt-1">
-                {business.subscription_status === "active"
-                  ? "Ativo"
-                  : business.subscription_status === "expired"
-                    ? "Expirado"
-                    : "Inativo"}
-              </Badge>
-              {subscriptionEndDate && (
-                <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Calendar className="h-3 w-3" />
-                  <span>
-                    {daysUntilExpiry !== null && daysUntilExpiry <= 30 ? (
-                      <span className="text-yellow-500 font-medium">Expira em {daysUntilExpiry} dias</span>
-                    ) : (
-                      `Válido até ${subscriptionEndDate}`
-                    )}
-                  </span>
-                </div>
-              )}
-              {(permissions.isFreePlan || permissions.isPreview) && (
-                <Button size="sm" className="w-full mt-3 text-xs" onClick={() => onNavigate?.("plan")}>
-                  {permissions.isPreview ? "Ativar Plano e Receber Pedidos" : "Melhorar Plano"}
-                  <ArrowRight className="h-3 w-3 ml-1" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
+        <BusinessRankingWidget
+          businessId={business.id}
+          onNavigate={onNavigate}
+        />
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card rounded-xl p-5 shadow-card">
-          <div className="flex items-center gap-2 mb-2">
-            <Eye className="h-4 w-4 text-primary" />
-            <span className="text-xs text-muted-foreground">Visualizações</span>
+      {/* ── Recent Requests ──────────────────────────── */}
+      {!isLocked && recentRequests.length > 0 && (
+        <div className="bg-card rounded-xl p-5 shadow-card space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Inbox className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Pedidos Recentes</span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs p-0 h-auto text-primary"
+              onClick={() => onNavigate?.("requests")}
+            >
+              Ver todos →
+            </Button>
           </div>
-          <p className="text-2xl font-bold">{analytics?.views ?? "—"}</p>
-          <p className="text-xs text-muted-foreground mt-1">Últimos 30 dias</p>
-          {isLocked && analytics && analytics.views > 0 && (
-            <p className="text-[10px] text-primary mt-1 font-medium">{analytics.views} pessoas viram o teu perfil!</p>
-          )}
+          <div className="space-y-2">
+            {recentRequests.map((req: any) => {
+              const sr = req.service_requests;
+              if (!sr) return null;
+              const isExpired = sr.status === "expired";
+              const isActive = sr.status === "active";
+              return (
+                <div
+                  key={req.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer hover:bg-muted/50 ${
+                    isExpired
+                      ? "border-muted bg-muted/20 opacity-60"
+                      : sr.urgency === "urgent"
+                        ? "border-destructive/30 bg-destructive/5"
+                        : "border-border"
+                  }`}
+                  onClick={() => onNavigate?.("requests")}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {getRequestUrgencyBadge(req)}
+                      <span className="text-sm font-medium text-foreground truncate">
+                        {sr.description?.slice(0, 60) || "Pedido sem descrição"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                      <span>{getTimeSince(sr.created_at)}</span>
+                      {sr.profiles?.full_name && (
+                        <>
+                          <span>•</span>
+                          <span>{sr.profiles.full_name}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isExpired && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        Expirado
+                      </Badge>
+                    )}
+                    {isActive && !req.first_response_at && (
+                      <Button size="sm" className="text-xs h-7">
+                        Responder
+                      </Button>
+                    )}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Badges Row ───────────────────────────────── */}
+      {permissions.canViewProAnalytics && unlockedBadges.length > 0 && (
+        <div className="bg-card rounded-xl p-5 shadow-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Badges Conquistados</span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs p-0 h-auto text-primary"
+              onClick={() => onNavigate?.("badges")}
+            >
+              Ver todos →
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {unlockedBadges.slice(0, 6).map((badge) => (
+              <Badge
+                key={badge.name}
+                variant="secondary"
+                className="text-xs px-3 py-1.5 bg-primary/5 border-primary/20"
+              >
+                ✅ {badge.name}
+              </Badge>
+            ))}
+            {unlockedBadges.length > 6 && (
+              <Badge variant="outline" className="text-xs px-3 py-1.5">
+                +{unlockedBadges.length - 6} mais
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Bottom row: Plan + Share + State ──────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <ShareProfileCard slug={business.slug} businessName={business.name} />
+
+        <div className="bg-card rounded-xl p-5 shadow-card flex flex-col justify-between">
+          <div className="flex items-center gap-3 mb-3">
+            <CreditCard className="h-5 w-5 text-primary" />
+            <span className="text-sm text-muted-foreground">Plano Atual</span>
+          </div>
+          <div>
+            <p className="text-lg font-bold">{plan?.name || "Gratuito"}</p>
+            <Badge
+              variant={business.subscription_status === "active" ? "default" : "secondary"}
+              className="mt-1"
+            >
+              {business.subscription_status === "active"
+                ? "Ativo"
+                : business.subscription_status === "expired"
+                  ? "Expirado"
+                  : "Inativo"}
+            </Badge>
+            {subscriptionEndDate && (
+              <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                <span>
+                  {daysUntilExpiry !== null && daysUntilExpiry <= 30 ? (
+                    <span className="text-yellow-500 font-medium">
+                      Expira em {daysUntilExpiry} dias
+                    </span>
+                  ) : (
+                    `Válido até ${subscriptionEndDate}`
+                  )}
+                </span>
+              </div>
+            )}
+            {(permissions.isFreePlan || permissions.isPreview) && (
+              <Button
+                size="sm"
+                className="w-full mt-3 text-xs"
+                onClick={() => onNavigate?.("plan")}
+              >
+                {permissions.isPreview ? "Ativar Plano" : "Melhorar Plano"}
+                <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            )}
+          </div>
         </div>
 
-        {isLocked ? (
-          <LockedCard
-            icon={MousePointerClick}
-            label="Contactos"
-            reason="Ativa um plano para ver"
-            onUnlock={() => onNavigate?.("plan")}
-          />
-        ) : (
+        <div className="space-y-4">
           <div className="bg-card rounded-xl p-5 shadow-card">
-            <div className="flex items-center gap-2 mb-2">
-              <MousePointerClick className="h-4 w-4 text-primary" />
-              <span className="text-xs text-muted-foreground">Contactos</span>
+            <div className="flex items-center gap-3 mb-3">
+              <Building2 className="h-5 w-5 text-primary" />
+              <span className="text-sm text-muted-foreground">Estado do Negócio</span>
             </div>
-            <p className="text-2xl font-bold">{analytics?.totalContacts ?? "—"}</p>
-            {analytics && analytics.totalContacts > 0 && (
+            <Badge
+              variant={business.is_active ? "default" : "secondary"}
+              className="text-sm px-3 py-1"
+            >
+              {business.is_active ? "✅ Visível ao público" : "🔍 Em verificação"}
+            </Badge>
+            {!business.is_active && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Estamos a verificar os seus dados. Complete o perfil para acelerar!
+              </p>
+            )}
+          </div>
+
+          {!isLocked && analytics && analytics.totalContacts > 0 && (
+            <div className="bg-card rounded-xl p-5 shadow-card">
+              <div className="flex items-center gap-2 mb-2">
+                <MousePointerClick className="h-4 w-4 text-primary" />
+                <span className="text-xs text-muted-foreground">Contactos (30d)</span>
+              </div>
+              <p className="text-2xl font-bold">{analytics.totalContacts}</p>
               <div className="flex gap-2 mt-1 flex-wrap">
                 {analytics.breakdown.phone > 0 && (
                   <span className="text-[10px] text-muted-foreground">📞{analytics.breakdown.phone}</span>
@@ -350,124 +602,6 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
                   <span className="text-[10px] text-muted-foreground">✉️{analytics.breakdown.email}</span>
                 )}
               </div>
-            )}
-          </div>
-        )}
-
-        {isLocked ? (
-          <LockedCard
-            icon={Inbox}
-            label="Pedidos"
-            reason="Ativa um plano para receber"
-            onUnlock={() => onNavigate?.("plan")}
-          />
-        ) : (
-          <div className="bg-card rounded-xl p-5 shadow-card">
-            <div className="flex items-center gap-2 mb-2">
-              <Inbox className="h-4 w-4 text-primary" />
-              <span className="text-xs text-muted-foreground">Pedidos</span>
-            </div>
-            <p className="text-2xl font-bold">{requests.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total recebidos</p>
-          </div>
-        )}
-
-        <div className="bg-card rounded-xl p-5 shadow-card">
-          <div className="flex items-center gap-2 mb-2">
-            <Bell className="h-4 w-4 text-primary" />
-            <span className="text-xs text-muted-foreground">Notificações</span>
-          </div>
-          <p className="text-2xl font-bold">{unreadCount}</p>
-          <p className="text-xs text-muted-foreground mt-1">Não lidas</p>
-        </div>
-      </div>
-
-      {/* Conquistas Widget */}
-      {permissions.canViewProAnalytics && unlockedBadges.length > 0 && (
-        <div className="bg-card rounded-xl p-5 shadow-card">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-primary" />
-              <span className="text-sm font-semibold">Conquistas</span>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-xs p-0 h-auto text-primary"
-              onClick={() => onNavigate?.("badges")}
-            >
-              Ver todas →
-            </Button>
-          </div>
-          <div className="space-y-1.5">
-            {unlockedBadges.slice(0, 3).map((badge) => (
-              <div key={badge.name} className="flex items-center gap-2 text-sm">
-                <span className="text-green-500">✅</span>
-                <span className="text-foreground">{badge.name}</span>
-              </div>
-            ))}
-            {unlockedBadges.length > 3 && (
-              <p className="text-xs text-muted-foreground ml-6">
-                (+{unlockedBadges.length - 3} mais)
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <BusinessRankingWidget
-          businessId={business.id}
-          onNavigate={onNavigate}
-        />
-
-        <BusinessSearchPosition
-          businessId={business.id}
-          planId={business.plan_id}
-          onUpgradeClick={() => onNavigate?.("plan")}
-        />
-
-        <div className="space-y-4">
-          {/* Estado do Negócio */}
-          <div className="bg-card rounded-xl p-5 shadow-card">
-            <div className="flex items-center gap-3 mb-3">
-              <Building2 className="h-5 w-5 text-primary" />
-              <span className="text-sm text-muted-foreground">Estado do Negócio</span>
-            </div>
-            <Badge variant={business.is_active ? "default" : "secondary"} className="text-sm px-3 py-1">
-              {business.is_active ? "✅ Visível ao público" : "🔍 Em verificação"}
-            </Badge>
-            {!business.is_active && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Estamos a verificar os seus dados. O negócio ficará visível em breve!
-                Complete o perfil para acelerar o processo.
-              </p>
-            )}
-          </div>
-
-          {contactsPerVisit !== null && !isLocked && (
-            <div className="bg-card rounded-xl p-5 shadow-card">
-              <div className="flex items-center gap-3 mb-3">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                <span className="text-sm text-muted-foreground">Contactos por Visita</span>
-              </div>
-              <p className="text-2xl font-bold">{contactsPerVisit}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {analytics!.totalContacts} contactos em {analytics!.views} visualizações
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Cada visitante clica em média {contactsPerVisit}× para te contactar
-              </p>
-              {permissions.canViewProAnalytics && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="mt-2 text-xs p-0 h-auto text-primary"
-                  onClick={() => onNavigate?.("insights")}
-                >
-                  Ver análise completa <ArrowRight className="h-3 w-3 ml-1" />
-                </Button>
-              )}
             </div>
           )}
 
@@ -478,11 +612,14 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
                 <span className="text-sm font-medium text-foreground">O teu Potencial</span>
               </div>
               <p className="text-2xl font-bold text-primary">{analytics.views}</p>
-              <p className="text-xs text-muted-foreground mt-1">pessoas viram o teu perfil nos últimos 30 dias</p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Com o plano START estas pessoas podiam ter-te contactado diretamente.
+              <p className="text-xs text-muted-foreground mt-1">
+                pessoas viram o teu perfil nos últimos 30 dias
               </p>
-              <Button size="sm" className="w-full mt-3 text-xs" onClick={() => onNavigate?.("plan")}>
+              <Button
+                size="sm"
+                className="w-full mt-3 text-xs"
+                onClick={() => onNavigate?.("plan")}
+              >
                 Começar a receber contactos →
               </Button>
             </div>
