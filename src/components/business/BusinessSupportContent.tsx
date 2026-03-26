@@ -234,7 +234,7 @@ const BusinessSupportContent = ({ businessId }: { businessId: string }) => {
       <div className="space-y-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Suporte PedeDireto</h1>
-          <p className="text-sm text-muted-foreground">A equipa responde normalmente em menos de 2h</p>
+          <p className="text-sm text-muted-foreground">A equipa responde normalmente em menos de 2h úteis</p>
         </div>
 
         {loadingConvs ? (
