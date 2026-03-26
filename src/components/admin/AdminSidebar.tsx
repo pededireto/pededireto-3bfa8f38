@@ -85,6 +85,7 @@ export type AdminTab =
   | "blog"
   | "newsletter"
   | "affiliates"
+  | "support"
   | "marketing-addons";
 
 interface AdminSidebarProps {
@@ -162,6 +163,7 @@ const SIDEBAR_STRUCTURE: Omit<SidebarItem, "badge">[][] = [
   // 7 - comunicacao
   [
     { id: "alerts", label: "Alertas", icon: Bell },
+    { id: "support", label: "Suporte & Mensagens", icon: MessageCircle },
     { id: "suggestions", label: "Sugestões", icon: Lightbulb },
     { id: "emails", label: "Email Marketing", icon: MailPlus },
     { id: "newsletter", label: "Newsletter", icon: MailPlus },
