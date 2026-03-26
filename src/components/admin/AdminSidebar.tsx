@@ -38,6 +38,7 @@ import {
   ChevronDown,
   ChevronRight,
   Zap,
+  MessageCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
