@@ -137,7 +137,7 @@ const AdminSupportContent = () => {
             business_name,
             user_email,
             last_message_preview: lastMsg
-              ? `${lastMsg.sender_type === "staff" ? "Tu: " : ""}${(lastMsg as any).content?.slice(0, 60)}`
+              ? `${(lastMsg as any).sender_type === "staff" ? "Tu: " : ""}${(lastMsg as any).content?.slice(0, 60)}`
               : "Sem mensagens",
             unread_count: unread || 0,
           };
