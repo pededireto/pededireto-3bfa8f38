@@ -1,25 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  MessageCircle,
-  Send,
-  Loader2,
-  Search,
-  CheckCircle,
-  Circle,
-  Tag,
-} from "lucide-react";
+import { MessageCircle, Send, Loader2, Search, CheckCircle, Circle, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -53,9 +39,7 @@ interface Message {
 const formatTime = (dateStr: string) => {
   const date = new Date(dateStr);
   const now = new Date();
-  const diffDays = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays === 0)
     return date.toLocaleTimeString("pt-PT", {
       hour: "2-digit",
@@ -82,9 +66,7 @@ const AdminSupportContent = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState("");
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "open" | "resolved">(
-    "all"
-  );
+  const [filterStatus, setFilterStatus] = useState<"all" | "open" | "resolved">("all");
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
@@ -159,7 +141,7 @@ const AdminSupportContent = () => {
               : "Sem mensagens",
             unread_count: unread || 0,
           };
-        })
+        }),
       );
 
       setConversations(enriched);
@@ -181,7 +163,7 @@ const AdminSupportContent = () => {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setMessages((data || []) as Message[]);
+      setMessages((data || []) as unknown as Message[]);
 
       // Marcar mensagens do utilizador como lidas
       await supabase
@@ -192,9 +174,7 @@ const AdminSupportContent = () => {
         .is("read_at", null);
 
       // Actualizar contagem
-      setConversations((prev) =>
-        prev.map((c) => (c.id === convId ? { ...c, unread_count: 0 } : c))
-      );
+      setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, unread_count: 0 } : c)));
     } catch (err: any) {
       console.error("Erro mensagens:", err);
     } finally {
@@ -223,7 +203,7 @@ const AdminSupportContent = () => {
         .single();
 
       if (error) throw error;
-      setMessages((prev) => [...prev, data as Message]);
+      setMessages((prev) => [...prev, data as unknown as Message]);
     } catch (err: any) {
       toast({ title: "Erro ao enviar", variant: "destructive" });
       setMessageText(text);
@@ -235,21 +215,14 @@ const AdminSupportContent = () => {
   // ── Marcar como resolvido ───────────────────────────────
   const toggleResolved = async () => {
     if (!selectedConv) return;
-    const newStatus =
-      selectedConv.status === "open" ? "resolved" : "open";
+    const newStatus = selectedConv.status === "open" ? "resolved" : "open";
     await supabase
       .from("support_conversations" as any)
       .update({ status: newStatus })
       .eq("id", selectedConv.id);
 
-    setSelectedConv((prev) =>
-      prev ? { ...prev, status: newStatus } : prev
-    );
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === selectedConv.id ? { ...c, status: newStatus } : c
-      )
-    );
+    setSelectedConv((prev) => (prev ? { ...prev, status: newStatus } : prev));
+    setConversations((prev) => prev.map((c) => (c.id === selectedConv.id ? { ...c, status: newStatus } : c)));
   };
 
   // ── Iniciar conversa com utilizador ────────────────────
@@ -347,10 +320,12 @@ const AdminSupportContent = () => {
               .update({ read_at: new Date().toISOString() })
               .eq("id", msg.id);
           }
-        }
+        },
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedConv?.id]);
 
   useEffect(() => {
@@ -363,8 +338,7 @@ const AdminSupportContent = () => {
 
   // ── Filtros ─────────────────────────────────────────────
   const filtered = conversations.filter((c) => {
-    const matchStatus =
-      filterStatus === "all" || c.status === filterStatus;
+    const matchStatus = filterStatus === "all" || c.status === filterStatus;
     const matchSearch =
       !search ||
       c.business_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -372,10 +346,7 @@ const AdminSupportContent = () => {
     return matchStatus && matchSearch;
   });
 
-  const totalUnread = conversations.reduce(
-    (sum, c) => sum + (c.unread_count || 0),
-    0
-  );
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
 
   return (
     <div className="h-[calc(100vh-120px)] flex flex-col">
@@ -383,9 +354,7 @@ const AdminSupportContent = () => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">Suporte & Mensagens</h1>
-          {totalUnread > 0 && (
-            <Badge variant="destructive">{totalUnread} não lidas</Badge>
-          )}
+          {totalUnread > 0 && <Badge variant="destructive">{totalUnread} não lidas</Badge>}
         </div>
         <Button size="sm" onClick={() => setShowNewConv(!showNewConv)}>
           + Nova mensagem
@@ -404,31 +373,18 @@ const AdminSupportContent = () => {
               onKeyDown={(e) => e.key === "Enter" && handleSearchUser()}
             />
             <Button size="sm" onClick={handleSearchUser} disabled={searchingUser}>
-              {searchingUser ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
+              {searchingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             </Button>
           </div>
           {Array.isArray(foundUser) && foundUser.length > 0 && (
             <div className="space-y-2">
               {foundUser.map((biz: any) => (
-                <div
-                  key={biz.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                >
+                <div key={biz.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                   <div>
                     <p className="text-sm font-medium">{biz.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {biz.owner_email}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{biz.owner_email}</p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setFoundUser(biz)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => setFoundUser(biz)}>
                     Seleccionar
                   </Button>
                 </div>
@@ -446,11 +402,7 @@ const AdminSupportContent = () => {
                 onChange={(e) => setNewMessage(e.target.value)}
                 rows={3}
               />
-              <Button
-                size="sm"
-                onClick={() => handleStartConversation(foundUser)}
-                disabled={!newMessage.trim()}
-              >
+              <Button size="sm" onClick={() => handleStartConversation(foundUser)} disabled={!newMessage.trim()}>
                 Enviar e iniciar conversa
               </Button>
             </div>
@@ -470,10 +422,7 @@ const AdminSupportContent = () => {
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 h-8 text-xs"
             />
-            <Select
-              value={filterStatus}
-              onValueChange={(v) => setFilterStatus(v as any)}
-            >
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
               <SelectTrigger className="w-28 h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
@@ -492,9 +441,7 @@ const AdminSupportContent = () => {
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
               </div>
             ) : filtered.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Sem conversas
-              </p>
+              <p className="text-sm text-muted-foreground text-center py-8">Sem conversas</p>
             ) : (
               <div className="space-y-1 pr-1">
                 {filtered.map((conv) => (
@@ -508,7 +455,7 @@ const AdminSupportContent = () => {
                       "w-full flex items-start gap-3 p-3 rounded-lg text-left transition-colors",
                       selectedConv?.id === conv.id
                         ? "bg-primary/10 border border-primary/20"
-                        : "hover:bg-muted/50 border border-transparent"
+                        : "hover:bg-muted/50 border border-transparent",
                     )}
                   >
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
@@ -516,29 +463,20 @@ const AdminSupportContent = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold truncate">
-                          {conv.business_name}
-                        </span>
+                        <span className="text-xs font-semibold truncate">{conv.business_name}</span>
                         <span className="text-[10px] text-muted-foreground shrink-0 ml-1">
                           {formatTime(conv.last_message_at)}
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                        {conv.last_message_preview}
-                      </p>
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">{conv.last_message_preview}</p>
                       <div className="flex items-center gap-1 mt-1">
                         <span
-                          className={cn(
-                            "text-[10px] px-1.5 py-0.5 rounded-full border",
-                            STATUS_COLORS[conv.status]
-                          )}
+                          className={cn("text-[10px] px-1.5 py-0.5 rounded-full border", STATUS_COLORS[conv.status])}
                         >
                           {conv.status === "open" ? "Aberto" : "Resolvido"}
                         </span>
                         {(conv.unread_count || 0) > 0 && (
-                          <Badge className="h-4 text-[10px] px-1 ml-auto">
-                            {conv.unread_count}
-                          </Badge>
+                          <Badge className="h-4 text-[10px] px-1 ml-auto">{conv.unread_count}</Badge>
                         )}
                       </div>
                     </div>
@@ -563,20 +501,11 @@ const AdminSupportContent = () => {
               {/* Header da conversa */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
                 <div>
-                  <p className="font-semibold text-sm">
-                    {selectedConv.business_name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedConv.user_email}
-                  </p>
+                  <p className="font-semibold text-sm">{selectedConv.business_name}</p>
+                  <p className="text-xs text-muted-foreground">{selectedConv.user_email}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs gap-1"
-                    onClick={toggleResolved}
-                  >
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={toggleResolved}>
                     {selectedConv.status === "open" ? (
                       <>
                         <CheckCircle className="h-3 w-3" /> Resolver
@@ -601,37 +530,28 @@ const AdminSupportContent = () => {
                     {messages.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`flex ${
-                          msg.sender_type === "staff"
-                            ? "justify-end"
-                            : "justify-start"
-                        }`}
+                        className={`flex ${msg.sender_type === "staff" ? "justify-end" : "justify-start"}`}
                       >
                         <div
                           className={cn(
                             "max-w-[75%] rounded-2xl px-4 py-3 text-sm",
                             msg.sender_type === "staff"
                               ? "bg-primary text-primary-foreground rounded-br-md"
-                              : "bg-muted rounded-bl-md"
+                              : "bg-muted rounded-bl-md",
                           )}
                         >
                           {msg.sender_type === "user" && (
-                            <p className="text-xs font-medium mb-1 opacity-70">
-                              {selectedConv.business_name}
-                            </p>
+                            <p className="text-xs font-medium mb-1 opacity-70">{selectedConv.business_name}</p>
                           )}
                           <p className="leading-relaxed">{msg.content}</p>
                           <p
                             className={cn(
                               "text-[10px] mt-1",
-                              msg.sender_type === "staff"
-                                ? "text-primary-foreground/60"
-                                : "text-muted-foreground"
+                              msg.sender_type === "staff" ? "text-primary-foreground/60" : "text-muted-foreground",
                             )}
                           >
                             {formatTime(msg.created_at)}
-                            {msg.sender_type === "staff" &&
-                              (msg.read_at ? " ✓✓" : " ✓")}
+                            {msg.sender_type === "staff" && (msg.read_at ? " ✓✓" : " ✓")}
                           </p>
                         </div>
                       </div>
@@ -663,21 +583,14 @@ const AdminSupportContent = () => {
                     onClick={handleSend}
                     disabled={!messageText.trim() || sending}
                   >
-                    {sending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>
               ) : (
                 <div className="p-3 border-t border-border text-center">
                   <p className="text-xs text-muted-foreground">
                     Conversa resolvida —{" "}
-                    <button
-                      className="text-primary hover:underline"
-                      onClick={toggleResolved}
-                    >
+                    <button className="text-primary hover:underline" onClick={toggleResolved}>
                       Reabrir
                     </button>
                   </p>
