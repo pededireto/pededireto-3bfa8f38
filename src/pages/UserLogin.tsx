@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useSmartRedirect } from "@/hooks/useSmartRedirect";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Email inválido").max(255),
@@ -92,10 +94,23 @@ const UserLogin = () => {
         <div className="bg-card rounded-2xl shadow-card p-8">
           <div className="text-center mb-8">
             <Link to="/" className="inline-block mb-6">
-              <h1 className="text-2xl font-bold text-primary">Pede Direto</h1>
+              <img src={logo} alt="Pede Direto" className="h-10" />
             </Link>
             <h2 className="text-xl font-semibold text-foreground">A Minha Conta</h2>
             <p className="text-muted-foreground mt-1">Faz login para aceder à tua área</p>
+          </div>
+
+          <div className="mb-6">
+            <GoogleSignInButton />
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">ou</span>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -170,12 +185,20 @@ const UserLogin = () => {
           </div>
         </div>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          Não tens conta?{" "}
-          <Link to="/register" className="text-primary hover:underline">
-            Cria uma aqui
-          </Link>
-        </p>
+        <div className="mt-6 space-y-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            Não tens conta?{" "}
+            <Link to="/register" className="text-primary font-semibold hover:underline">
+              Cria uma aqui — é grátis!
+            </Link>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Tens um negócio?{" "}
+            <Link to="/claim-business" className="text-primary hover:underline">
+              Registar negócio →
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

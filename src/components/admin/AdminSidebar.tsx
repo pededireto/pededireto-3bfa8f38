@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
 import {
   CreditCard,
   LayoutDashboard,
@@ -36,12 +37,15 @@ import {
   FileCheck,
   ChevronDown,
   ChevronRight,
+  Zap,
+  MessageCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useUncontactedCount } from "@/hooks/useExpirationLogs";
 import { usePendingRequestsCount } from "@/hooks/useActionRequests";
 import { usePendingClaimsCount } from "@/hooks/useClaimRequests";
+import { usePlatformAlertsCounts, usePendingReviewsCount } from "@/hooks/usePlatformAlerts";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -60,6 +64,7 @@ export type AdminTab =
   | "settings"
   | "pages"
   | "synonyms"
+  | "subcategory-relations"
   | "team-management"
   | "action-requests"
   | "audit-logs"
@@ -77,7 +82,12 @@ export type AdminTab =
   | "reviews"
   | "test-users"
   | "pending-claims"
-  | "emails";
+  | "emails"
+  | "blog"
+  | "newsletter"
+  | "affiliates"
+  | "support"
+  | "marketing-addons";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -109,6 +119,7 @@ const SIDEBAR_STRUCTURE: Omit<SidebarItem, "badge">[][] = [
     { id: "claim-requests", label: "Pedidos de Claim", icon: ShieldCheck },
     { id: "pending-claims", label: "Reclamações Comerciais", icon: FileCheck },
     { id: "business-modules", label: "Config. Ficha", icon: Puzzle },
+    { id: "marketing-addons", label: "Marketing AI", icon: Zap },
     { id: "featured", label: "Destaques", icon: Crown },
     { id: "reviews", label: "Avaliações", icon: Star },
   ],
@@ -132,6 +143,7 @@ const SIDEBAR_STRUCTURE: Omit<SidebarItem, "badge">[][] = [
     { id: "revenue", label: "Receita & Crescimento", icon: TrendingUp },
     { id: "commission-models", label: "Modelos Comissão", icon: Coins },
     { id: "commission-audit", label: "Auditoria Comissões", icon: ShieldCheck },
+    { id: "affiliates", label: "Gestão Afiliados", icon: Handshake },
   ],
   // 5 - analytics
   [
@@ -145,13 +157,17 @@ const SIDEBAR_STRUCTURE: Omit<SidebarItem, "badge">[][] = [
     { id: "categories", label: "Categorias", icon: FolderOpen },
     { id: "pages", label: "Páginas", icon: FileText },
     { id: "synonyms", label: "Sinónimos", icon: BookOpen },
+    { id: "subcategory-relations", label: "Relações", icon: Puzzle },
     { id: "homepage", label: "Homepage", icon: Home },
+    { id: "blog", label: "Blog", icon: BookOpen },
   ],
   // 7 - comunicacao
   [
     { id: "alerts", label: "Alertas", icon: Bell },
+    { id: "support", label: "Suporte & Mensagens", icon: MessageCircle },
     { id: "suggestions", label: "Sugestões", icon: Lightbulb },
     { id: "emails", label: "Email Marketing", icon: MailPlus },
+    { id: "newsletter", label: "Newsletter", icon: MailPlus },
   ],
   // 8 - sistema
   [
@@ -193,13 +209,16 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
   const { data: pendingRequestsCount = 0 } = usePendingRequestsCount();
   const { data: pendingClaimsCount = 0 } = usePendingClaimsCount();
   const { data: unreadTickets = 0 } = useUnreadTicketsCount();
+  const { data: alertCounts } = usePlatformAlertsCounts();
+  const { data: pendingReviewsCount = 0 } = usePendingReviewsCount();
 
   // Badges por index de grupo (corresponde a SIDEBAR_STRUCTURE)
   const badgeMap: Record<AdminTab, number> = {
     "claim-requests": pendingClaimsCount,
     "action-requests": pendingRequestsCount,
     tickets: unreadTickets,
-    alerts: uncontactedCount,
+    alerts: alertCounts?.critical || 0,
+    reviews: pendingReviewsCount,
   } as Record<AdminTab, number>;
 
   // Construir grupos com badges injectados
@@ -229,8 +248,8 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
       {/* Brand */}
       <div className="p-6 border-b border-sidebar-border hidden lg:block">
         <Link to="/" className="block">
-          <h1 className="text-xl font-bold text-sidebar-primary">Pede Direto</h1>
-          <p className="text-xs text-sidebar-foreground/70">Área de Gestão</p>
+          <img src={logo} alt="Pede Direto" className="h-8" />
+          <p className="text-xs text-sidebar-foreground/70 mt-1">Área de Gestão</p>
         </Link>
       </div>
 
@@ -322,8 +341,50 @@ const AdminSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: AdminSidebarP
         })}
       </nav>
 
+      {/* Dashboards Internos */}
+      <div className="px-3 pb-1">
+        <button
+          onClick={() => toggleGroup("dashboards")}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+        >
+          <ExternalLink className="h-4 w-4 flex-shrink-0" />
+          <span className="flex-1 text-left">Dashboards</span>
+          {openGroups.includes("dashboards") ? (
+            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+          )}
+        </button>
+        {openGroups.includes("dashboards") && (
+          <div className="ml-3 pl-3 border-l border-sidebar-border/50 mt-0.5 space-y-0.5">
+            {[
+              { to: "/cs", label: "Customer Success", emoji: "🎧" },
+              { to: "/comercial", label: "Comercial", emoji: "💼" },
+              { to: "/onboarding", label: "Onboarding", emoji: "🚀" },
+            ].map((d) => (
+              <Link
+                key={d.to}
+                to={d.to}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              >
+                <span>{d.emoji}</span>
+                <span>{d.label}</span>
+                <ExternalLink className="h-3 w-3 ml-auto opacity-40" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border space-y-2">
+        <Link
+          to="/app/reel"
+          className="flex items-center gap-2 text-sm text-cta hover:text-cta/80 transition-colors font-medium"
+        >
+          <Zap className="h-4 w-4" />
+          Marketing AI Studio
+        </Link>
         <Link
           to="/"
           className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors"

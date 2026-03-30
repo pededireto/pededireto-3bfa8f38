@@ -1,27 +1,88 @@
 import { useParams, Link } from "react-router-dom";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useSubcategory, useSubcategories } from "@/hooks/useSubcategories";
 import { useCategory } from "@/hooks/useCategories";
 import { useBusinesses } from "@/hooks/useBusinesses";
+import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BusinessGrid from "@/components/BusinessGrid";
 import FeaturedSection from "@/components/FeaturedSection";
 import SuggestionForm from "@/components/SuggestionForm";
-import { ArrowLeft, ArrowRight, MapPin } from "lucide-react";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import { ArrowLeft, ArrowRight, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useState } from "react";
 
 const BASE_URL = "https://pededireto.pt";
+
+const slugify = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+/* ── hook: cities for this subcategory with counts ─── */
+
+const useCitiesForSubcategory = (subcategoryId?: string) =>
+  useQuery({
+    queryKey: ["subcategory-cities", subcategoryId],
+    queryFn: async () => {
+      const { data: junctionData, error: jError } = await supabase
+        .from("business_subcategories")
+        .select("business_id")
+        .eq("subcategory_id", subcategoryId!);
+
+      if (jError) throw jError;
+      if (!junctionData || junctionData.length === 0) return [];
+
+      const businessIds = junctionData.map((j) => j.business_id);
+
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("city")
+        .eq("is_active", true)
+        .in("id", businessIds)
+        .not("city", "is", null);
+
+      if (error) throw error;
+
+      const cityCountMap = new Map<string, { name: string; count: number }>();
+      for (const b of data ?? []) {
+        if (!b.city) continue;
+        const key = slugify(b.city);
+        const existing = cityCountMap.get(key);
+        if (existing) {
+          existing.count++;
+        } else {
+          cityCountMap.set(key, { name: b.city, count: 1 });
+        }
+      }
+
+      return Array.from(cityCountMap.entries())
+        .map(([slug, { name, count }]) => ({ slug, name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 12);
+    },
+    enabled: !!subcategoryId,
+  });
+
+const PAGE_SIZE = 12;
 
 const SubcategoryPage = () => {
   const { categorySlug, subcategorySlug } = useParams<{ categorySlug: string; subcategorySlug: string }>();
   const [cityFilter, setCityFilter] = useState("");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const { data: subcategory, isLoading: subcategoryLoading } = useSubcategory(subcategorySlug);
   const { data: category } = useCategory(categorySlug);
   const { data: allSubcategories = [] } = useSubcategories(category?.id);
+  const { data: cities = [] } = useCitiesForSubcategory(subcategory?.id);
 
   const { data: allBusinesses = [], isLoading: businessesLoading } = useBusinesses(
     undefined,
@@ -37,6 +98,11 @@ const SubcategoryPage = () => {
   // Separar destacados dos normais
   const subcategoryFeatured = allBusinesses.filter((b) => b.is_featured);
   const regularBusinesses = allBusinesses.filter((b) => !b.is_featured);
+  const visibleBusinesses = regularBusinesses.slice(0, visibleCount);
+  const hasMore = visibleCount < regularBusinesses.length;
+
+  // Show text filter only if fewer than 3 cities
+  const showTextFilter = cities.length < 3;
 
   if (subcategoryLoading) {
     return (
@@ -70,22 +136,13 @@ const SubcategoryPage = () => {
     );
   }
 
-  /* ===========================
-     SEO DINÂMICO
-  =========================== */
-
-  const locationLabel = cityFilter.trim()
-    ? `em ${cityFilter.trim()}`
-    : "em Portugal";
-
+  /* ── SEO ── */
+  const locationLabel = cityFilter.trim() ? `em ${cityFilter.trim()}` : "em Portugal";
   const pageTitle = `${subcategory.name} ${locationLabel} | ${category?.name || "Pede Direto"}`;
-
   const pageDescription = subcategory.description
     ? subcategory.description.slice(0, 155)
     : `Encontre profissionais de ${subcategory.name.toLowerCase()} ${locationLabel}. Contacte diretamente, sem intermediários — só no Pede Direto.`;
-
   const pageUrl = `${BASE_URL}/categoria/${categorySlug}/${subcategorySlug}`;
-
   const pageImage = subcategory.image_url || `${BASE_URL}/og-default.jpg`;
 
   const schemaData = {
@@ -103,26 +160,21 @@ const SubcategoryPage = () => {
     })),
   };
 
-  /* =========================== */
-
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
         <link rel="canonical" href={pageUrl} />
-
         <meta property="og:type" content="website" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:image" content={pageImage} />
         <meta property="og:url" content={pageUrl} />
-
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
         <meta name="twitter:image" content={pageImage} />
-
         <script type="application/ld+json">
           {JSON.stringify(schemaData)}
         </script>
@@ -131,49 +183,88 @@ const SubcategoryPage = () => {
       <Header />
 
       <main className="flex-1">
-        {/* Subcategory Header */}
-        <section className="section-hero py-8 md:py-12">
-          <div className="container">
-            <Link
-              to={`/categoria/${categorySlug}`}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar a {subcategory.categories?.name || "Categorias"}
-            </Link>
+        {/* Breadcrumbs */}
+        <div className="container pt-6">
+          <Breadcrumbs items={[
+            { label: category?.name || "Categoria", href: `/categoria/${categorySlug}` },
+            { label: subcategory.name },
+          ]} />
+        </div>
 
+        {/* Subcategory Header */}
+        <section className="section-hero py-4 md:py-8">
+          <div className="container">
             <h1 className="text-3xl md:text-4xl font-bold mb-3">{subcategory.name}</h1>
 
             {subcategory.description && (
               <p className="text-lg text-muted-foreground mb-6 max-w-2xl">{subcategory.description}</p>
             )}
 
-            {/* City Filter */}
-            <div className="max-w-md">
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Filtrar por cidade..."
-                  value={cityFilter}
-                  onChange={(e) => setCityFilter(e.target.value)}
-                  className="pl-10"
-                />
+            {/* City Chips or Text Filter */}
+            {showTextFilter ? (
+              <div className="max-w-md">
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Filtrar por cidade..."
+                    value={cityFilter}
+                    onChange={(e) => setCityFilter(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  Filtrar por cidade
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {cities.map((c) => (
+                    <Link
+                      key={c.slug}
+                      to={`/categoria/${categorySlug}/${subcategorySlug}/cidade/${c.slug}`}
+                    >
+                      <Badge
+                        variant="outline"
+                        className="px-3 py-1.5 text-sm cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                      >
+                        {c.name} ({c.count})
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
         {/* Featured */}
         {subcategoryFeatured.length > 0 && <FeaturedSection businesses={subcategoryFeatured} />}
 
-        {/* All Businesses */}
+        {/* All Businesses with pagination */}
         <BusinessGrid
-          businesses={regularBusinesses}
+          businesses={visibleBusinesses}
           title={`${subcategory.name}`}
+          subtitle={regularBusinesses.length > 0 ? `A mostrar ${Math.min(visibleCount, regularBusinesses.length)} de ${regularBusinesses.length} negócio${regularBusinesses.length !== 1 ? "s" : ""}` : undefined}
           isLoading={businessesLoading}
           emptyMessage={`Ainda não temos negócios de ${subcategory.name.toLowerCase()} registados.`}
         />
+
+        {hasMore && (
+          <div className="container pb-8 text-center">
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2"
+              onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+            >
+              <Loader2 className="h-4 w-4 hidden" />
+              Carregar mais negócios
+            </Button>
+          </div>
+        )}
 
         {allBusinesses.length === 0 && !businessesLoading && (
           <div className="container pb-12">

@@ -141,7 +141,17 @@ export const useBusinessServiceRequests = (businessId: string | null) => {
         } as ServiceRequestsData;
       }
 
-      // Buscar os service_requests separadamente para evitar problemas com joins
+      // FIX: mapeamento de status em português (BD usa PT, não EN)
+      const statusLabels: Record<string, string> = {
+        enviado: "Novo",
+        visualizado: "Visto",
+        aceite: "Aceite",
+        recusado: "Recusado",
+        expirado: "Expirado",
+        sem_resposta: "Sem resposta",
+        respondido: "Respondido",
+      };
+
       const requestIds = rows.map((r: any) => r.request_id).filter(Boolean);
       const { data: srData } = await supabase
         .from("service_requests" as any)
@@ -151,9 +161,13 @@ export const useBusinessServiceRequests = (businessId: string | null) => {
       const srMap = new Map((Array.isArray(srData) ? srData : []).map((s: any) => [s.id, s]));
 
       const total = rows.length;
-      const accepted = rows.filter((r: any) => r.status === "accepted").length;
-      const pending = rows.filter((r: any) => r.status === "pending" || r.status === "enviado").length;
-      const rejected = rows.filter((r: any) => r.status === "rejected").length;
+
+      // FIX: status em português
+      const accepted = rows.filter((r: any) => r.status === "aceite").length;
+      const pending = rows.filter(
+        (r: any) => r.status === "enviado" || r.status === "visualizado" || r.status === "sem_resposta",
+      ).length;
+      const rejected = rows.filter((r: any) => r.status === "recusado" || r.status === "expirado").length;
       const viewed = rows.filter((r: any) => r.viewed_at).length;
 
       const responseTimes = rows
@@ -172,7 +186,7 @@ export const useBusinessServiceRequests = (businessId: string | null) => {
           description: sr?.description ?? "Sem descrição",
           urgency: sr?.urgency ?? "normal",
           location_city: sr?.location_city ?? null,
-          status: r.status,
+          status: statusLabels[r.status] ?? r.status,
           sent_at: r.sent_at,
           viewed_at: r.viewed_at ?? null,
           consumer_name: sr?.consumer_name ?? null,
@@ -237,11 +251,7 @@ export const useBusinessReviewsData = (businessId: string | null) => {
 
       const stats = statsResult.data;
       const reviews = Array.isArray(reviewsResult.data) ? reviewsResult.data : [];
-
-      const recentMapped = reviews.map((r) => ({
-        ...r,
-        pending_response: !r.business_response,
-      }));
+      const recentMapped = reviews.map((r) => ({ ...r, pending_response: !r.business_response }));
 
       return {
         total: stats?.total_reviews ?? 0,
@@ -261,53 +271,72 @@ export const useBusinessReviewsData = (businessId: string | null) => {
   });
 };
 
-// ─── Badges ───────────────────────────────────────────────────────────────────
+// ─── Badges (with progress-based unlock) ──────────────────────────────────────
 export interface BadgeData {
   name: string;
   description: string | null;
   icon_url: string | null;
   color: string | null;
-  earned_at: string;
+  earned_at: string | null;
   earned_automatically: boolean;
+  unlocked: boolean;
 }
 
 export const useBusinessBadges = (businessId: string | null) => {
   return useQuery({
     queryKey: ["business-badges", businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_earned_badges")
-        .select("earned_at, earned_automatically, badge_id")
-        .eq("business_id", businessId!)
-        .order("earned_at", { ascending: false });
-
-      if (error) throw error;
-      const rows = Array.isArray(data) ? data : [];
-      if (rows.length === 0) return [] as BadgeData[];
-
-      const badgeIds = rows.map((r: any) => r.badge_id).filter(Boolean);
-      const { data: badgesData } = await supabase
+      // 1. Get all active badges
+      const { data: allBadges, error: badgesErr } = await supabase
         .from("business_badges")
         .select("id, name, description, icon_url, color")
-        .in("id", badgeIds)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      if (badgesErr) throw badgesErr;
+      if (!allBadges || allBadges.length === 0) return [] as BadgeData[];
 
-      const badgeMap = new Map((Array.isArray(badgesData) ? badgesData : []).map((b: any) => [b.id, b]));
+      // 2. Get earned badges
+      const { data: earned, error: earnedErr } = await supabase
+        .from("business_earned_badges")
+        .select("badge_id, earned_at, earned_automatically")
+        .eq("business_id", businessId!);
+      if (earnedErr) throw earnedErr;
+      const earnedMap = new Map((earned || []).map((e) => [e.badge_id, e]));
 
-      return rows
-        .map((r: any) => {
-          const b = badgeMap.get(r.badge_id) as any;
-          if (!b) return null;
-          return {
-            name: b.name,
-            description: b.description ?? null,
-            icon_url: b.icon_url ?? null,
-            color: b.color ?? null,
-            earned_at: r.earned_at,
-            earned_automatically: r.earned_automatically ?? false,
-          };
-        })
-        .filter(Boolean) as BadgeData[];
+      // 3. Get progress
+      const { data: progress, error: progErr } = await supabase
+        .from("business_badge_progress" as any)
+        .select("badge_id, current_value, target_value")
+        .eq("business_id", businessId!);
+      if (progErr) throw progErr;
+      const progressMap = new Map(((progress as any[]) || []).map((p: any) => [p.badge_id, p]));
+
+      // 4. Merge: unlocked = earned OR (current_value >= target_value)
+      const result: BadgeData[] = allBadges.map((b) => {
+        const e = earnedMap.get(b.id);
+        const p = progressMap.get(b.id);
+        const unlockedByProgress = p && p.target_value > 0 && p.current_value >= p.target_value;
+        const unlocked = !!e || !!unlockedByProgress;
+
+        return {
+          name: b.name,
+          description: b.description ?? null,
+          icon_url: b.icon_url ?? null,
+          color: b.color ?? null,
+          earned_at: e?.earned_at ?? null,
+          earned_automatically: e?.earned_automatically ?? false,
+          unlocked,
+        };
+      });
+
+      // Sort: unlocked first
+      result.sort((a, b) => {
+        if (a.unlocked && !b.unlocked) return -1;
+        if (!a.unlocked && b.unlocked) return 1;
+        return 0;
+      });
+
+      return result;
     },
     enabled: !!businessId,
     staleTime: 10 * 60 * 1000,
@@ -329,8 +358,9 @@ export const useBusinessMonthlyHistory = (businessId: string | null) => {
       const since = new Date();
       since.setMonth(since.getMonth() - 12);
 
+      // FIX: usar business_analytics_events em vez de analytics_events
       const { data, error } = await supabase
-        .from("business_analytics_events")
+        .from("business_analytics_events" as any)
         .select("event_type, created_at")
         .eq("business_id", businessId!)
         .gte("created_at", since.toISOString());
@@ -378,27 +408,25 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
   return useQuery({
     queryKey: ["business-benchmarking-pro", businessId],
     queryFn: async () => {
-      // 1. Buscar category_id e city do negócio
+      const empty: BenchmarkingData = {
+        posicao_geral: 0,
+        posicao_cidade: 0,
+        views_this_month: 0,
+        leads_this_month: 0,
+        media_views_categoria: 0,
+        media_leads_categoria: 0,
+        media_ctr_categoria: 0,
+        total_negocios_categoria: 0,
+      };
+
       const { data: biz, error: bizError } = await supabase
         .from("businesses")
         .select("category_id, city")
         .eq("id", businessId!)
         .single();
       if (bizError) throw bizError;
-      if (!biz?.category_id) {
-        return {
-          posicao_geral: 0,
-          posicao_cidade: 0,
-          views_this_month: 0,
-          leads_this_month: 0,
-          media_views_categoria: 0,
-          media_leads_categoria: 0,
-          media_ctr_categoria: 0,
-          total_negocios_categoria: 0,
-        } as BenchmarkingData;
-      }
+      if (!biz?.category_id) return empty;
 
-      // 2. Buscar IDs dos negócios da mesma categoria
       const { data: categoryBusinesses, error: catError } = await supabase
         .from("businesses")
         .select("id, city")
@@ -407,22 +435,10 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
       if (catError) throw catError;
 
       const categoryBizList = Array.isArray(categoryBusinesses) ? categoryBusinesses : [];
-      if (categoryBizList.length === 0) {
-        return {
-          posicao_geral: 0,
-          posicao_cidade: 0,
-          views_this_month: 0,
-          leads_this_month: 0,
-          media_views_categoria: 0,
-          media_leads_categoria: 0,
-          media_ctr_categoria: 0,
-          total_negocios_categoria: 0,
-        } as BenchmarkingData;
-      }
+      if (categoryBizList.length === 0) return empty;
 
       const categoryIds = categoryBizList.map((b: any) => b.id);
 
-      // 3. Buscar métricas só dos negócios desta categoria
       const { data: metrics, error: metricsError } = await supabase
         .from("business_analytics_metrics")
         .select("business_id, views_this_month, leads_this_month, conversion_rate_this_month")
@@ -431,7 +447,6 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
 
       const metricsList = Array.isArray(metrics) ? metrics : [];
 
-      // 4. Rankings
       const sortedGeral = [...metricsList].sort(
         (a: any, b: any) => (b.views_this_month ?? 0) - (a.views_this_month ?? 0),
       );
@@ -444,7 +459,6 @@ export const useBusinessBenchmarkingPro = (businessId: string | null) => {
       );
       const posicao_cidade = sortedCity.findIndex((m: any) => m.business_id === businessId) + 1;
 
-      // 5. Médias
       const total = metricsList.length;
       const media_views =
         total > 0 ? Math.round(metricsList.reduce((s: number, m: any) => s + (m.views_this_month ?? 0), 0) / total) : 0;

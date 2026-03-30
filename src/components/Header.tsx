@@ -1,11 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import { Menu, User, LogOut } from "lucide-react";
+import logo from "@/assets/pede-direto-logo.png";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useHeaderPages } from "@/hooks/useNavigationPages";
 import { useAuth } from "@/hooks/useAuth";
 import ThemeToggle from "./ThemeToggle";
+import NotificationBell from "./notifications/NotificationBell";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,7 +33,7 @@ const Header = () => {
     >
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-primary">Pede Direto</span>
+          <img src={logo} alt="Pede Direto" className="h-8" />
         </Link>
 
         {/* Desktop Navigation */}
@@ -59,6 +61,30 @@ const Header = () => {
           })}
 
           <Link
+            to="/blog"
+            aria-current={isActive("/blog") ? "page" : undefined}
+            className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+          >
+            Blog
+          </Link>
+
+          <Link
+            to="/pricing"
+            aria-current={isActive("/pricing") ? "page" : undefined}
+            className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+          >
+            Preços
+          </Link>
+
+          <Link
+            to="/top"
+            aria-current={isActive("/top") ? "page" : undefined}
+            className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+          >
+            🏆 Top Negócios
+          </Link>
+
+          <Link
             to="/claim-business"
             aria-current={isActive("/claim-business") ? "page" : undefined}
             className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
@@ -68,6 +94,8 @@ const Header = () => {
 
           {user ? (
             <>
+              <NotificationBell targetRole={isAdmin ? "admin" : "consumer"} />
+
               {isAdmin ? (
                 <Link
                   to="/admin"
@@ -93,14 +121,23 @@ const Header = () => {
               </Button>
             </>
           ) : (
-            <Link
-              to="/login"
-              aria-current={isActive("/login") ? "page" : undefined}
-              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors inline-flex items-center gap-1"
-            >
-              <User className="h-4 w-4" aria-hidden="true" focusable="false" />
-              Entrar
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/register"
+                className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 px-4 py-2 rounded-lg transition-colors inline-flex flex-col items-center leading-tight"
+              >
+                <span>Criar Conta</span>
+                <span className="text-[10px] font-normal opacity-80">É grátis</span>
+              </Link>
+              <Link
+                to="/login"
+                aria-current={isActive("/login") ? "page" : undefined}
+                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors inline-flex items-center gap-1"
+              >
+                <User className="h-4 w-4" aria-hidden="true" focusable="false" />
+                Entrar
+              </Link>
+            </div>
           )}
 
           <ThemeToggle />
@@ -149,6 +186,33 @@ const Header = () => {
               })}
 
               <Link
+                to="/blog"
+                aria-current={isActive("/blog") ? "page" : undefined}
+                className="text-lg font-medium text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                Blog
+              </Link>
+
+              <Link
+                to="/pricing"
+                aria-current={isActive("/pricing") ? "page" : undefined}
+                className="text-lg font-medium text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                Preços
+              </Link>
+
+              <Link
+                to="/top"
+                aria-current={isActive("/top") ? "page" : undefined}
+                className="text-lg font-medium text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                🏆 Top Negócios
+              </Link>
+
+              <Link
                 to="/claim-business"
                 aria-current={isActive("/claim-business") ? "page" : undefined}
                 className="text-lg font-medium text-primary hover:text-primary/80 transition-colors"
@@ -159,6 +223,11 @@ const Header = () => {
 
               {user ? (
                 <>
+                  <div className="flex items-center gap-2">
+                    <NotificationBell targetRole={isAdmin ? "admin" : "consumer"} />
+                    <span className="text-lg font-medium text-foreground">Notificações</span>
+                  </div>
+
                   {isAdmin ? (
                     <Link
                       to="/admin"
@@ -190,15 +259,25 @@ const Header = () => {
                   </button>
                 </>
               ) : (
-                <Link
-                  to="/login"
-                  aria-current={isActive("/login") ? "page" : undefined}
-                  className="text-lg font-medium text-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <User className="h-5 w-5" aria-hidden="true" focusable="false" />
-                  Entrar
-                </Link>
+                <div className="border-t border-border pt-4 mt-2 space-y-3">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Novo aqui?</p>
+                  <Link
+                    to="/register"
+                    className="w-full text-center text-base font-semibold text-primary-foreground bg-primary hover:bg-primary/90 px-4 py-3 rounded-lg transition-colors block"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Criar Conta — É grátis
+                  </Link>
+                  <Link
+                    to="/login"
+                    aria-current={isActive("/login") ? "page" : undefined}
+                    className="text-lg font-medium text-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <User className="h-5 w-5" aria-hidden="true" focusable="false" />
+                    Entrar
+                  </Link>
+                </div>
               )}
 
               <ThemeToggle />

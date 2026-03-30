@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Loader2 } from "lucide-react";
+import logoImg from "@/assets/pede-direto-logo.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useBusinessByUser } from "@/hooks/useBusinessDashboard";
@@ -15,6 +16,11 @@ import BusinessEditContent from "@/components/business/BusinessEditContent";
 import TeamSection from "@/components/business/TeamSection";
 import ClaimStatusBanner from "@/components/business/ClaimStatusBanner";
 import BusinessReviewsPanel from "@/components/business/BusinessReviewsPanel";
+import BadgesTab from "@/components/business/BadgesTab";
+import AffiliatePortalContent from "@/components/affiliate/AffiliatePortalContent";
+import BusinessQuotesContent from "@/components/business/BusinessQuotesContent";
+import BusinessSupportContent from "@/components/business/BusinessSupportContent";
+import FeaturePopupManager from "@/components/business/FeaturePopupManager";
 
 const BusinessDashboard = () => {
   const [activeTab, setActiveTab] = useState<BusinessTab>("overview");
@@ -65,6 +71,14 @@ const BusinessDashboard = () => {
         return permissions.canViewTeam ? <TeamSection businessId={business.id} /> : null;
       case "reviews":
         return <BusinessReviewsPanel businessId={business.id} />;
+      case "badges":
+        return <BadgesTab businessId={business.id} />;
+      case "affiliates":
+        return <AffiliatePortalContent showBackButton backTo="/business-dashboard" />;
+      case "quotes":
+        return <BusinessQuotesContent businessId={business.id} />;
+      case "support":
+        return <BusinessSupportContent businessId={business.id} />;
       default:
         return null;
     }
@@ -73,7 +87,7 @@ const BusinessDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card">
-        <Link to="/" className="text-lg font-bold text-primary">Pede Direto</Link>
+        <Link to="/"><img src={logoImg} alt="Pede Direto" className="h-7" /></Link>
         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
           {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
@@ -106,6 +120,12 @@ const BusinessDashboard = () => {
           {renderContent()}
         </main>
       </div>
+
+      {/* Feature Popup Manager — max 1 popup per session */}
+      <FeaturePopupManager
+        audience="business"
+        onTabNavigate={(tab) => setActiveTab(tab as BusinessTab)}
+      />
     </div>
   );
 };

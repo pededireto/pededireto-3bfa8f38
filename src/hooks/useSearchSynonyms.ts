@@ -5,6 +5,7 @@ export interface SearchSynonym {
   id: string;
   termo: string;
   equivalente: string;
+  type: string;
   created_at: string;
 }
 
@@ -12,13 +13,22 @@ export const useSearchSynonyms = () => {
   return useQuery({
     queryKey: ["search-synonyms"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("search_synonyms")
-        .select("*")
-        .order("termo", { ascending: true });
-
-      if (error) throw error;
-      return data as SearchSynonym[];
+      const allData: SearchSynonym[] = [];
+      let offset = 0;
+      const PAGE_SIZE = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from("search_synonyms")
+          .select("*")
+          .order("termo", { ascending: true })
+          .range(offset, offset + PAGE_SIZE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData.push(...(data as SearchSynonym[]));
+        if (data.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+      return allData;
     },
   });
 };
@@ -27,7 +37,7 @@ export const useCreateSearchSynonym = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (synonym: { termo: string; equivalente: string }) => {
+    mutationFn: async (synonym: { termo: string; equivalente: string; type?: string }) => {
       const { data, error } = await supabase
         .from("search_synonyms")
         .insert(synonym as any)
@@ -39,6 +49,9 @@ export const useCreateSearchSynonym = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["search-synonyms"] });
+    },
+    onError: (error: any) => {
+      console.error("[useCreateSearchSynonym] error:", error);
     },
   });
 };
@@ -57,6 +70,41 @@ export const useDeleteSearchSynonym = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["search-synonyms"] });
+    },
+    onError: (error: any) => {
+      console.error("[useDeleteSearchSynonym] error:", error);
+    },
+  });
+};
+
+export const useBulkCreateSearchSynonyms = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (rows: { termo: string; equivalente: string; type: string }[]) => {
+      const { count: before } = await supabase
+        .from("search_synonyms")
+        .select("*", { count: "exact", head: true });
+
+      const { error } = await supabase
+        .from("search_synonyms")
+        .upsert(rows as any[], { onConflict: "termo,equivalente", ignoreDuplicates: true });
+
+      if (error) throw error;
+
+      const { count: after } = await supabase
+        .from("search_synonyms")
+        .select("*", { count: "exact", head: true });
+
+      const inserted = (after ?? 0) - (before ?? 0);
+      const skipped = rows.length - inserted;
+      return { inserted, skipped };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["search-synonyms"] });
+    },
+    onError: (error: any) => {
+      console.error("[useBulkCreateSearchSynonyms] error:", error);
     },
   });
 };

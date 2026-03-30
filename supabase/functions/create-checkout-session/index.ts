@@ -18,10 +18,10 @@ Deno.serve(async (req) => {
     const { planId, planName, price, businessId, paymentMethod } = await req.json();
 
     if (!planId || !price || !businessId || !paymentMethod) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const origin = req.headers.get("origin") || "https://pededireto.pt";
@@ -34,10 +34,23 @@ Deno.serve(async (req) => {
     let session;
 
     if (isSepa) {
-      // SEPA Debit — suporta subscription e payment
+      // SEPA Debit requer um Product + Price criado previamente no Stripe,
+      // ou então criar via API antes de criar a session.
+      // A forma mais fiável é criar um Price ad-hoc com product_data.
+
+      // 1. Criar o produto e preço no momento
+      const stripePrice = await stripe.prices.create({
+        currency: "eur",
+        unit_amount: Math.round(price * 100),
+        product_data: {
+          name: `Pede Direto — ${planName}`,
+        },
+      });
+
+      // 2. Criar a Checkout Session com o price_id gerado
       session = await stripe.checkout.sessions.create({
         payment_method_types: ["sepa_debit"],
-        mode: "payment", // usar payment para cobranças únicas; usar subscription para recorrente
+        mode: "payment",
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata: {
@@ -46,6 +59,7 @@ Deno.serve(async (req) => {
           payment_method: "sepa",
         },
         payment_intent_data: {
+          setup_future_usage: "off_session", // necessário para SEPA guardar mandate
           metadata: {
             business_id: businessId,
             plan_id: planId,
@@ -53,20 +67,12 @@ Deno.serve(async (req) => {
         },
         line_items: [
           {
+            price: stripePrice.id,
             quantity: 1,
-            price_data: {
-              currency: "eur",
-              unit_amount: Math.round(price * 100),
-              product_data: {
-                name: `Pede Direto — ${planName}`,
-                description: "Subscrição Pede Direto Business",
-              },
-            },
           },
         ],
       });
     } else if (isMbway) {
-      // MB Way — apenas payment, não suporta subscriptions
       session = await stripe.checkout.sessions.create({
         payment_method_types: ["mb_way"],
         mode: "payment",
@@ -96,30 +102,27 @@ Deno.serve(async (req) => {
             },
           },
         ],
-        // MB Way precisa de número de telefone
         phone_number_collection: {
           enabled: true,
         },
       });
     } else {
-      return new Response(
-        JSON.stringify({ error: "Invalid payment method. Use 'mbway' or 'sepa'" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Invalid payment method. Use 'mbway' or 'sepa'" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log(`Checkout session created: ${session.id} for business ${businessId}`);
 
-    return new Response(
-      JSON.stringify({ url: session.url, sessionId: session.id }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
+    return new Response(JSON.stringify({ url: session.url, sessionId: session.id }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: any) {
     console.error("Stripe checkout error:", error.message);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

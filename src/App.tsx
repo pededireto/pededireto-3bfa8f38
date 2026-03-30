@@ -13,10 +13,13 @@ import ScrollToTop from "@/components/ScrollToTop";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import CookieConsent from "@/components/CookieConsent";
 import SessionExpiredModal from "@/components/SessionExpiredModal";
+import StickySearch from "@/components/StickySearch";
 
 import Index from "./pages/Index";
 import CategoryPage from "./pages/CategoryPage";
 import SubcategoryPage from "./pages/SubcategoryPage";
+import SubcategoryCityPage from "./pages/SubcategoryCityPage";
+import SeoSubcategoryCityPage from "./pages/SeoSubcategoryCityPage";
 import BusinessPage from "./pages/BusinessPage";
 import InstitutionalPage from "./pages/InstitutionalPage";
 
@@ -44,9 +47,25 @@ import CustomerSuccessPage from "./pages/CustomerSuccessPage";
 import RequestServicePage from "./pages/RequestServicePage";
 import RequestDetailPage from "./pages/RequestDetailPage";
 import UpgradePage from "./pages/UpgradePage";
+import SearchPage from "./pages/SearchPage";
+import BlogPage from "./pages/BlogPage";
+import BlogPostPage from "./pages/BlogPostPage";
+import TopRankingPage from "./pages/TopRankingPage";
+import TopIndexPage from "./pages/TopIndexPage";
+import PricingPage from "./pages/PricingPage";
+import BusinessShortUrl from "./pages/BusinessShortUrl";
+import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
+import AffiliateLandingPage from "./pages/AffiliateLandingPage";
+import UnsubscribePage from "./pages/UnsubscribePage";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
+
+import StudioLayout from "./pages/studio/StudioLayout";
+import StudioReelPage from "./pages/studio/StudioReelPage";
+import StudioImagePage from "./pages/studio/StudioImagePage";
+import StudioHistoryPage from "./pages/studio/StudioHistoryPage";
+import StudioSettingsPage from "./pages/studio/StudioSettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +83,24 @@ const RouteTracker = () => {
       });
     }
   }, [location]);
+
+  return null;
+};
+
+/* =========================
+   REFERRAL TRACKING
+   Guarda ?ref=CODIGO em sessionStorage
+========================= */
+const ReferralTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const refCode = params.get("ref");
+    if (refCode && /^PD-[A-Z0-9]{4}$/.test(refCode)) {
+      localStorage.setItem("affiliate_ref", refCode);
+    }
+  }, [location.search]);
 
   return null;
 };
@@ -110,10 +147,11 @@ const App = () => {
 
               <BrowserRouter>
                 <RouteTracker />
+                <ReferralTracker />
                 <RouteFocusHandler />
                 <ScrollToTop />
                 <SessionExpiredModal />
-
+                <StickySearch />
                 {/* ✅ SKIP LINK (primeiro elemento focável real da página) */}
                 <a
                   href="#main-content"
@@ -128,9 +166,20 @@ const App = () => {
                     {/* PUBLIC */}
                     <Route path="/" element={<Index />} />
                     <Route path="/categoria/:slug" element={<CategoryPage />} />
+                    <Route path="/categoria/:categorySlug/:subcategorySlug/cidade/:citySlug" element={<SubcategoryCityPage />} />
                     <Route path="/categoria/:categorySlug/:subcategorySlug" element={<SubcategoryPage />} />
                     <Route path="/negocio/:slug" element={<BusinessPage />} />
                     <Route path="/pagina/:slug" element={<InstitutionalPage />} />
+                    <Route path="/pesquisa" element={<SearchPage />} />
+                    <Route path="/blog" element={<BlogPage />} />
+                    <Route path="/blog/:slug" element={<BlogPostPage />} />
+                    <Route path="/top" element={<TopIndexPage />} />
+                    <Route path="/top/:subcategorySlug/:citySlug" element={<TopRankingPage />} />
+                    <Route path="/top/:subcategorySlug" element={<TopRankingPage />} />
+                    <Route path="/s/:subSlug/:citySlug" element={<SeoSubcategoryCityPage />} />
+                    <Route path="/p/:slug" element={<BusinessShortUrl />} />
+                    <Route path="/pricing" element={<PricingPage />} />
+                    <Route path="/afiliados" element={<AffiliateLandingPage />} />
 
                     {/* AUTH */}
                     <Route path="/login" element={<UserLogin />} />
@@ -139,6 +188,8 @@ const App = () => {
                     <Route path="/register" element={<RegisterChoice />} />
                     <Route path="/registar/consumidor" element={<UserRegister />} />
                     <Route path="/register/business" element={<RegisterBusiness />} />
+
+                    <Route path="/auth/callback" element={<AuthCallback />} />
 
                     {/* PASSWORD RECOVERY */}
                     <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -206,6 +257,17 @@ const App = () => {
                     {/* SERVICES */}
                     <Route path="/pedir-servico" element={<RequestServicePage />} />
                     <Route path="/upgrade" element={<UpgradePage />} />
+
+                    <Route path="/unsubscribe" element={<UnsubscribePage />} />
+
+                    {/* MARKETING AI STUDIO */}
+                    <Route path="/app" element={<StudioLayout />}>
+                      <Route index element={<StudioReelPage />} />
+                      <Route path="reel" element={<StudioReelPage />} />
+                      <Route path="image" element={<StudioImagePage />} />
+                      <Route path="history" element={<StudioHistoryPage />} />
+                      <Route path="settings" element={<StudioSettingsPage />} />
+                    </Route>
 
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />

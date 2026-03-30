@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { Helmet } from "react-helmet-async";
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 const BASE_URL = "https://pededireto.pt";
 
@@ -84,7 +86,10 @@ const UserRegister = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Helmet>
         <title>Criar Conta | Pede Direto</title>
-        <meta name="description" content="Cria a tua conta no Pede Direto para guardar pesquisas, favoritos e gerir os teus pedidos de serviço." />
+        <meta
+          name="description"
+          content="Cria a tua conta no Pede Direto para guardar pesquisas, favoritos e gerir os teus pedidos de serviço."
+        />
         <link rel="canonical" href={`${BASE_URL}/registar`} />
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
@@ -93,10 +98,23 @@ const UserRegister = () => {
         <div className="bg-card rounded-2xl shadow-card p-8">
           <div className="text-center mb-8">
             <Link to="/" className="inline-block mb-6">
-              <h1 className="text-2xl font-bold text-primary">Pede Direto</h1>
+              <img src={logo} alt="Pede Direto" className="h-10" />
             </Link>
             <h2 className="text-xl font-semibold text-foreground">Criar Conta</h2>
             <p className="text-muted-foreground mt-1">Regista-te para guardar pesquisas e favoritos</p>
+          </div>
+
+          <div className="mb-6">
+            <GoogleSignInButton label="Registar com Google" />
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">ou</span>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -183,8 +201,7 @@ const UserRegister = () => {
             <Button type="submit" className="w-full btn-cta-primary" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  A criar...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />A criar...
                 </>
               ) : (
                 "Criar Conta"

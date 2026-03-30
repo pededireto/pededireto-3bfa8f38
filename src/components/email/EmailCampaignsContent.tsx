@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { Plus, Send, Clock, CheckCircle, X, Search, Users } from "lucide-react";
+import { Plus, Send, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useEmailCampaigns, useCreateCampaign, useUpdateCampaign, useEmailTemplates, useSendEmail, renderTemplate } from "@/hooks/useEmailMarketing";
 import { useToast } from "@/hooks/use-toast";
+import { useCategories } from "@/hooks/useCategories";
 import { supabase } from "@/integrations/supabase/client";
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -20,10 +21,20 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
   cancelled: { label: "Cancelada", variant: "destructive" },
 };
 
+const PLAN_OPTIONS = [
+  { value: "", label: "Todos os planos" },
+  { value: "free", label: "Free" },
+  { value: "1_month", label: "1 Mês" },
+  { value: "3_months", label: "3 Meses" },
+  { value: "6_months", label: "6 Meses" },
+  { value: "1_year", label: "1 Ano" },
+];
+
 const EmailCampaignsContent = () => {
   const { toast } = useToast();
   const { data: campaigns = [], isPending } = useEmailCampaigns();
   const { data: templates = [] } = useEmailTemplates();
+  const { data: categories = [] } = useCategories();
   const createCampaign = useCreateCampaign();
   const updateCampaign = useUpdateCampaign();
   const sendEmail = useSendEmail();
@@ -32,11 +43,32 @@ const EmailCampaignsContent = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", template_id: "", segment_criteria: "{}", scheduled_at: "" });
+
+  // Visual filter form instead of raw JSON
+  const [form, setForm] = useState({
+    name: "",
+    template_id: "",
+    scheduled_at: "",
+    filter_city: "",
+    filter_category_id: "",
+    filter_plan: "",
+    filter_verified: false,
+    filter_has_email: true,
+  });
 
   const filtered = campaigns.filter((c: any) =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const buildSegmentCriteria = () => {
+    const criteria: Record<string, any> = {};
+    if (form.filter_city) criteria.city = form.filter_city;
+    if (form.filter_category_id) criteria.category_id = form.filter_category_id;
+    if (form.filter_plan) criteria.subscription_plan = form.filter_plan;
+    if (form.filter_verified) criteria.is_verified = true;
+    if (form.filter_has_email) criteria.has_email = true;
+    return criteria;
+  };
 
   const handleCreate = async () => {
     if (!form.name || !form.template_id) {
@@ -44,17 +76,15 @@ const EmailCampaignsContent = () => {
       return;
     }
     try {
-      let criteria = {};
-      try { criteria = JSON.parse(form.segment_criteria); } catch {}
       await createCampaign.mutateAsync({
         name: form.name,
         template_id: form.template_id,
-        segment_criteria: criteria,
+        segment_criteria: buildSegmentCriteria(),
         scheduled_at: form.scheduled_at || undefined,
       });
       toast({ title: "Campanha criada" });
       setCreateOpen(false);
-      setForm({ name: "", template_id: "", segment_criteria: "{}", scheduled_at: "" });
+      setForm({ name: "", template_id: "", scheduled_at: "", filter_city: "", filter_category_id: "", filter_plan: "", filter_verified: false, filter_has_email: true });
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
     }
@@ -68,21 +98,19 @@ const EmailCampaignsContent = () => {
   const confirmSend = async () => {
     if (!selectedCampaign) return;
     try {
-      // Update status
       await updateCampaign.mutateAsync({ id: selectedCampaign.id, status: "sending" });
 
-      // Get recipients based on segment_criteria
       const criteria = selectedCampaign.segment_criteria || {};
       let query = (supabase as any).from("businesses").select("id, name, email, city").eq("is_active", true).not("email", "is", null);
       if (criteria.city) query = query.eq("city", criteria.city);
       if (criteria.category_id) query = query.eq("category_id", criteria.category_id);
-      if (criteria.has_subscription) query = query.eq("subscription_status", "active");
+      if (criteria.subscription_plan) query = query.eq("subscription_plan", criteria.subscription_plan);
+      if (criteria.is_verified) query = query.eq("is_verified", true);
       const { data: recipients = [] } = await query.limit(500);
 
       const template = templates.find((t: any) => t.id === selectedCampaign.template_id);
       if (!template) throw new Error("Template não encontrado");
 
-      // Send in batches
       let sentCount = 0;
       const batchSize = 50;
       for (let i = 0; i < recipients.length; i += batchSize) {
@@ -176,9 +204,9 @@ const EmailCampaignsContent = () => {
         </div>
       )}
 
-      {/* Create Dialog */}
+      {/* Create Dialog with visual filters */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Nova Campanha</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -196,10 +224,48 @@ const EmailCampaignsContent = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Critérios de Segmentação (JSON)</Label>
-              <Textarea value={form.segment_criteria} onChange={(e) => setForm({ ...form, segment_criteria: e.target.value })} className="font-mono text-xs" rows={4} placeholder='{"city": "Lisboa", "has_subscription": true}' />
+
+            {/* Visual segment filters */}
+            <div className="border-t pt-4 space-y-3">
+              <Label className="text-sm font-medium">Segmentação</Label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Cidade</Label>
+                  <Input value={form.filter_city} onChange={(e) => setForm({ ...form, filter_city: e.target.value })} placeholder="Ex: Lisboa" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Categoria</Label>
+                  <Select value={form.filter_category_id} onValueChange={(v) => setForm({ ...form, filter_category_id: v === "all" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Plano</Label>
+                  <Select value={form.filter_plan} onValueChange={(v) => setForm({ ...form, filter_plan: v === "all" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {PLAN_OPTIONS.filter(p => p.value).map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-2 bg-muted/40 rounded-lg">
+                <Switch checked={form.filter_verified} onCheckedChange={(v) => setForm({ ...form, filter_verified: v })} />
+                <p className="text-sm">Apenas verificados</p>
+              </div>
+              <div className="flex items-center gap-3 p-2 bg-muted/40 rounded-lg">
+                <Switch checked={form.filter_has_email} onCheckedChange={(v) => setForm({ ...form, filter_has_email: v })} />
+                <p className="text-sm">Apenas com email</p>
+              </div>
             </div>
+
             <div className="space-y-2">
               <Label>Agendar para (opcional)</Label>
               <Input type="datetime-local" value={form.scheduled_at} onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })} />

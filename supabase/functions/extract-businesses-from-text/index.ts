@@ -7,11 +7,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ─── Invalid value detection ───
 const INVALID_VALUES = new Set([
-  "", "-", "−", "—", "--", "n/a", "na", "não disponível", "nao disponivel",
-  "indisponível", "indisponivel", "sem info", "sem informação", "sem informacao",
-  "desconhecido", "unknown", "none", "null", "undefined",
+  "",
+  "-",
+  "−",
+  "—",
+  "--",
+  "n/a",
+  "na",
+  "não disponível",
+  "nao disponivel",
+  "indisponível",
+  "indisponivel",
+  "sem info",
+  "sem informação",
+  "sem informacao",
+  "desconhecido",
+  "unknown",
+  "none",
+  "null",
+  "undefined",
 ]);
 
 function isInvalid(val: unknown): boolean {
@@ -29,41 +44,91 @@ function clean(val: unknown): string | null {
   return (val as string).trim();
 }
 
-// ─── Column name mapping ───
 const COLUMN_MAP: Record<string, string> = {
-  // name
-  nome: "name", name: "name", negocio: "name", negócio: "name", business: "name", empresa: "name",
-  // description
-  descricao: "description", descrição: "description", description: "description", sobre: "description", about: "description",
-  // city
-  cidade: "city", city: "city", localidade: "city",
-  // address
-  morada: "address", address: "address", endereco: "address", endereço: "address",
-  // cta_phone
-  cta_phone: "cta_phone", phone: "cta_phone", telefone: "cta_phone", tel: "cta_phone", telephone: "cta_phone",
-  // cta_whatsapp
-  cta_whatsapp: "cta_whatsapp", whatsapp: "cta_whatsapp", wp: "cta_whatsapp", wpp: "cta_whatsapp",
-  // cta_email
-  cta_email: "cta_email", email: "cta_email", "email negocio": "cta_email", email_negocio: "cta_email",
-  // cta_website
-  cta_website: "cta_website", website: "cta_website", site: "cta_website", url: "cta_website", web: "cta_website",
-  // owner
-  owner_name: "owner_name", responsavel: "owner_name", responsável: "owner_name", proprietario: "owner_name", proprietário: "owner_name", contact_name: "owner_name",
-  owner_email: "owner_email", email_responsavel: "owner_email", email_responsável: "owner_email", "email responsavel": "owner_email", "email owner": "owner_email",
-  owner_phone: "owner_phone", "telefone owner": "owner_phone", "telefone responsavel": "owner_phone",
-  // nif
-  nif: "nif", contribuinte: "nif", "n contribuinte": "nif",
-  // social
-  instagram: "instagram_url", instagram_url: "instagram_url",
-  facebook: "facebook_url", facebook_url: "facebook_url",
-  // ids
-  category_id: "category_id", subcategory_id: "subcategory_id",
-  category: "category", categoria: "category",
-  subcategory: "subcategory", subcategoria: "subcategory",
+  nome: "name",
+  name: "name",
+  negocio: "name",
+  negócio: "name",
+  business: "name",
+  empresa: "name",
+  descricao: "description",
+  descrição: "description",
+  description: "description",
+  sobre: "description",
+  about: "description",
+  cidade: "city",
+  city: "city",
+  localidade: "city",
+  morada: "address",
+  address: "address",
+  endereco: "address",
+  endereço: "address",
+  cta_phone: "cta_phone",
+  phone: "cta_phone",
+  telefone: "cta_phone",
+  tel: "cta_phone",
+  telephone: "cta_phone",
+  cta_whatsapp: "cta_whatsapp",
+  whatsapp: "cta_whatsapp",
+  wp: "cta_whatsapp",
+  wpp: "cta_whatsapp",
+  cta_email: "cta_email",
+  email: "cta_email",
+  "email negocio": "cta_email",
+  email_negocio: "cta_email",
+  cta_website: "cta_website",
+  website: "cta_website",
+  site: "cta_website",
+  url: "cta_website",
+  web: "cta_website",
+  owner_name: "owner_name",
+  responsavel: "owner_name",
+  responsável: "owner_name",
+  proprietario: "owner_name",
+  proprietário: "owner_name",
+  contact_name: "owner_name",
+  owner_email: "owner_email",
+  email_responsavel: "owner_email",
+  email_responsável: "owner_email",
+  "email responsavel": "owner_email",
+  "email owner": "owner_email",
+  owner_phone: "owner_phone",
+  "telefone owner": "owner_phone",
+  "telefone responsavel": "owner_phone",
+  nif: "nif",
+  contribuinte: "nif",
+  "n contribuinte": "nif",
+  instagram: "instagram_url",
+  instagram_url: "instagram_url",
+  facebook: "facebook_url",
+  facebook_url: "facebook_url",
+  other_social_url: "other_social_url",
+  outra_rede: "other_social_url",
+  logo_url: "logo_url",
+  logo: "logo_url",
+  logotipo: "logo_url",
+  opening_hours: "opening_hours",
+  horarios: "opening_hours",
+  horários: "opening_hours",
+  cta_booking_url: "cta_booking_url",
+  reservas: "cta_booking_url",
+  cta_order_url: "cta_order_url",
+  pedidos: "cta_order_url",
+  category_id: "category_id",
+  subcategory_id: "subcategory_id",
+  category: "category",
+  categoria: "category",
+  subcategory: "subcategory",
+  subcategoria: "subcategory",
 };
 
 function mapColumnName(raw: string): string | null {
-  const key = raw.trim().toLowerCase().replace(/[_\s]+/g, " ").trim().replace(/ /g, "_");
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, " ")
+    .trim()
+    .replace(/ /g, "_");
   if (COLUMN_MAP[key]) return COLUMN_MAP[key];
   const noUnderscore = key.replace(/_/g, "");
   for (const [k, v] of Object.entries(COLUMN_MAP)) {
@@ -72,13 +137,19 @@ function mapColumnName(raw: string): string | null {
   return null;
 }
 
-// ─── Tabular format detection ───
-function detectTabularFormat(text: string): { isTabular: boolean; delimiter: string; headerLine: string; dataLines: string[] } {
-  const lines = text.split("\n").map(l => l.trimEnd()).filter(l => l.trim().length > 0);
+function detectTabularFormat(text: string): {
+  isTabular: boolean;
+  delimiter: string;
+  headerLine: string;
+  dataLines: string[];
+} {
+  const lines = text
+    .split("\n")
+    .map((l) => l.trimEnd())
+    .filter((l) => l.trim().length > 0);
   if (lines.length < 2) return { isTabular: false, delimiter: "", headerLine: "", dataLines: [] };
 
   const firstLine = lines[0];
-
   let delimiter = "\t";
   let parts = firstLine.split(delimiter);
   if (parts.length < 3) {
@@ -96,28 +167,24 @@ function detectTabularFormat(text: string): { isTabular: boolean; delimiter: str
     if (mapColumnName(part) !== null) matches++;
   }
 
-  if (matches >= 3) {
-    return { isTabular: true, delimiter, headerLine: firstLine, dataLines: lines.slice(1) };
-  }
-
+  if (matches >= 3) return { isTabular: true, delimiter, headerLine: firstLine, dataLines: lines.slice(1) };
   return { isTabular: false, delimiter: "", headerLine: "", dataLines: [] };
 }
 
-// ─── Parse tabular data (NO AI) ───
 function parseTabular(headerLine: string, dataLines: string[], delimiter: string): any[] {
   const isMultiSpace = delimiter === "    ";
   const headers = isMultiSpace
-    ? headerLine.split(/\s{4,}/).map(h => h.trim())
-    : headerLine.split(delimiter).map(h => h.trim());
+    ? headerLine.split(/\s{4,}/).map((h) => h.trim())
+    : headerLine.split(delimiter).map((h) => h.trim());
 
-  const columnMapping: (string | null)[] = headers.map(h => mapColumnName(h));
+  const columnMapping: (string | null)[] = headers.map((h) => mapColumnName(h));
   const businesses: any[] = [];
 
   for (const line of dataLines) {
     if (!line.trim()) continue;
     const values = isMultiSpace
-      ? line.split(/\s{4,}/).map(v => v.trim())
-      : line.split(delimiter).map(v => v.trim());
+      ? line.split(/\s{4,}/).map((v) => v.trim())
+      : line.split(delimiter).map((v) => v.trim());
 
     const entry: Record<string, string | null> = {};
     let hasName = false;
@@ -136,12 +203,9 @@ function parseTabular(headerLine: string, dataLines: string[], delimiter: string
   return businesses;
 }
 
-// ─── Social URL detection helpers ───
 function extractInstagram(val: string | null): string | null {
   if (!val) return null;
-  // Full URL
   if (val.includes("instagram.com/")) return val.startsWith("http") ? val : "https://" + val;
-  // Handle like @username
   if (/^@?[a-zA-Z0-9._]{1,30}$/.test(val) && !val.includes(".")) {
     return `https://instagram.com/${val.replace(/^@/, "")}`;
   }
@@ -154,7 +218,6 @@ function extractFacebook(val: string | null): string | null {
   return null;
 }
 
-// ─── Normalize a business object ───
 function normalizeBusiness(raw: any): any {
   function pickVal(...keys: string[]): string | null {
     for (const k of keys) {
@@ -164,9 +227,17 @@ function normalizeBusiness(raw: any): any {
     return null;
   }
 
-  // Collect all phone numbers
-  const allPhoneRaw = [raw.cta_phone, raw.phone, raw.telefone, raw.tel, raw.cta_whatsapp, raw.whatsapp, raw.wp, raw.owner_phone]
-    .map(v => (v && typeof v === "string" ? v.trim() : null))
+  const allPhoneRaw = [
+    raw.cta_phone,
+    raw.phone,
+    raw.telefone,
+    raw.tel,
+    raw.cta_whatsapp,
+    raw.whatsapp,
+    raw.wp,
+    raw.owner_phone,
+  ]
+    .map((v) => (v && typeof v === "string" ? v.trim() : null))
     .filter((v): v is string => !isInvalid(v));
   const uniquePhones = [...new Set(allPhoneRaw)];
 
@@ -175,7 +246,6 @@ function normalizeBusiness(raw: any): any {
   let owner_phone: string | null = null;
 
   if (uniquePhones.length === 1) {
-    // 1 phone → fill ALL phone fields
     cta_phone = uniquePhones[0];
     cta_whatsapp = uniquePhones[0];
     owner_phone = uniquePhones[0];
@@ -189,9 +259,8 @@ function normalizeBusiness(raw: any): any {
     owner_phone = uniquePhones[2];
   }
 
-  // Collect all emails
   const allEmails = [raw.cta_email, raw.email, raw.owner_email, raw.email_negocio, raw.email_responsavel]
-    .map(v => (v && typeof v === "string" ? v.trim().toLowerCase() : null))
+    .map((v) => (v && typeof v === "string" ? v.trim().toLowerCase() : null))
     .filter((v): v is string => !isInvalid(v) && v!.includes("@"))
     .filter((v, i, arr) => arr.indexOf(v) === i);
 
@@ -199,7 +268,6 @@ function normalizeBusiness(raw: any): any {
   let owner_email: string | null = null;
 
   if (allEmails.length === 1) {
-    // 1 email → fill BOTH email fields
     cta_email = allEmails[0];
     owner_email = allEmails[0];
   } else if (allEmails.length >= 2) {
@@ -207,7 +275,6 @@ function normalizeBusiness(raw: any): any {
     owner_email = allEmails[1];
   }
 
-  // Website normalization
   const rawWebsite = pickVal("cta_website", "website", "site", "url", "web");
   let website: string | null = null;
   if (rawWebsite) {
@@ -217,9 +284,22 @@ function normalizeBusiness(raw: any): any {
     }
   }
 
-  // Social URLs
   const instagram = pickVal("instagram_url", "instagram");
   const facebook = pickVal("facebook_url", "facebook");
+
+  // opening_hours — aceita objeto ou string JSON
+  let opening_hours: Record<string, string> | null = null;
+  const rawHours = raw.opening_hours ?? raw.horarios ?? raw.horários ?? null;
+  if (rawHours) {
+    if (typeof rawHours === "object") opening_hours = rawHours;
+    else if (typeof rawHours === "string") {
+      try {
+        opening_hours = JSON.parse(rawHours);
+      } catch {
+        opening_hours = null;
+      }
+    }
+  }
 
   return {
     name: pickVal("name", "nome", "negocio", "business"),
@@ -236,6 +316,13 @@ function normalizeBusiness(raw: any): any {
     nif: pickVal("nif", "contribuinte"),
     instagram_url: extractInstagram(instagram),
     facebook_url: extractFacebook(facebook),
+    // ── 5 campos novos ──
+    other_social_url: pickVal("other_social_url", "outra_rede") || null,
+    logo_url: pickVal("logo_url", "logo", "logotipo") || null,
+    opening_hours,
+    cta_booking_url: pickVal("cta_booking_url", "reservas") || null,
+    cta_order_url: pickVal("cta_order_url", "pedidos") || null,
+    // categorização
     category: pickVal("category", "categoria"),
     subcategory: pickVal("subcategory", "subcategoria"),
     category_id: raw.category_id ?? null,
@@ -243,8 +330,12 @@ function normalizeBusiness(raw: any): any {
   };
 }
 
-// ─── AI extraction ───
-async function extractWithAI(text: string, safeLimit: number, categoryId: string | null, subcategoryId: string | null): Promise<any[]> {
+async function extractWithAI(
+  text: string,
+  safeLimit: number,
+  categoryId: string | null,
+  subcategoryId: string | null,
+): Promise<any[]> {
   const lovableKey = Deno.env.get("LOVABLE_API_KEY");
   if (!lovableKey) throw new Error("LOVABLE_API_KEY não configurado");
 
@@ -273,12 +364,6 @@ REGRAS CRÍTICAS:
 ${categoryInstruction}
 - Máximo ${safeLimit} negócios
 
-FORMATOS POSSÍVEIS DO TEXTO:
-- Texto concatenado sem separadores (campos colados)
-- Lista com um campo por linha
-- Tabela copiada (tabs/espaços)
-- Lista com cabeçalhos de cidade
-
 TEXTO:
 ${text.substring(0, 30000)}`;
 
@@ -293,49 +378,57 @@ ${text.substring(0, 30000)}`;
       messages: [
         {
           role: "system",
-          content: "Extrais dados estruturados de texto. Respondes APENAS via tool calling com JSON válido. NUNCA uses placeholders como 'Não disponível' — usa null.",
+          content:
+            "Extrais dados estruturados de texto. Respondes APENAS via tool calling com JSON válido. NUNCA uses placeholders como 'Não disponível' — usa null.",
         },
         { role: "user", content: prompt },
       ],
-      tools: [{
-        type: "function",
-        function: {
-          name: "extract_businesses",
-          description: "Lista de negócios extraídos do texto",
-          parameters: {
-            type: "object",
-            properties: {
-              businesses: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string", description: "Nome do negócio" },
-                    description: { type: "string", nullable: true, description: "Descrição/sobre do negócio" },
-                    address: { type: "string", nullable: true },
-                    city: { type: "string", nullable: true },
-                    phone: { type: "string", nullable: true, description: "Telefone principal" },
-                    whatsapp: { type: "string", nullable: true },
-                    email: { type: "string", nullable: true, description: "Email do negócio" },
-                    owner_email: { type: "string", nullable: true },
-                    owner_name: { type: "string", nullable: true },
-                    owner_phone: { type: "string", nullable: true },
-                    website: { type: "string", nullable: true },
-                    nif: { type: "string", nullable: true, description: "NIF/contribuinte (9 dígitos)" },
-                    instagram: { type: "string", nullable: true, description: "URL ou username Instagram" },
-                    facebook: { type: "string", nullable: true, description: "URL Facebook" },
-                    category: { type: "string", nullable: true },
-                    subcategory: { type: "string", nullable: true },
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "extract_businesses",
+            description: "Lista de negócios extraídos do texto",
+            parameters: {
+              type: "object",
+              properties: {
+                businesses: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string", description: "Nome do negócio" },
+                      description: { type: "string", nullable: true },
+                      address: { type: "string", nullable: true },
+                      city: { type: "string", nullable: true },
+                      phone: { type: "string", nullable: true },
+                      whatsapp: { type: "string", nullable: true },
+                      email: { type: "string", nullable: true },
+                      owner_email: { type: "string", nullable: true },
+                      owner_name: { type: "string", nullable: true },
+                      owner_phone: { type: "string", nullable: true },
+                      website: { type: "string", nullable: true },
+                      nif: { type: "string", nullable: true },
+                      instagram: { type: "string", nullable: true },
+                      facebook: { type: "string", nullable: true },
+                      other_social_url: { type: "string", nullable: true },
+                      logo_url: { type: "string", nullable: true },
+                      opening_hours: { type: "object", nullable: true },
+                      cta_booking_url: { type: "string", nullable: true },
+                      cta_order_url: { type: "string", nullable: true },
+                      category: { type: "string", nullable: true },
+                      subcategory: { type: "string", nullable: true },
+                    },
+                    required: ["name"],
                   },
-                  required: ["name"],
                 },
               },
+              required: ["businesses"],
+              additionalProperties: false,
             },
-            required: ["businesses"],
-            additionalProperties: false,
           },
         },
-      }],
+      ],
       tool_choice: { type: "function", function: { name: "extract_businesses" } },
     }),
   });
@@ -356,16 +449,12 @@ ${text.substring(0, 30000)}`;
   return parsed.businesses || [];
 }
 
-// ─── Save mode: upsert to database ───
 async function handleSaveMode(
   businesses: any[],
   categoryId: string | null,
   subcategoryId: string | null,
 ): Promise<{ inserted: number; updated: number; errors: string[] }> {
-  const adminClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   const results = { inserted: 0, updated: 0, errors: [] as string[] };
 
@@ -376,9 +465,17 @@ async function handleSaveMode(
       continue;
     }
 
+    const slug = safe.name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
     try {
       const { data, error } = await adminClient.rpc("upsert_business_from_import", {
         p_name: safe.name,
+        p_slug: slug,
         p_city: safe.city,
         p_address: safe.address,
         p_cta_email: safe.cta_email,
@@ -392,8 +489,13 @@ async function handleSaveMode(
         p_description: safe.description,
         p_instagram_url: safe.instagram_url,
         p_facebook_url: safe.facebook_url,
+        p_other_social_url: safe.other_social_url,
+        p_logo_url: safe.logo_url,
+        p_opening_hours: safe.opening_hours,
+        p_cta_booking_url: safe.cta_booking_url,
+        p_cta_order_url: safe.cta_order_url,
         p_category_id: categoryId ?? safe.category_id,
-        p_subcategory_id: (subcategoryId && subcategoryId !== "none") ? subcategoryId : (safe.subcategory_id ?? null),
+        p_subcategory_id: subcategoryId && subcategoryId !== "none" ? subcategoryId : (safe.subcategory_id ?? null),
         p_registration_source: "import_text",
       });
 
@@ -403,18 +505,16 @@ async function handleSaveMode(
       } else {
         const action = (data as any)?.action;
         if (action === "inserted") results.inserted++;
-        if (action === "updated") results.updated++;
+        else results.updated++;
       }
     } catch (e: any) {
       results.errors.push(`${safe.name}: ${e.message}`);
     }
   }
 
-  console.log(`Upsert: ${results.inserted} inserted, ${results.updated} updated, ${results.errors.length} errors`);
   return results;
 }
 
-// ─── Main handler ───
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -447,7 +547,6 @@ serve(async (req) => {
       businesses: preSelectedBusinesses,
     } = await req.json();
 
-    // ═══ SAVE MODE ═══
     if (saveToDatabase && preSelectedBusinesses?.length > 0) {
       const results = await handleSaveMode(preSelectedBusinesses, categoryId, subcategoryId);
       return new Response(JSON.stringify({ businesses: preSelectedBusinesses, results }), {
@@ -455,7 +554,6 @@ serve(async (req) => {
       });
     }
 
-    // ═══ EXTRACTION MODE ═══
     if (!text || text.trim().length < 10) {
       return new Response(JSON.stringify({ error: "Texto demasiado curto" }), {
         status: 400,
@@ -477,35 +575,36 @@ serve(async (req) => {
       } catch (e: any) {
         if (e.message === "RATE_LIMIT") {
           return new Response(JSON.stringify({ error: "Rate limit excedido, tente novamente mais tarde" }), {
-            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         if (e.message === "PAYMENT_REQUIRED") {
           return new Response(JSON.stringify({ error: "Créditos AI insuficientes" }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         console.error("Extraction error:", e);
         return new Response(JSON.stringify({ error: "Erro na extração de dados" }), {
-          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
 
     const businesses = rawBusinesses
       .slice(0, safeLimit)
-      .map(b => normalizeBusiness(b))
-      .filter(b => b.name)
-      .map(b => ({
+      .map((b) => normalizeBusiness(b))
+      .filter((b) => b.name)
+      .map((b) => ({
         ...b,
         category_id: categoryId ?? b.category_id ?? null,
-        subcategory_id: (subcategoryId && subcategoryId !== "none") ? subcategoryId : (b.subcategory_id ?? null),
+        subcategory_id: subcategoryId && subcategoryId !== "none" ? subcategoryId : (b.subcategory_id ?? null),
         category: categoryId ? null : b.category,
         subcategory: subcategoryId ? null : b.subcategory,
         source: "manual_text_import",
       }));
-
-    console.log(`Extracted ${businesses.length} businesses (tabular: ${tabular.isTabular})`);
 
     return new Response(JSON.stringify({ businesses }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

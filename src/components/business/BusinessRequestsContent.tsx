@@ -1,12 +1,27 @@
-import { useRef, useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { useBusinessRequests, useBusinessRequestsMeta } from "@/hooks/useBusinessDashboard";
+import {
+  useBusinessRequests,
+  useBusinessRequestsMeta,
+  useArchiveRequest,
+  useRestoreRequest,
+  type RequestArchiveFilter,
+} from "@/hooks/useBusinessDashboard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Loader2,
   Inbox,
@@ -24,8 +39,12 @@ import {
   Clock,
   XCircle,
   Lock,
+  Archive,
+  RotateCcw,
+  Search,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatReviewerName } from "@/lib/utils";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -52,17 +71,16 @@ const matchStatusConfig: Record<
 
 // ─── Sub-componente: Chat de um pedido (com Realtime) ─────────────────────────
 
-const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => void }) => {
+const RequestChat = ({ requestId, consumerDisplayName = "Consumidor", onRead }: { requestId: string; consumerDisplayName?: string; onRead: () => void }) => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Buscar mensagens
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["business-request-messages", requestId],
-    refetchInterval: 60000, // fallback polling reduzido (realtime é o principal)
+    refetchInterval: 60000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("request_messages" as any)
@@ -74,7 +92,6 @@ const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => v
     },
   });
 
-  // Supabase Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel(`request-messages-${requestId}`)
@@ -98,7 +115,6 @@ const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => v
     };
   }, [requestId, qc]);
 
-  // Marcar mensagens do consumidor como lidas
   useEffect(() => {
     if (messages.length === 0) return;
     const unread = messages.filter((m) => m.sender_role === "consumer" && !m.read_at);
@@ -118,7 +134,6 @@ const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => v
       });
   }, [messages, qc, onRead]);
 
-  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -127,34 +142,22 @@ const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => v
     if (!newMessage.trim()) return;
     setSending(true);
     try {
-      // Garantir sessão activa antes do insert
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) throw new Error("Sessão expirada. Por favor, volta a iniciar sessão.");
-
-      console.log("Sending message:", {
-        request_id: requestId,
-        sender_id: session.user.id,
-        sender_role: "business",
-      });
+      if (!session) throw new Error("Sessão expirada.");
 
       const { error } = await supabase.from("request_messages" as any).insert({
         request_id: requestId,
-        sender_id: session.user.id, // usar session.user.id para garantir que bate com auth.uid()
+        sender_id: session.user.id,
         sender_role: "business",
         message: newMessage.trim(),
       } as any);
 
-      if (error) {
-        console.error("Insert error:", error);
-        throw error;
-      }
-
+      if (error) throw error;
       setNewMessage("");
       qc.invalidateQueries({ queryKey: ["business-request-messages", requestId] });
-    } catch (err) {
-      console.error("Send error:", err);
+    } catch {
       toast({ title: "Erro ao enviar mensagem", variant: "destructive" });
     } finally {
       setSending(false);
@@ -193,7 +196,7 @@ const RequestChat = ({ requestId, onRead }: { requestId: string; onRead: () => v
                       : "bg-muted text-foreground rounded-bl-sm"
                   }`}
                 >
-                  {!isBusiness && <p className="text-xs font-semibold mb-1 opacity-70">Consumidor</p>}
+                  {!isBusiness && <p className="text-xs font-semibold mb-1 opacity-70">{consumerDisplayName}</p>}
                   <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                   <p className={`text-xs mt-1 ${isBusiness ? "opacity-70 text-right" : "opacity-50"}`}>
                     {new Date(msg.created_at).toLocaleTimeString("pt-PT", {
@@ -246,13 +249,57 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { data: requests = [], isLoading } = useBusinessRequests(businessId);
+
+  const [archiveFilter, setArchiveFilter] = useState<RequestArchiveFilter>("active");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [urgencyFilter, setUrgencyFilter] = useState<string>("all");
+
+  const { data: requests = [], isPending } = useBusinessRequests(businessId, archiveFilter);
   const [openChats, setOpenChats] = useState<Record<string, boolean>>({});
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
-  const requestIds = requests.map((m: any) => m.service_requests?.id).filter(Boolean) as string[];
+  const archiveMutation = useArchiveRequest();
+  const restoreMutation = useRestoreRequest();
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Client-side filtering
+  const filteredRequests = useMemo(() => {
+    return requests.filter((match: any) => {
+      const sr = match.service_requests;
+
+      // Status filter
+      if (statusFilter !== "all" && match.status !== statusFilter) return false;
+
+      // Urgency filter
+      if (urgencyFilter === "urgent" && sr?.urgency !== "urgent") return false;
+      if (urgencyFilter === "normal" && sr?.urgency === "urgent") return false;
+
+      // Search filter
+      if (debouncedSearch) {
+        const s = debouncedSearch.toLowerCase();
+        const desc = (sr?.description || "").toLowerCase();
+        const name = (sr?.profiles?.full_name || sr?.consumer_name || "").toLowerCase();
+        const city = (sr?.location_city || "").toLowerCase();
+        if (!desc.includes(s) && !name.includes(s) && !city.includes(s)) return false;
+      }
+
+      return true;
+    });
+  }, [requests, statusFilter, urgencyFilter, debouncedSearch]);
+
+  const requestIds = filteredRequests.map((m: any) => m.service_requests?.id).filter(Boolean) as string[];
   const { data: requestMeta = {} } = useBusinessRequestsMeta(businessId, requestIds);
+
+  // Counts for tabs (from all requests, not filtered)
+  const allActiveCount = requests.filter((m: any) => !m.archived_at).length;
+  const allArchivedCount = requests.filter((m: any) => !!m.archived_at).length;
 
   const toggleChat = (requestId: string) => {
     setOpenChats((prev) => ({ ...prev, [requestId]: !prev[requestId] }));
@@ -260,8 +307,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
 
   const handleRead = useCallback(() => {}, []);
 
-  // ── Aceitar / Recusar pedido ──────────────────────────────────────────────
-  const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado") => {
+  const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado", requestId?: string) => {
     setUpdatingStatus(matchId);
     try {
       const { error } = await supabase
@@ -277,6 +323,15 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             : "O pedido foi recusado.",
       });
       qc.invalidateQueries({ queryKey: ["business-requests"] });
+
+      // P2: Notify consumer via email when business accepts
+      if (newStatus === "aceite" && requestId) {
+        supabase.functions
+          .invoke("notify-consumer", {
+            body: { type: "match_accepted", request_id: requestId, business_id: businessId },
+          })
+          .catch((err) => console.error("notify-consumer error:", err));
+      }
     } catch {
       toast({ title: "Erro ao atualizar pedido", variant: "destructive" });
     } finally {
@@ -284,13 +339,223 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
     }
   };
 
-  if (isLoading) {
+  const handleArchive = (matchId: string) => {
+    archiveMutation.mutate(matchId, {
+      onSuccess: () => toast({ title: "Pedido arquivado" }),
+      onError: () => toast({ title: "Erro ao arquivar", variant: "destructive" }),
+    });
+  };
+
+  const handleRestore = (matchId: string) => {
+    restoreMutation.mutate(matchId, {
+      onSuccess: () => toast({ title: "Pedido restaurado" }),
+      onError: () => toast({ title: "Erro ao restaurar", variant: "destructive" }),
+    });
+  };
+
+  const renderRequestCard = (match: any) => {
+    const sr = match.service_requests;
+    const profile = sr?.profiles;
+    const isUrgent = sr?.urgency === "urgent";
+    const requestId = sr?.id as string | undefined;
+    const meta = requestId ? (requestMeta as any)[requestId] : undefined;
+    const chatOpen = requestId ? !!openChats[requestId] : false;
+    const isAccepted = match.status === "aceite" || match.contact_unlocked === true;
+    const isPending = match.status === "enviado" || match.status === "visualizado";
+    const isArchived = !!match.archived_at;
+
+    const statusCfg = matchStatusConfig[match.status] || {
+      label: match.status,
+      variant: "secondary" as const,
+    };
+
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div
+        key={match.id}
+        className={`bg-card rounded-xl p-5 shadow-sm border transition-colors space-y-3 ${
+          meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : "border-border"
+        } ${isArchived ? "opacity-70" : ""}`}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 space-y-1 min-w-0">
+            {isUrgent && (
+              <div className="flex items-center gap-1 text-destructive text-xs font-semibold mb-1">
+                <AlertTriangle className="h-3.5 w-3.5" /> URGENTE
+              </div>
+            )}
+            <p className="font-medium text-foreground">{sr?.description || "Pedido sem descrição"}</p>
+            <p className="text-sm text-muted-foreground">
+              {sr?.categories?.name}
+              {sr?.subcategories?.name ? ` • ${sr.subcategories.name}` : ""}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+            <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
+            {isArchived && <Badge variant="outline" className="text-xs">Arquivado</Badge>}
+            {meta?.hasUnread && (
+              <span className="flex items-center gap-1 text-xs text-primary font-semibold animate-pulse">
+                <Bell className="h-3 w-3" /> Nova mensagem
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Accept / Reject buttons */}
+        {isPending && !isArchived && (
+          <div className="flex items-center gap-2 py-1">
+            <Button
+              size="sm"
+              onClick={() => handleStatusChange(match.id, "aceite", requestId)}
+              disabled={updatingStatus === match.id}
+              className="flex items-center gap-1.5"
+            >
+              {updatingStatus === match.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              )}
+              Aceitar Pedido
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleStatusChange(match.id, "recusado", requestId)}
+              disabled={updatingStatus === match.id}
+              className="flex items-center gap-1.5 text-destructive hover:text-destructive"
+            >
+              <XCircle className="h-3.5 w-3.5" />
+              Recusar
+            </Button>
+          </div>
+        )}
+
+        {/* Consumer info */}
+        {isAccepted ? (
+          <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+            <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">Consumidor</p>
+            {(sr?.consumer_name || profile?.full_name) && (
+              <div className="flex items-center gap-2 text-foreground">
+                <User className="h-3.5 w-3.5 text-muted-foreground" />
+               {profile?.full_name || sr?.consumer_name}
+              </div>
+            )}
+            {(sr?.consumer_email || profile?.email) && (
+              <div className="flex items-center gap-2">
+                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                <a href={`mailto:${sr?.consumer_email || profile?.email}`} className="text-primary hover:underline">
+                  {sr?.consumer_email || profile?.email}
+                </a>
+              </div>
+            )}
+            {(sr?.consumer_phone || profile?.phone) && (
+              <div className="flex items-center gap-2">
+                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                <a href={`tel:${sr?.consumer_phone || profile?.phone}`} className="text-primary hover:underline">
+                  {sr?.consumer_phone || profile?.phone}
+                </a>
+              </div>
+            )}
+          </div>
+        ) : (
+          profile && (
+            <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+              <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">Consumidor</p>
+              {(sr?.consumer_name || profile?.full_name) && (
+                <div className="flex items-center gap-2 text-foreground">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  {formatReviewerName(profile?.full_name || sr?.consumer_name)}
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-muted-foreground text-xs mt-1">
+                <Lock className="h-3 w-3" />
+                Aceita o pedido para ver o contacto do consumidor
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Location */}
+        {(sr?.location_city || sr?.location_postal_code || sr?.address) && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" />
+            {[sr?.address, sr?.location_city, sr?.location_postal_code].filter(Boolean).join(", ")}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <p className="text-xs text-muted-foreground">
+            {new Date(match.sent_at).toLocaleDateString("pt-PT", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+
+          <div className="flex items-center gap-2">
+            {/* Archive / Restore */}
+            {isArchived ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleRestore(match.id)}
+                disabled={restoreMutation.isPending}
+                className="flex items-center gap-1.5 text-xs"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleArchive(match.id)}
+                disabled={archiveMutation.isPending}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground"
+              >
+                <Archive className="h-3.5 w-3.5" /> Arquivar
+              </Button>
+            )}
+
+            {/* Chat button */}
+            {requestId && isAccepted && (
+              <Button
+                size="sm"
+                variant={meta?.hasUnread ? "default" : "outline"}
+                onClick={() => toggleChat(requestId)}
+                className="flex items-center gap-1.5"
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                {chatOpen ? "Fechar" : meta?.hasUnread ? "Responder" : "Conversa"}
+                {chatOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Inline chat */}
+        {requestId && chatOpen && isAccepted && <RequestChat requestId={requestId} consumerDisplayName={formatReviewerName(profile?.full_name)} onRead={handleRead} />}
       </div>
     );
-  }
+  };
+
+  const renderEmpty = () => {
+    const messages: Record<RequestArchiveFilter, { title: string; desc: string }> = {
+      active: { title: "Sem pedidos ativos", desc: "Quando receberes novos pedidos, aparecerão aqui." },
+      archived: { title: "Sem pedidos arquivados", desc: "Os pedidos que arquivares aparecerão aqui." },
+      all: { title: "Sem pedidos recebidos", desc: "Ainda não recebeste nenhum pedido de consumidores." },
+    };
+    const msg = messages[archiveFilter];
+    return (
+      <div className="text-center py-16 text-muted-foreground">
+        <Inbox className="h-12 w-12 mx-auto mb-4 opacity-30" />
+        <p className="font-medium">{msg.title}</p>
+        <p className="text-sm mt-1">{msg.desc}</p>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -299,187 +564,74 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
         <p className="text-muted-foreground">Pedidos de orçamento e serviços dos consumidores</p>
       </div>
 
-      {requests.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <Inbox className="h-12 w-12 mx-auto mb-4 opacity-30" />
-          <p>Sem pedidos recebidos.</p>
+      {/* Tabs */}
+      <Tabs value={archiveFilter} onValueChange={(v) => setArchiveFilter(v as RequestArchiveFilter)}>
+        <TabsList>
+          <TabsTrigger value="active" className="flex items-center gap-1.5">
+            Ativos
+            {allActiveCount > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs h-5 min-w-5 px-1.5">{allActiveCount}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="archived" className="flex items-center gap-1.5">
+            Arquivados
+            {allArchivedCount > 0 && (
+              <Badge variant="outline" className="ml-1 text-xs h-5 min-w-5 px-1.5">{allArchivedCount}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="all">Todos</TabsTrigger>
+        </TabsList>
+
+        {/* Filters bar */}
+        <div className="flex flex-wrap gap-3 mt-4">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar por descrição, nome ou cidade…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="enviado">Novo</SelectItem>
+              <SelectItem value="aceite">Aceite</SelectItem>
+              <SelectItem value="recusado">Recusado</SelectItem>
+              <SelectItem value="respondido">Respondido</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Urgência" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="urgent">Urgente</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {requests.map((match: any) => {
-            const sr = match.service_requests;
-            const profile = sr?.profiles;
-            const isUrgent = sr?.urgency === "urgent";
-            const requestId = sr?.id as string | undefined;
-            const meta = requestId ? (requestMeta as any)[requestId] : undefined;
-            const chatOpen = requestId ? !!openChats[requestId] : false;
-            const isAccepted = match.status === "aceite" || match.contact_unlocked === true;
-            const isPending = match.status === "enviado" || match.status === "visualizado";
 
-            const statusCfg = matchStatusConfig[match.status] || {
-              label: match.status,
-              variant: "secondary" as const,
-            };
-
-            return (
-              <div
-                key={match.id}
-                className={`bg-card rounded-xl p-5 shadow-sm border transition-colors space-y-3 ${
-                  meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : "border-border"
-                }`}
-              >
-                {/* ── Cabeçalho ── */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 space-y-1 min-w-0">
-                    {isUrgent && (
-                      <div className="flex items-center gap-1 text-destructive text-xs font-semibold mb-1">
-                        <AlertTriangle className="h-3.5 w-3.5" /> URGENTE
-                      </div>
-                    )}
-                    <p className="font-medium text-foreground">{sr?.description || "Pedido sem descrição"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {sr?.categories?.name}
-                      {sr?.subcategories?.name ? ` • ${sr.subcategories.name}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                    <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
-                    {meta?.hasUnread && (
-                      <span className="flex items-center gap-1 text-xs text-primary font-semibold animate-pulse">
-                        <Bell className="h-3 w-3" /> Nova mensagem
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── Botões Aceitar / Recusar (só se ainda pendente) ── */}
-                {isPending && (
-                  <div className="flex items-center gap-2 py-1">
-                    <Button
-                      size="sm"
-                      onClick={() => handleStatusChange(match.id, "aceite")}
-                      disabled={updatingStatus === match.id}
-                      className="flex items-center gap-1.5"
-                    >
-                      {updatingStatus === match.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      )}
-                      Aceitar Pedido
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleStatusChange(match.id, "recusado")}
-                      disabled={updatingStatus === match.id}
-                      className="flex items-center gap-1.5 text-destructive hover:text-destructive"
-                    >
-                      <XCircle className="h-3.5 w-3.5" />
-                      Recusar
-                    </Button>
-                  </div>
-                )}
-
-                {/* ── Info do consumidor (condicional ao status) ── */}
-                {isAccepted ? (
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
-                    <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">Consumidor</p>
-                    {/* Nome do snapshot ou do profile */}
-                    {(sr?.consumer_name || profile?.full_name) && (
-                      <div className="flex items-center gap-2 text-foreground">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        {sr?.consumer_name || profile?.full_name}
-                      </div>
-                    )}
-                    {/* Email */}
-                    {(sr?.consumer_email || profile?.email) && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                        <a
-                          href={`mailto:${sr?.consumer_email || profile?.email}`}
-                          className="text-primary hover:underline"
-                        >
-                          {sr?.consumer_email || profile?.email}
-                        </a>
-                      </div>
-                    )}
-                    {/* Telefone */}
-                    {(sr?.consumer_phone || profile?.phone) && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        <a
-                          href={`tel:${sr?.consumer_phone || profile?.phone}`}
-                          className="text-primary hover:underline"
-                        >
-                          {sr?.consumer_phone || profile?.phone}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  profile && (
-                    <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
-                      <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                        Consumidor
-                      </p>
-                      {/* Antes da aceitação: apenas nome e cidade */}
-                      {(sr?.consumer_name || profile?.full_name) && (
-                        <div className="flex items-center gap-2 text-foreground">
-                          <User className="h-3.5 w-3.5 text-muted-foreground" />
-                          {sr?.consumer_name || profile?.full_name}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs mt-1">
-                        <Lock className="h-3 w-3" />
-                        Aceita o pedido para ver o contacto do consumidor
-                      </div>
-                    </div>
-                  )
-                )}
-
-                {/* ── Localização ── */}
-                {(sr?.location_city || sr?.location_postal_code || sr?.address) && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {[sr?.address, sr?.location_city, sr?.location_postal_code].filter(Boolean).join(", ")}
-                  </div>
-                )}
-
-                {/* ── Rodapé: data + botão conversa ── */}
-                <div className="flex items-center justify-between gap-3 pt-1">
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(match.sent_at).toLocaleDateString("pt-PT", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-
-                  {/* Botão de conversa apenas se o pedido foi aceite */}
-                  {requestId && isAccepted && (
-                    <Button
-                      size="sm"
-                      variant={meta?.hasUnread ? "default" : "outline"}
-                      onClick={() => toggleChat(requestId)}
-                      className="flex items-center gap-1.5"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" />
-                      {chatOpen ? "Fechar" : meta?.hasUnread ? "Responder" : "Conversa"}
-                      {chatOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                    </Button>
-                  )}
-                </div>
-
-                {/* ── Chat inline (apenas após aceitação) ── */}
-                {requestId && chatOpen && isAccepted && <RequestChat requestId={requestId} onRead={handleRead} />}
-              </div>
-            );
-          })}
-        </div>
-      )}
+        {/* Content */}
+        {isPending ? (
+          <div className="space-y-4 mt-4">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-40 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : filteredRequests.length === 0 ? (
+          renderEmpty()
+        ) : (
+          <div className="space-y-4 mt-4">
+            {filteredRequests.map(renderRequestCard)}
+          </div>
+        )}
+      </Tabs>
     </div>
   );
 };

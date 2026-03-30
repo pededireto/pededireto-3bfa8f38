@@ -8,6 +8,7 @@ export interface Category {
   description: string | null;
   icon: string | null;
   image_url: string | null;
+  video_url: string | null;
   alcance_default: "local" | "nacional" | "hibrido";
   display_order: number;
   is_active: boolean;
@@ -24,7 +25,7 @@ export const useCategories = () => {
         .select("*")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
-      
+
       if (error) throw error;
       return data as Category[];
     },
@@ -35,11 +36,8 @@ export const useAllCategories = () => {
   return useQuery({
     queryKey: ["categories", "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("display_order", { ascending: true });
-      
+      const { data, error } = await supabase.from("categories").select("*").order("display_order", { ascending: true });
+
       if (error) throw error;
       return data as Category[];
     },
@@ -51,12 +49,8 @@ export const useCategory = (slug: string | undefined) => {
     queryKey: ["category", slug],
     queryFn: async () => {
       if (!slug) return null;
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .eq("slug", slug)
-        .maybeSingle();
-      
+      const { data, error } = await supabase.from("categories").select("*").eq("slug", slug).maybeSingle();
+
       if (error) throw error;
       return data as Category | null;
     },
@@ -66,59 +60,125 @@ export const useCategory = (slug: string | undefined) => {
 
 export const useCreateCategory = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (category: Omit<Category, "id" | "created_at" | "updated_at">) => {
-      const { data, error } = await supabase
-        .from("categories")
-        .insert(category)
-        .select()
-        .single();
-      
+      const { data, error } = await supabase.from("categories").insert(category).select().single();
+
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+    onError: (error: any) => {
+      console.error("[useCreateCategory] error:", error);
     },
   });
 };
 
 export const useUpdateCategory = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Category> & { id: string }) => {
-      const { data, error } = await supabase
-        .from("categories")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      
+      const { data, error } = await supabase.from("categories").update(updates).eq("id", id).select().single();
+
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
+    onError: (error: any) => {
+      console.error("[useUpdateCategory] error:", error);
+    },
   });
 };
 
 export const useDeleteCategory = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("categories")
-        .delete()
-        .eq("id", id);
-      
+      const { error } = await supabase.from("categories").delete().eq("id", id);
+
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+    onError: (error: any) => {
+      console.error("[useDeleteCategory] error:", error);
+    },
+  });
+};
+
+export interface Subcategory {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  image_url: string | null;
+  video_url: string | null;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CategoryWithSubcategories extends Category {
+  subcategories: Subcategory[];
+}
+
+export const useSubcategories = (categoryId: string | undefined) => {
+  return useQuery({
+    queryKey: ["subcategories", categoryId],
+    queryFn: async () => {
+      if (!categoryId) return [];
+
+      const { data, error } = await supabase
+        .from("subcategories")
+        .select("*")
+        .eq("category_id", categoryId)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+      return data as Subcategory[];
+    },
+    enabled: !!categoryId,
+  });
+};
+
+export const useCategoriesWithSubcategories = () => {
+  return useQuery({
+    queryKey: ["categories-with-subcategories"],
+    queryFn: async () => {
+      // Buscar categorias
+      const { data: categories, error: catError } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (catError) throw catError;
+
+      // Buscar todas as subcategorias
+      const { data: subcategories, error: subError } = await supabase
+        .from("subcategories")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (subError) throw subError;
+
+      // Agrupar subcategorias por categoria
+      const categoriesWithSubs: CategoryWithSubcategories[] = (categories || []).map((cat) => ({
+        ...cat,
+        subcategories: (subcategories || []).filter((sub) => sub.category_id === cat.id),
+      }));
+
+      return categoriesWithSubs;
     },
   });
 };

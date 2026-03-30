@@ -13,14 +13,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Settings, Zap } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, Plus, Trash2, Settings, Zap, Megaphone } from "lucide-react";
 
 const CommissionModelsContent = () => {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const { data: models = [], isLoading } = useCommissionModels();
   const { data: plans = [] } = useCommercialPlans();
   const createModel = useCreateCommissionModel();
@@ -41,6 +43,15 @@ const CommissionModelsContent = () => {
     value: 0,
     applies_to: "first_payment" as "first_payment" | "monthly",
     duration_months: null as number | null,
+  });
+
+  // Affiliate fields edit state
+  const [editingAffiliate, setEditingAffiliate] = useState<string | null>(null);
+  const [affiliateForm, setAffiliateForm] = useState({
+    rate: 0,
+    renewal_rate: 0,
+    valid_from: "",
+    valid_until: "",
   });
 
   const handleCreateModel = async () => {
@@ -98,6 +109,37 @@ const CommissionModelsContent = () => {
     }
   };
 
+  const openAffiliateEdit = (model: any) => {
+    setEditingAffiliate(model.id);
+    setAffiliateForm({
+      rate: model.rate || 0,
+      renewal_rate: model.renewal_rate || 0,
+      valid_from: model.valid_from ? model.valid_from.split("T")[0] : "",
+      valid_until: model.valid_until ? model.valid_until.split("T")[0] : "",
+    });
+  };
+
+  const handleSaveAffiliate = async () => {
+    if (!editingAffiliate) return;
+    try {
+      const { error } = await supabase
+        .from("commission_models" as any)
+        .update({
+          rate: affiliateForm.rate || null,
+          renewal_rate: affiliateForm.renewal_rate || null,
+          valid_from: affiliateForm.valid_from || null,
+          valid_until: affiliateForm.valid_until || null,
+        })
+        .eq("id", editingAffiliate);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["commission-models"] });
+      toast({ title: "Configuração de afiliados guardada" });
+      setEditingAffiliate(null);
+    } catch {
+      toast({ title: "Erro", variant: "destructive" });
+    }
+  };
+
   if (isLoading) {
     return <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
@@ -106,7 +148,7 @@ const CommissionModelsContent = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">⚙️ Modelos de Comissão</h1>
-        <p className="text-muted-foreground">Configurar modelos e regras de comissões para comerciais</p>
+        <p className="text-muted-foreground">Configurar modelos e regras de comissões para comerciais e afiliados</p>
       </div>
 
       {/* Create Model */}
@@ -130,11 +172,24 @@ const CommissionModelsContent = () => {
                 <h3 className="font-bold">{model.name}</h3>
                 {model.description && <p className="text-sm text-muted-foreground">{model.description}</p>}
               </div>
-              <Badge variant={model.is_active ? "default" : "secondary"}>
-                {model.is_active ? "Ativo" : "Inativo"}
-              </Badge>
+              {model.is_active ? (
+                <Badge className="bg-primary text-primary-foreground">
+                  <Megaphone className="h-3 w-3 mr-1" /> CAMPANHA ACTIVA
+                </Badge>
+              ) : (
+                <Badge variant="secondary">Inativo</Badge>
+              )}
             </div>
-            <div className="flex gap-2">
+
+            {/* Affiliate summary */}
+            {(model.rate || model.renewal_rate) && (
+              <div className="text-xs text-muted-foreground mb-3 space-y-0.5">
+                <p>💰 One-shot: {model.rate || 0}% · 🔄 Renovação: {model.renewal_rate || 0}%</p>
+                {model.valid_until && <p>📅 Até: {new Date(model.valid_until).toLocaleDateString("pt-PT")}</p>}
+              </div>
+            )}
+
+            <div className="flex gap-2 flex-wrap">
               {!model.is_active && (
                 <Button size="sm" variant="outline" onClick={() => handleActivate(model.id)}>
                   <Zap className="h-3 w-3 mr-1" /> Ativar
@@ -142,6 +197,9 @@ const CommissionModelsContent = () => {
               )}
               <Button size="sm" variant="outline" onClick={() => setSelectedModelId(model.id)}>
                 <Settings className="h-3 w-3 mr-1" /> Regras
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => openAffiliateEdit(model)}>
+                <Megaphone className="h-3 w-3 mr-1" /> Afiliados
               </Button>
               <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(model.id)}>
                 <Trash2 className="h-3 w-3" />
@@ -155,7 +213,7 @@ const CommissionModelsContent = () => {
       {selectedModelId && (
         <div className="bg-card rounded-xl p-6 shadow-card">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Regras do Modelo: {models.find((m: any) => m.id === selectedModelId)?.name}</h2>
+            <h2 className="text-lg font-semibold">Regras Comerciais: {models.find((m: any) => m.id === selectedModelId)?.name}</h2>
             <Button size="sm" onClick={() => { setRuleForm({ plan_id: null, commission_type: "percentage", value: 0, applies_to: "first_payment", duration_months: null }); setRuleDialogOpen(true); }}>
               <Plus className="h-4 w-4 mr-1" /> Nova Regra
             </Button>
@@ -251,6 +309,66 @@ const CommissionModelsContent = () => {
               </div>
             </div>
             <Button className="w-full" onClick={handleCreateRule}>Criar Regra</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Affiliate Config Dialog */}
+      <Dialog open={!!editingAffiliate} onOpenChange={(open) => !open && setEditingAffiliate(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              <Megaphone className="h-5 w-5 inline mr-2" />
+              Configuração de Afiliados
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Estas taxas são usadas pelo sistema de afiliados, separado das regras comerciais acima.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <Label>Taxa base (one-shot) — aplicada na primeira conversão</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={affiliateForm.rate}
+                  onChange={(e) => setAffiliateForm({ ...affiliateForm, rate: parseFloat(e.target.value) || 0 })}
+                  className="w-24"
+                />
+                <span className="text-sm text-muted-foreground">%</span>
+              </div>
+            </div>
+            <div>
+              <Label>Taxa de renovação — aplicada em renovações de subscrição</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={affiliateForm.renewal_rate}
+                  onChange={(e) => setAffiliateForm({ ...affiliateForm, renewal_rate: parseFloat(e.target.value) || 0 })}
+                  className="w-24"
+                />
+                <span className="text-sm text-muted-foreground">%</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Válido de</Label>
+                <Input
+                  type="date"
+                  value={affiliateForm.valid_from}
+                  onChange={(e) => setAffiliateForm({ ...affiliateForm, valid_from: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Válido até (vazio = sem expiração)</Label>
+                <Input
+                  type="date"
+                  value={affiliateForm.valid_until}
+                  onChange={(e) => setAffiliateForm({ ...affiliateForm, valid_until: e.target.value })}
+                />
+              </div>
+            </div>
+            <Button className="w-full" onClick={handleSaveAffiliate}>Guardar Configuração</Button>
           </div>
         </DialogContent>
       </Dialog>

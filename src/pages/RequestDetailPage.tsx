@@ -26,6 +26,10 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRequestSocialProof } from "@/hooks/useRequestSocialProof";
+import RequestSocialProof from "@/components/consumer/RequestSocialProof";
+import RequestProgressBar, { type ProgressData } from "@/components/consumer/RequestProgressBar";
+import RequestActivityPulse from "@/components/consumer/RequestActivityPulse";
 
 // --- Tipos ---
 
@@ -37,6 +41,8 @@ interface RequestDetail {
   location_city: string | null;
   location_postal_code: string | null;
   created_at: string;
+  category_id: string | null;
+  subcategory_id: string | null;
   categories?: { name: string } | null;
   subcategories?: { name: string } | null;
 }
@@ -47,6 +53,7 @@ interface Match {
   sent_at: string;
   responded_at: string | null;
   price_quote: string | null;
+  viewed_at: string | null;
   businesses?: { id: string; name: string; slug: string } | null;
 }
 
@@ -70,14 +77,13 @@ interface RatingState {
 // --- Configs visuais ---
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  novo: { label: "Novo", variant: "secondary" },
-  em_contacto: { label: "Em Contacto", variant: "outline" },
-  encaminhado: { label: "Encaminhado", variant: "default" },
   aberto: { label: "Aberto", variant: "secondary" },
   em_conversa: { label: "Em Conversa", variant: "outline" },
-  fechado: { label: "Resolvido", variant: "default" },
+  propostas_recebidas: { label: "Propostas Recebidas", variant: "default" },
+  em_negociacao: { label: "Em Negociação", variant: "default" },
+  fechado: { label: "Fechado", variant: "default" },
   cancelado: { label: "Cancelado", variant: "destructive" },
-  concluido: { label: "Concluido", variant: "default" },
+  expirado: { label: "Expirado", variant: "outline" },
 };
 
 const matchStatusConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -163,6 +169,7 @@ const RequestDetailPage = () => {
           `
           id, description, status, urgency,
           location_city, location_postal_code, created_at,
+          category_id, subcategory_id,
           categories:category_id (name),
           subcategories:subcategory_id (name)
         `,
@@ -175,6 +182,12 @@ const RequestDetailPage = () => {
     },
   });
 
+  // Social proof
+  const { data: socialProof } = useRequestSocialProof(
+    request?.subcategory_id,
+    request?.location_city
+  );
+
   // Query: matches
   const { data: matches = [] } = useQuery({
     queryKey: ["request-matches-detail", id],
@@ -184,7 +197,7 @@ const RequestDetailPage = () => {
         .from("request_business_matches" as any)
         .select(
           `
-          id, status, sent_at, responded_at, price_quote,
+          id, status, sent_at, responded_at, price_quote, viewed_at,
           businesses:business_id (id, name, slug)
         `,
         )
@@ -194,6 +207,12 @@ const RequestDetailPage = () => {
       return (data || []) as unknown as Match[];
     },
   });
+
+  // Computed activity data from matches
+  const matchesViewed = matches.filter((m: any) => (m as any).viewed_at != null || m.status !== "enviado").length;
+  const matchesResponded = matches.filter(
+    (m: any) => m.responded_at != null || ["aceite", "recusado", "orcamento_enviado", "em_conversa"].includes(m.status)
+  ).length;
 
   // Query: avaliacoes ja feitas
   const { data: existingRatings = [] } = useQuery({
@@ -489,15 +508,14 @@ const RequestDetailPage = () => {
   }
 
   const cfg = statusConfig[request.status] || { label: request.status, variant: "secondary" as const };
-  const isResolved = request.status === "fechado" || request.status === "concluido";
+  const isResolved = request.status === "fechado";
   const hasAcceptedMatch = matches.some((m) => m.status === "aceite");
   const allRefused = matches.length > 0 && matches.every((m) => m.status === "recusado" || m.status === "expirado");
 
+  // P7: Welcome banner for newly created requests (< 60s ago)
+  const isNewlyCreated = request && (Date.now() - new Date(request.created_at).getTime()) < 60000;
+
   // ── Estado do banner ──────────────────────────────────────────────────────
-  // "none"   → sem recusas ou pedido resolvido → não mostrar
-  // "red"    → todos recusaram, sem ticket activo → botão "Pedir Ajuda"
-  // "orange" → ticket aberto, aguarda resposta da equipa
-  // "green"  → admin entrou no caso (assigned / in_progress / waiting_response)
   const bannerState = (() => {
     if (isResolved || !allRefused) return "none";
     if (!activeTicket) return "red";
@@ -508,6 +526,24 @@ const RequestDetailPage = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+
+      {/* P7: Welcome banner for newly created requests */}
+      {isNewlyCreated && (
+        <div className="bg-primary/10 border-b border-primary/20">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-start gap-3 max-w-3xl mx-auto">
+              <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+              <div>
+                <h2 className="font-bold text-foreground">Pedido enviado com sucesso!</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Estamos a contactar os melhores profissionais da sua área.
+                  Receberá respostas em breve — normalmente em menos de 2 horas.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Pedido de Ajuda */}
       {showHelpModal && (
@@ -667,6 +703,35 @@ const RequestDetailPage = () => {
             )}
           </div>
         </div>
+
+        {/* ── Progress Bar ── */}
+        <Card className="mb-4">
+          <CardContent className="py-4 px-5 space-y-3">
+            <RequestProgressBar
+              data={{
+                requestStatus: request.status,
+                matchesTotal: matches.length,
+                matchesViewed,
+                matchesResponded,
+                hasMessages: messages.length > 0,
+              }}
+            />
+            {matches.length > 0 && (
+              <RequestActivityPulse
+                notified={matches.length}
+                viewed={matchesViewed}
+                responded={matchesResponded}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Social Proof ── */}
+        {socialProof && (socialProof.similarRequests >= 2 || socialProof.avgRating) && (
+          <div className="mb-4 px-1">
+            <RequestSocialProof data={socialProof} city={request.location_city} />
+          </div>
+        )}
 
         {/* ── Banner dinâmico (🔴 vermelho / 🟠 laranja / 🟢 verde) ── */}
         {bannerState !== "none" && (

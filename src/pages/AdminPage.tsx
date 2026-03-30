@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Loader2 } from "lucide-react";
+import logoImg from "@/assets/pede-direto-logo.png";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { useAllBusinesses } from "@/hooks/useBusinesses";
 import { useAllCategories } from "@/hooks/useCategories";
@@ -18,6 +19,7 @@ import AnalyticsContent from "@/components/admin/AnalyticsContent";
 import SettingsContent from "@/components/admin/SettingsContent";
 import PagesContent from "@/components/admin/PagesContent";
 import SynonymsContent from "@/components/admin/SynonymsContent";
+import SubcategoryRelationsContent from "@/components/admin/SubcategoryRelationsContent";
 import PlansContent from "@/components/admin/PlansContent";
 import SearchLogsContent from "@/components/admin/SearchLogsContent";
 import AlertsContent from "@/components/admin/AlertsContent";
@@ -40,6 +42,12 @@ import AdminReviewsPanel from "@/components/admin/AdminReviewsPanel";
 import TestUsersPanel from "@/components/admin/TestUsersPanel";
 import PendingClaimsPanel from "@/components/admin/PendingClaimsPanel";
 import EmailHub from "@/components/email/EmailHub";
+import BlogContent from "@/components/admin/BlogContent";
+import PlatformAlertsContent from "@/components/admin/PlatformAlertsContent";
+import NewsletterContent from "@/components/admin/NewsletterContent";
+import AffiliateAdminContent from "@/components/admin/AffiliateAdminContent";
+import BusinessAddonsManager from "@/components/admin/BusinessAddonsManager";
+import AdminSupportContent from "@/components/admin/AdminSupportContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -57,9 +65,10 @@ const AdminPage = () => {
     if (activeTab === "settings") return <SettingsContent />;
     if (activeTab === "pages") return <PagesContent />;
     if (activeTab === "synonyms") return <SynonymsContent />;
+    if (activeTab === "subcategory-relations") return <SubcategoryRelationsContent />;
     if (activeTab === "plans") return <PlansContent />;
     if (activeTab === "search-logs") return <SearchLogsContent />;
-    if (activeTab === "alerts") return <AlertsContent />;
+    if (activeTab === "alerts") return <PlatformAlertsContent />;
     if (activeTab === "team-management") return <TeamManagement />;
     if (activeTab === "action-requests") return <ActionRequestsContent />;
     if (activeTab === "audit-logs") return <AuditLogsContent />;
@@ -79,6 +88,11 @@ const AdminPage = () => {
     if (activeTab === "test-users") return <TestUsersPanel />;
     if (activeTab === "pending-claims") return <PendingClaimsPanel />;
     if (activeTab === "emails") return <EmailHub showInbox />;
+    if (activeTab === "blog") return <BlogContent />;
+    if (activeTab === "newsletter") return <NewsletterContent />;
+    if (activeTab === "affiliates") return <AffiliateAdminContent />;
+    if (activeTab === "support") return <AdminSupportContent />;
+    if (activeTab === "marketing-addons") return <BusinessAddonsManager />;
 
     if (isLoading) {
       return (
@@ -113,43 +127,32 @@ const AdminPage = () => {
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <div className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card">
-        <Link to="/" className="text-lg font-bold text-primary">
-          Pede Direto
+        <Link to="/">
+          <img src={logoImg} alt="Pede Direto" className="h-7" />
         </Link>
         <div className="flex items-center gap-1">
           <NotificationBell targetRole="admin" />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </div>
 
       <div className="flex">
-        <aside className={cn(
-          "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-sidebar text-sidebar-foreground transform transition-transform duration-200 lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
-          <AdminSidebar
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            setSidebarOpen={setSidebarOpen}
-          />
+        <aside
+          className={cn(
+            "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-sidebar text-sidebar-foreground transform transition-transform duration-200 lg:translate-x-0",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          )}
+        >
+          <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} setSidebarOpen={setSidebarOpen} />
         </aside>
 
         {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
+          <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
-        <main className="flex-1 min-h-screen lg:min-h-[calc(100vh)] p-4 md:p-8">
-          {renderContent()}
-        </main>
+        <main className="flex-1 min-h-screen lg:min-h-[calc(100vh)] p-4 md:p-8">{renderContent()}</main>
       </div>
     </div>
   );

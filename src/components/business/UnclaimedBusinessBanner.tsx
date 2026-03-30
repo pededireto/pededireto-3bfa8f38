@@ -5,12 +5,14 @@ import { useNavigate } from "react-router-dom";
 interface Props {
   businessId: string;
   claimStatus?: string | null;
+  isClaimed?: boolean;
 }
 
-export function UnclaimedBusinessBanner({ businessId, claimStatus }: Props) {
+export function UnclaimedBusinessBanner({ businessId, claimStatus, isClaimed }: Props) {
   const navigate = useNavigate();
 
-  // Se for verified, não mostra nada
+  // Se is_claimed é true ou claim_status é verified, não mostra nada
+  if (isClaimed === true) return null;
   if (claimStatus === "verified") return null;
 
   // Para pending - pedido em análise
@@ -20,9 +22,7 @@ export function UnclaimedBusinessBanner({ businessId, claimStatus }: Props) {
         <div className="flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0" />
           <div>
-            <p className="font-semibold text-blue-400">
-              Pedido de reclamação pendente
-            </p>
+            <p className="font-semibold text-blue-400">Pedido de reclamação pendente</p>
             <p className="text-sm text-muted-foreground">
               Este negócio tem um pedido de reclamação em análise pela nossa equipa.
             </p>
@@ -38,12 +38,10 @@ export function UnclaimedBusinessBanner({ businessId, claimStatus }: Props) {
       <div className="flex items-center gap-3 flex-1">
         <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
         <div>
-          <p className="font-semibold text-yellow-400">
-            Negócio não reclamado
-          </p>
+          <p className="font-semibold text-yellow-400">É o proprietário desta empresa?</p>
           <p className="text-sm text-muted-foreground">
-            Este negócio ainda não está a ser gerido pelo proprietário.
-            É o seu negócio? Reclame gratuitamente e comece a receber clientes.
+            Associe WhatsApp, Redes Sociais, Botões de Reserva, Fotos e Video! Registe este negócio gratuitamente e
+            comece a receber clientes.
           </p>
         </div>
       </div>

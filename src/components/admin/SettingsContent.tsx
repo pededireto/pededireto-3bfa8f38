@@ -84,18 +84,54 @@ const SettingsContent = () => {
             {form.logo_url && <img src={form.logo_url} alt="Logo" className="h-12 mt-2 object-contain" />}
           </div>
           <div className="space-y-2">
-            <Label>URL da Mascote</Label>
-            <Input value={form.mascot_url || ""} onChange={(e) => setForm({ ...form, mascot_url: e.target.value })} placeholder="https://..." />
-            <div className="flex items-center gap-2 mt-2">
-              <Switch
-                checked={form.mascot_enabled === "true"}
-                onCheckedChange={(c) => setForm({ ...form, mascot_enabled: c ? "true" : "false" })}
-              />
-              <Label>Mascote visível</Label>
-            </div>
-            {form.mascot_url && form.mascot_enabled === "true" && <img src={form.mascot_url} alt="Mascote" className="h-16 mt-2 object-contain" />}
+            <Label>Tipo de Media do Hero</Label>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={form.hero_media_type || "image"}
+              onChange={(e) => setForm({ ...form, hero_media_type: e.target.value })}
+            >
+              <option value="image">Imagem / Mascote</option>
+              <option value="video">Vídeo YouTube</option>
+            </select>
           </div>
         </div>
+
+        {form.hero_media_type === "video" ? (
+          <div className="space-y-2">
+            <Label>URL do Vídeo (YouTube)</Label>
+            <Input value={form.hero_video_url || ""} onChange={(e) => setForm({ ...form, hero_video_url: e.target.value })} placeholder="https://youtube.com/watch?v=..." />
+            {form.hero_video_url && (
+              <div className="mt-2 aspect-video max-w-xs rounded overflow-hidden">
+                <iframe
+                  src={(() => {
+                    const m = form.hero_video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+                    return m ? `https://www.youtube.com/embed/${m[1]}` : "";
+                  })()}
+                  className="w-full h-full"
+                  allowFullScreen
+                  title="Preview"
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>URL da Imagem / Mascote</Label>
+              <Input value={form.mascot_url || ""} onChange={(e) => setForm({ ...form, mascot_url: e.target.value })} placeholder="https://..." />
+              {form.mascot_url && <img src={form.mascot_url} alt="Mascote" className="h-16 mt-2 object-contain" />}
+            </div>
+            <div className="space-y-2 pt-6">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={form.mascot_enabled === "true"}
+                  onCheckedChange={(c) => setForm({ ...form, mascot_enabled: c ? "true" : "false" })}
+                />
+                <Label>Imagem visível no Hero</Label>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}

@@ -1,5 +1,6 @@
  import { useState } from "react";
  import { useNavigate, Link } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
  import { z } from "zod";
  import { useAuth } from "@/hooks/useAuth";
  import { Button } from "@/components/ui/button";
@@ -79,7 +80,7 @@
            {/* Header */}
            <div className="text-center mb-8">
              <Link to="/" className="inline-block mb-6">
-               <h1 className="text-2xl font-bold text-primary">Pede Direto</h1>
+               <img src={logo} alt="Pede Direto" className="h-10" />
              </Link>
              <h2 className="text-xl font-semibold text-foreground">Criar Conta Admin</h2>
              <p className="text-muted-foreground mt-1">Regista-te para gerir restaurantes</p>

@@ -1,10 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { useSavedSearches, useDeleteSavedSearch } from "@/hooks/useSavedSearches";
 import { useUserFavorites, useToggleFavorite } from "@/hooks/useUserFavorites";
-import { useConsumerRequests, useConsumerRequestsMeta } from "@/hooks/useServiceRequests";
+import {
+  useConsumerRequests,
+  useConsumerRequestsMeta,
+  useConsumerRequestReviews,
+  type RequestReviewInfo,
+} from "@/hooks/useServiceRequests";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
@@ -12,7 +17,6 @@ import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Loader2,
   Search,
@@ -25,27 +29,26 @@ import {
   Phone,
   Mail,
   MapPin,
-  MessageCircle,
-  Bell,
-  ArrowRight,
   Store,
   ChevronRight,
+  Handshake,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
-  novo: { label: "Novo", variant: "secondary" },
-  em_contacto: { label: "Em Contacto", variant: "outline" },
-  encaminhado: { label: "Encaminhado", variant: "default" },
-  concluido: { label: "Concluído", variant: "default" },
-  cancelado: { label: "Cancelado", variant: "destructive" },
-};
+import ConsumerMetricsBar from "@/components/consumer/ConsumerMetricsBar";
+import ConsumerBadgesSection from "@/components/consumer/ConsumerBadgesSection";
+import ConsumerRequestCard from "@/components/consumer/ConsumerRequestCard";
+import ConsumerActivityTimeline from "@/components/consumer/ConsumerActivityTimeline";
+import ConsumerDashboardInsights from "@/components/consumer/ConsumerDashboardInsights";
+import DigestPreferencesToggle from "@/components/consumer/DigestPreferencesToggle";
+import AffiliatePortalContent from "@/components/affiliate/AffiliatePortalContent";
 
 const UserDashboard = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
   const { data: membership, isLoading: membershipLoading } = useBusinessMembership();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("requests");
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const { data: savedSearches = [], isLoading: searchesLoading } = useSavedSearches();
   const { data: favorites = [], isLoading: favoritesLoading } = useUserFavorites();
@@ -55,6 +58,7 @@ const UserDashboard = () => {
 
   const requestIds = myRequests.map((r: any) => r.id);
   const { data: requestMeta = {} } = useConsumerRequestsMeta(requestIds);
+  const { data: requestReviews = {} } = useConsumerRequestReviews(requestIds);
 
   const totalUnread = Object.values(requestMeta).filter((m: any) => m.hasUnread).length;
 
@@ -63,7 +67,7 @@ const UserDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, email, phone, city")
+        .select("id, full_name, email, phone, city")
         .eq("user_id", user!.id)
         .single();
       if (error) throw error;
@@ -72,22 +76,48 @@ const UserDashboard = () => {
     enabled: !!user,
   });
 
-  // Buscar nome do negócio para mostrar no banner
-  const { data: businessInfo } = useQuery({
-    queryKey: ["business-name", membership?.business_id],
+  // Count user reviews
+  const { data: reviewsCount = 0 } = useQuery({
+    queryKey: ["my-reviews-count", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("name, slug")
-        .eq("id", membership!.business_id)
-        .single();
+      const { count, error } = await supabase
+        .from("business_reviews")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id);
       if (error) throw error;
-      return data;
+      return count || 0;
     },
-    enabled: !!membership?.business_id,
+    enabled: !!user,
+  });
+
+  // Fetch ALL businesses linked to this user via business_users
+  const { data: myBusinesses = [] } = useQuery({
+    queryKey: ["my-businesses-list", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      // Get profile id first
+      const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
+      if (!prof) return [];
+
+      const { data, error } = await supabase
+        .from("business_users")
+        .select("business_id, role, businesses:business_id(id, name, slug)")
+        .eq("user_id", prof.id);
+      if (error) {
+        console.error("myBusinesses error:", error);
+        return [];
+      }
+      return (data ?? []).filter((d: any) => d.businesses) as Array<{
+        business_id: string;
+        role: string;
+        businesses: { id: string; name: string; slug: string };
+      }>;
+    },
+    enabled: !!user?.id,
   });
 
   const profileIncomplete = profile && (!profile.full_name?.trim() || !profile.phone?.trim());
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0] || "utilizador";
 
   useEffect(() => {
     if (authLoading || membershipLoading) return;
@@ -96,8 +126,6 @@ const UserDashboard = () => {
     } else if (isAdmin) {
       navigate("/admin");
     }
-    // ✅ REMOVIDO: redirect automático para /business-dashboard
-    // O utilizador pode ter os dois perfis e deve poder escolher
   }, [user, isAdmin, authLoading, membershipLoading, navigate]);
 
   if (authLoading || membershipLoading) {
@@ -131,15 +159,22 @@ const UserDashboard = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      <main className="flex-1 container py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">A Minha Conta</h1>
-          <p className="text-muted-foreground mt-1">{user.email}</p>
+      <main className="flex-1 container py-8 space-y-6">
+        {/* ── A — Header personalizado ─────────────────────────────────── */}
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Olá, {firstName}! 👋</h1>
+          <p className="text-muted-foreground mt-0.5 text-sm">
+            {new Date().toLocaleDateString("pt-PT", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </p>
         </div>
 
-        {/* ── Banner: Tens também um negócio registado ─────────────────── */}
-        {membership?.business_id && (
-          <Card className="mb-6 border-primary/40 bg-primary/5 dark:bg-primary/10">
+        {/* ── Banner: Negócios registados ─────────────────────────────────── */}
+        {myBusinesses.length === 1 && (
+          <Card className="border-primary/40 bg-primary/5 dark:bg-primary/10">
             <CardContent className="py-4 px-6">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
@@ -147,14 +182,14 @@ const UserDashboard = () => {
                     <Store className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground text-sm">Tens um negócio registado no Pede Direto</p>
-                    {businessInfo?.name && <p className="text-xs text-muted-foreground mt-0.5">{businessInfo.name}</p>}
+                    <p className="font-semibold text-foreground text-sm">Tens 1 negócio registado</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{myBusinesses[0].businesses.name}</p>
                   </div>
                 </div>
                 <Button asChild size="sm" className="gap-2 flex-shrink-0">
                   <Link to="/business-dashboard">
                     <Store className="h-4 w-4" />
-                    Ir para o Painel do Negócio
+                    Painel do Negócio
                     <ChevronRight className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -162,63 +197,93 @@ const UserDashboard = () => {
             </CardContent>
           </Card>
         )}
-
-        {/* Profile Card */}
-        {profile && (
-          <Card className={`mb-6 ${profileIncomplete ? "border-amber-400 dark:border-amber-500" : ""}`}>
-            <CardContent className="py-5 px-6">
-              {profileIncomplete && (
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2">
-                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                  <p className="text-sm font-medium">Complete o seu perfil para poder criar pedidos de serviço.</p>
+        {myBusinesses.length > 1 && (
+          <Card className="border-primary/40 bg-primary/5 dark:bg-primary/10">
+            <CardContent className="py-4 px-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-primary/15 rounded-full p-2.5">
+                  <Store className="h-5 w-5 text-primary" />
                 </div>
-              )}
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4 min-w-0">
-                  <div className="bg-primary/10 rounded-full p-3">
-                    <User className="h-5 w-5 text-primary" />
+                <p className="font-semibold text-foreground text-sm">Tens {myBusinesses.length} negócios registados</p>
+              </div>
+              <div className="space-y-2">
+                {myBusinesses.map((b) => (
+                  <div
+                    key={b.business_id}
+                    className="flex items-center justify-between bg-background/60 rounded-lg px-4 py-2.5"
+                  >
+                    <span className="text-sm font-medium text-foreground">{b.businesses.name}</span>
+                    <Button asChild size="sm" variant="outline" className="gap-1.5 h-8 text-xs">
+                      <Link to={`/business-dashboard?bid=${b.business_id}`}>
+                        Painel <ChevronRight className="h-3 w-3" />
+                      </Link>
+                    </Button>
                   </div>
-                  <div className="space-y-1 min-w-0">
-                    <p className="font-semibold text-foreground">
-                      {profile.full_name?.trim() || "Nome não preenchido"}
-                    </p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      {profile.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3.5 w-3.5" />
-                          {profile.email}
-                        </span>
-                      )}
-                      {profile.phone?.trim() ? (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3.5 w-3.5" />
-                          {profile.phone}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                          <Phone className="h-3.5 w-3.5" />
-                          Telefone em falta
-                        </span>
-                      )}
-                      {profile.city?.trim() && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {profile.city}
-                        </span>
-                      )}
-                    </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {myBusinesses.length === 0 && !membershipLoading && (
+          <Card className="border-dashed border-primary/30">
+            <CardContent className="py-4 px-6">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 rounded-full p-2.5">
+                    <Store className="h-5 w-5 text-muted-foreground" />
                   </div>
+                  <p className="text-sm text-muted-foreground">Ainda não tens nenhum negócio registado</p>
                 </div>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/perfil">Editar Perfil</Link>
+                <Button asChild size="sm" variant="outline" className="gap-2 flex-shrink-0">
+                  <Link to="/claim-business">
+                    <Store className="h-4 w-4" />
+                    Registar Negócio
+                  </Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* CTA Card */}
-        <Link to="/pedir-servico" className="block mb-8">
+        {/* ── Profile warning ───────────────────────────────────────────── */}
+        {profileIncomplete && (
+          <Card className="border-amber-400 dark:border-amber-500">
+            <CardContent className="py-4 px-6">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Complete o seu perfil para criar pedidos</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
+                    {profile?.email && (
+                      <span className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" /> {profile.email}
+                      </span>
+                    )}
+                    {!profile?.phone?.trim() && (
+                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                        <Phone className="h-3 w-3" /> Telefone em falta
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/perfil">Completar</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── B — Métricas ───────────────────────────────────────────── */}
+        <ConsumerMetricsBar
+          requestsCount={myRequests.length}
+          unreadCount={totalUnread}
+          favoritesCount={favorites.length}
+          reviewsCount={reviewsCount}
+        />
+
+        {/* ── C — CTA Pedir Serviço ──────────────────────────────────── */}
+        <Link to="/pedir-servico" className="block">
           <Card className="bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer">
             <CardContent className="flex items-center gap-4 py-5 px-6">
               <div className="bg-primary-foreground/20 rounded-full p-3">
@@ -233,28 +298,67 @@ const UserDashboard = () => {
           </Card>
         </Link>
 
-        <Tabs defaultValue="requests" className="w-full">
-          <TabsList className="mb-6">
+        {/* ── C2 — CTA Programa de Afiliados ─────────────────────────── */}
+        <div
+          onClick={() => {
+            setActiveTab("affiliates");
+            setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+          }}
+          className="block cursor-pointer"
+        >
+          <Card className="bg-gradient-to-r from-accent to-accent/80 hover:opacity-90 transition-opacity cursor-pointer border-primary/20">
+            <CardContent className="flex items-center gap-4 py-5 px-6">
+              <div className="bg-primary/15 rounded-full p-3">
+                <Handshake className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-foreground">🤝 Programa de Afiliados</h3>
+                <p className="text-sm text-muted-foreground">Indica negócios e ganha comissões recorrentes.</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ── D — Badges (Conquistas) ────────────────────────────────── */}
+        <ConsumerBadgesSection profileId={profile?.id} />
+
+        {/* ── E — Dashboard Insights ─────────────────────────────── */}
+        <ConsumerDashboardInsights userId={user?.id} />
+
+        {/* ── F — Activity Timeline ───────────────────────────────── */}
+        <ConsumerActivityTimeline userId={user?.id} />
+
+        {/* ── G — Digest Preferences ─────────────────────────────── */}
+        <DigestPreferencesToggle />
+
+        {/* ── F — Tabs ───────────────────────────────────────────────── */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" ref={tabsRef}>
+          <TabsList className="mb-4">
             <TabsTrigger value="requests" className="gap-2">
               <ClipboardList className="h-4 w-4" />
-              Os Meus Pedidos
+              Pedidos
               {totalUnread > 0 && (
                 <span className="ml-1 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5">
                   {totalUnread}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="searches" className="gap-2">
-              <Search className="h-4 w-4" />
-              Pesquisas Guardadas
-            </TabsTrigger>
             <TabsTrigger value="favorites" className="gap-2">
               <Heart className="h-4 w-4" />
-              Meus Favoritos
+              Favoritos
+            </TabsTrigger>
+            <TabsTrigger value="searches" className="gap-2">
+              <Search className="h-4 w-4" />
+              Pesquisas
+            </TabsTrigger>
+            <TabsTrigger value="affiliates" className="gap-2">
+              <Handshake className="h-4 w-4" />
+              Afiliados
             </TabsTrigger>
           </TabsList>
 
-          {/* ── My Requests Tab ─────────────────────────────────────────── */}
+          {/* ── Pedidos ─────────────────────────────────────────────────── */}
           <TabsContent value="requests">
             {requestsLoading ? (
               <div className="flex justify-center py-12">
@@ -273,71 +377,68 @@ const UserDashboard = () => {
             ) : (
               <div className="space-y-3">
                 {myRequests.map((req: any) => {
-                  const cfg = statusConfig[req.status] || { label: req.status, variant: "secondary" as const };
-                  const meta = (requestMeta as any)[req.id] as
-                    | { responses: number; hasUnread: boolean; hasPending: boolean }
-                    | undefined;
+                  const meta = (requestMeta as any)[req.id];
+                  const reviews: RequestReviewInfo[] =
+                    (requestReviews as Record<string, RequestReviewInfo[]>)[req.id] || [];
+                  return <ConsumerRequestCard key={req.id} req={req} meta={meta} reviews={reviews} />;
+                })}
+              </div>
+            )}
+          </TabsContent>
 
+          {/* ── Favoritos ───────────────────────────────────────────────── */}
+          <TabsContent value="favorites">
+            {favoritesLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : favorites.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Heart className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+                  <p className="text-muted-foreground">Ainda não adicionaste nenhum favorito.</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Clica no ❤️ nos negócios para os adicionares aos teus favoritos.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {favorites.map((fav: any) => {
+                  const biz = fav.businesses;
+                  if (!biz) return null;
                   return (
-                    <Card
-                      key={req.id}
-                      className={`transition-colors ${meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : ""}`}
-                    >
-                      <CardContent className="py-4 px-6 space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-primary uppercase tracking-wide">
-                              {req.categories?.name || "Sem categoria"}
-                              {req.subcategories?.name ? ` • ${req.subcategories.name}` : ""}
-                            </p>
-                            <p className="font-medium text-foreground mt-1 line-clamp-2">
-                              {req.description
-                                ? req.description.length > 120
-                                  ? req.description.slice(0, 120) + "…"
-                                  : req.description
-                                : "Sem descrição"}
-                            </p>
-                          </div>
-                          <Badge variant={cfg.variant}>{cfg.label}</Badge>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                          {req.location_city && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {req.location_city}
-                            </span>
-                          )}
-                          {req.urgency === "urgent" && (
-                            <span className="text-destructive font-semibold">⚠ Urgente</span>
-                          )}
-                          <span>
-                            {new Date(req.created_at).toLocaleDateString("pt-PT", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                    <Card key={fav.id} className="overflow-hidden">
+                      <div className="aspect-[4/3] bg-muted flex items-center justify-center">
+                        {biz.logo_url ? (
+                          <img src={biz.logo_url} alt={biz.name} className="max-w-full max-h-full object-contain p-2" />
+                        ) : (
+                          <span className="text-sm font-bold text-primary/40 text-center leading-tight line-clamp-2 px-2">
+                            {biz.name}
                           </span>
-                          {meta && meta.responses > 0 && (
-                            <span className="flex items-center gap-1 text-foreground font-medium">
-                              <MessageCircle className="h-3.5 w-3.5 text-primary" />
-                              {meta.responses} {meta.responses === 1 ? "resposta" : "respostas"}
-                            </span>
-                          )}
-                          {meta?.hasUnread && (
-                            <span className="flex items-center gap-1 text-primary font-semibold animate-pulse">
-                              <Bell className="h-3.5 w-3.5" />
-                              Nova mensagem
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex justify-end pt-1">
-                          <Button asChild size="sm" variant={meta?.hasUnread ? "default" : "outline"}>
-                            <Link to={`/pedido/${req.id}`} className="flex items-center gap-1.5">
-                              Ver Conversa
-                              <ArrowRight className="h-3.5 w-3.5" />
+                        )}
+                      </div>
+                      <CardContent className="p-4">
+                        {biz.categories && (
+                          <span className="text-xs font-medium text-primary uppercase tracking-wide">
+                            {biz.categories.name}
+                          </span>
+                        )}
+                        <h3 className="font-bold text-lg mt-1">{biz.name}</h3>
+                        <div className="flex gap-2 mt-3">
+                          <Button size="sm" variant="outline" asChild className="flex-1">
+                            <Link to={`/negocio/${biz.slug}`}>
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              Ver
                             </Link>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            onClick={() => handleRemoveFavorite(fav.business_id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </CardContent>
@@ -348,7 +449,7 @@ const UserDashboard = () => {
             )}
           </TabsContent>
 
-          {/* ── Saved Searches Tab ──────────────────────────────────────── */}
+          {/* ── Pesquisas Guardadas ──────────────────────────────────────── */}
           <TabsContent value="searches">
             {searchesLoading ? (
               <div className="flex justify-center py-12">
@@ -360,7 +461,7 @@ const UserDashboard = () => {
                   <Search className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
                   <p className="text-muted-foreground">Ainda não guardaste nenhuma pesquisa.</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Usa o botão "Guardar Pesquisa" na barra de pesquisa para guardares as tuas buscas.
+                    Usa o botão "Guardar Pesquisa" na barra de pesquisa.
                   </p>
                 </CardContent>
               </Card>
@@ -393,65 +494,9 @@ const UserDashboard = () => {
             )}
           </TabsContent>
 
-          {/* ── Favorites Tab ───────────────────────────────────────────── */}
-          <TabsContent value="favorites">
-            {favoritesLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
-            ) : favorites.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Heart className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-                  <p className="text-muted-foreground">Ainda não adicionaste nenhum favorito.</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Clica no ❤️ nos negócios para os adicionares aos teus favoritos.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {favorites.map((fav: any) => {
-                  const biz = fav.businesses;
-                  if (!biz) return null;
-                  return (
-                    <Card key={fav.id} className="overflow-hidden">
-                      <div className="aspect-[4/3] bg-muted flex items-center justify-center">
-                        {biz.logo_url ? (
-                          <img src={biz.logo_url} alt={biz.name} className="max-w-full max-h-full object-contain p-2" />
-                        ) : (
-                          <span className="text-4xl font-bold text-primary/40">{biz.name?.charAt(0)}</span>
-                        )}
-                      </div>
-                      <CardContent className="p-4">
-                        {biz.categories && (
-                          <span className="text-xs font-medium text-primary uppercase tracking-wide">
-                            {biz.categories.name}
-                          </span>
-                        )}
-                        <h3 className="font-bold text-lg mt-1">{biz.name}</h3>
-                        <div className="flex gap-2 mt-3">
-                          <Button size="sm" variant="outline" asChild className="flex-1">
-                            <Link to={`/negocio/${biz.slug}`}>
-                              <ExternalLink className="h-4 w-4 mr-1" />
-                              Ver
-                            </Link>
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive"
-                            onClick={() => handleRemoveFavorite(fav.business_id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+          {/* ── Afiliados ───────────────────────────────────────────────── */}
+          <TabsContent value="affiliates">
+            <AffiliatePortalContent showBackButton backTo="/dashboard" />
           </TabsContent>
         </Tabs>
       </main>

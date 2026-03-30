@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
 import { Search, Building2, ArrowLeft, Loader2, MapPin, Plus, CheckCircle2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,17 +13,19 @@ import { useBusinessMembership } from "@/hooks/useBusinessMembership";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const BUSINESS_DASHBOARD_URL = "https://pededireto.pt/business-dashboard";
+
 const ClaimBusiness = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: membership, isLoading: membershipLoading } = useBusinessMembership();
 
-  // Redirect authenticated users who already have a business
   useEffect(() => {
     if (!membershipLoading && user && membership?.business_id) {
-      navigate("/business-dashboard", { replace: true });
+      window.location.href = BUSINESS_DASHBOARD_URL;
     }
-  }, [user, membership, membershipLoading, navigate]);
+  }, [user, membership, membershipLoading]);
+
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,7 +36,7 @@ const ClaimBusiness = () => {
   const [newCategoryId, setNewCategoryId] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  // Inline signup fields (for unauthenticated claim)
+  // Campos de signup inline (para utilizador não autenticado)
   const [signupName, setSignupName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
@@ -44,27 +47,44 @@ const ClaimBusiness = () => {
   const { claim, isLoading: isClaiming } = useClaimBusiness();
   const { data: categories = [] } = useCategories();
 
-  // Auto-claim saved business after email verification + login
+  // Auto-claim após confirmação de email + login
   useEffect(() => {
     const savedBusinessId = localStorage.getItem("claimedBusinessId");
     if (!savedBusinessId || !user || membershipLoading) return;
     if (membership?.business_id) {
       localStorage.removeItem("claimedBusinessId");
-      navigate("/business-dashboard", { replace: true });
+      window.location.href = BUSINESS_DASHBOARD_URL;
       return;
     }
-    // Auto-claim
     (async () => {
       localStorage.removeItem("claimedBusinessId");
       const { error } = await claim(savedBusinessId);
       if (!error) {
         toast({ title: "Negócio reclamado!", description: "O seu pedido está em validação." });
-        navigate("/business-dashboard", { replace: true });
+        window.location.href = BUSINESS_DASHBOARD_URL;
       }
     })();
   }, [user, membershipLoading]);
 
-  // Authenticated user claims directly
+  const createAffiliateClaimAlert = async (businessId: string, businessName: string) => {
+    const refCode = localStorage.getItem("affiliate_ref");
+    if (!refCode) return;
+    try {
+      await (supabase as any).from("admin_alerts").insert({
+        type: "affiliate_claim_review",
+        title: `Claim via afiliado ${refCode}`,
+        message: `O negócio "${businessName}" foi reclamado por um visitante que chegou via link de afiliado (${refCode}). Revise se esta conversão deve ser atribuída ao afiliado.`,
+        severity: "important",
+        category: "affiliates",
+        entity_type: "business",
+        entity_id: businessId,
+      });
+    } catch (e) {
+      console.error("Failed to create affiliate claim alert:", e);
+    }
+    localStorage.removeItem("affiliate_ref");
+  };
+
   const handleClaim = async () => {
     if (!selectedBusiness || !user) return;
     const { error } = await claim(selectedBusiness.id);
@@ -74,12 +94,15 @@ const ClaimBusiness = () => {
         : "Erro ao reclamar negócio. Tenta novamente.";
       toast({ title: "Erro", description: msg, variant: "destructive" });
     } else {
-      toast({ title: "Pedido enviado!", description: "O seu pedido está em validação. Receberá uma notificação em breve." });
-      navigate("/business-dashboard");
+      await createAffiliateClaimAlert(selectedBusiness.id, selectedBusiness.name);
+      toast({
+        title: "Pedido enviado!",
+        description: "O seu pedido está em validação. Receberá uma notificação em breve.",
+      });
+      window.location.href = BUSINESS_DASHBOARD_URL;
     }
   };
 
-  // Unauthenticated user: signup inline + claim
   const handleSignupAndClaim = async () => {
     if (!selectedBusiness) return;
     if (!signupName || !signupPhone || !signupEmail || !signupPassword) {
@@ -87,13 +110,17 @@ const ClaimBusiness = () => {
       return;
     }
     if (signupPassword.length < 6) {
-      toast({ title: "Password fraca", description: "A password deve ter pelo menos 6 caracteres.", variant: "destructive" });
+      toast({
+        title: "Password fraca",
+        description: "A password deve ter pelo menos 6 caracteres.",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsSigningUp(true);
     try {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email: signupEmail,
         password: signupPassword,
         options: {
@@ -104,78 +131,52 @@ const ClaimBusiness = () => {
 
       if (signUpError) throw signUpError;
 
-      // ✅ CRITICAL: Check if session is available (auto-confirmed)
       const { data: sessionData } = await supabase.auth.getSession();
-      
+
       if (!sessionData.session) {
-        // Email confirmation required
         toast({
           title: "Verifique o seu email",
           description: "Enviámos um email de confirmação. Após confirmar, entre na sua conta para concluir o claim.",
         });
-        // Save intent so after email verification the user can be redirected
         localStorage.setItem("claimedBusinessId", selectedBusiness.id);
         localStorage.setItem("postLoginRedirect", "/claim-business");
         setIsSigningUp(false);
         return;
       }
 
-      // ✅ Session is available - now we can claim
       const { error: claimError } = await claim(selectedBusiness.id);
       if (claimError) throw claimError;
 
+      await createAffiliateClaimAlert(selectedBusiness.id, selectedBusiness.name);
       toast({ title: "Conta criada e negócio reclamado!", description: "O seu pedido está em validação." });
-      navigate("/business-dashboard");
-
+      window.location.href = BUSINESS_DASHBOARD_URL;
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message || "Não foi possível criar a conta.", variant: "destructive" });
+      const detail = err?.details || err?.hint || err?.message || "Não foi possível criar a conta.";
+      const code = err?.code ? ` (${err.code})` : "";
+      toast({ title: "Erro ao criar conta", description: `${detail}${code}`, variant: "destructive" });
+      console.error("[ClaimBusiness] signup error:", err);
     } finally {
       setIsSigningUp(false);
     }
   };
 
-  const handleCreateNew = async () => {
-    if (!newName || !newCategoryId || !newCity || !user) return;
-    setIsCreating(true);
-    try {
-      const slug = newName
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-
-      // Use server-side RPC to create business + assign ownership atomically
-      const { data: businessId, error: rpcError } = await supabase.rpc(
-        "register_business_with_owner" as any,
-        {
-          p_name: newName,
-          p_slug: `${slug}-${Date.now()}`,
-          p_city: newCity,
-          p_category_id: newCategoryId,
-          p_owner_email: user.email || "",
-          p_registration_source: "claim_flow",
-        }
+  // FIX: redireciona para /register/business (wizard completo) em vez de tentar criar directamente
+  const handleCreateOrRedirect = () => {
+    navigate("/register/business", {
+      state: {
+        prefill: {
+          name: newName,
+          city: newCity,
+          categoryId: newCategoryId,
+        },
+      },
+    });
+    if (newName || newCity || newCategoryId) {
+      localStorage.setItem(
+        "registerBusinessPrefill",
+        JSON.stringify({ name: newName, city: newCity, categoryId: newCategoryId }),
       );
-
-      if (rpcError) throw rpcError;
-
-      toast({ title: "Pedido enviado!", description: "O negócio foi criado e está pendente de validação." });
-      navigate("/business-dashboard");
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message || "Não foi possível criar o negócio.", variant: "destructive" });
-    } finally {
-      setIsCreating(false);
     }
-  };
-
-  const handleCreateOrRedirect = async () => {
-    if (!user) {
-      localStorage.setItem("postLoginRedirect", "/register/business");
-      navigate("/register/business");
-      return;
-    }
-    await handleCreateNew();
   };
 
   return (
@@ -184,11 +185,11 @@ const ClaimBusiness = () => {
         <div className="bg-card rounded-2xl shadow-card p-8">
           <div className="text-center mb-6">
             <Link to="/" className="inline-block mb-4">
-              <h1 className="text-2xl font-bold text-primary">Pede Direto</h1>
+              <img src={logo} alt="Pede Direto" className="h-10" />
             </Link>
-            <h2 className="text-xl font-semibold text-foreground">Reclame o seu Negócio</h2>
+            <h2 className="text-xl font-semibold text-foreground">O teu negócio merece estar aqui</h2>
             <p className="text-muted-foreground mt-1">
-              O seu negócio pode já estar listado. Procure pelo nome abaixo.
+              Já temos milhares de negócios listados. Verifica se o teu já está — e reclama-o gratuitamente!
             </p>
           </div>
 
@@ -214,7 +215,6 @@ const ClaimBusiness = () => {
                 </div>
               )}
 
-              {/* Results list */}
               {results.length > 0 && !selectedBusiness && (
                 <div className="border border-border rounded-xl overflow-hidden divide-y divide-border max-h-64 overflow-y-auto">
                   {results.map((r) => (
@@ -237,7 +237,6 @@ const ClaimBusiness = () => {
                 </div>
               )}
 
-              {/* Selected business */}
               {selectedBusiness && (
                 <div className="border-2 border-primary rounded-xl p-4 bg-primary/5 space-y-4">
                   <div className="flex items-center gap-3">
@@ -246,16 +245,16 @@ const ClaimBusiness = () => {
                   </div>
 
                   {user ? (
-                    /* Authenticated — claim directly */
                     <Button onClick={handleClaim} disabled={isClaiming} className="w-full btn-cta-primary">
                       {isClaiming ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />A reclamar...</>
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />A reclamar...
+                        </>
                       ) : (
                         "Reclamar este negócio"
                       )}
                     </Button>
                   ) : (
-                    /* Not authenticated — inline signup form */
                     <div className="space-y-3 pt-2 border-t border-border">
                       <p className="text-sm text-muted-foreground flex items-center gap-2">
                         <Lock className="h-3.5 w-3.5" />
@@ -295,13 +294,11 @@ const ClaimBusiness = () => {
                           placeholder="Mínimo 6 caracteres"
                         />
                       </div>
-                      <Button
-                        onClick={handleSignupAndClaim}
-                        disabled={isSigningUp}
-                        className="w-full btn-cta-primary"
-                      >
+                      <Button onClick={handleSignupAndClaim} disabled={isSigningUp} className="w-full btn-cta-primary">
                         {isSigningUp ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />A criar conta...</>
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />A criar conta...
+                          </>
                         ) : (
                           "Criar Conta e Reclamar"
                         )}
@@ -311,31 +308,36 @@ const ClaimBusiness = () => {
                 </div>
               )}
 
-              {/* Create new */}
               <div className="pt-4 border-t border-border">
                 <button
                   onClick={() => setShowCreateForm(true)}
                   className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
                 >
-                  <Plus className="h-4 w-4" />
-                  Não encontro o meu negócio — Criar novo
+                  <Plus className="h-4 w-4" />+ O meu negócio não está aqui — quero adicionar
                 </button>
               </div>
             </div>
           ) : (
-            /* Create new business form */
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Nome do Negócio *</Label>
-                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex: Restaurante O Manel" />
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Ex: Restaurante O Manel"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Categoria *</Label>
                 <Select value={newCategoryId} onValueChange={setNewCategoryId}>
-                  <SelectTrigger><SelectValue placeholder="Selecionar categoria" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar categoria" />
+                  </SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -347,16 +349,10 @@ const ClaimBusiness = () => {
 
               <Button
                 onClick={handleCreateOrRedirect}
-                disabled={isCreating || !newName || !newCategoryId || !newCity}
+                disabled={!newName || !newCategoryId || !newCity}
                 className="w-full btn-cta-primary"
               >
-                {isCreating ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />A criar...</>
-                ) : user ? (
-                  "Criar Negócio"
-                ) : (
-                  "Continuar para Registo Completo"
-                )}
+                {user ? "Continuar para Registo Completo" : "Continuar para Registo Completo"}
               </Button>
 
               <button

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Loader2, TrendingUp, Lock } from "lucide-react";
-import { useBusinessIntelligence } from "@/hooks/useBusinessIntelligence";
+import { Loader2, TrendingUp, Lock, Download } from "lucide-react";
+import { useBusinessIntelligence, getPeakHourLabel, getPeakDowLabel } from "@/hooks/useBusinessIntelligence";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
+import { useBusinessBenchmark } from "@/hooks/useBusinessBenchmark";
 import {
   useBusinessFavorites,
   useBusinessProfileScore,
@@ -10,12 +11,13 @@ import {
   useBusinessReviewsData,
   useBusinessBadges,
   useBusinessMonthlyHistory,
-  useBusinessBenchmarkingPro,
 } from "@/hooks/useBusinessDashboardPro";
 import DateRangeFilter from "@/components/intelligence/DateRangeFilter";
 import BusinessPerformanceCard from "@/components/intelligence/BusinessPerformanceCard";
 import BusinessBenchmarkCard from "@/components/intelligence/BusinessBenchmarkCard";
+import BenchmarkInsightsPanel from "@/components/intelligence/BenchmarkInsightsPanel";
 import UpgradeAnalyticsCard from "@/components/intelligence/UpgradeAnalyticsCard";
+import SectorBenchmarkPanel from "@/components/intelligence/SectorBenchmarkPanel";
 import {
   FavoritesCard,
   ProfileScoreCard,
@@ -23,9 +25,9 @@ import {
   ReviewsCard,
   BadgesCard,
   MonthlyHistoryCard,
-  BenchmarkingProCard,
 } from "@/components/business/BusinessProWidgets";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 interface BusinessInsightsContentProps {
   businessId: string;
@@ -50,7 +52,7 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
   const { data: reviewsData } = useBusinessReviewsData(isVerified && hasProAccess ? businessId : null);
   const { data: badges } = useBusinessBadges(isVerified && hasProAccess ? businessId : null);
   const { data: monthlyHistory } = useBusinessMonthlyHistory(isVerified && hasProAccess ? businessId : null);
-  const { data: benchmarkingPro } = useBusinessBenchmarkingPro(isVerified && hasProAccess ? businessId : null);
+  const { data: benchmarkData, isLoading: benchmarkLoading } = useBusinessBenchmark(isVerified && hasProAccess ? businessId : null, days);
 
   const { data, isLoading, error } = useBusinessIntelligence(
     isVerified && hasProAccess ? businessId : null,
@@ -147,6 +149,35 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
     );
   }
 
+  const exportToCSV = () => {
+    if (!data) return;
+    const rows = [
+      ['Métrica', 'Valor', 'Período'],
+      ['Impressões', data.impressions ?? 0, `Últimos ${days} dias`],
+      ['Cliques', data.clicks ?? 0, `Últimos ${days} dias`],
+      ['CTR', (data.ctr ?? 0) + '%', `Últimos ${days} dias`],
+      ['Pesquisas na categoria', data.searches_in_category ?? 0, `Últimos ${days} dias`],
+      ['Pesquisas na cidade', data.searches_in_city ?? 0, `Últimos ${days} dias`],
+      ['Posição média', data.position_average ?? '-', `Últimos ${days} dias`],
+      ['Cliques Telefone', data.contacts?.click_phone ?? 0, 'Total'],
+      ['Cliques WhatsApp', data.contacts?.click_whatsapp ?? 0, 'Total'],
+      ['Cliques Email', data.contacts?.click_email ?? 0, 'Total'],
+      ['Cliques Website', data.contacts?.click_website ?? 0, 'Total'],
+      ['Hora de pico', getPeakHourLabel(data.peak_hour), '-'],
+      ['Dia mais activo', getPeakDowLabel(data.peak_dow), '-'],
+      ['Impressões período anterior', data.previous?.impressions ?? 0, 'Anterior'],
+      ['Cliques período anterior', data.previous?.clicks ?? 0, 'Anterior'],
+    ];
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `insights-${businessId}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-8">
 
@@ -156,7 +187,13 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
           <TrendingUp className="h-5 w-5 text-primary" />
           <h1 className="text-xl font-semibold">Insights PRO</h1>
         </div>
-        <DateRangeFilter days={days} onChange={setDays} />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportToCSV}>
+            <Download className="h-4 w-4 mr-1" />
+            Exportar CSV
+          </Button>
+          <DateRangeFilter days={days} onChange={setDays} />
+        </div>
       </div>
 
       {/* Performance existente (sem alterações) */}
@@ -195,8 +232,13 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
       {/* Benchmarking original + novo PRO */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <BusinessBenchmarkCard businessId={businessId} days={days} />
-        {benchmarkingPro && <BenchmarkingProCard data={benchmarkingPro} />}
+        <BenchmarkInsightsPanel data={benchmarkData} isLoading={benchmarkLoading} />
       </div>
+
+      <div className="border-t border-border/50" />
+
+      {/* Benchmarking Sectorial Z.AI */}
+      <SectorBenchmarkPanel businessId={businessId} />
 
     </div>
   );

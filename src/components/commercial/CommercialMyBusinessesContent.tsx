@@ -1,26 +1,16 @@
-import { useMyAssignments, useTransferToAccountManager } from "@/hooks/useCommercialPerformance";
+import { useMyPipeline, PIPELINE_PHASES } from "@/hooks/useCommercialPipeline";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, ArrowRight } from "lucide-react";
+import { Loader2, Building2, MapPin } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
+import CommercialBusinessSheet from "./CommercialBusinessSheet";
 
 const CommercialMyBusinessesContent = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const { data: assignments = [], isLoading } = useMyAssignments();
-  const transfer = useTransferToAccountManager();
-
-  const handleTransfer = async (businessId: string) => {
-    if (!user?.id) return;
-    if (!confirm("Passar este negócio ao Gestor de Conta?")) return;
-    try {
-      await transfer.mutateAsync({ business_id: businessId, commercial_id: user.id });
-      toast({ title: "Negócio transferido para Gestor de Conta" });
-    } catch {
-      toast({ title: "Erro ao transferir", variant: "destructive" });
-    }
-  };
+  const { data: pipeline = [], isLoading } = useMyPipeline();
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -30,7 +20,7 @@ const CommercialMyBusinessesContent = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">🏢 Meus Negócios</h1>
-        <p className="text-muted-foreground">Negócios atribuídos a si</p>
+        <p className="text-muted-foreground">{pipeline.length} negócios atribuídos a si</p>
       </div>
 
       <div className="bg-card rounded-xl shadow-card overflow-hidden">
@@ -39,50 +29,69 @@ const CommercialMyBusinessesContent = () => {
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left p-4 font-medium text-muted-foreground">Negócio</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Plano</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Estado</th>
-                <th className="text-left p-4 font-medium text-muted-foreground">Função</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Cidade</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Categoria</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Fase</th>
+                <th className="text-left p-4 font-medium text-muted-foreground">Próx. Follow-up</th>
                 <th className="text-right p-4 font-medium text-muted-foreground">Receita</th>
-                <th className="text-right p-4 font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {assignments.map((a: any) => (
-                <tr key={a.id} className="border-t border-border">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <Building2 className="h-5 w-5 text-primary/50" />
-                      <span className="font-medium">{a.businesses?.name || "-"}</span>
-                    </div>
-                  </td>
-                  <td className="p-4 text-sm text-muted-foreground">{a.businesses?.commercial_plans?.name || "Sem plano"}</td>
-                  <td className="p-4">
-                    <Badge variant="secondary" className={
-                      a.businesses?.subscription_status === "active" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
-                    }>
-                      {a.businesses?.subscription_status === "active" ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </td>
-                  <td className="p-4">
-                    <Badge variant="outline">{a.role === "sales" ? "Vendas" : "Gestor de Conta"}</Badge>
-                  </td>
-                  <td className="p-4 text-right font-medium">{Number(a.businesses?.subscription_price || 0).toFixed(2)}€</td>
-                  <td className="p-4 text-right">
-                    {a.role === "sales" && (
-                      <Button size="sm" variant="outline" onClick={() => handleTransfer(a.businesses?.id)} disabled={transfer.isPending}>
-                        <ArrowRight className="h-3 w-3 mr-1" /> Passar a Gestor
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {assignments.length === 0 && (
-                <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Sem negócios atribuídos.</td></tr>
+              {pipeline.map((item) => {
+                const biz = item.businesses;
+                const phaseConf = PIPELINE_PHASES.find(p => p.value === item.phase);
+                return (
+                  <tr
+                    key={item.id}
+                    className="border-t border-border cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedBusinessId(item.business_id)}
+                  >
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        {biz?.logo_url ? (
+                          <img src={biz.logo_url} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Building2 className="h-4 w-4 text-primary/50" />
+                          </div>
+                        )}
+                        <span className="font-medium">{biz?.name || "-"}</span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{biz?.city || "—"}</span>
+                    </td>
+                    <td className="p-4 text-sm text-muted-foreground">{biz?.categories?.name || "—"}</td>
+                    <td className="p-4">
+                      <Badge variant="secondary" className={cn("text-xs", phaseConf?.color)}>
+                        {phaseConf?.emoji} {phaseConf?.label}
+                      </Badge>
+                    </td>
+                    <td className="p-4 text-sm text-muted-foreground">
+                      {item.next_followup_date
+                        ? new Date(item.next_followup_date).toLocaleDateString("pt-PT")
+                        : "—"}
+                    </td>
+                    <td className="p-4 text-right font-medium">
+                      {biz?.subscription_status === "active" ? `${Number(biz.subscription_price || 0).toFixed(2)}€` : "Gratuito"}
+                    </td>
+                  </tr>
+                );
+              })}
+              {pipeline.length === 0 && (
+                <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">
+                  Sem negócios atribuídos. Vá a "Negócios" e clique em "Atribuir" para adicionar.
+                </td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      <CommercialBusinessSheet
+        businessId={selectedBusinessId}
+        onClose={() => setSelectedBusinessId(null)}
+      />
     </div>
   );
 };

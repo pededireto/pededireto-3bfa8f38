@@ -2,15 +2,19 @@ import { useState } from "react";
 import { BusinessWithCategory, useUpdateBusiness, CommercialStatus } from "@/hooks/useBusinesses";
 import { useCreateActionRequest } from "@/hooks/useActionRequests";
 import { useCreateAuditLog } from "@/hooks/useAuditLogs";
+import { useAssignToMe } from "@/hooks/useCommercialPipeline";
+import { useAuth } from "@/hooks/useAuth";
 import { Category } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Search, Building2, AlertTriangle, UserCheck, Ban, Handshake } from "lucide-react";
+import { Pencil, Search, Building2, AlertTriangle, UserCheck, Ban, Handshake, UserPlus, Check } from "lucide-react";
 import BusinessFileCard from "@/components/admin/BusinessFileCard";
+import { useCommercialAssignments } from "@/hooks/useCommercialPerformance";
 
 interface CommercialBusinessesContentProps {
   businesses: BusinessWithCategory[];
@@ -21,20 +25,43 @@ const commercialStatusLabels: Record<string, string> = {
   nao_contactado: "Não Contactado",
   contactado: "Contactado",
   interessado: "Interessado",
+  proposta_enviada: "Proposta Enviada",
+  negociacao: "Negociação",
   cliente: "Cliente",
   perdido: "Perdido",
+  followup_agendado: "Follow-Up",
 };
 
 const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusinessesContentProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const updateBusiness = useUpdateBusiness();
   const createActionRequest = useCreateActionRequest();
   const createAuditLog = useCreateAuditLog();
+  const assignToMe = useAssignToMe();
+  const { data: allAssignments = [] } = useCommercialAssignments();
+
+  // Build maps: business_id → assignment info
+  const assignmentMap = new Map<string, { commercial_id: string; profileName?: string }>();
+  for (const a of allAssignments as any[]) {
+    if (a.is_active) {
+      assignmentMap.set(a.business_id, {
+        commercial_id: a.commercial_id,
+        profileName: a.profiles?.full_name || a.profiles?.email,
+      });
+    }
+  }
+  const myBusinessIds = new Set(
+    (allAssignments as any[])
+      .filter((a: any) => a.is_active && a.commercial_id === user?.id)
+      .map((a: any) => a.business_id)
+  );
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCommercialStatus, setFilterCommercialStatus] = useState("");
   const [filterOrigin, setFilterOrigin] = useState("");
   const [filterSubscription, setFilterSubscription] = useState("");
+  const [filterAssignment, setFilterAssignment] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<BusinessWithCategory | null>(null);
 
@@ -60,6 +87,23 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
       toast({ title: `Estado alterado para "${commercialStatusLabels[newStatus]}"` });
     } catch {
       toast({ title: "Erro ao alterar estado", variant: "destructive" });
+    }
+  };
+
+  const handleAssignToMe = async (businessId: string) => {
+    try {
+      await assignToMe.mutateAsync(businessId);
+      toast({ title: "Negócio atribuído a si com sucesso!" });
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg === "ALREADY_MINE") {
+        toast({ title: "Este negócio já está atribuído a si" });
+      } else if (msg.startsWith("ASSIGNED_OTHER:")) {
+        const name = msg.replace("ASSIGNED_OTHER:", "");
+        toast({ title: `Este negócio já está atribuído a ${name}`, variant: "destructive" });
+      } else {
+        toast({ title: "Erro ao atribuir", variant: "destructive" });
+      }
     }
   };
 
@@ -91,7 +135,10 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
       (filterSubscription === "free" && b.subscription_status === "inactive") ||
       (filterSubscription === "active" && b.subscription_status === "active") ||
       (filterSubscription === "inactive" && !b.is_active);
-    return matchesSearch && matchesCommercial && matchesOrigin && matchesSub;
+    const matchesAssignment = filterAssignment === "all" ||
+      (filterAssignment === "mine" && myBusinessIds.has(b.id)) ||
+      (filterAssignment === "unassigned" && !assignmentMap.has(b.id));
+    return matchesSearch && matchesCommercial && matchesOrigin && matchesSub && matchesAssignment;
   });
 
   return (
@@ -107,6 +154,14 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Pesquisar negócios..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
+        <Select value={filterAssignment} onValueChange={setFilterAssignment}>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Atribuição" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="mine">Meus</SelectItem>
+            <SelectItem value="unassigned">Sem atribuição</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={filterCommercialStatus} onValueChange={setFilterCommercialStatus}>
           <SelectTrigger className="w-44"><SelectValue placeholder="Estado comercial" /></SelectTrigger>
           <SelectContent>
@@ -177,19 +232,47 @@ const CommercialBusinessesContent = ({ businesses, categories }: CommercialBusin
                         business.commercial_status === "interessado" ? "bg-warning/10 text-warning" :
                         business.commercial_status === "contactado" ? "bg-primary/10 text-primary" :
                         business.commercial_status === "perdido" ? "bg-destructive/10 text-destructive" :
+                        business.commercial_status === "proposta_enviada" ? "bg-warning/10 text-warning" :
+                        business.commercial_status === "negociacao" ? "bg-primary/20 text-primary" :
+                        business.commercial_status === "followup_agendado" ? "bg-primary/15 text-primary" :
                         "bg-muted text-muted-foreground"
                       }>
                         {commercialStatusLabels[business.commercial_status] || "Não Contactado"}
                       </Badge>
-                      {business.is_active ? (
-                        <Badge variant="secondary" className="bg-success/10 text-success">Ativo</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="bg-muted text-muted-foreground">Inativo</Badge>
+                      {myBusinessIds.has(business.id) && (
+                        <Badge variant="outline" className="text-xs">Meu</Badge>
                       )}
                     </div>
                   </td>
                   <td className="p-4">
                     <div className="flex gap-1 flex-wrap">
+                      {(() => {
+                        const assignment = assignmentMap.get(business.id);
+                        if (!assignment) {
+                          return (
+                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleAssignToMe(business.id)} disabled={assignToMe.isPending}>
+                              <UserPlus className="h-3 w-3 mr-1" /> Atribuir
+                            </Button>
+                          );
+                        }
+                        if (assignment.commercial_id === user?.id) {
+                          return (
+                            <Button size="sm" variant="outline" className="text-xs h-7 text-success border-success/30" disabled>
+                              <Check className="h-3 w-3 mr-1" /> Meu
+                            </Button>
+                          );
+                        }
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="sm" variant="outline" className="text-xs h-7 text-muted-foreground" disabled>
+                                <UserCheck className="h-3 w-3 mr-1" /> Atribuído
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Atribuído a {assignment.profileName || "outro comercial"}</TooltipContent>
+                          </Tooltip>
+                        );
+                      })()}
                       {business.commercial_status === "nao_contactado" && (
                         <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleQuickStatusChange(business, "contactado")}>
                           <UserCheck className="h-3 w-3 mr-1" /> Contactado

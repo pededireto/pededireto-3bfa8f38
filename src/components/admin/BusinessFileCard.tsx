@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BusinessWithCategory,
   useUpdateBusiness,
@@ -19,8 +20,15 @@ import {
 import { Category } from "@/hooks/useCategories";
 import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useBusinessSubcategoryIds, useSyncBusinessSubcategories } from "@/hooks/useBusinessSubcategories";
+import MultiCategorySelector from "@/components/business/MultiCategorySelector";
+import { useBusinessCategoryIds, useSyncBusinessCategories } from "@/hooks/useBusinessCategories";
+import { useBusinessCityNames, useSyncBusinessCities, parseCityString } from "@/hooks/useBusinessCities";
 import { useCreateAuditLog } from "@/hooks/useAuditLogs";
 import { useContactLogs, useCreateContactLog } from "@/hooks/useContactLogs";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import AdminBadgesPanel from "@/components/admin/AdminBadgesPanel";
+import MultiCityInput from "@/components/business/MultiCityInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,22 +63,21 @@ import {
   EyeOff,
   ExternalLink,
   Image,
+  Award,
   Trash2,
+  FlaskConical,
 } from "lucide-react";
-
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
-
 interface BusinessFileCardProps {
-  business: BusinessWithCategory | null; // null = create mode (admin only)
+  business: BusinessWithCategory | null;
   categories: Category[];
   isAdmin: boolean;
   mode?: "admin" | "owner";
   onSaved: () => void;
   onCancel: () => void;
 }
-
 const commercialStatusLabels: Record<string, string> = {
   nao_contactado: "Não Contactado",
   contactado: "Contactado",
@@ -78,7 +85,6 @@ const commercialStatusLabels: Record<string, string> = {
   cliente: "Cliente",
   perdido: "Perdido",
 };
-
 const generateSlug = (name: string) =>
   name
     .toLowerCase()
@@ -86,14 +92,15 @@ const generateSlug = (name: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-
-// Limite de imagens por plano
-function getGalleryLimit(subscriptionPlan: string, isPremium: boolean): number {
-  if (subscriptionPlan === "free" || !subscriptionPlan) return 0;
+// ── CORRIGIDO: usa isAdmin, form.plan_id e form.is_premium em vez de business ──
+function getGalleryLimit(planId: string, isPremium: boolean, isAdmin: boolean): number {
+  if (isAdmin) return 999; // admin sem limite
+  if (!planId) return 0; // sem plano = free = sem galeria
   return isPremium ? 6 : 2;
 }
-
-// Parser de horários do Google
+// ─────────────────────────────────────────────
+// Parser de horários do Google — MELHORADO
+// ─────────────────────────────────────────────
 const DAY_MAP: Record<string, string> = {
   "segunda-feira": "segunda-feira",
   segunda: "segunda-feira",
@@ -113,8 +120,7 @@ const DAY_MAP: Record<string, string> = {
 };
 const WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira"];
 const WEEKEND = ["sábado", "domingo"];
-
-function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string } {
+function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string; closed: string } {
   const text = raw.replace(/–|—/g, "-").replace(/\t/g, " ").trim();
   const schedule: Record<string, string> = {};
   const segmented = text.replace(
@@ -132,29 +138,26 @@ function parseGoogleSchedule(raw: string): { weekdays: string; weekend: string }
     for (const [key, dayName] of Object.entries(DAY_MAP)) {
       if (norm.startsWith(key.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))) {
         const rest = line.slice(key.length).trim();
-        if (rest) schedule[dayName] = /encerrado|fechado/i.test(rest) ? "Encerrado" : rest;
+        if (rest) schedule[dayName] = /encerrado|fechado|closed/i.test(rest) ? "Encerrado" : rest;
         break;
       }
     }
   }
-  const wdHours = WEEKDAYS.map((d) => schedule[d]).filter(Boolean);
+  const wdOpen = WEEKDAYS.filter((d) => schedule[d] && schedule[d] !== "Encerrado");
+  const wdClosed = WEEKDAYS.filter((d) => schedule[d] === "Encerrado");
+  const wdHours = wdOpen.map((d) => schedule[d]);
   const allSame = wdHours.length > 0 && wdHours.every((h) => h === wdHours[0]);
-  return {
-    weekdays: allSame
-      ? wdHours[0]
-      : WEEKDAYS.filter((d) => schedule[d])
-          .map((d) => `${d} ${schedule[d]}`)
-          .join("  "),
-    weekend: WEEKEND.filter((d) => schedule[d])
-      .map((d) => `${d} ${schedule[d]}`)
-      .join("  "),
-  };
+  const weekdays = allSame ? wdHours[0] : wdOpen.map((d) => `${d} ${schedule[d]}`).join("\n");
+  const weOpen = WEEKEND.filter((d) => schedule[d] && schedule[d] !== "Encerrado");
+  const weClosed = WEEKEND.filter((d) => schedule[d] === "Encerrado");
+  const weekend = weOpen.map((d) => `${d} ${schedule[d]}`).join("\n");
+  const allClosed = [...wdClosed, ...weClosed];
+  const closed = allClosed.length > 0 ? allClosed.join(", ") : "";
+  return { weekdays, weekend, closed };
 }
-
 // ─────────────────────────────────────────────
 // Sub-components
 // ─────────────────────────────────────────────
-
 function VisibilityBadge({ visible, onChange }: { visible: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
@@ -171,7 +174,6 @@ function VisibilityBadge({ visible, onChange }: { visible: boolean; onChange: (v
     </button>
   );
 }
-
 function Section({
   title,
   icon: Icon,
@@ -211,7 +213,6 @@ function Section({
     </Collapsible>
   );
 }
-
 function ContactHistoryInline({ businessId }: { businessId: string }) {
   const { data: logs = [], isLoading } = useContactLogs(businessId);
   const createLog = useCreateContactLog();
@@ -219,7 +220,6 @@ function ContactHistoryInline({ businessId }: { businessId: string }) {
   const [showForm, setShowForm] = useState(false);
   const [tipo, setTipo] = useState("telefone");
   const [nota, setNota] = useState("");
-
   const tipoIcons: Record<string, React.ElementType> = {
     telefone: Phone,
     email: Mail,
@@ -232,7 +232,6 @@ function ContactHistoryInline({ businessId }: { businessId: string }) {
     whatsapp: "WhatsApp",
     outro: "Outro",
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -244,7 +243,6 @@ function ContactHistoryInline({ businessId }: { businessId: string }) {
       toast({ title: "Erro ao registar contacto", variant: "destructive" });
     }
   };
-
   return (
     <div className="space-y-3">
       {!showForm ? (
@@ -320,39 +318,123 @@ function ContactHistoryInline({ businessId }: { businessId: string }) {
     </div>
   );
 }
-
+// ─────────────────────────────────────────────
+// Trial & Claim Section (admin only)
+// ─────────────────────────────────────────────
+function TrialClaimSection({ business }: { business: BusinessWithCategory }) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const trialEnd = (business as any).trial_ends_at ? new Date((business as any).trial_ends_at) : null;
+  const isTrialActive = !!trialEnd && trialEnd > new Date();
+  const trialDaysLeft = isTrialActive ? Math.ceil((trialEnd!.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
+  const isClaimed = (business as any).is_claimed === true;
+  const handleActivateTrial = async () => {
+    const now = new Date();
+    const ends = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
+    const { error } = await supabase
+      .from("businesses")
+      .update({
+        trial_ends_at: ends.toISOString(),
+        trial_activated_at: now.toISOString(),
+        trial_activated_by: user?.id,
+        is_claimed: true,
+      } as any)
+      .eq("id", business.id);
+    if (error) {
+      toast({ title: "Erro ao activar trial", variant: "destructive" });
+    } else {
+      toast({ title: "Trial de 15 dias activado" });
+      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+    }
+  };
+  const handleCancelTrial = async () => {
+    const { error } = await supabase
+      .from("businesses")
+      .update({ trial_ends_at: null } as any)
+      .eq("id", business.id);
+    if (error) {
+      toast({ title: "Erro ao cancelar trial", variant: "destructive" });
+    } else {
+      toast({ title: "Trial cancelado" });
+      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+    }
+  };
+  const handleToggleClaimed = async (value: boolean) => {
+    const { error } = await supabase
+      .from("businesses")
+      .update({ is_claimed: value } as any)
+      .eq("id", business.id);
+    if (error) {
+      toast({ title: "Erro ao alterar estado", variant: "destructive" });
+    } else {
+      toast({ title: value ? "Negócio marcado como reclamado" : "Negócio marcado como não reclamado" });
+      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+    }
+  };
+  return (
+    <Section title="Trial & Claim" icon={FlaskConical} defaultOpen={true}>
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Switch checked={isClaimed} onCheckedChange={handleToggleClaimed} />
+          <Label>Negócio Reclamado</Label>
+          {isClaimed && (
+            <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+              Reclamado
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {isTrialActive ? (
+            <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+              Trial Activo — {trialDaysLeft} dias restantes
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
+              Sem Trial
+            </Badge>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {!isTrialActive && (
+            <Button type="button" size="sm" onClick={handleActivateTrial}>
+              <FlaskConical className="h-3.5 w-3.5 mr-1.5" />
+              Activar Trial 15 dias
+            </Button>
+          )}
+          {isTrialActive && (
+            <Button type="button" size="sm" variant="destructive" onClick={handleCancelTrial}>
+              Cancelar Trial
+            </Button>
+          )}
+        </div>
+      </div>
+    </Section>
+  );
+}
 // ─────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────
-
 const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCancel }: BusinessFileCardProps) => {
   const { toast } = useToast();
   const isOwner = mode === "owner";
   const isEditing = !!business;
-
-  // Hooks — admin usa useUpdateBusiness, owner usa useUpdateBusinessOwner
   const updateBusinessAdmin = useUpdateBusiness();
   const updateBusinessOwner = useUpdateBusinessOwner();
   const createBusiness = useCreateBusiness();
   const createAuditLog = useCreateAuditLog();
   const syncSubcategories = useSyncBusinessSubcategories();
+  const { data: businessCities } = useBusinessCityNames(business?.id);
+  const syncCities = useSyncBusinessCities();
   const { data: allSubcategories = [] } = useAllSubcategories();
   const { data: commercialPlans = [] } = useCommercialPlans(true);
   const { data: editSubcategoryIds } = useBusinessSubcategoryIds(business?.id);
   const { data: activeModules = [] } = useActiveBusinessModules();
   const { data: existingModuleValues = [] } = useBusinessModuleValues(business?.id);
   const upsertModuleValues = useUpsertBusinessModuleValues();
-
   // Schedule paste box
   const [rawSchedulePaste, setRawSchedulePaste] = useState("");
   const [showPasteBox, setShowPasteBox] = useState(false);
-
-  // Gallery limit based on plan
-  const galleryLimit = getGalleryLimit(
-    (business as any)?.subscription_plan ?? "free",
-    (business as any)?.is_premium ?? false,
-  );
-
   const [form, setForm] = useState({
     // 1. Identidade
     name: "",
@@ -361,9 +443,13 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     logo_url: "",
     // 2. Presença Pública
     category_id: "",
+    category_ids: [] as string[],
+    primary_category_id: "",
     subcategory_ids: [] as string[],
     alcance: "local" as "local" | "nacional" | "hibrido",
     city: "",
+    city_names: [] as string[],
+    primary_city: "",
     zone: "",
     public_address: "",
     cta_phone: "",
@@ -372,16 +458,19 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     // 3. Horários
     schedule_weekdays: "",
     schedule_weekend: "",
+    schedule_closed: "",
     show_schedule: true,
     // 4. Presença Digital (PRO)
     cta_whatsapp: "",
-    show_whatsapp: true,
+    show_whatsapp: false,
     instagram_url: "",
     facebook_url: "",
     other_social_url: "",
-    show_social: true,
+    cta_booking_url: "",
+    cta_order_url: "",
+    show_social: false,
     images: [] as string[],
-    show_gallery: true,
+    show_gallery: false,
     // 5. Dados Legais
     nif: "",
     address: "",
@@ -391,7 +480,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     // 6. Estado Comercial (admin only)
     commercial_status: "nao_contactado" as CommercialStatus,
     is_active: false,
-    // 7. Subscrição (admin edita, owner lê)
+    // 7. Subscrição
     plan_id: "",
     subscription_start_date: "",
     subscription_status: "inactive" as SubscriptionStatus,
@@ -400,10 +489,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     premium_level: "" as string,
     display_order: 0,
   });
-
   const [moduleValues, setModuleValues] = useState<Record<string, { value: string | null; value_json: any }>>({});
-
-  // Load business data
+  // ── CORRIGIDO: galleryLimit usa form.plan_id e form.is_premium (valores actuais do form) ──
+  const galleryLimit = getGalleryLimit(form.plan_id, form.is_premium, isAdmin);
   useEffect(() => {
     if (business) {
       setForm({
@@ -412,9 +500,13 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         description: business.description || "",
         logo_url: business.logo_url || "",
         category_id: business.category_id || "",
+        category_ids: [] as string[],
+        primary_category_id: "",
         subcategory_ids: [],
         alcance: business.alcance || "local",
         city: business.city || "",
+        city_names: [],
+        primary_city: "",
         zone: business.zone || "",
         public_address: (business as any).public_address || "",
         cta_phone: business.cta_phone || "",
@@ -422,15 +514,18 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         cta_website: business.cta_website || "",
         schedule_weekdays: business.schedule_weekdays || "",
         schedule_weekend: business.schedule_weekend || "",
+        schedule_closed: (business as any).schedule_closed || "",
         show_schedule: (business as any).show_schedule ?? true,
         cta_whatsapp: business.cta_whatsapp || "",
-        show_whatsapp: (business as any).show_whatsapp ?? true,
+        show_whatsapp: (business as any).show_whatsapp ?? false,
         instagram_url: (business as any).instagram_url || "",
         facebook_url: (business as any).facebook_url || "",
         other_social_url: (business as any).other_social_url || "",
-        show_social: (business as any).show_social ?? true,
+        cta_booking_url: (business as any).cta_booking_url || "",
+        cta_order_url: (business as any).cta_order_url || "",
+        show_social: (business as any).show_social ?? false,
         images: (business as any).images || [],
-        show_gallery: (business as any).show_gallery ?? true,
+        show_gallery: (business as any).show_gallery ?? false,
         nif: (business as any).nif || "",
         address: (business as any).address || "",
         owner_name: (business as any).owner_name || "",
@@ -448,13 +543,39 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       });
     }
   }, [business]);
-
   useEffect(() => {
     if (editSubcategoryIds && business) {
       setForm((prev) => ({ ...prev, subcategory_ids: editSubcategoryIds }));
     }
   }, [editSubcategoryIds, business]);
 
+  const { data: editCategoryIds } = useBusinessCategoryIds(business?.id);
+  const syncCategories = useSyncBusinessCategories();
+
+  useEffect(() => {
+    if (editCategoryIds && business) {
+      setForm((prev) => ({
+        ...prev,
+        category_ids: editCategoryIds.map(c => c.category_id),
+        primary_category_id: editCategoryIds.find(c => c.is_primary)?.category_id || business.category_id || "",
+        category_id: editCategoryIds.find(c => c.is_primary)?.category_id || business.category_id || "",
+      }));
+    }
+  }, [editCategoryIds, business]);
+
+  // Load cities from junction table
+  useEffect(() => {
+    if (businessCities && businessCities.length > 0) {
+      const names = businessCities.map((bc) => bc.city_name);
+      const primary = businessCities.find((bc) => bc.is_primary)?.city_name || names[0] || "";
+      setForm((prev) => ({ ...prev, city_names: names, primary_city: primary, city: primary }));
+    } else if (business?.city) {
+      const parsed = parseCityString(business.city);
+      if (parsed.length > 0) {
+        setForm((prev) => ({ ...prev, city_names: parsed, primary_city: parsed[0], city: parsed[0] }));
+      }
+    }
+  }, [businessCities, business?.city]);
   useEffect(() => {
     if (existingModuleValues.length > 0) {
       const map: Record<string, { value: string | null; value_json: any }> = {};
@@ -464,10 +585,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       setModuleValues(map);
     }
   }, [existingModuleValues]);
-
   const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
-  const filteredSubcategories = allSubcategories.filter((s) => s.category_id === form.category_id);
-
+  const activeCategoryIds = form.category_ids.length > 0 ? form.category_ids : (form.category_id ? [form.category_id] : []);
+  const filteredSubcategories = allSubcategories.filter((s) => activeCategoryIds.includes(s.category_id));
   const toggleSubcategory = (subId: string) => {
     setForm((prev) => ({
       ...prev,
@@ -476,10 +596,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         : [...prev.subcategory_ids, subId],
     }));
   };
-
-  // Gallery helpers
   const addImage = () => {
-    if (form.images.length >= galleryLimit) return;
+    if (!isAdmin && form.images.length >= galleryLimit) return;
     setForm((prev) => ({ ...prev, images: [...prev.images, ""] }));
   };
   const updateImage = (index: number, url: string) => {
@@ -490,19 +608,17 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
   const removeImage = (index: number) => {
     setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
   };
-
-  // Schedule paste
+  // ── Handler do botão "Colar do Google" ──
   const handleFormatSchedule = () => {
     if (!rawSchedulePaste.trim()) return;
-    const { weekdays, weekend } = parseGoogleSchedule(rawSchedulePaste);
+    const { weekdays, weekend, closed } = parseGoogleSchedule(rawSchedulePaste);
     if (weekdays) set("schedule_weekdays", weekdays);
     if (weekend) set("schedule_weekend", weekend);
+    if (closed) set("schedule_closed", closed);
     setRawSchedulePaste("");
     setShowPasteBox(false);
-    toast({ title: "✅ Horário formatado!" });
+    toast({ title: "✅ Horário organizado automaticamente!" });
   };
-
-  // Subscription dates helper (admin)
   const getSubscriptionDates = (planId: string, startDate: string) => {
     if (!planId || !startDate) {
       return {
@@ -534,12 +650,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
       subscription_plan: "1_month" as SubscriptionPlan,
     };
   };
-
   // ─── Submit ───────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validação cliente (admin)
     if (!isOwner && form.commercial_status === "cliente") {
       const missing: string[] = [];
       if (!form.nif) missing.push("NIF");
@@ -555,8 +668,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         return;
       }
     }
-
-    // Validação módulos dinâmicos
     if (!isOwner) {
       const missingModules = activeModules.filter(
         (m) => m.is_required && !moduleValues[m.id]?.value && !moduleValues[m.id]?.value_json,
@@ -570,12 +681,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         return;
       }
     }
-
     const cleanImages = form.images.filter((url) => url.trim() !== "");
-
     try {
       if (isOwner) {
-        // ── Owner: usa hook próprio com RLS ──────────────────
         await updateBusinessOwner.mutateAsync({
           id: business!.id,
           name: form.name,
@@ -583,7 +691,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           logo_url: form.logo_url || null,
           category_id: form.category_id || null,
           subcategory_id: form.subcategory_ids[0] || null,
-          city: form.city || null,
+          city: form.primary_city || form.city || null,
           zone: form.zone || null,
           alcance: form.alcance,
           public_address: form.public_address || null,
@@ -592,16 +700,18 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           cta_website: form.cta_website || null,
           schedule_weekdays: form.schedule_weekdays || null,
           schedule_weekend: form.schedule_weekend || null,
+          schedule_closed: form.schedule_closed || null,
           show_schedule: form.show_schedule,
           cta_whatsapp: form.cta_whatsapp || null,
           show_whatsapp: form.show_whatsapp,
           instagram_url: form.instagram_url || null,
           facebook_url: form.facebook_url || null,
           other_social_url: form.other_social_url || null,
+          cta_booking_url: (form as any).cta_booking_url || null,
+          cta_order_url: (form as any).cta_order_url || null,
           show_social: form.show_social,
           images: cleanImages.length > 0 ? cleanImages : null,
           show_gallery: form.show_gallery,
-          // Dados Legais — owner também pode editar
           nif: form.nif || null,
           address: form.address || null,
           owner_name: form.owner_name || null,
@@ -611,7 +721,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
         });
         toast({ title: "✅ Negócio atualizado com sucesso!" });
       } else {
-        // ── Admin: usa hook completo ─────────────────────────
         const subscriptionData = getSubscriptionDates(form.plan_id, form.subscription_start_date);
         const data: any = {
           name: form.name,
@@ -621,12 +730,13 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           plan_id: form.plan_id || null,
           description: form.description || null,
           logo_url: form.logo_url || null,
-          city: form.city || null,
+           city: form.primary_city || form.city || null,
           zone: form.zone || null,
           alcance: form.alcance,
           public_address: form.public_address || null,
           schedule_weekdays: form.schedule_weekdays || null,
           schedule_weekend: form.schedule_weekend || null,
+          schedule_closed: form.schedule_closed || null,
           show_schedule: form.show_schedule,
           cta_website: form.cta_website || null,
           cta_whatsapp: form.cta_whatsapp || null,
@@ -636,6 +746,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           instagram_url: form.instagram_url || null,
           facebook_url: form.facebook_url || null,
           other_social_url: form.other_social_url || null,
+          cta_booking_url: (form as any).cta_booking_url || null,
+          cta_order_url: (form as any).cta_order_url || null,
           show_social: form.show_social,
           images: cleanImages.length > 0 ? cleanImages : null,
           show_gallery: form.show_gallery,
@@ -652,9 +764,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           commercial_status: form.commercial_status,
           ...subscriptionData,
         };
-
         let businessId: string;
-
         if (isEditing) {
           await updateBusinessAdmin.mutateAsync({ id: business.id, ...data });
           businessId = business.id;
@@ -677,12 +787,25 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           businessId = result.id;
           toast({ title: "Negócio criado com sucesso" });
         }
-
         if (form.subcategory_ids.length > 0) {
           await syncSubcategories.mutateAsync({ businessId, subcategoryIds: form.subcategory_ids });
         }
-
-        const moduleEntries = Object.entries(moduleValues).filter(([_, v]) => v.value || v.value_json);
+        if (form.category_ids.length > 0) {
+          await syncCategories.mutateAsync({
+            businessId,
+            categoryIds: form.category_ids,
+            primaryCategoryId: form.primary_category_id || form.category_ids[0],
+          });
+        }
+        // Sync cities junction table
+        if (form.city_names.length > 0) {
+          await syncCities.mutateAsync({
+            businessId,
+            cities: form.city_names,
+            primaryCity: form.primary_city,
+          });
+        }
+        const moduleEntries = Object.entries(moduleValues);
         if (moduleEntries.length > 0) {
           await upsertModuleValues.mutateAsync({
             businessId,
@@ -694,23 +817,22 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           });
         }
       }
-
       if (form.subcategory_ids.length > 0 && isOwner) {
         await syncSubcategories.mutateAsync({ businessId: business!.id, subcategoryIds: form.subcategory_ids });
       }
-
       onSaved();
     } catch (error: any) {
+      const detail = error?.details || error?.hint || error?.message || "Erro desconhecido";
+      const code = error?.code ? ` (${error.code})` : "";
       toast({
-        title: "Erro",
-        description: error?.message || "Não foi possível guardar o negócio",
+        title: "Erro ao guardar negócio",
+        description: `${detail}${code}`,
         variant: "destructive",
       });
+      console.error("[BusinessFileCard] error:", error);
     }
   };
-
   const isLoading = createBusiness.isPending || updateBusinessAdmin.isPending || updateBusinessOwner.isPending;
-
   // ─────────────────────────────────────────────
   // Render
   // ─────────────────────────────────────────────
@@ -770,28 +892,23 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </div>
       </Section>
-
       {/* ── 2. Presença Pública ── */}
       <Section title="Presença Pública" icon={Globe} badge="Gratuito · START">
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select
-                value={form.category_id}
-                onValueChange={(v) => setForm((prev) => ({ ...prev, category_id: v, subcategory_ids: [] }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Categorias</Label>
+              <MultiCategorySelector
+                selectedCategoryIds={form.category_ids.length > 0 ? form.category_ids : (form.category_id ? [form.category_id] : [])}
+                primaryCategoryId={form.primary_category_id || form.category_id}
+                onChange={(ids, primaryId) => setForm((prev) => ({
+                  ...prev,
+                  category_ids: ids,
+                  primary_category_id: primaryId,
+                  category_id: primaryId,
+                  subcategory_ids: [],
+                }))}
+              />
             </div>
             <div className="space-y-2">
               <Label>Alcance</Label>
@@ -807,7 +924,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </Select>
             </div>
           </div>
-
           {form.category_id && filteredSubcategories.length > 0 && (
             <div className="space-y-2">
               <Label>Subcategorias</Label>
@@ -827,18 +943,27 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               )}
             </div>
           )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Cidade</Label>
-              <Input value={form.city} onChange={(e) => set("city", e.target.value)} />
+              <Label>Cidades onde opera</Label>
+              <MultiCityInput
+                cities={form.city_names}
+                primaryCity={form.primary_city}
+                onChange={(cities, primary) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    city_names: cities,
+                    primary_city: primary,
+                    city: primary,
+                  }));
+                }}
+              />
             </div>
             <div className="space-y-2">
               <Label>Zona / Região</Label>
               <Input value={form.zone} onChange={(e) => set("zone", e.target.value)} placeholder="Ex: Grande Lisboa" />
             </div>
           </div>
-
           <div className="space-y-2">
             <Label>Morada pública</Label>
             <Input
@@ -848,7 +973,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             />
             <p className="text-xs text-muted-foreground">Visível ao público na página do negócio.</p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Telefone público</Label>
@@ -863,7 +987,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               <Input type="email" value={form.cta_email} onChange={(e) => set("cta_email", e.target.value)} />
             </div>
           </div>
-
           <div className="space-y-2">
             <Label>Website</Label>
             <Input
@@ -874,12 +997,13 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </div>
       </Section>
-
       {/* ── 3. Horários ── */}
       <Section title="Horários" icon={Clock} defaultOpen={false} badge="Gratuito · START">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Podes copiar o horário diretamente do Google e colar aqui.</p>
+            <p className="text-xs text-muted-foreground">
+              Copia o horário directamente do Google e cola aqui — o sistema organiza automaticamente.
+            </p>
             <div className="flex items-center gap-2">
               <VisibilityBadge visible={form.show_schedule} onChange={(v) => set("show_schedule", v)} />
               <Button
@@ -893,27 +1017,27 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </Button>
             </div>
           </div>
-
           {!form.show_schedule && (
             <p className="text-[11px] text-muted-foreground flex items-center gap-1 bg-muted/30 rounded px-3 py-2">
               <EyeOff className="h-3 w-3" /> Horários guardados mas não visíveis ao público
             </p>
           )}
-
           {showPasteBox && (
             <div className="border border-primary/30 bg-primary/5 rounded-lg p-4 space-y-3">
-              <Label className="text-sm font-medium">Cola aqui o horário do Google</Label>
+              <Label className="text-sm font-medium">Cola aqui o horário copiado do Google</Label>
               <Textarea
                 value={rawSchedulePaste}
                 onChange={(e) => setRawSchedulePaste(e.target.value)}
-                placeholder={"sexta-feira\n09:00-22:00\nsábado\n12:00-18:00\ndomingo\nEncerrado\n..."}
-                rows={6}
+                placeholder={
+                  "segunda-feira 09:00-22:00\nterça-feira 09:00-22:00\nquarta-feira 09:00-22:00\nquinta-feira 09:00-22:00\nsexta-feira 09:00-22:00\nsábado 12:00-18:00\ndomingo Encerrado"
+                }
+                rows={8}
                 className="text-sm font-mono"
                 autoFocus
               />
               <div className="flex gap-2">
                 <Button type="button" size="sm" onClick={handleFormatSchedule} disabled={!rawSchedulePaste.trim()}>
-                  <Wand2 className="h-3.5 w-3.5 mr-1.5" /> Formatar automaticamente
+                  <Wand2 className="h-3.5 w-3.5 mr-1.5" /> Organizar automaticamente
                 </Button>
                 <Button
                   type="button"
@@ -929,36 +1053,47 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </div>
             </div>
           )}
-
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${!form.show_schedule ? "opacity-50" : ""}`}>
-            <div className="space-y-1.5">
-              <Label>Horário dias úteis</Label>
-              <Textarea
-                value={form.schedule_weekdays}
-                onChange={(e) => set("schedule_weekdays", e.target.value)}
-                placeholder="Ex: 09:00-18:00"
-                rows={2}
-                className="text-sm resize-none"
-              />
+          <div className={`space-y-3 ${!form.show_schedule ? "opacity-50" : ""}`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>📅 Dias úteis (seg–sex)</Label>
+                <Textarea
+                  value={form.schedule_weekdays}
+                  onChange={(e) => set("schedule_weekdays", e.target.value)}
+                  placeholder="Ex: 09:00–18:00"
+                  rows={2}
+                  className="text-sm resize-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>🗓 Fim de semana</Label>
+                <Textarea
+                  value={form.schedule_weekend}
+                  onChange={(e) => set("schedule_weekend", e.target.value)}
+                  placeholder="Ex: sábado 10:00–14:00"
+                  rows={2}
+                  className="text-sm resize-none"
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Horário fim-de-semana</Label>
-              <Textarea
-                value={form.schedule_weekend}
-                onChange={(e) => set("schedule_weekend", e.target.value)}
-                placeholder="Ex: sábado 10:00-14:00  domingo Encerrado"
-                rows={2}
-                className="text-sm resize-none"
+              <Label>🔴 Dias encerrados</Label>
+              <Input
+                value={form.schedule_closed}
+                onChange={(e) => set("schedule_closed", e.target.value)}
+                placeholder="Ex: domingo, segunda-feira"
+                className="text-sm"
               />
+              <p className="text-[11px] text-muted-foreground">
+                Preenchido automaticamente ao colar do Google. Pode editar manualmente.
+              </p>
             </div>
           </div>
         </div>
       </Section>
-
       {/* ── 4. Presença Digital (PRO) ── */}
       <Section title="Presença Digital" icon={Share2} defaultOpen={false} badge="PRO">
         <div className="space-y-6">
-          {/* WhatsApp */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>WhatsApp</Label>
@@ -976,8 +1111,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </p>
             )}
           </div>
-
-          {/* Redes Sociais */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">Redes Sociais</Label>
@@ -1017,19 +1150,41 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
               </div>
             </div>
           </div>
-
-          {/* Galeria */}
+          {/* ── CTAs de Reserva e Encomenda ── */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <Label className="text-sm font-medium">CTAs de Acção Direta</Label>
+            <p className="text-xs text-muted-foreground">Aparecem como botões de destaque na página pública.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>📅 Reservar Agora</Label>
+                <Input
+                  value={(form as any).cta_booking_url}
+                  onChange={(e) => set("cta_booking_url", e.target.value)}
+                  placeholder="https://... (Google Reserve, TheFork, Calendly...)"
+                />
+                <p className="text-[11px] text-muted-foreground">Ex: Google Reserve, TheFork, Calendly, Doctolib</p>
+              </div>
+              <div className="space-y-2">
+                <Label>🛍️ Pedir Online</Label>
+                <Input
+                  value={(form as any).cta_order_url}
+                  onChange={(e) => set("cta_order_url", e.target.value)}
+                  placeholder="https://... (UberEats, Glovo, sistema próprio...)"
+                />
+                <p className="text-[11px] text-muted-foreground">Ex: UberEats, Glovo, sistema próprio</p>
+              </div>
+            </div>
+          </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Label className="text-sm font-medium">Galeria</Label>
                 <span className="text-[11px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
-                  {form.images.filter((u) => u.trim()).length} / {galleryLimit} imagens
+                  {form.images.filter((u) => u.trim()).length} / {isAdmin ? "∞" : galleryLimit} imagens
                 </span>
               </div>
               <VisibilityBadge visible={form.show_gallery} onChange={(v) => set("show_gallery", v)} />
             </div>
-
             {galleryLimit === 0 && !isAdmin ? (
               <p className="text-xs text-muted-foreground bg-muted/30 rounded px-3 py-2">
                 O plano gratuito não inclui galeria. Faz upgrade para START ou PRO para adicionar imagens.
@@ -1065,18 +1220,16 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
                     </Button>
                   </div>
                 ))}
-                {(isAdmin || form.images.length < galleryLimit) && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addImage}
-                    className="w-full border-dashed text-xs mt-1"
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                    Adicionar imagem ({form.images.length}/{isAdmin ? "∞" : galleryLimit})
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addImage}
+                  className="w-full border-dashed text-xs mt-1"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Adicionar imagem ({form.images.length}/{isAdmin ? "∞" : galleryLimit})
+                </Button>
                 <p className="text-[11px] text-muted-foreground">
                   Cola o URL de qualquer imagem pública — Instagram, Facebook, Supabase, ou outro site.
                 </p>
@@ -1085,7 +1238,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </div>
       </Section>
-
       {/* ── 5. Dados Legais e Administrativos ── */}
       <Section
         title="Dados Legais e Administrativos"
@@ -1132,7 +1284,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </div>
       </Section>
-
       {/* ── 6. Estado Comercial (admin only) ── */}
       {!isOwner && (
         <Section title="Estado Comercial e Histórico" icon={Handshake} defaultOpen={true}>
@@ -1168,11 +1319,11 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           )}
         </Section>
       )}
-
+      {/* ── 6B. Trial & Claim (admin only) ── */}
+      {!isOwner && isEditing && business && <TrialClaimSection business={business} />}
       {/* ── 7. Subscrição e Produto ── */}
       <Section title="Subscrição e Produto" icon={CreditCard} defaultOpen={false}>
         {isOwner ? (
-          // Owner: só leitura
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-4 space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
@@ -1218,7 +1369,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             </Button>
           </div>
         ) : (
-          // Admin: edita tudo
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1258,7 +1408,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
                 </p>
               </div>
             </div>
-
             {form.plan_id && (
               <div className="space-y-2">
                 <Label>Data de início</Label>
@@ -1280,7 +1429,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
                   })()}
               </div>
             )}
-
             {isAdmin && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-border">
                 <div className="space-y-2">
@@ -1311,7 +1459,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         )}
       </Section>
-
       {/* ── 8. Contexto Financeiro (admin only) ── */}
       {!isOwner && (
         <Section title="Contexto Financeiro" icon={DollarSign} defaultOpen={false}>
@@ -1365,8 +1512,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </Section>
       )}
-
-      {/* ── 9. Auditoria (admin + isAdmin only) ── */}
+      {/* ── 9. Auditoria (admin only) ── */}
       {!isOwner && isAdmin && isEditing && business && (
         <Section title="Auditoria e Alertas" icon={ShieldCheck} defaultOpen={false}>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -1389,7 +1535,6 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           </div>
         </Section>
       )}
-
       {/* ── 10. Campos Adicionais (admin only) ── */}
       {!isOwner && activeModules.length > 0 && (
         <Section title="Campos Adicionais" icon={Puzzle} defaultOpen={isEditing}>
@@ -1526,7 +1671,12 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           })()}
         </Section>
       )}
-
+      {/* ── Badges (admin only, editing existing) ── */}
+      {isEditing && isAdmin && business && (
+        <Section title="Badges" icon={Award} defaultOpen={false}>
+          <AdminBadgesPanel businessId={business.id} />
+        </Section>
+      )}
       {/* ── Actions ── */}
       <div className="flex justify-end gap-2 pt-4 border-t border-border">
         <Button type="button" variant="outline" onClick={onCancel}>
@@ -1540,5 +1690,4 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     </form>
   );
 };
-
 export default BusinessFileCard;

@@ -1,10 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatSupabaseError } from "@/utils/supabaseError";
 import type { Json } from "@/integrations/supabase/types";
 
 export type SubscriptionPlan = "free" | "1_month" | "3_months" | "6_months" | "1_year";
 export type SubscriptionStatus = "inactive" | "active" | "expired";
-export type CommercialStatus = "nao_contactado" | "contactado" | "interessado" | "cliente" | "perdido";
+export type CommercialStatus =
+  | "nao_contactado"
+  | "contactado"
+  | "interessado"
+  | "proposta_enviada"
+  | "negociacao"
+  | "cliente"
+  | "perdido"
+  | "followup_agendado";
 export type PremiumLevel = "SUPER" | "CATEGORIA" | "SUBCATEGORIA";
 
 export interface Business {
@@ -20,7 +29,7 @@ export interface Business {
   city: string | null;
   zone: string | null;
   alcance: "local" | "nacional" | "hibrido";
-  public_address: string | null; // 👈 NOVO CAMPO ADICIONADO
+  public_address: string | null;
   coordinates: Json | null;
   schedule_weekdays: string | null;
   schedule_weekend: string | null;
@@ -41,6 +50,7 @@ export interface Business {
   subscription_end_date: string | null;
   subscription_status: SubscriptionStatus;
   claim_status?: string | null;
+  ranking_score?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -57,6 +67,10 @@ export interface BusinessWithCategory extends Business {
     name: string;
     slug: string;
   } | null;
+  business_review_stats?: {
+    average_rating: number;
+    total_reviews: number;
+  } | null;
 }
 
 const BUSINESS_SELECT = `
@@ -71,6 +85,10 @@ const BUSINESS_SELECT = `
     id,
     name,
     slug
+  ),
+  business_review_stats (
+    average_rating,
+    total_reviews
   )
 `;
 
@@ -78,7 +96,7 @@ export const useBusinesses = (categoryId?: string, city?: string, subcategoryId?
   return useQuery({
     queryKey: ["businesses", categoryId, city, subcategoryId],
     queryFn: async () => {
-      // If filtering by subcategory, use junction table for many-to-many
+      // Se filtrar por subcategoria, usar junction table (many-to-many)
       if (subcategoryId) {
         const { data: junctionData, error: jError } = await supabase
           .from("business_subcategories")
@@ -88,7 +106,52 @@ export const useBusinesses = (categoryId?: string, city?: string, subcategoryId?
         if (jError) throw jError;
         if (!junctionData || junctionData.length === 0) return [];
 
-        const businessIds = junctionData.map((j) => j.business_id);
+        let businessIds = junctionData.map((j) => j.business_id);
+
+        // If filtering by city, also include businesses from business_cities junction
+        if (city) {
+          const { data: cityJunction } = await supabase
+            .from("business_cities")
+            .select("business_id")
+            .ilike("city_name", `%${city}%`);
+
+          const cityBizIds = new Set((cityJunction || []).map((c) => c.business_id));
+          // Keep only businesses in this subcategory
+          const subcatBizIds = new Set(businessIds);
+
+          let query = supabase
+            .from("businesses")
+            .select(BUSINESS_SELECT)
+            .eq("is_active", true)
+            .in("id", businessIds)
+            .order("is_featured", { ascending: false })
+            .order("is_premium", { ascending: false })
+            .order("ranking_score", { ascending: false })
+            .order("display_order", { ascending: true });
+
+          if (categoryId) query = query.eq("category_id", categoryId);
+          // Match by city in businesses.city OR in business_cities OR alcance nacional
+          query = query.or(`city.ilike.%${city}%,alcance.eq.nacional`);
+
+          const { data, error } = await query;
+          if (error) throw error;
+
+          // Also include businesses found only in business_cities junction
+          const resultIds = new Set((data || []).map((b: any) => b.id));
+          const missingIds = [...cityBizIds].filter((id) => subcatBizIds.has(id) && !resultIds.has(id));
+
+          if (missingIds.length > 0) {
+            const { data: extra } = await supabase
+              .from("businesses")
+              .select(BUSINESS_SELECT)
+              .eq("is_active", true)
+              .in("id", missingIds);
+            if (extra)
+              return [...(data as unknown as BusinessWithCategory[]), ...(extra as unknown as BusinessWithCategory[])];
+          }
+
+          return data as unknown as BusinessWithCategory[];
+        }
 
         let query = supabase
           .from("businesses")
@@ -97,10 +160,10 @@ export const useBusinesses = (categoryId?: string, city?: string, subcategoryId?
           .in("id", businessIds)
           .order("is_featured", { ascending: false })
           .order("is_premium", { ascending: false })
+          .order("ranking_score", { ascending: false })
           .order("display_order", { ascending: true });
 
         if (categoryId) query = query.eq("category_id", categoryId);
-        if (city) query = query.or(`city.ilike.%${city}%,alcance.eq.nacional`);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -113,6 +176,7 @@ export const useBusinesses = (categoryId?: string, city?: string, subcategoryId?
         .eq("is_active", true)
         .order("is_featured", { ascending: false })
         .order("is_premium", { ascending: false })
+        .order("ranking_score", { ascending: false })
         .order("display_order", { ascending: true });
 
       if (categoryId) query = query.eq("category_id", categoryId);
@@ -139,7 +203,7 @@ export const useFeaturedBusinesses = (categoryId?: string) => {
 
       if (categoryId) query = query.eq("category_id", categoryId);
 
-      // Exclude SUPER premium businesses (they appear in Super Destaques section)
+      // Excluir SUPER premium (aparecem na secção Super Destaques)
       query = query.or("premium_level.is.null,premium_level.neq.SUPER");
 
       const { data, error } = await query;
@@ -154,11 +218,7 @@ export const useBusiness = (slug: string | undefined) => {
     queryKey: ["business", slug],
     queryFn: async () => {
       if (!slug) return null;
-      const { data, error } = await supabase
-        .from("businesses")
-        .select(BUSINESS_SELECT)
-        .eq("slug", slug)
-        .maybeSingle();
+      const { data, error } = await supabase.from("businesses").select(BUSINESS_SELECT).eq("slug", slug).maybeSingle();
 
       if (error) throw error;
       return data as unknown as BusinessWithCategory | null;
@@ -174,7 +234,7 @@ export const useAllBusinesses = () => {
       let allData: BusinessWithCategory[] = [];
       let from = 0;
       const batchSize = 1000;
-      
+
       while (true) {
         const { data, error } = await supabase
           .from("businesses")
@@ -184,9 +244,9 @@ export const useAllBusinesses = () => {
 
         if (error) throw error;
         if (!data || data.length === 0) break;
-        
+
         allData = [...allData, ...(data as unknown as BusinessWithCategory[])];
-        
+
         if (data.length < batchSize) break;
         from += batchSize;
       }
@@ -201,9 +261,13 @@ export const useCreateBusiness = () => {
 
   return useMutation({
     mutationFn: async (business: Omit<Business, "id" | "created_at" | "updated_at">) => {
+      // Criar o negócio sempre inativo — a equipa ativa manualmente depois
       const { data, error } = await supabase
         .from("businesses")
-        .insert(business as any)
+        .insert({
+          ...business,
+          is_active: false,
+        } as any)
         .select()
         .single();
 
@@ -212,6 +276,9 @@ export const useCreateBusiness = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
+    },
+    onError: (error: any) => {
+      console.error("[useCreateBusiness] error:", error);
     },
   });
 };
@@ -234,6 +301,9 @@ export const useUpdateBusiness = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
     },
+    onError: (error: any) => {
+      console.error("[useUpdateBusiness] error:", error);
+    },
   });
 };
 
@@ -242,20 +312,19 @@ export const useDeleteBusiness = () => {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("businesses")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("businesses").delete().eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
     },
+    onError: (error: any) => {
+      console.error("[useDeleteBusiness] error:", error);
+    },
   });
 };
 
-// Subscription plan pricing
 export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, { label: string; price: number; months: number }> = {
   free: { label: "Gratuito", price: 0, months: 0 },
   "1_month": { label: "1 Mês", price: 15, months: 1 },
@@ -264,7 +333,6 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, { label: string; price
   "1_year": { label: "1 Ano", price: 120, months: 12 },
 };
 
-// Expiring subscriptions query
 export const useExpiringSubscriptions = (daysAhead: number) => {
   return useQuery({
     queryKey: ["businesses", "expiring", daysAhead],

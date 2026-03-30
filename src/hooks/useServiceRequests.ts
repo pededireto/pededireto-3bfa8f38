@@ -78,8 +78,8 @@ export const useUpdateRequestStatus = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updates: any = { status };
-      if (status === "concluido" || status === "cancelado") {
+      const updates: any = { status, updated_at: new Date().toISOString() };
+      if (status === "fechado" || status === "cancelado") {
         updates.closed_at = new Date().toISOString();
       }
       const { error } = await supabase
@@ -183,8 +183,8 @@ export const useServiceRequestStats = () => {
 
       const total = requests.length;
       const thisMonth = requests.filter((r) => r.created_at >= startOfMonth).length;
-      const concluded = requests.filter((r) => r.status === "concluido").length;
-      const forwarded = requests.filter((r) => r.status === "encaminhado" || r.status === "concluido").length;
+      const concluded = requests.filter((r) => r.status === "fechado").length;
+      const forwarded = requests.filter((r) => r.status === "em_conversa" || r.status === "em_negociacao" || r.status === "fechado").length;
 
       // By category
       const byCat: Record<string, number> = {};
@@ -204,12 +204,83 @@ export const useServiceRequestStats = () => {
   });
 };
 
-// ─── Meta-dados por pedido (respostas + não lidas) ────────────────────────────
+// ─── Meta-dados por pedido (respostas + não lidas + actividade) ───────────────
 export interface RequestMeta {
   responses: number;
   hasUnread: boolean;
   hasPending: boolean;
+  notified: number;
+  viewed: number;
+  responded: number;
+  hasMessages: boolean;
 }
+
+// ─── Review feedback por pedido ───────────────────────────────────────────────
+export interface RequestReviewInfo {
+  rating: number;
+  comment: string | null;
+  businessResponse: string | null;
+  businessResponseAt: string | null;
+  businessName: string;
+}
+
+export const useConsumerRequestReviews = (requestIds: string[]) => {
+  return useQuery({
+    queryKey: ["consumer-request-reviews", requestIds],
+    enabled: requestIds.length > 0,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return {} as Record<string, RequestReviewInfo[]>;
+
+      const { data: matches, error: matchErr } = await supabase
+        .from("request_business_matches" as any)
+        .select("request_id, business_id")
+        .in("request_id", requestIds);
+      if (matchErr) throw matchErr;
+
+      const allBusinessIds = [...new Set((matches || []).map((m: any) => m.business_id))];
+      if (allBusinessIds.length === 0) return {} as Record<string, RequestReviewInfo[]>;
+
+      const { data: reviews, error: revErr } = await supabase
+        .from("business_reviews")
+        .select("business_id, rating, comment, business_response, business_response_at")
+        .eq("user_id", user.id)
+        .in("business_id", allBusinessIds);
+      if (revErr) throw revErr;
+
+      const { data: businesses } = await supabase
+        .from("businesses")
+        .select("id, name")
+        .in("id", allBusinessIds);
+
+      const bizNameMap: Record<string, string> = {};
+      (businesses || []).forEach((b: any) => { bizNameMap[b.id] = b.name; });
+
+      const reviewMap: Record<string, typeof reviews extends (infer T)[] ? T : never> = {};
+      (reviews || []).forEach((r: any) => { reviewMap[r.business_id] = r; });
+
+      const result: Record<string, RequestReviewInfo[]> = {};
+      (matches || []).forEach((m: any) => {
+        const rev = reviewMap[m.business_id];
+        if (rev) {
+          if (!result[m.request_id]) result[m.request_id] = [];
+          result[m.request_id].push({
+            rating: (rev as any).rating,
+            comment: (rev as any).comment,
+            businessResponse: (rev as any).business_response,
+            businessResponseAt: (rev as any).business_response_at,
+            businessName: bizNameMap[m.business_id] || "Negócio",
+          });
+        }
+      });
+
+      return result;
+    },
+  });
+};
 
 export const useConsumerRequestsMeta = (requestIds: string[]) => {
   return useQuery({
@@ -221,10 +292,10 @@ export const useConsumerRequestsMeta = (requestIds: string[]) => {
       } = await supabase.auth.getUser();
       if (!user) return {} as Record<string, RequestMeta>;
 
-      // Buscar matches (respostas dos negócios)
+      // Buscar matches com detalhes de actividade
       const { data: matches, error: matchError } = await supabase
         .from("request_business_matches" as any)
-        .select("request_id, status")
+        .select("request_id, status, viewed_at, responded_at, first_response_at")
         .in("request_id", requestIds);
       if (matchError) throw matchError;
 
@@ -237,6 +308,16 @@ export const useConsumerRequestsMeta = (requestIds: string[]) => {
         .is("read_at", null);
       if (msgError) throw msgError;
 
+      // Buscar se existem mensagens (para saber se conversa começou)
+      const { data: allMessages, error: allMsgError } = await supabase
+        .from("request_messages" as any)
+        .select("request_id")
+        .in("request_id", requestIds)
+        .limit(500);
+      if (allMsgError) throw allMsgError;
+
+      const messageRequestIds = new Set((allMessages || []).map((m: any) => m.request_id));
+
       // Agregar por request_id
       const meta: Record<string, RequestMeta> = {};
 
@@ -248,6 +329,12 @@ export const useConsumerRequestsMeta = (requestIds: string[]) => {
           responses: reqMatches.length,
           hasUnread: reqUnread.length > 0,
           hasPending: reqMatches.some((m: any) => m.status === "enviado"),
+          notified: reqMatches.length,
+          viewed: reqMatches.filter((m: any) => m.viewed_at != null).length,
+          responded: reqMatches.filter(
+            (m: any) => m.responded_at != null || m.first_response_at != null
+          ).length,
+          hasMessages: messageRequestIds.has(id),
         };
       });
 

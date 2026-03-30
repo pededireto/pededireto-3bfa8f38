@@ -18,11 +18,14 @@ interface OwnerBusinessUpdate {
   cta_website?: string | null;
   schedule_weekdays?: string | null;
   schedule_weekend?: string | null;
+  schedule_closed?: string | null;
   // PRO
   cta_whatsapp?: string | null;
   instagram_url?: string | null;
   facebook_url?: string | null;
   other_social_url?: string | null;
+  cta_booking_url?: string | null;
+  cta_order_url?: string | null;
   images?: string[] | null;
   // Visibilidade
   show_whatsapp?: boolean;
@@ -44,7 +47,8 @@ export const useUpdateBusinessOwner = () => {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: OwnerBusinessUpdate) => {
-      const { data, error } = await supabase.from("businesses").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabase.from("businesses").update(updates).eq("id", id).select().maybeSingle(); // .single() lançava PGRST116 quando RLS bloqueava ou não retornava rows
+
       if (error) throw error;
       return data;
     },
@@ -52,6 +56,9 @@ export const useUpdateBusinessOwner = () => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
       queryClient.invalidateQueries({ queryKey: ["business"] });
       queryClient.invalidateQueries({ queryKey: ["business-by-user"] });
+    },
+    onError: (error: any) => {
+      console.error("[useUpdateBusinessOwner] error:", error);
     },
   });
 };

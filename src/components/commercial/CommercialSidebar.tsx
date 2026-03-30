@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import logo from "@/assets/pede-direto-logo.png";
 import {
   Building2,
   LogOut,
@@ -9,11 +10,14 @@ import {
   ShieldCheck,
   Ticket,
   MailPlus,
+  Handshake,
+  Target,
+  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-export type CommercialTab = "dashboard" | "businesses" | "my-businesses" | "my-commissions" | "my-requests" | "claim-requests" | "tickets" | "emails";
+export type CommercialTab = "dashboard" | "pipeline" | "businesses" | "my-businesses" | "my-commissions" | "my-requests" | "claim-requests" | "tickets" | "emails" | "affiliates";
 
 interface CommercialSidebarProps {
   activeTab: CommercialTab;
@@ -23,24 +27,26 @@ interface CommercialSidebarProps {
 
 const sidebarItems: { id: CommercialTab; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+  { id: "pipeline", label: "Pipeline", icon: Target },
   { id: "businesses", label: "Negócios", icon: Building2 },
-  { id: "my-businesses", label: "Meus Negócios", icon: Building2 },
+  { id: "my-businesses", label: "Meus Negócios", icon: UserPlus },
   { id: "my-commissions", label: "Minhas Comissões", icon: DollarSign },
   { id: "my-requests", label: "Os Meus Pedidos", icon: ClipboardList },
   { id: "claim-requests", label: "Pedidos de Claim", icon: ShieldCheck },
   { id: "emails", label: "Email Marketing", icon: MailPlus },
+  { id: "affiliates", label: "Programa de Afiliados", icon: Handshake },
   { id: "tickets", label: "Tickets", icon: Ticket },
 ];
 
 const CommercialSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: CommercialSidebarProps) => {
-  const { signOut } = useAuth();
+  const { signOut, isAdmin, isSuperAdmin } = useAuth();
 
   return (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b border-sidebar-border hidden lg:block">
         <Link to="/" className="block">
-          <h1 className="text-xl font-bold text-sidebar-primary">Pede Direto</h1>
-          <p className="text-xs text-sidebar-foreground/70">Área Comercial</p>
+          <img src={logo} alt="Pede Direto" className="h-8" />
+          <p className="text-xs text-sidebar-foreground/70 mt-1">Área Comercial</p>
         </Link>
       </div>
 
@@ -63,6 +69,12 @@ const CommercialSidebar = ({ activeTab, setActiveTab, setSidebarOpen }: Commerci
       </nav>
 
       <div className="p-4 border-t border-sidebar-border space-y-2">
+        {(isAdmin || isSuperAdmin) && (
+          <Link to="/admin" className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors">
+            <ExternalLink className="h-4 w-4" />
+            ← Área Admin
+          </Link>
+        )}
         <Link to="/" className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors">
           <ExternalLink className="h-4 w-4" />
           Ver site público

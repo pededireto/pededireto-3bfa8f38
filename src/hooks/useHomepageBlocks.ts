@@ -27,7 +27,6 @@ export const useHomepageBlocks = () => {
 
       if (error) throw error;
 
-      // Filter by date range client-side
       return (data as unknown as HomepageBlock[]).filter((b) => {
         if (b.start_date && new Date(b.start_date) > new Date(now)) return false;
         if (b.end_date && new Date(b.end_date) < new Date(now)) return false;
@@ -66,6 +65,9 @@ export const useCreateHomepageBlock = () => {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["homepage-blocks"] }),
+    onError: (error: any) => {
+      console.error("[useCreateHomepageBlock] error:", error);
+    },
   });
 };
 
@@ -83,6 +85,9 @@ export const useUpdateHomepageBlock = () => {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["homepage-blocks"] }),
+    onError: (error: any) => {
+      console.error("[useUpdateHomepageBlock] error:", error);
+    },
   });
 };
 
@@ -97,5 +102,8 @@ export const useDeleteHomepageBlock = () => {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["homepage-blocks"] }),
+    onError: (error: any) => {
+      console.error("[useDeleteHomepageBlock] error:", error);
+    },
   });
 };

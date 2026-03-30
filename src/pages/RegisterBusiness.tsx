@@ -1,62 +1,20 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCategories } from "@/hooks/useCategories";
-import { useSubcategories } from "@/hooks/useSubcategories";
+import { useAllSubcategories } from "@/hooks/useSubcategories";
+import { useSyncBusinessCategories } from "@/hooks/useBusinessCategories";
 import { useAuth } from "@/hooks/useAuth";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { CheckCircle, Building2, Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import CityAutocomplete from "@/components/ui/CityAutocomplete";
+import MultiCategorySelector from "@/components/business/MultiCategorySelector";
+import { CheckCircle, Loader2, ArrowLeft, ArrowRight, Phone, MapPin, X, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const baseSchema = {
-  name: z.string().trim().min(2, "Mínimo 2 caracteres").max(200, "Máximo 200 caracteres"),
-  nif: z.string().trim().min(9, "NIF deve ter 9 dígitos").max(9, "NIF deve ter 9 dígitos").regex(/^\d{9}$/, "NIF deve conter apenas 9 dígitos"),
-  address: z.string().trim().min(5, "Morada é obrigatória").max(300, "Máximo 300 caracteres"),
-  cta_email: z.string().trim().email("Email inválido").max(255),
-  cta_phone: z.string().trim().min(9, "Telefone inválido").max(20, "Telefone inválido"),
-  owner_name: z.string().trim().min(2, "Nome obrigatório").max(200),
-  owner_phone: z.string().trim().min(9, "Telefone inválido").max(20),
-  owner_email: z.string().trim().email("Email inválido").max(255),
-  category_id: z.string().uuid("Selecione uma categoria"),
-  subcategory_id: z.string().uuid("Selecione uma subcategoria"),
-  cta_whatsapp: z.string().trim().max(20).optional().or(z.literal("")),
-  cta_website: z.string().trim().url("URL inválido").max(500).optional().or(z.literal("")),
-  city: z.string().trim().min(2, "Cidade obrigatória").max(100),
-  password: z.string().optional(),
-};
-
-const formSchemaAuth = z.object({
-  ...baseSchema,
-  password: z.string().min(6, "Password deve ter pelo menos 6 caracteres"),
-});
-
-const formSchemaNoAuth = z.object({
-  ...baseSchema,
-  password: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchemaAuth>;
+import logo from "@/assets/pede-direto-logo.png";
 
 const generateSlug = (name: string) =>
   name
@@ -68,311 +26,564 @@ const generateSlug = (name: string) =>
   "-" +
   Date.now().toString(36);
 
+type Step = 1 | 2 | 3;
+
+interface FormData {
+  name: string;
+  phone: string;
+  city: string;
+  email: string;
+  password: string;
+  categoryIds: string[];
+  primaryCategoryId: string;
+  subcategoryIds: string[];
+}
+
+const ProgressBar = ({ step }: { step: Step }) => (
+  <div className="w-full max-w-md mx-auto mb-8">
+    <div className="flex items-center justify-between mb-2">
+      {[1, 2, 3].map((s) => (
+        <div key={s} className="flex items-center gap-2">
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+              s <= step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {s < step ? <CheckCircle className="h-4 w-4" /> : s}
+          </div>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            {s === 1 ? "Negócio" : s === 2 ? "Área" : "Publicar"}
+          </span>
+        </div>
+      ))}
+    </div>
+    <div className="w-full bg-muted rounded-full h-1.5">
+      <div
+        className="bg-primary h-1.5 rounded-full transition-all duration-500"
+        style={{ width: `${((step - 1) / 2) * 100}%` }}
+      />
+    </div>
+  </div>
+);
+
 const RegisterBusiness = () => {
-  const [submitted, setSubmitted] = useState(false);
+  const [step, setStep] = useState<Step>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const schema = user ? formSchemaNoAuth : formSchemaAuth;
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      name: "",
-      nif: "",
-      address: "",
-      cta_email: "",
-      cta_phone: "",
-      owner_name: "",
-      owner_phone: "",
-      owner_email: "",
-      category_id: "",
-      subcategory_id: "",
-      cta_whatsapp: "",
-      cta_website: "",
-      city: "",
-      password: "",
-    },
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    phone: "",
+    city: "",
+    email: "",
+    password: "",
+    categoryIds: [],
+    primaryCategoryId: "",
+    subcategoryIds: [],
   });
 
-  const selectedCategoryId = form.watch("category_id");
-  const { data: categories = [] } = useCategories();
-  const { data: subcategories = [] } = useSubcategories(selectedCategoryId || undefined);
+  // Prefill from ClaimBusiness ou localStorage
+  useEffect(() => {
+    const prefill = location.state?.prefill;
+    const stored = localStorage.getItem("registerBusinessPrefill");
+    const storedPrefill = stored ? JSON.parse(stored) : null;
+    const data = prefill || storedPrefill;
+    if (!data) return;
 
-  const onSubmit = async (values: FormValues) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: data.name || prev.name,
+      city: data.city || prev.city,
+      categoryIds: data.categoryId ? [data.categoryId] : prev.categoryIds,
+      primaryCategoryId: data.categoryId || prev.primaryCategoryId,
+    }));
+    localStorage.removeItem("registerBusinessPrefill");
+  }, []);
+
+  const { data: categories = [] } = useCategories();
+  const { data: allSubcategories = [] } = useAllSubcategories();
+  const syncCategories = useSyncBusinessCategories();
+
+  // Subcategorias filtradas pelas categorias seleccionadas
+  const subcategories = allSubcategories.filter((s) => formData.categoryIds.includes(s.category_id));
+
+  const updateField = (field: keyof FormData, value: string) => setFormData((prev) => ({ ...prev, [field]: value }));
+
+  const toggleSubcategory = (id: string) => {
+    setFormData((prev) => {
+      const current = prev.subcategoryIds;
+      if (current.includes(id)) {
+        return { ...prev, subcategoryIds: current.filter((s) => s !== id) };
+      }
+      if (current.length >= 3) return prev;
+      return { ...prev, subcategoryIds: [...current, id] };
+    });
+  };
+
+  // Reset subcategorias quando categorias mudam
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      subcategoryIds: prev.subcategoryIds.filter((subId) => {
+        const sub = allSubcategories.find((s) => s.id === subId);
+        return sub && prev.categoryIds.includes(sub.category_id);
+      }),
+    }));
+  }, [formData.categoryIds, allSubcategories]);
+
+  const handleCategoriesChange = (categoryIds: string[], primaryCategoryId: string) => {
+    setFormData((prev) => ({ ...prev, categoryIds, primaryCategoryId }));
+  };
+
+  // Validação
+  const isStep1Valid = () => {
+    const nameOk = formData.name.trim().length >= 2;
+    const phoneOk = formData.phone.trim().length >= 9;
+    const cityOk = formData.city.trim().length >= 2;
+    if (!user) {
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+      const passOk = formData.password.length >= 6;
+      return nameOk && phoneOk && cityOk && emailOk && passOk;
+    }
+    return nameOk && phoneOk && cityOk;
+  };
+
+  const isStep2Valid = () =>
+    formData.categoryIds.length > 0 && formData.primaryCategoryId !== "" && formData.subcategoryIds.length >= 1;
+
+  const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
       let currentUser = user;
 
-      // Se não está autenticado, criar conta primeiro
+      // Criar conta se não autenticado
       if (!currentUser) {
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: values.owner_email,
-          password: values.password!,
+          email: formData.email,
+          password: formData.password,
           options: {
-            data: {
-              full_name: values.owner_name,
-              phone: values.owner_phone,
-            },
+            data: { full_name: formData.name },
             emailRedirectTo: window.location.origin,
           },
         });
-
         if (signUpError) throw signUpError;
 
-        currentUser = signUpData.user;
+        const { data: sessionData } = await supabase.auth.getSession();
 
-        if (!currentUser) {
+        if (!sessionData?.session) {
+          // --- FIX: guardar na tabela pending_registrations em vez de só localStorage ---
+          const pendingPayload = {
+            name: formData.name,
+            city: formData.city,
+            cta_phone: formData.phone,
+            category_id: formData.primaryCategoryId,
+            subcategory_ids: formData.subcategoryIds,
+            owner_email: formData.email,
+          };
+
+          // Tenta guardar na BD (robusto entre dispositivos/sessões)
+          try {
+            await (supabase as any).from("pending_registrations").insert({
+              user_id: signUpData.user?.id,
+              payload: pendingPayload,
+            });
+          } catch (dbErr) {
+            console.warn("[RegisterBusiness] Fallback para localStorage:", dbErr);
+          }
+
+          // Mantém localStorage como fallback
+          localStorage.setItem("pendingBusinessRegistration", JSON.stringify(pendingPayload));
+
           toast({
             title: "Verifique o seu email",
-            description: "Enviámos um email de confirmação. Confirme para ativar a sua conta.",
+            description: "Enviámos um email de confirmação. Após confirmar, o seu negócio será criado automaticamente.",
           });
           setSubmitted(true);
           return;
         }
+        currentUser = signUpData.user;
       }
 
-      const slug = generateSlug(values.name);
+      const slug = generateSlug(formData.name);
+      const primarySubcategoryId = formData.subcategoryIds[0];
 
-      // Use server-side RPC to create business + business_users atomically
-      const { data: businessId, error: rpcError } = await supabase.rpc(
-        "register_business_with_owner" as any,
-        {
-          p_name: values.name,
-          p_slug: slug,
-          p_nif: values.nif,
-          p_address: values.address,
-          p_city: values.city,
-          p_cta_email: values.cta_email,
-          p_cta_phone: values.cta_phone,
-          p_owner_name: values.owner_name,
-          p_owner_phone: values.owner_phone,
-          p_owner_email: values.owner_email,
-          p_category_id: values.category_id,
-          p_subcategory_id: values.subcategory_id,
-          p_cta_whatsapp: values.cta_whatsapp || null,
-          p_cta_website: values.cta_website || null,
-          p_registration_source: "register_form",
-        }
-      );
+      const { data: businessId, error: rpcError } = await supabase.rpc("register_business_with_owner" as any, {
+        p_name: formData.name,
+        p_slug: slug,
+        p_city: formData.city,
+        p_cta_phone: formData.phone,
+        p_category_id: formData.primaryCategoryId,
+        p_subcategory_id: primarySubcategoryId,
+        p_owner_email: currentUser?.email || formData.email,
+        p_registration_source: "onboarding_wizard",
+      });
 
       if (rpcError) throw rpcError;
 
-      toast({
-        title: "Negócio registado!",
-        description: "O seu negócio foi submetido e está pendente de validação.",
-      });
-      setSubmitted(true);
+      // Categorias na junction table
+      if (businessId) {
+        await syncCategories.mutateAsync({
+          businessId,
+          categoryIds: formData.categoryIds,
+          primaryCategoryId: formData.primaryCategoryId,
+        });
+      }
 
-    } catch (err: any) {
+      // Subcategorias adicionais
+      if (businessId && formData.subcategoryIds.length > 1) {
+        const additionalRows = formData.subcategoryIds.slice(1).map((subId) => ({
+          business_id: businessId,
+          subcategory_id: subId,
+        }));
+        await supabase.from("business_subcategories").insert(additionalRows);
+      }
+
+      // Afiliado
+      const refCode = localStorage.getItem("affiliate_ref");
+      if (refCode && businessId) {
+        try {
+          await supabase.rpc("link_affiliate_referral" as any, {
+            p_ref_code: refCode,
+            p_business_id: businessId,
+            p_business_name: formData.name,
+          });
+        } catch (e) {
+          console.error("Failed to link affiliate referral:", e);
+        }
+        localStorage.removeItem("affiliate_ref");
+      }
+
+      localStorage.setItem("onboarding_complete", "true");
+
       toast({
-        title: "Erro",
-        description: err.message || "Não foi possível registar o negócio.",
+        title: "🎉 Negócio registado!",
+        description: "Estamos a verificar os seus dados. Complete o perfil no dashboard!",
+      });
+
+      navigate("/business-dashboard");
+    } catch (err: any) {
+      const detail = err?.details || err?.hint || err?.message || "Não foi possível registar o negócio.";
+      const code = err?.code ? ` (${err.code})` : "";
+      toast({
+        title: "Erro ao registar negócio",
+        description: `${detail}${code}`,
         variant: "destructive",
       });
+      console.error("[RegisterBusiness] error:", err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Ecrã de confirmação de email
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-16 text-center">
-          <CheckCircle className="mx-auto h-16 w-16 text-primary mb-4" />
-          <h1 className="text-2xl font-bold text-foreground mb-2">Negócio Registado!</h1>
-          <p className="text-muted-foreground mb-6">
-            {!user
-              ? "Enviámos um email de confirmação. Após confirmar, o seu negócio será validado pela equipa."
-              : "O seu negócio foi submetido e está pendente de validação pela nossa equipa."}
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center space-y-4">
+          <CheckCircle className="mx-auto h-16 w-16 text-primary" />
+          <h1 className="text-2xl font-bold text-foreground">Quase lá!</h1>
+          <p className="text-muted-foreground">
+            Enviámos um email de confirmação para <strong>{formData.email}</strong>. Após confirmar, o seu negócio será
+            criado automaticamente.
           </p>
-          <Button onClick={() => navigate("/")} variant="outline">
+          <Button variant="outline" onClick={() => navigate("/")}>
             Voltar ao início
           </Button>
-        </main>
-        <Footer />
+        </div>
       </div>
     );
   }
 
+  const selectedSubcategoryNames = formData.subcategoryIds
+    .map((id) => subcategories.find((s) => s.id === id)?.name)
+    .filter(Boolean);
+
+  const selectedCategoryNames = formData.categoryIds
+    .map((id) => categories.find((c) => c.id === id)?.name)
+    .filter(Boolean);
+
+  const maskPhone = (phone: string) => {
+    if (phone.length < 3) return phone;
+    return phone[0] + "** *** " + phone.slice(-3);
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="text-center mb-8">
-          <Building2 className="mx-auto h-12 w-12 text-primary mb-3" />
-          <h1 className="text-2xl font-bold text-foreground">Registar Novo Negócio</h1>
-          <p className="text-muted-foreground mt-1">
-            Preencha os dados do seu negócio para o adicionar à Pede Direto.
-          </p>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <div className="border-b border-border bg-card">
+        <div className="container flex items-center justify-between py-3">
+          <img src={logo} alt="Pede Direto" className="h-8" />
+          {step > 1 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStep((step - 1) as Step)}
+              className="text-muted-foreground"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Voltar
+            </Button>
+          )}
         </div>
+      </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Dados do Negócio */}
-            <div className="bg-card rounded-xl border border-border p-6 space-y-4">
-              <h2 className="font-semibold text-foreground">Dados do Negócio</h2>
+      <main className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <ProgressBar step={step} />
 
-              <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Negócio *</FormLabel>
-                  <FormControl><Input placeholder="Ex: Restaurante O Manel" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <FormField control={form.control} name="nif" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>NIF *</FormLabel>
-                  <FormControl><Input placeholder="123456789" maxLength={9} {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="address" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Morada *</FormLabel>
-                    <FormControl><Input placeholder="Rua..." {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="city" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cidade *</FormLabel>
-                    <FormControl><Input placeholder="Lisboa" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+          {/* ═══════════ STEP 1 ═══════════ */}
+          {step === 1 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-foreground">O seu negócio</h1>
+                <p className="text-muted-foreground mt-1">Apenas 3 campos para começar</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="category_id" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="subcategory_id" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subcategoria *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCategoryId}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {subcategories.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Nome do negócio *</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => updateField("name", e.target.value)}
+                    placeholder="Ex: Restaurante O Manel"
+                    className="h-12 text-base"
+                    autoFocus
+                  />
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="cta_email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email do Negócio *</FormLabel>
-                    <FormControl><Input type="email" placeholder="email@negocio.pt" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="cta_phone" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefone do Negócio *</FormLabel>
-                    <FormControl><Input placeholder="912345678" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Telefone *</Label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => updateField("phone", e.target.value)}
+                    placeholder="912 345 678"
+                    type="tel"
+                    className="h-12 text-base"
+                    maxLength={15}
+                  />
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="cta_whatsapp" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>WhatsApp</FormLabel>
-                    <FormControl><Input placeholder="912345678" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="cta_website" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Website</FormLabel>
-                    <FormControl><Input placeholder="https://..." {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-            </div>
-
-            {/* Dados do Responsável */}
-            <div className="bg-card rounded-xl border border-border p-6 space-y-4">
-              <h2 className="font-semibold text-foreground">Dados do Responsável</h2>
-
-              <FormField control={form.control} name="owner_name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome *</FormLabel>
-                  <FormControl><Input placeholder="Nome completo" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="owner_phone" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefone *</FormLabel>
-                    <FormControl><Input placeholder="912345678" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="owner_email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email {!user ? "(será o seu email de acesso) *" : "*"}</FormLabel>
-                    <FormControl><Input type="email" placeholder="email@pessoal.pt" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Cidade *</Label>
+                  <CityAutocomplete
+                    value={formData.city}
+                    onChange={(v) => updateField("city", v)}
+                    placeholder="Ex: Lisboa"
+                    className="h-12 text-base"
+                  />
+                </div>
               </div>
 
               {!user && (
-                <FormField control={form.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password de acesso *</FormLabel>
-                    <FormControl><Input type="password" placeholder="Mínimo 6 caracteres" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              )}
-            </div>
-
-            <Button type="submit" disabled={isSubmitting} className="w-full btn-cta-primary">
-              {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  A registar...
+                  <div className="relative">
+                    <Separator />
+                    <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-3 text-xs text-muted-foreground whitespace-nowrap">
+                      Criar conta para gerir o seu negócio
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Email *</Label>
+                      <Input
+                        value={formData.email}
+                        onChange={(e) => updateField("email", e.target.value)}
+                        placeholder="email@exemplo.pt"
+                        type="email"
+                        className="h-12 text-base"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Password *</Label>
+                      <Input
+                        value={formData.password}
+                        onChange={(e) => updateField("password", e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
+                        type="password"
+                        className="h-12 text-base"
+                      />
+                    </div>
+                  </div>
                 </>
-              ) : (
-                "Registar Negócio"
               )}
-            </Button>
-          </form>
-        </Form>
+
+              <Button
+                onClick={() => setStep(2)}
+                disabled={!isStep1Valid()}
+                className="w-full h-12 text-base font-semibold"
+              >
+                Continuar
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          )}
+
+          {/* ═══════════ STEP 2 ═══════════ */}
+          {step === 2 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-foreground">Área de atuação</h1>
+                <p className="text-muted-foreground mt-1">Em que área trabalha o seu negócio?</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Categorias *</Label>
+                  <MultiCategorySelector
+                    selectedCategoryIds={formData.categoryIds}
+                    primaryCategoryId={formData.primaryCategoryId}
+                    onChange={handleCategoriesChange}
+                  />
+                </div>
+
+                {formData.categoryIds.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Subcategorias * <span className="text-muted-foreground font-normal">(até 3)</span>
+                    </Label>
+
+                    {formData.subcategoryIds.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {formData.subcategoryIds.map((id) => {
+                          const sub = subcategories.find((s) => s.id === id);
+                          if (!sub) return null;
+                          return (
+                            <Badge
+                              key={id}
+                              variant="default"
+                              className="px-3 py-1.5 text-sm gap-1.5 cursor-pointer"
+                              onClick={() => toggleSubcategory(id)}
+                            >
+                              {sub.name}
+                              <X className="h-3 w-3" />
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="border border-border rounded-xl max-h-56 overflow-y-auto divide-y divide-border">
+                      {formData.categoryIds.map((catId) => {
+                        const cat = categories.find((c) => c.id === catId);
+                        const catSubs = subcategories.filter((s) => s.category_id === catId);
+                        if (catSubs.length === 0) return null;
+                        return (
+                          <div key={catId}>
+                            {formData.categoryIds.length > 1 && (
+                              <div className="px-4 py-1.5 bg-muted/50 text-xs font-semibold text-muted-foreground">
+                                {cat?.name}
+                              </div>
+                            )}
+                            {catSubs.map((sub) => {
+                              const isSelected = formData.subcategoryIds.includes(sub.id);
+                              const isDisabled = !isSelected && formData.subcategoryIds.length >= 3;
+                              return (
+                                <button
+                                  key={sub.id}
+                                  type="button"
+                                  onClick={() => !isDisabled && toggleSubcategory(sub.id)}
+                                  disabled={isDisabled}
+                                  className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between ${
+                                    isSelected
+                                      ? "bg-primary/10 text-primary font-medium"
+                                      : isDisabled
+                                        ? "opacity-40 cursor-not-allowed"
+                                        : "hover:bg-muted"
+                                  }`}
+                                >
+                                  <span>{sub.name}</span>
+                                  {isSelected && <CheckCircle className="h-4 w-4 text-primary" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                      {subcategories.length === 0 && (
+                        <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />A carregar subcategorias...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                onClick={() => setStep(3)}
+                disabled={!isStep2Valid()}
+                className="w-full h-12 text-base font-semibold"
+              >
+                Ver preview
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          )}
+
+          {/* ═══════════ STEP 3 ═══════════ */}
+          {step === 3 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-foreground">Pronto para publicar!</h1>
+                <p className="text-muted-foreground mt-1">É assim que o seu negócio vai aparecer</p>
+              </div>
+
+              <div className="bg-card rounded-2xl border-2 border-primary/20 shadow-lg p-6 space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl font-bold text-primary">{formData.name.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-bold text-foreground truncate">{formData.name}</h2>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {formData.city}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedSubcategoryNames.map((name) => (
+                    <Badge key={name} variant="secondary" className="text-xs">
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Phone className="h-4 w-4" />
+                  <span>{maskPhone(formData.phone)}</span>
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  <Building2 className="h-3 w-3 inline mr-1" />
+                  {selectedCategoryNames.join(" · ")}
+                </div>
+              </div>
+
+              <p className="text-center text-xs text-muted-foreground">
+                Pode completar o perfil com logo, descrição e mais detalhes após publicar.
+              </p>
+
+              <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full h-14 text-base font-bold">
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />A publicar...
+                  </>
+                ) : (
+                  "🚀 Publicar o meu negócio agora"
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
       </main>
-      <Footer />
     </div>
   );
 };
