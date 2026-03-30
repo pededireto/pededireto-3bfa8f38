@@ -1,3 +1,21 @@
+-- Garantir que tabelas existem antes dos indices
+CREATE TABLE IF NOT EXISTS public.search_intelligence_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  query TEXT,
+  user_id UUID REFERENCES auth.users(id),
+  business_id UUID REFERENCES public.businesses(id),
+  results_count INT DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.analytics_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  user_id UUID REFERENCES auth.users(id),
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- 1.1 Feature Flag
 ALTER TABLE plan_rules 
@@ -228,3 +246,4 @@ BEGIN
   RETURN result;
 END;
 $$;
+

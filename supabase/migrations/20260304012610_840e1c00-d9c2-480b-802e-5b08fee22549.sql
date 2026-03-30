@@ -1,3 +1,28 @@
+CREATE TABLE IF NOT EXISTS public.cities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  region TEXT,
+  country TEXT DEFAULT 'PT',
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS public.business_partner_memberships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES public.partner_organizations(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'active',
+  joined_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(business_id, organization_id)
+);
+-- Garantir tabela existe
+CREATE TABLE IF NOT EXISTS public.business_analytics_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  user_id UUID REFERENCES auth.users(id),
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- ============================================================
 -- FIX 1: Enable RLS on all 19 unprotected tables
@@ -209,3 +234,6 @@ GRANT SELECT ON public.businesses_public TO anon, authenticated;
 GRANT SELECT ON public.top_rated_businesses TO anon, authenticated;
 GRANT SELECT ON public.business_dashboard_summary TO authenticated;
 GRANT SELECT ON public.admin_unread_alerts TO authenticated;
+
+
+

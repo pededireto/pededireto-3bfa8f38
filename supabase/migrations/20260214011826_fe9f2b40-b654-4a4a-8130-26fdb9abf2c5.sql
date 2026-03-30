@@ -1,3 +1,35 @@
+-- Criar tabelas em falta
+CREATE TABLE IF NOT EXISTS public.business_analytics_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  user_id UUID REFERENCES auth.users(id),
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.intent_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.search_logs_intelligent (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  query TEXT,
+  user_id UUID REFERENCES auth.users(id),
+  results_count INT DEFAULT 0,
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.user_search_context (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  context JSONB,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- =============================================
 -- FIX 1: Enable RLS on 5 tables missing it
@@ -209,3 +241,4 @@ SELECT input_text, count(*) AS frequency
 FROM search_intelligence_logs
 GROUP BY input_text
 ORDER BY count(*) DESC;
+

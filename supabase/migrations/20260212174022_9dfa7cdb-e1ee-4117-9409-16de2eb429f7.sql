@@ -1,3 +1,14 @@
+-- Garantir que revenue_events existe antes de ativar RLS
+CREATE TABLE IF NOT EXISTS public.revenue_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  plan_id UUID,
+  amount NUMERIC NOT NULL DEFAULT 0,
+  assigned_user_id UUID REFERENCES public.profiles(id),
+  triggered_by UUID REFERENCES public.profiles(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- =============================================
 -- FASE 1: Tabelas, colunas e RLS
@@ -235,3 +246,4 @@ BEGIN
   RETURN v_event_id;
 END;
 $$;
+

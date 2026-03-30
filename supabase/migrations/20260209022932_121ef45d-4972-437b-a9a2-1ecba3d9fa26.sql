@@ -240,7 +240,7 @@ END;
 $function$;
 
 -- Create storage bucket for site assets (logos, mascot)
-INSERT INTO storage.buckets (id, name, public) VALUES ('site-assets', 'site-assets', true);
+INSERT INTO storage.buckets (id, name, public) VALUES ('site-assets', 'site-assets', true) ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY "Anyone can view site assets" ON storage.objects
   FOR SELECT USING (bucket_id = 'site-assets');

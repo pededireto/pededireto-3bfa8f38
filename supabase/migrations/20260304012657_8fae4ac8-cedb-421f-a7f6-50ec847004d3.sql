@@ -1,3 +1,7 @@
+-- Converter coluna status para match_status
+ALTER TABLE public.request_business_matches ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.request_business_matches ALTER COLUMN status TYPE public.match_status USING status::public.match_status;
+ALTER TABLE public.request_business_matches ALTER COLUMN status SET DEFAULT 'pendente'::public.match_status;
 
 -- Convert remaining 6 views to security_invoker
 
@@ -100,3 +104,5 @@ GRANT SELECT ON public.popular_templates TO authenticated;
 GRANT SELECT ON public.support_tickets_with_context TO authenticated;
 GRANT SELECT ON public.tickets_by_department TO authenticated;
 GRANT SELECT ON public.tickets_sla_violations TO authenticated;
+
+

@@ -1,3 +1,8 @@
+-- Garantir que colunas existem antes das politicas
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS owner_email text;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS owner_name text;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS owner_phone text;
+
 
 -- ============================================================
 -- Part A: business_highlights
@@ -145,7 +150,7 @@ CREATE TRIGGER update_plan_rules_updated_at
 -- ============================================================
 -- Part D: business_notifications
 -- ============================================================
-CREATE TABLE public.business_notifications (
+CREATE TABLE IF NOT EXISTS public.business_notifications (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
   type text NOT NULL,
@@ -209,3 +214,5 @@ INSERT INTO public.site_settings (key, value) VALUES
   ('highlights_sort_method', 'manual'),
   ('highlights_filter_by_date', 'false')
 ON CONFLICT (key) DO NOTHING;
+
+
