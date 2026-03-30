@@ -1,3 +1,6 @@
+-- Garantir que a coluna existe antes de criar a política
+ALTER TABLE public.businesses 
+  ADD COLUMN IF NOT EXISTS registration_source text DEFAULT 'self_service';
 
 -- Allow anyone to insert businesses with self_service registration
 CREATE POLICY "Anyone can register a business via self service"
