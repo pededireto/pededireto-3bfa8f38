@@ -302,8 +302,7 @@ const CsBusinesses = () => {
         filterStatus === "all" ? true :
         filterStatus === "active" ? status === "active" :
         filterStatus === "inactive" ? status === "inactive" :
-        filterStatus === "active_unclaimed" ? status === "active_unclaimed" :
-        b.subscription_status === "expired";
+        filterStatus === "expired" ? b.subscription_status === "expired" : true;
       const matchCategory = !filterCategory || filterCategory === "all" || b.category_id === filterCategory;
       const matchSubcategory =
         !filterSubcategory ||

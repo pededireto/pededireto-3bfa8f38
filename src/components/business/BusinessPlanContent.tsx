@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getBusinessStatusLabel, getBusinessStatusVariant } from "@/utils/businessStatus";
 import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
