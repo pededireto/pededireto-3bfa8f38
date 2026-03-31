@@ -522,7 +522,11 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
           });
         } catch (catErr: any) {
           console.error("[BusinessOwnerEditForm] Erro ao sincronizar categorias:", catErr);
-          toast({ title: "Aviso: erro ao sincronizar categorias", description: catErr?.message, variant: "destructive" });
+          toast({
+            title: "Aviso: erro ao sincronizar categorias",
+            description: catErr?.message,
+            variant: "destructive",
+          });
         }
       }
 
@@ -534,7 +538,11 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
           });
         } catch (subErr: any) {
           console.error("[BusinessOwnerEditForm] Erro ao sincronizar subcategorias:", subErr);
-          toast({ title: "Aviso: erro ao sincronizar subcategorias", description: subErr?.message, variant: "destructive" });
+          toast({
+            title: "Aviso: erro ao sincronizar subcategorias",
+            description: subErr?.message,
+            variant: "destructive",
+          });
         }
       }
 
@@ -596,7 +604,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
               </p>
             </div>
             <div className="space-y-2">
-              <Label>URL do logótipo</Label>
+              <Label>URL do logótipo - Colocar Link de uma imagem sem ser o url de uma imagem facebook</Label>
               <Input
                 value={form.logo_url}
                 onChange={(e) => set("logo_url", e.target.value)}
@@ -616,39 +624,39 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
 
         {/* 2. Presença Pública */}
         <Section title="Presença Pública" icon={Globe} badge="Gratuito · START">
-           <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Categorias</Label>
-                <MultiCategorySelector
-                  selectedCategoryIds={form.category_ids}
-                  primaryCategoryId={form.primary_category_id}
-                  onChange={(ids, primary) => {
-                    setForm((prev) => ({
-                      ...prev,
-                      category_ids: ids,
-                      primary_category_id: primary,
-                      category_id: primary,
-                      subcategory_ids: prev.subcategory_ids.filter((subId) => {
-                        const sub = allSubcategories.find((s) => s.id === subId);
-                        return sub && ids.includes(sub.category_id);
-                      }),
-                    }));
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Alcance</Label>
-                <Select value={form.alcance} onValueChange={(v: any) => set("alcance", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="local">Local</SelectItem>
-                    <SelectItem value="nacional">Nacional</SelectItem>
-                    <SelectItem value="hibrido">Híbrido</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Categorias</Label>
+              <MultiCategorySelector
+                selectedCategoryIds={form.category_ids}
+                primaryCategoryId={form.primary_category_id}
+                onChange={(ids, primary) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    category_ids: ids,
+                    primary_category_id: primary,
+                    category_id: primary,
+                    subcategory_ids: prev.subcategory_ids.filter((subId) => {
+                      const sub = allSubcategories.find((s) => s.id === subId);
+                      return sub && ids.includes(sub.category_id);
+                    }),
+                  }));
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Alcance</Label>
+              <Select value={form.alcance} onValueChange={(v: any) => set("alcance", v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="local">Local</SelectItem>
+                  <SelectItem value="nacional">Nacional</SelectItem>
+                  <SelectItem value="hibrido">Híbrido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {form.category_ids.length > 0 && filteredSubcategories.length > 0 && (
               <div className="space-y-2">
                 <Label>Subcategorias</Label>
