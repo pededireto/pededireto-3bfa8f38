@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from "react";
+import { getBusinessStatusLabel, getBusinessStatusVariant, getBusinessStatusEmoji } from "@/utils/businessStatus";
 import { useAllBusinesses } from "@/hooks/useBusinesses";
 import { useBusinessAlerts } from "@/hooks/useBusinessAlerts";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
