@@ -136,8 +136,8 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
               <h2 className="text-xl font-bold">{business.name}</h2>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 {business.city && <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{business.city}</span>}
-                <Badge variant={business.is_active ? "default" : "secondary"} className="text-xs">
-                  {business.is_active ? "✅ Activo" : "⚠️ Inactivo"}
+                <Badge variant={getBusinessStatusVariant(business)} className="text-xs">
+                  {getBusinessStatusEmoji(business)} {getBusinessStatusLabel(business)}
                 </Badge>
                 <Badge variant={business.subscription_status === "active" ? "default" : "secondary"} className="text-xs">
                   {plan?.name || "Gratuito"}
