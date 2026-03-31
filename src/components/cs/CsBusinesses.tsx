@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from "react";
+import { getBusinessStatusLabel, getBusinessStatusVariant, getBusinessStatusEmoji } from "@/utils/businessStatus";
 import { useAllBusinesses } from "@/hooks/useBusinesses";
 import { useBusinessAlerts } from "@/hooks/useBusinessAlerts";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
@@ -135,8 +136,8 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
               <h2 className="text-xl font-bold">{business.name}</h2>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 {business.city && <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{business.city}</span>}
-                <Badge variant={business.is_active ? "default" : "secondary"} className="text-xs">
-                  {business.is_active ? "✅ Activo" : "⚠️ Inactivo"}
+                <Badge variant={getBusinessStatusVariant(business)} className="text-xs">
+                  {getBusinessStatusEmoji(business)} {getBusinessStatusLabel(business)}
                 </Badge>
                 <Badge variant={business.subscription_status === "active" ? "default" : "secondary"} className="text-xs">
                   {plan?.name || "Gratuito"}
@@ -197,8 +198,8 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
             <div className="bg-muted/40 rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-xs text-muted-foreground block">Plano</span>{plan?.name || "Gratuito"}</div>
               <div><span className="text-xs text-muted-foreground block">Estado</span>
-                <Badge variant={business.subscription_status === "active" ? "default" : "secondary"} className="text-xs mt-0.5">
-                  {business.subscription_status === "active" ? "Activo" : business.subscription_status === "expired" ? "Expirado" : "Inactivo"}
+                <Badge variant={getBusinessStatusVariant(business)} className="text-xs mt-0.5">
+                  {getBusinessStatusLabel(business)}
                 </Badge>
               </div>
               <div><span className="text-xs text-muted-foreground block">Início</span>{business.subscription_start_date || "—"}</div>
@@ -294,11 +295,14 @@ const CsBusinesses = () => {
     const list = businesses.filter((b: any) => {
       const matchSearch = b.name.toLowerCase().includes(search.toLowerCase()) ||
         b.city?.toLowerCase().includes(search.toLowerCase());
+      const status = b.is_active
+        ? (b.claim_status === "claimed" || b.claim_status === "verified" ? "active" : "active_unclaimed")
+        : "inactive";
       const matchStatus =
         filterStatus === "all" ? true :
-        filterStatus === "active" ? b.is_active && b.subscription_status === "active" :
-        filterStatus === "inactive" ? !b.is_active :
-        b.subscription_status === "expired";
+        filterStatus === "active" ? status === "active" :
+        filterStatus === "inactive" ? status === "inactive" :
+        filterStatus === "expired" ? b.subscription_status === "expired" : true;
       const matchCategory = !filterCategory || filterCategory === "all" || b.category_id === filterCategory;
       const matchSubcategory =
         !filterSubcategory ||
@@ -427,8 +431,8 @@ const CsBusinesses = () => {
                         {business.ranking_score?.toFixed(1) ?? "—"}
                       </Badge>
                     )}
-                    <Badge variant={business.is_active ? "default" : "secondary"} className="text-xs hidden sm:flex">
-                      {business.is_active ? "Activo" : "Inactivo"}
+                    <Badge variant={getBusinessStatusVariant(business)} className="text-xs hidden sm:flex">
+                      {getBusinessStatusLabel(business)}
                     </Badge>
                     {!isFreePlan && (
                       <Badge variant="outline" className="text-xs hidden sm:flex border-primary/40 text-primary">

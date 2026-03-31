@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getBusinessStatusLabel, getBusinessStatusVariant } from "@/utils/businessStatus";
 import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useCommercialPlans } from "@/hooks/useCommercialPlans";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
@@ -86,8 +87,8 @@ const BusinessPlanContent = ({ business }: Props) => {
         <div className="flex items-center gap-3 mb-4">
           <CreditCard className="h-6 w-6 text-primary" />
           <h2 className="text-xl font-bold">{currentPlan?.name || "Gratuito"}</h2>
-          <Badge variant={business.subscription_status === "active" ? "default" : "secondary"}>
-            {business.subscription_status === "active" ? "Ativo" : "Inativo"}
+          <Badge variant={getBusinessStatusVariant(business)} >
+            {getBusinessStatusLabel(business)}
           </Badge>
         </div>
         {currentPlan && (
