@@ -1,3 +1,12 @@
+CREATE TABLE IF NOT EXISTS public.image_prompts_library (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT,
+  prompt TEXT NOT NULL,
+  category TEXT,
+  tags TEXT[],
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 CREATE TABLE IF NOT EXISTS public.internal_notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -437,6 +446,7 @@ CREATE TABLE IF NOT EXISTS public.revenue_events (
   triggered_by UUID REFERENCES public.profiles(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
 
 
 
