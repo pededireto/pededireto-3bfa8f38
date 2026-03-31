@@ -556,9 +556,9 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     if (editCategoryIds && business) {
       setForm((prev) => ({
         ...prev,
-        category_ids: editCategoryIds.map(c => c.category_id),
-        primary_category_id: editCategoryIds.find(c => c.is_primary)?.category_id || business.category_id || "",
-        category_id: editCategoryIds.find(c => c.is_primary)?.category_id || business.category_id || "",
+        category_ids: editCategoryIds.map((c) => c.category_id),
+        primary_category_id: editCategoryIds.find((c) => c.is_primary)?.category_id || business.category_id || "",
+        category_id: editCategoryIds.find((c) => c.is_primary)?.category_id || business.category_id || "",
       }));
     }
   }, [editCategoryIds, business]);
@@ -586,7 +586,8 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
     }
   }, [existingModuleValues]);
   const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
-  const activeCategoryIds = form.category_ids.length > 0 ? form.category_ids : (form.category_id ? [form.category_id] : []);
+  const activeCategoryIds =
+    form.category_ids.length > 0 ? form.category_ids : form.category_id ? [form.category_id] : [];
   const filteredSubcategories = allSubcategories.filter((s) => activeCategoryIds.includes(s.category_id));
   const toggleSubcategory = (subId: string) => {
     setForm((prev) => ({
@@ -730,7 +731,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
           plan_id: form.plan_id || null,
           description: form.description || null,
           logo_url: form.logo_url || null,
-           city: form.primary_city || form.city || null,
+          city: form.primary_city || form.city || null,
           zone: form.zone || null,
           alcance: form.alcance,
           public_address: form.public_address || null,
@@ -879,7 +880,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             )}
           </div>
           <div className="space-y-2">
-            <Label>URL do logótipo</Label>
+            <Label>URL do logótipo - Colocar Link de uma imagem sem ser o url de uma imagem facebook</Label>
             <Input value={form.logo_url} onChange={(e) => set("logo_url", e.target.value)} placeholder="https://..." />
             {form.logo_url && (
               <img
@@ -899,15 +900,19 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             <div className="space-y-2">
               <Label>Categorias</Label>
               <MultiCategorySelector
-                selectedCategoryIds={form.category_ids.length > 0 ? form.category_ids : (form.category_id ? [form.category_id] : [])}
+                selectedCategoryIds={
+                  form.category_ids.length > 0 ? form.category_ids : form.category_id ? [form.category_id] : []
+                }
                 primaryCategoryId={form.primary_category_id || form.category_id}
-                onChange={(ids, primaryId) => setForm((prev) => ({
-                  ...prev,
-                  category_ids: ids,
-                  primary_category_id: primaryId,
-                  category_id: primaryId,
-                  subcategory_ids: [],
-                }))}
+                onChange={(ids, primaryId) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    category_ids: ids,
+                    primary_category_id: primaryId,
+                    category_id: primaryId,
+                    subcategory_ids: [],
+                  }))
+                }
               />
             </div>
             <div className="space-y-2">
