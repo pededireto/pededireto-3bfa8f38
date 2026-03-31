@@ -23,23 +23,31 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Verify user identity via getUser (server-side validation)
     const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await callerClient.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Não autenticado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const caller = { id: claimsData.claims.sub as string };
+    const caller = { id: user.id };
 
-    const { data: adminCheck } = await callerClient.rpc("is_admin");
-    if (!adminCheck) {
+    // Verify admin role directly from database using service role client
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const { data: roleCheck } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .in("role", ["admin", "super_admin"])
+      .maybeSingle();
+
+    if (!roleCheck) {
       return new Response(JSON.stringify({ error: "Apenas administradores podem gerir a equipa" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -47,7 +55,6 @@ Deno.serve(async (req) => {
     }
 
     const { action, email, password, full_name, user_id, role } = await req.json();
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     if (action === "create") {
       if (!email || !password) {

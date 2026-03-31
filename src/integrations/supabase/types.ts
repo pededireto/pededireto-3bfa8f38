@@ -7858,6 +7858,10 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_business_member: { Args: { p_business_id: string }; Returns: boolean }
+      is_business_member_direct: {
+        Args: { p_business_id: string }
+        Returns: boolean
+      }
       is_commercial: { Args: never; Returns: boolean }
       is_commercial_or_admin: { Args: { _user_id: string }; Returns: boolean }
       link_affiliate_referral: {
