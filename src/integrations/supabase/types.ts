@@ -5231,6 +5231,30 @@ export type Database = {
           },
         ]
       }
+      pending_registrations: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       plan_changes: {
         Row: {
           changed_by: string | null
