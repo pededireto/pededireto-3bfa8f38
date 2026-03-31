@@ -1161,7 +1161,7 @@ const BusinessFileCard = ({ business, categories, isAdmin, mode, onSaved, onCanc
             <p className="text-xs text-muted-foreground">Aparecem como botões de destaque na página pública.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>📅 Reservar Agora</Label>
+                <Label>📅 Reservar/Agendar</Label>
                 <Input
                   value={(form as any).cta_booking_url}
                   onChange={(e) => set("cta_booking_url", e.target.value)}

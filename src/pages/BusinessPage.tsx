@@ -326,7 +326,9 @@ const BusinessPage = () => {
     }
   }, [business?.id]);
 
-  const handleCtaClick = (type: "whatsapp" | "phone" | "website" | "email" | "app" | "instagram" | "facebook" | "reservation" | "order") => {
+  const handleCtaClick = (
+    type: "whatsapp" | "phone" | "website" | "email" | "app" | "instagram" | "facebook" | "reservation" | "order",
+  ) => {
     if (!business) return;
     trackEvent.mutate({
       event_type: `click_${type}` as any,
@@ -350,9 +352,7 @@ const BusinessPage = () => {
 
   const getAlcanceLabel = () => {
     if (!business) return "";
-    const cityNames = businessCities.length > 1
-      ? businessCities.map((c) => c.city_name).join(", ")
-      : null;
+    const cityNames = businessCities.length > 1 ? businessCities.map((c) => c.city_name).join(", ") : null;
 
     switch (business.alcance) {
       case "nacional":
@@ -361,14 +361,14 @@ const BusinessPage = () => {
         return cityNames
           ? `Atende em ${cityNames}`
           : business.city
-          ? `Atende em ${business.city}`
-          : "Atendimento local";
+            ? `Atende em ${business.city}`
+            : "Atendimento local";
       case "hibrido":
         return cityNames
           ? `${cityNames} + envios nacionais`
           : business.city
-          ? `${business.city} + envios nacionais`
-          : "Local + envios nacionais";
+            ? `${business.city} + envios nacionais`
+            : "Local + envios nacionais";
       default:
         return "";
     }
@@ -589,7 +589,9 @@ const BusinessPage = () => {
                       </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-primary/10 p-4">
-                        <span className="text-2xl md:text-4xl font-bold text-primary/30 text-center leading-tight">{business.name}</span>
+                        <span className="text-2xl md:text-4xl font-bold text-primary/30 text-center leading-tight">
+                          {business.name}
+                        </span>
                       </div>
                     )}
                     {ribbonBadges.map((slug) => {
@@ -907,7 +909,7 @@ const BusinessPage = () => {
                         }}
                       >
                         <CalendarCheck className="w-5 h-5" />
-                        Reservar Agora
+                        Reservar/Agendar
                       </Button>
                     )}
                     {ctaOrderUrl && (
@@ -987,7 +989,10 @@ const BusinessPage = () => {
                           <Button
                             variant="outline"
                             className="w-full justify-center text-base hover:border-[#E1306C] hover:text-[#E1306C] transition-colors"
-                            onClick={() => { handleCtaClick("instagram"); window.open(instagramUrl, "_blank"); }}
+                            onClick={() => {
+                              handleCtaClick("instagram");
+                              window.open(instagramUrl, "_blank");
+                            }}
                           >
                             <Instagram className="w-5 h-5" />
                             Ver Instagram
@@ -997,7 +1002,10 @@ const BusinessPage = () => {
                           <Button
                             variant="outline"
                             className="w-full justify-center text-base hover:border-[#1877F2] hover:text-[#1877F2] transition-colors"
-                            onClick={() => { handleCtaClick("facebook"); window.open(facebookUrl, "_blank"); }}
+                            onClick={() => {
+                              handleCtaClick("facebook");
+                              window.open(facebookUrl, "_blank");
+                            }}
                           >
                             <Facebook className="w-5 h-5" />
                             Ver Facebook

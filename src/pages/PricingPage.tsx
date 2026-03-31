@@ -76,7 +76,7 @@ const TIERS: TierConfig[] = [
     features: [
       "Galeria de fotos até 6",
       "Vídeo no perfil (logótipo integrado no vídeo quando activo)",
-      "Reservar Agora + Pedir Online",
+      "Reservar/Agendar + Pedir Online",
       "Promoções (1 foto com promoções em vigor)",
       "Analytics PRO & Intelligence Center",
       "Destaque na subcategoria",
@@ -144,26 +144,25 @@ const PricingPage = () => {
               Escolha o plano certo para o seu negócio
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Apareça nos resultados, receba pedidos e acompanhe as métricas do seu negócio.
-              Comece grátis e evolua quando quiser.
+              Apareça nos resultados, receba pedidos e acompanhe as métricas do seu negócio. Comece grátis e evolua
+              quando quiser.
             </p>
 
             {/* Billing Toggle */}
             <div className="flex items-center justify-center gap-3 pt-4">
-              <span className={`text-sm font-medium ${billing === "monthly" ? "text-foreground" : "text-muted-foreground"}`}>
+              <span
+                className={`text-sm font-medium ${billing === "monthly" ? "text-foreground" : "text-muted-foreground"}`}
+              >
                 Mensal
               </span>
-              <Switch
-                checked={billing === "annual"}
-                onCheckedChange={(v) => setBilling(v ? "annual" : "monthly")}
-              />
-              <span className={`text-sm font-medium ${billing === "annual" ? "text-foreground" : "text-muted-foreground"}`}>
+              <Switch checked={billing === "annual"} onCheckedChange={(v) => setBilling(v ? "annual" : "monthly")} />
+              <span
+                className={`text-sm font-medium ${billing === "annual" ? "text-foreground" : "text-muted-foreground"}`}
+              >
                 Anual
               </span>
               {billing === "annual" && (
-                <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
-                  1 mês grátis
-                </Badge>
+                <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">1 mês grátis</Badge>
               )}
             </div>
           </div>
@@ -211,9 +210,7 @@ const PricingPage = () => {
                             <span className="text-sm font-normal text-muted-foreground">/mês</span>
                           </div>
                           {billing === "annual" && tier.priceAnnual && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Facturado €{tier.priceAnnual}/ano
-                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">Facturado €{tier.priceAnnual}/ano</p>
                           )}
                         </>
                       )}
@@ -221,9 +218,7 @@ const PricingPage = () => {
 
                     <div className="flex-1 space-y-3 mb-6">
                       {tier.inheritLabel && (
-                        <p className="text-xs font-semibold text-primary mb-2">
-                          {tier.inheritLabel}
-                        </p>
+                        <p className="text-xs font-semibold text-primary mb-2">{tier.inheritLabel}</p>
                       )}
                       {tier.features.map((feature) => (
                         <div key={feature} className="flex items-start gap-2 text-sm">
@@ -257,12 +252,8 @@ const PricingPage = () => {
         <section className="pb-16 px-4">
           <div className="container max-w-4xl mx-auto">
             <div className="text-center mb-8 space-y-2">
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-                Potencia o teu negócio com IA
-              </h2>
-              <p className="text-muted-foreground">
-                Disponível como add-on para qualquer plano
-              </p>
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground">Potencia o teu negócio com IA</h2>
+              <p className="text-muted-foreground">Disponível como add-on para qualquer plano</p>
             </div>
 
             <div className="relative rounded-2xl border-2 border-warning/40 bg-gradient-to-br from-warning/5 via-card to-accent/5 p-8 shadow-lg ring-1 ring-warning/20">
@@ -273,9 +264,7 @@ const PricingPage = () => {
                       <Video className="h-6 w-6 text-warning" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-foreground">
-                        🎬 Marketing AI Studio
-                      </h3>
+                      <h3 className="text-xl font-bold text-foreground">🎬 Marketing AI Studio</h3>
                       <p className="text-sm text-muted-foreground">
                         €19.90<span className="text-xs">/mês</span>
                       </p>
@@ -297,11 +286,7 @@ const PricingPage = () => {
                 </div>
 
                 <div className="flex flex-col gap-3 md:min-w-[200px] md:pt-16">
-                  <a
-                    href="https://pededireto.pt/claim-business"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href="https://pededireto.pt/claim-business" target="_blank" rel="noopener noreferrer">
                     <Button className="w-full bg-warning text-warning-foreground hover:bg-warning/90">
                       Adicionar ao meu plano
                     </Button>

@@ -20,8 +20,8 @@ interface Props {
 }
 
 const PLANS = [
-  { value: "START", label: "START", price: 9.90 },
-  { value: "PRO", label: "PRO", price: 19.90 },
+  { value: "START", label: "START", price: 9.9 },
+  { value: "PRO", label: "PRO", price: 19.9 },
   { value: "PRO_ANUAL", label: "PRO Anual", price: 199 },
 ];
 
@@ -66,12 +66,12 @@ const CommercialProposalForm = ({ business, onClose, onSent }: Props) => {
         .eq("category", cat)
         .eq("subcategory", sub)
         .maybeSingle();
-      return data?.data as any || null;
+      return (data?.data as any) || null;
     },
     enabled: !!(business?.categories?.name && business?.subcategories?.name),
   });
 
-  const planInfo = PLANS.find(p => p.value === plan);
+  const planInfo = PLANS.find((p) => p.value === plan);
 
   const validUntil = useMemo(() => {
     const d = new Date();
@@ -93,7 +93,8 @@ const CommercialProposalForm = ({ business, onClose, onSent }: Props) => {
       if (benchmark.ticket_medio) items.push(`<li>Ticket médio: ${benchmark.ticket_medio}</li>`);
       if (benchmark.canal_aquisicao) items.push(`<li>Canal principal: ${benchmark.canal_aquisicao}</li>`);
       if (benchmark.tendencia_2025) items.push(`<li>Tendência 2025: ${benchmark.tendencia_2025}</li>`);
-      if (benchmark.benchmark_avaliacoes) items.push(`<li>Benchmark avaliações: ${benchmark.benchmark_avaliacoes}</li>`);
+      if (benchmark.benchmark_avaliacoes)
+        items.push(`<li>Benchmark avaliações: ${benchmark.benchmark_avaliacoes}</li>`);
       if (benchmark.dica_ouro) items.push(`<li>💡 ${benchmark.dica_ouro}</li>`);
       if (items.length > 0) {
         benchmarkSection = `
@@ -113,7 +114,7 @@ const CommercialProposalForm = ({ business, onClose, onSent }: Props) => {
     } else if (plan === "PRO") {
       features = `<li>Tudo do START</li><li>Analytics PRO e Intelligence Center</li>
         <li>Benchmarking do sector</li><li>Destaque na subcategoria</li>
-        <li>Botões Reservar Agora e Pedir Online</li><li>Galeria de 6 fotos + vídeo</li>`;
+        <li>Botões Reservar/Agendar e Pedir Online</li><li>Galeria de 6 fotos + vídeo</li>`;
     } else {
       features = `<li>Tudo do PRO</li><li>2 meses grátis vs mensal</li><li>Preço fixo garantido</li>`;
     }
@@ -226,48 +227,78 @@ const CommercialProposalForm = ({ business, onClose, onSent }: Props) => {
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Email destinatário</Label>
-          <Input value={emailTo} onChange={e => setEmailTo(e.target.value)} placeholder="email@..." className="text-sm" />
+          <Input
+            value={emailTo}
+            onChange={(e) => setEmailTo(e.target.value)}
+            placeholder="email@..."
+            className="text-sm"
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Plano</Label>
-          <Select value={plan} onValueChange={v => { setPlan(v); setPrice(String(PLANS.find(p => p.value === v)?.price || 0)); }}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={plan}
+            onValueChange={(v) => {
+              setPlan(v);
+              setPrice(String(PLANS.find((p) => p.value === v)?.price || 0));
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {PLANS.map(p => <SelectItem key={p.value} value={p.value}>{p.label} — {p.price}€</SelectItem>)}
+              {PLANS.map((p) => (
+                <SelectItem key={p.value} value={p.value}>
+                  {p.label} — {p.price}€
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Preço (€)</Label>
-          <Input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} className="text-sm" />
+          <Input
+            type="number"
+            step="0.01"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            className="text-sm"
+          />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Desconto (%)</Label>
-          <Input type="number" value={discount} onChange={e => setDiscount(e.target.value)} className="text-sm" />
+          <Input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="text-sm" />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Validade (dias)</Label>
-          <Input type="number" value={validDays} onChange={e => setValidDays(e.target.value)} className="text-sm" />
+          <Input type="number" value={validDays} onChange={(e) => setValidDays(e.target.value)} className="text-sm" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Assinatura comercial</Label>
-          <Input value={commercialName} onChange={e => setCommercialName(e.target.value)} className="text-sm" />
+          <Input value={commercialName} onChange={(e) => setCommercialName(e.target.value)} className="text-sm" />
         </div>
       </div>
 
       <div className="space-y-1">
         <Label className="text-xs">Mensagem personalizada (opcional)</Label>
-        <Textarea value={personalMsg} onChange={e => setPersonalMsg(e.target.value)} placeholder="Mensagem extra..." rows={2} />
+        <Textarea
+          value={personalMsg}
+          onChange={(e) => setPersonalMsg(e.target.value)}
+          placeholder="Mensagem extra..."
+          rows={2}
+        />
       </div>
 
       {benchmark && (
-        <p className="text-xs text-success flex items-center gap-1">✅ Dados de benchmarking disponíveis — serão incluídos na proposta</p>
+        <p className="text-xs text-success flex items-center gap-1">
+          ✅ Dados de benchmarking disponíveis — serão incluídos na proposta
+        </p>
       )}
 
       <div className="flex gap-2">
@@ -275,7 +306,9 @@ const CommercialProposalForm = ({ business, onClose, onSent }: Props) => {
           {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
           Enviar Proposta
         </Button>
-        <Button variant="outline" onClick={onClose}>Cancelar</Button>
+        <Button variant="outline" onClick={onClose}>
+          Cancelar
+        </Button>
       </div>
     </div>
   );
