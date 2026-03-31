@@ -105,27 +105,44 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange }: HeroSectionP
   };
 
   const renderTitle = () => {
-    const lines = heroTitle.split("\n");
+    // Try splitting on actual newline first
+    const lines = heroTitle.split("\n").filter(l => l.trim());
     if (lines.length > 1) {
       return (
         <>
           {lines[0]}
           <br />
-          <span className="text-primary">{lines[1]}</span>
+          <span className="text-primary">{lines.slice(1).join(" ")}</span>
         </>
       );
     }
-    const highlightWord = settings?.hero_highlight_word || "Resolve";
+
+    // Fallback: split on known separator phrase
+    const highlightWord = settings?.hero_highlight_word || "Nós Mostramos quem Resolve";
     if (heroTitle.includes(highlightWord)) {
-      const parts = heroTitle.split(highlightWord);
+      const idx = heroTitle.indexOf(highlightWord);
+      const before = heroTitle.slice(0, idx).trim();
+      const after = heroTitle.slice(idx);
       return (
         <>
-          {parts[0]}
-          <span className="text-primary">{highlightWord}</span>
-          {parts.slice(1).join(highlightWord)}
+          {before && <>{before}<br /></>}
+          <span className="text-primary">{after}</span>
         </>
       );
     }
+
+    // Last fallback: split on "?" 
+    const qIndex = heroTitle.indexOf("?");
+    if (qIndex !== -1) {
+      return (
+        <>
+          {heroTitle.slice(0, qIndex + 1)}
+          <br />
+          <span className="text-primary">{heroTitle.slice(qIndex + 1).trim()}</span>
+        </>
+      );
+    }
+
     return heroTitle;
   };
 
