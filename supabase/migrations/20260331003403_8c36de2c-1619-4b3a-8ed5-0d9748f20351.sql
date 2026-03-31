@@ -1,3 +1,20 @@
+CREATE TABLE IF NOT EXISTS public.image_prompts_library (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  categoria TEXT,
+  estilo TEXT,
+  proporcao TEXT,
+  objectivo TEXT,
+  prompt_principal TEXT NOT NULL,
+  variante_a TEXT,
+  variante_b TEXT,
+  titulo TEXT,
+  tags TEXT[],
+  exemplo_negocio TEXT,
+  instrucoes TEXT,
+  is_active BOOLEAN DEFAULT true,
+  usage_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- =====================================================
 -- FIX 1: Restrict businesses public SELECT to exclude PII
@@ -79,3 +96,4 @@ CREATE POLICY "Members view business team" ON public.business_users
 CREATE POLICY "Admins view all business_users" ON public.business_users
   FOR SELECT TO authenticated
   USING (public.is_admin());
+
