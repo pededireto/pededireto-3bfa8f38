@@ -432,8 +432,8 @@ const CsBusinesses = () => {
                         {business.ranking_score?.toFixed(1) ?? "—"}
                       </Badge>
                     )}
-                    <Badge variant={business.is_active ? "default" : "secondary"} className="text-xs hidden sm:flex">
-                      {business.is_active ? "Activo" : "Inactivo"}
+                    <Badge variant={getBusinessStatusVariant(business)} className="text-xs hidden sm:flex">
+                      {getBusinessStatusLabel(business)}
                     </Badge>
                     {!isFreePlan && (
                       <Badge variant="outline" className="text-xs hidden sm:flex border-primary/40 text-primary">
