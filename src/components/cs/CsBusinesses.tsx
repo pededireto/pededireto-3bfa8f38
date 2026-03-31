@@ -295,10 +295,14 @@ const CsBusinesses = () => {
     const list = businesses.filter((b: any) => {
       const matchSearch = b.name.toLowerCase().includes(search.toLowerCase()) ||
         b.city?.toLowerCase().includes(search.toLowerCase());
+      const status = b.is_active
+        ? (b.claim_status === "claimed" || b.claim_status === "verified" ? "active" : "active_unclaimed")
+        : "inactive";
       const matchStatus =
         filterStatus === "all" ? true :
-        filterStatus === "active" ? b.is_active && b.subscription_status === "active" :
-        filterStatus === "inactive" ? !b.is_active :
+        filterStatus === "active" ? status === "active" :
+        filterStatus === "inactive" ? status === "inactive" :
+        filterStatus === "active_unclaimed" ? status === "active_unclaimed" :
         b.subscription_status === "expired";
       const matchCategory = !filterCategory || filterCategory === "all" || b.category_id === filterCategory;
       const matchSubcategory =
