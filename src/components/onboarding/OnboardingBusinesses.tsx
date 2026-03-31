@@ -268,8 +268,8 @@ const OnboardingBusinesses = () => {
                 <td className="p-3 font-medium text-sm">{b.name}</td>
                 <td className="p-3 text-sm text-muted-foreground">{b.city || "-"}</td>
                 <td className="p-3">
-                  <Badge variant={b.is_active ? "default" : "secondary"} className="text-xs">
-                    {b.is_active ? "Ativo" : "Inativo"}
+                  <Badge variant={getBusinessStatusVariant(b)} className="text-xs">
+                    {getBusinessStatusLabel(b)}
                   </Badge>
                 </td>
                 <td className="p-3">
