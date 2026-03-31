@@ -47,9 +47,10 @@ export const useUpdateBusinessOwner = () => {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: OwnerBusinessUpdate) => {
-      const { data, error } = await supabase.from("businesses").update(updates).eq("id", id).select().maybeSingle(); // .single() lançava PGRST116 quando RLS bloqueava ou não retornava rows
+      const { data, error } = await supabase.from("businesses").update(updates).eq("id", id).select().maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('Não foi possível guardar. Verifica as permissões do negócio.');
       return data;
     },
     onSuccess: () => {
