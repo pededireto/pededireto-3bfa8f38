@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { getBusinessStatusLabel, getBusinessStatusVariant } from "@/utils/businessStatus";
 import { useOnboardingBusinesses, useBulkUpdateBusinessStatus } from "@/hooks/useOnboardingData";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
