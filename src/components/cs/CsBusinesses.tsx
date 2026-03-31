@@ -198,8 +198,8 @@ const BusinessFicha = ({ business, onClose }: { business: any; onClose: () => vo
             <div className="bg-muted/40 rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
               <div><span className="text-xs text-muted-foreground block">Plano</span>{plan?.name || "Gratuito"}</div>
               <div><span className="text-xs text-muted-foreground block">Estado</span>
-                <Badge variant={business.subscription_status === "active" ? "default" : "secondary"} className="text-xs mt-0.5">
-                  {business.subscription_status === "active" ? "Activo" : business.subscription_status === "expired" ? "Expirado" : "Inactivo"}
+                <Badge variant={getBusinessStatusVariant(business)} className="text-xs mt-0.5">
+                  {getBusinessStatusLabel(business)}
                 </Badge>
               </div>
               <div><span className="text-xs text-muted-foreground block">Início</span>{business.subscription_start_date || "—"}</div>
