@@ -55,7 +55,6 @@ Deno.serve(async (req) => {
     }
 
     const { action, email, password, full_name, user_id, role } = await req.json();
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     if (action === "create") {
       if (!email || !password) {
