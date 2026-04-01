@@ -17,7 +17,7 @@ const BASE_URL = "https://pededireto.pt";
 const registerSchema = z
   .object({
     fullName: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
-    phone: z.string().trim().min(9, "Telefone inválido").max(20),
+    phone: z.string().trim().min(9, "Número de telefone obrigatório (mínimo 9 dígitos)").max(20),
     email: z.string().trim().email("Email inválido").max(255),
     password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").max(100),
     confirmPassword: z.string(),
