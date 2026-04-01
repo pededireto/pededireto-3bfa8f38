@@ -66,8 +66,11 @@ const UserRegister = () => {
 
       if (error) {
         let message = "Erro ao criar conta. Tenta novamente.";
-        if (error.message.includes("already registered")) {
-          message = "Este email já está registado.";
+        const errMsg = error.message || "";
+        if (errMsg.includes("already registered") || errMsg.includes("23505") || errMsg.includes("already exists")) {
+          setDuplicateError(true);
+          setIsLoading(false);
+          return;
         }
         toast({
           title: "Erro no registo",
@@ -76,10 +79,12 @@ const UserRegister = () => {
         });
       } else {
         toast({
-          title: "Conta criada!",
-          description: "Verifica o teu email para confirmar a conta.",
+          title: "Conta criada com sucesso!",
+          description: "Bem-vindo ao Pede Direto!",
         });
-        navigate("/login");
+        // Com auto-confirm, o utilizador já tem sessão — useSmartRedirect tratará do redirect
+        // Fallback caso não haja sessão imediata
+        navigate("/dashboard", { replace: true });
       }
     } finally {
       setIsLoading(false);
