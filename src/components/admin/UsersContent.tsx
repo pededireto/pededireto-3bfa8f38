@@ -148,14 +148,6 @@ const UsersContent = () => {
                 <td className="p-4 text-muted-foreground">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span>{user.email || "—"}</span>
-                    {!user.email_confirmed_at && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs border-yellow-500/50 text-yellow-600 dark:text-yellow-400 shrink-0"
-                      >
-                        Não confirmado
-                      </Badge>
-                    )}
                   </div>
                 </td>
                 <td className="p-4 text-muted-foreground hidden md:table-cell">{user.phone || "—"}</td>
