@@ -258,10 +258,9 @@ const SubcategoryPage = () => {
               variant="outline"
               size="lg"
               className="gap-2"
-              onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+              onClick={() => setVisibleCount(regularBusinesses.length)}
             >
-              <Loader2 className="h-4 w-4 hidden" />
-              Carregar mais negócios
+              Ver todos os {regularBusinesses.length} negócios
             </Button>
           </div>
         )}

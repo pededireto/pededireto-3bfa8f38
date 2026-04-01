@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import logo from "@/assets/pede-direto-logo.png";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
+import { useSmartRedirect } from "@/hooks/useSmartRedirect";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ const BASE_URL = "https://pededireto.pt";
 const registerSchema = z
   .object({
     fullName: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
-    phone: z.string().trim().min(9, "Telefone inválido").max(20),
+    phone: z.string().trim().min(9, "Número de telefone obrigatório (mínimo 9 dígitos)").max(20),
     email: z.string().trim().email("Email inválido").max(255),
     password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").max(100),
     confirmPassword: z.string(),
@@ -28,8 +29,11 @@ const registerSchema = z
 
 const UserRegister = () => {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+
+  // Se o utilizador já tem sessão (ex: auto-confirm), redirecionar para o dashboard correcto
+  useSmartRedirect(user, authLoading);
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -39,6 +43,7 @@ const UserRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [duplicateError, setDuplicateError] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,8 +67,11 @@ const UserRegister = () => {
 
       if (error) {
         let message = "Erro ao criar conta. Tenta novamente.";
-        if (error.message.includes("already registered")) {
-          message = "Este email já está registado.";
+        const errMsg = error.message || "";
+        if (errMsg.includes("already registered") || errMsg.includes("23505") || errMsg.includes("already exists")) {
+          setDuplicateError(true);
+          setIsLoading(false);
+          return;
         }
         toast({
           title: "Erro no registo",
@@ -72,15 +80,61 @@ const UserRegister = () => {
         });
       } else {
         toast({
-          title: "Conta criada!",
-          description: "Verifica o teu email para confirmar a conta.",
+          title: "Conta criada com sucesso!",
+          description: "Bem-vindo ao Pede Direto!",
         });
-        navigate("/login");
+        // Com auto-confirm, o utilizador já tem sessão — useSmartRedirect tratará do redirect
+        // Fallback caso não haja sessão imediata
+        navigate("/dashboard", { replace: true });
       }
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Modal de conta duplicada
+  if (duplicateError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-card rounded-2xl shadow-card p-8 text-center space-y-5">
+            <div className="mx-auto w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <h2 className="text-xl font-semibold text-foreground">Conta já existente</h2>
+            <p className="text-muted-foreground">
+              Verificámos que já existe um perfil ativo com este email. Deverá aceder com as suas credenciais ou, caso não se lembre da password, recuperar a mesma.
+            </p>
+            <div className="space-y-3">
+              <Button
+                onClick={() => navigate("/forgot-password")}
+                className="w-full btn-cta-primary"
+              >
+                Recuperar Password
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDuplicateError(false);
+                  setErrors({});
+                }}
+                className="w-full"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar ao passo anterior
+              </Button>
+              <Link
+                to="/login"
+                className="block text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Já tenho conta — Entrar
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
