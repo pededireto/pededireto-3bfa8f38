@@ -92,6 +92,50 @@ const UserRegister = () => {
     }
   };
 
+  // Modal de conta duplicada
+  if (duplicateError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-card rounded-2xl shadow-card p-8 text-center space-y-5">
+            <div className="mx-auto w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <h2 className="text-xl font-semibold text-foreground">Conta já existente</h2>
+            <p className="text-muted-foreground">
+              Verificámos que já existe um perfil ativo com este email. Deverá aceder com as suas credenciais ou, caso não se lembre da password, recuperar a mesma.
+            </p>
+            <div className="space-y-3">
+              <Button
+                onClick={() => navigate("/forgot-password")}
+                className="w-full btn-cta-primary"
+              >
+                Recuperar Password
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDuplicateError(false);
+                  setErrors({});
+                }}
+                className="w-full"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar ao passo anterior
+              </Button>
+              <Link
+                to="/login"
+                className="block text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Já tenho conta — Entrar
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Helmet>
