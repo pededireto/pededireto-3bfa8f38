@@ -7903,26 +7903,47 @@ export type Database = {
       process_followups: { Args: never; Returns: undefined }
       recalculate_all_ranking_scores: { Args: never; Returns: undefined }
       recalculate_all_scores: { Args: never; Returns: undefined }
-      register_business_with_owner: {
-        Args: {
-          p_address?: string
-          p_category_id?: string
-          p_city?: string
-          p_cta_email?: string
-          p_cta_phone?: string
-          p_cta_website?: string
-          p_cta_whatsapp?: string
-          p_name: string
-          p_nif?: string
-          p_owner_email?: string
-          p_owner_name?: string
-          p_owner_phone?: string
-          p_registration_source?: string
-          p_slug: string
-          p_subcategory_id?: string
-        }
-        Returns: string
-      }
+      register_business_with_owner:
+        | {
+            Args: {
+              p_address?: string
+              p_category_id?: string
+              p_city?: string
+              p_cta_email?: string
+              p_cta_phone?: string
+              p_cta_website?: string
+              p_cta_whatsapp?: string
+              p_name: string
+              p_nif?: string
+              p_owner_email?: string
+              p_owner_name?: string
+              p_owner_phone?: string
+              p_registration_source?: string
+              p_slug: string
+              p_subcategory_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_address?: string
+              p_category_id?: string
+              p_city?: string
+              p_cta_email?: string
+              p_cta_phone?: string
+              p_cta_website?: string
+              p_cta_whatsapp?: string
+              p_name: string
+              p_nif?: string
+              p_owner_email?: string
+              p_owner_name?: string
+              p_owner_phone?: string
+              p_registration_source?: string
+              p_slug: string
+              p_subcategory_id?: string
+            }
+            Returns: string
+          }
       remove_business_member: {
         Args: { p_business_id: string; p_user_id: string }
         Returns: undefined
