@@ -173,18 +173,6 @@ const UsersContent = () => {
                     <Button size="sm" variant="ghost" title="Gerir Negócios" onClick={() => setBizModal(user.id)}>
                       <Building2 className="h-4 w-4" />
                     </Button>
-                    {/* Botão confirmar email — só se não confirmado */}
-                    {!user.email_confirmed_at && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        title="Confirmar email manualmente"
-                        onClick={() => confirmEmail.mutate(user.id)}
-                        disabled={confirmEmail.isPending}
-                      >
-                        <MailCheck className="h-4 w-4 text-yellow-500" />
-                      </Button>
-                    )}
                     {/* Botão corrigir role — só se não tiver role atribuído */}
                     {!user.app_role && (
                       <Button
