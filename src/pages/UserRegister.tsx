@@ -29,8 +29,11 @@ const registerSchema = z
 
 const UserRegister = () => {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+
+  // Se o utilizador já tem sessão (ex: auto-confirm), redirecionar para o dashboard correcto
+  useSmartRedirect(user, authLoading);
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
