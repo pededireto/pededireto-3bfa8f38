@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import logo from "@/assets/pede-direto-logo.png";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
+import { useSmartRedirect } from "@/hooks/useSmartRedirect";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
