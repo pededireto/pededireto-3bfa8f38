@@ -151,9 +151,20 @@ const ClaimBusiness = () => {
       toast({ title: "Conta criada e negócio reclamado!", description: "O seu pedido está em validação." });
       window.location.href = BUSINESS_DASHBOARD_URL;
     } catch (err: any) {
-      const detail = err?.details || err?.hint || err?.message || "Não foi possível criar a conta.";
-      const code = err?.code ? ` (${err.code})` : "";
-      toast({ title: "Erro ao criar conta", description: `${detail}${code}`, variant: "destructive" });
+      const errMsg = err?.message || "";
+      const code = err?.code || "";
+      
+      if (code === "23505" || errMsg.includes("already exists") || errMsg.includes("already registered")) {
+        toast({
+          title: "Conta já existente",
+          description: "Já existe um perfil com este email. Aceda com as suas credenciais ou recupere a password.",
+          variant: "destructive",
+        });
+      } else {
+        const detail = err?.details || err?.hint || errMsg || "Não foi possível criar a conta.";
+        const codeStr = code ? ` (${code})` : "";
+        toast({ title: "Erro ao criar conta", description: `${detail}${codeStr}`, variant: "destructive" });
+      }
       console.error("[ClaimBusiness] signup error:", err);
     } finally {
       setIsSigningUp(false);
