@@ -210,6 +210,14 @@ const UsersContent = () => {
                         <UserCheck className="h-4 w-4 text-primary" />
                       )}
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Apagar utilizador"
+                      onClick={() => setDeleteConfirm({ id: user.user_id, name: user.full_name || user.email || "utilizador" })}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -231,6 +239,34 @@ const UsersContent = () => {
         />
       )}
       {bizModal && <AdminUserBusinessManager userId={bizModal} open={true} onClose={() => setBizModal(null)} />}
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar utilizador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tens a certeza que queres apagar <strong>{deleteConfirm?.name}</strong>? Esta ação é irreversível e remove a conta, perfil e todas as associações.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteUser.isPending}
+              onClick={() => {
+                if (deleteConfirm) {
+                  deleteUser.mutate(deleteConfirm.id, {
+                    onSuccess: () => setDeleteConfirm(null),
+                  });
+                }
+              }}
+            >
+              {deleteUser.isPending ? "A apagar..." : "Apagar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
