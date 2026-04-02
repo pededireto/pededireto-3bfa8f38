@@ -5,15 +5,26 @@ import {
   useUpdateUserStatus,
   useConfirmUserEmail,
   useFixUserRole,
+  useDeleteUser,
 } from "@/hooks/useUsers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, UserCheck, UserX, Shield, Building2, MailCheck, AlertTriangle } from "lucide-react";
+import { Loader2, Search, UserCheck, UserX, Shield, Building2, MailCheck, AlertTriangle, Trash2 } from "lucide-react";
 import AdminUserRoleEditorModal from "./AdminUserRoleEditorModal";
 import AdminUserBusinessManager from "./AdminUserBusinessManager";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const UsersContent = () => {
   const { data: users = [], isLoading } = useAllUsers();
@@ -21,12 +32,14 @@ const UsersContent = () => {
   const updateStatus = useUpdateUserStatus();
   const confirmEmail = useConfirmUserEmail();
   const fixRole = useFixUserRole();
+  const deleteUser = useDeleteUser();
   const { toast } = useToast();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roleModal, setRoleModal] = useState<{ userId: string; role?: string } | null>(null);
   const [bizModal, setBizModal] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -197,6 +210,14 @@ const UsersContent = () => {
                         <UserCheck className="h-4 w-4 text-primary" />
                       )}
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Apagar utilizador"
+                      onClick={() => setDeleteConfirm({ id: user.user_id, name: user.full_name || user.email || "utilizador" })}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -218,6 +239,34 @@ const UsersContent = () => {
         />
       )}
       {bizModal && <AdminUserBusinessManager userId={bizModal} open={true} onClose={() => setBizModal(null)} />}
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar utilizador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tens a certeza que queres apagar <strong>{deleteConfirm?.name}</strong>? Esta ação é irreversível e remove a conta, perfil e todas as associações.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteUser.isPending}
+              onClick={() => {
+                if (deleteConfirm) {
+                  deleteUser.mutate(deleteConfirm.id, {
+                    onSuccess: () => setDeleteConfirm(null),
+                  });
+                }
+              }}
+            >
+              {deleteUser.isPending ? "A apagar..." : "Apagar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
