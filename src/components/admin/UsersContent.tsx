@@ -32,12 +32,14 @@ const UsersContent = () => {
   const updateStatus = useUpdateUserStatus();
   const confirmEmail = useConfirmUserEmail();
   const fixRole = useFixUserRole();
+  const deleteUser = useDeleteUser();
   const { toast } = useToast();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roleModal, setRoleModal] = useState<{ userId: string; role?: string } | null>(null);
   const [bizModal, setBizModal] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
