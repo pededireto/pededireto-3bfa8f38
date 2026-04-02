@@ -124,3 +124,23 @@ export const useFixUserRole = () => {
     onError: (e: any) => toast.error(e.message || "Erro ao corrigir role"),
   });
 };
+
+// Apagar utilizador (admin only)
+export const useDeleteUser = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke("admin-delete-user", {
+        body: { user_id: userId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Utilizador apagado com sucesso");
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (e: any) => toast.error(e.message || "Erro ao apagar utilizador"),
+  });
+};

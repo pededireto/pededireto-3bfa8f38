@@ -5,15 +5,26 @@ import {
   useUpdateUserStatus,
   useConfirmUserEmail,
   useFixUserRole,
+  useDeleteUser,
 } from "@/hooks/useUsers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, UserCheck, UserX, Shield, Building2, MailCheck, AlertTriangle } from "lucide-react";
+import { Loader2, Search, UserCheck, UserX, Shield, Building2, MailCheck, AlertTriangle, Trash2 } from "lucide-react";
 import AdminUserRoleEditorModal from "./AdminUserRoleEditorModal";
 import AdminUserBusinessManager from "./AdminUserBusinessManager";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const UsersContent = () => {
   const { data: users = [], isLoading } = useAllUsers();
