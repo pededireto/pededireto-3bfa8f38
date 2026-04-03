@@ -37,6 +37,11 @@ interface FormData {
   categoryIds: string[];
   primaryCategoryId: string;
   subcategoryIds: string[];
+  nif: string;
+  address: string;
+  ownerName: string;
+  ownerPhone: string;
+  ownerEmail: string;
 }
 
 const ProgressBar = ({ step }: { step: Step }) => (
@@ -84,6 +89,11 @@ const RegisterBusiness = () => {
     categoryIds: [],
     primaryCategoryId: "",
     subcategoryIds: [],
+    nif: "",
+    address: "",
+    ownerName: "",
+    ownerPhone: "",
+    ownerEmail: "",
   });
 
   // Prefill from ClaimBusiness ou localStorage
@@ -111,7 +121,15 @@ const RegisterBusiness = () => {
   // Subcategorias filtradas pelas categorias seleccionadas
   const subcategories = allSubcategories.filter((s) => formData.categoryIds.includes(s.category_id));
 
-  const updateField = (field: keyof FormData, value: string) => setFormData((prev) => ({ ...prev, [field]: value }));
+  const updateField = (field: keyof FormData, value: string) => {
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      // Pre-fill owner fields from main fields when empty
+      if (field === "email" && !prev.ownerEmail) next.ownerEmail = value;
+      if (field === "phone" && !prev.ownerPhone) next.ownerPhone = value;
+      return next;
+    });
+  };
 
   const toggleSubcategory = (id: string) => {
     setFormData((prev) => {
@@ -182,7 +200,11 @@ const RegisterBusiness = () => {
             cta_phone: formData.phone,
             category_id: formData.primaryCategoryId,
             subcategory_ids: formData.subcategoryIds,
-            owner_email: formData.email,
+            owner_email: formData.ownerEmail || formData.email,
+            nif: formData.nif || null,
+            address: formData.address || null,
+            owner_name: formData.ownerName || null,
+            owner_phone: formData.ownerPhone || null,
           };
 
           // Tenta guardar na BD (robusto entre dispositivos/sessões)
@@ -218,8 +240,12 @@ const RegisterBusiness = () => {
         p_cta_phone: formData.phone,
         p_category_id: formData.primaryCategoryId,
         p_subcategory_id: primarySubcategoryId,
-        p_owner_email: currentUser?.email || formData.email,
+        p_owner_email: formData.ownerEmail || currentUser?.email || formData.email,
         p_registration_source: "onboarding_wizard",
+        p_nif: formData.nif || null,
+        p_address: formData.address || null,
+        p_owner_name: formData.ownerName || null,
+        p_owner_phone: formData.ownerPhone || null,
       });
 
       if (rpcError) throw rpcError;
@@ -386,6 +412,78 @@ const RegisterBusiness = () => {
                     placeholder="Ex: Lisboa"
                     className="h-12 text-base"
                   />
+                </div>
+              </div>
+
+              {/* Dados da Empresa (opcionais) */}
+              <div className="relative">
+                <Separator />
+                <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-3 text-xs text-muted-foreground whitespace-nowrap">
+                  Dados da empresa (opcional)
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">NIF</Label>
+                  <Input
+                    value={formData.nif}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, "").slice(0, 9);
+                      updateField("nif", v);
+                    }}
+                    placeholder="123456789"
+                    className="h-12 text-base"
+                    maxLength={9}
+                    inputMode="numeric"
+                  />
+                  {formData.nif.length > 0 && formData.nif.length !== 9 && (
+                    <p className="text-xs text-amber-600">O NIF deve ter 9 dígitos</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Morada</Label>
+                  <Input
+                    value={formData.address}
+                    onChange={(e) => updateField("address", e.target.value)}
+                    placeholder="Ex: Rua Principal 123, Lisboa"
+                    className="h-12 text-base"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Nome do responsável</Label>
+                  <Input
+                    value={formData.ownerName}
+                    onChange={(e) => updateField("ownerName", e.target.value)}
+                    placeholder="Nome completo"
+                    className="h-12 text-base"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Telefone responsável</Label>
+                    <Input
+                      value={formData.ownerPhone}
+                      onChange={(e) => updateField("ownerPhone", e.target.value)}
+                      placeholder="912 345 678"
+                      type="tel"
+                      className="h-12 text-base"
+                      maxLength={15}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Email responsável</Label>
+                    <Input
+                      value={formData.ownerEmail}
+                      onChange={(e) => updateField("ownerEmail", e.target.value)}
+                      placeholder="responsavel@empresa.pt"
+                      type="email"
+                      className="h-12 text-base"
+                    />
+                  </div>
                 </div>
               </div>
 

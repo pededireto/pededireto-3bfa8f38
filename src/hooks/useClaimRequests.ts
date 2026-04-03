@@ -78,6 +78,9 @@ export const useApproveClaim = () => {
         p_admin_notes: notes || null,
       } as any);
       if (error) throw error;
+      if (data && typeof data === 'object' && 'success' in data && !(data as any).success) {
+        throw new Error(String((data as any).error) || "Erro desconhecido ao aprovar claim");
+      }
       return data;
     },
     onSuccess: () => {
