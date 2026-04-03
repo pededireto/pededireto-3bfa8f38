@@ -399,6 +399,78 @@ const RegisterBusiness = () => {
                 </div>
               </div>
 
+              {/* Dados da Empresa (opcionais) */}
+              <div className="relative">
+                <Separator />
+                <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-3 text-xs text-muted-foreground whitespace-nowrap">
+                  Dados da empresa (opcional)
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">NIF</Label>
+                  <Input
+                    value={formData.nif}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, "").slice(0, 9);
+                      updateField("nif", v);
+                    }}
+                    placeholder="123456789"
+                    className="h-12 text-base"
+                    maxLength={9}
+                    inputMode="numeric"
+                  />
+                  {formData.nif.length > 0 && formData.nif.length !== 9 && (
+                    <p className="text-xs text-amber-600">O NIF deve ter 9 dígitos</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Morada</Label>
+                  <Input
+                    value={formData.address}
+                    onChange={(e) => updateField("address", e.target.value)}
+                    placeholder="Ex: Rua Principal 123, Lisboa"
+                    className="h-12 text-base"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Nome do responsável</Label>
+                  <Input
+                    value={formData.ownerName}
+                    onChange={(e) => updateField("ownerName", e.target.value)}
+                    placeholder="Nome completo"
+                    className="h-12 text-base"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Telefone responsável</Label>
+                    <Input
+                      value={formData.ownerPhone}
+                      onChange={(e) => updateField("ownerPhone", e.target.value)}
+                      placeholder="912 345 678"
+                      type="tel"
+                      className="h-12 text-base"
+                      maxLength={15}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Email responsável</Label>
+                    <Input
+                      value={formData.ownerEmail}
+                      onChange={(e) => updateField("ownerEmail", e.target.value)}
+                      placeholder="responsavel@empresa.pt"
+                      type="email"
+                      className="h-12 text-base"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {!user && (
                 <>
                   <div className="relative">
