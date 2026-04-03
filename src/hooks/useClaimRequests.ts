@@ -78,9 +78,8 @@ export const useApproveClaim = () => {
         p_admin_notes: notes || null,
       } as any);
       if (error) throw error;
-      // Handle controlled error responses from the RPC
-      if (data && typeof data === 'object' && 'success' in data && !data.success) {
-        throw new Error(data.error || "Erro desconhecido ao aprovar claim");
+      if (data && typeof data === 'object' && 'success' in data && !(data as any).success) {
+        throw new Error(String((data as any).error) || "Erro desconhecido ao aprovar claim");
       }
       return data;
     },

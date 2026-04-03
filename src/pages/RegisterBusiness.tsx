@@ -89,6 +89,11 @@ const RegisterBusiness = () => {
     categoryIds: [],
     primaryCategoryId: "",
     subcategoryIds: [],
+    nif: "",
+    address: "",
+    ownerName: "",
+    ownerPhone: "",
+    ownerEmail: "",
   });
 
   // Prefill from ClaimBusiness ou localStorage
