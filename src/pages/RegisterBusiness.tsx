@@ -121,7 +121,15 @@ const RegisterBusiness = () => {
   // Subcategorias filtradas pelas categorias seleccionadas
   const subcategories = allSubcategories.filter((s) => formData.categoryIds.includes(s.category_id));
 
-  const updateField = (field: keyof FormData, value: string) => setFormData((prev) => ({ ...prev, [field]: value }));
+  const updateField = (field: keyof FormData, value: string) => {
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      // Pre-fill owner fields from main fields when empty
+      if (field === "email" && !prev.ownerEmail) next.ownerEmail = value;
+      if (field === "phone" && !prev.ownerPhone) next.ownerPhone = value;
+      return next;
+    });
+  };
 
   const toggleSubcategory = (id: string) => {
     setFormData((prev) => {
