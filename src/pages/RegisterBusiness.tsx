@@ -192,7 +192,11 @@ const RegisterBusiness = () => {
             cta_phone: formData.phone,
             category_id: formData.primaryCategoryId,
             subcategory_ids: formData.subcategoryIds,
-            owner_email: formData.email,
+            owner_email: formData.ownerEmail || formData.email,
+            nif: formData.nif || null,
+            address: formData.address || null,
+            owner_name: formData.ownerName || null,
+            owner_phone: formData.ownerPhone || null,
           };
 
           // Tenta guardar na BD (robusto entre dispositivos/sessões)
