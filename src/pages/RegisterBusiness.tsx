@@ -228,8 +228,12 @@ const RegisterBusiness = () => {
         p_cta_phone: formData.phone,
         p_category_id: formData.primaryCategoryId,
         p_subcategory_id: primarySubcategoryId,
-        p_owner_email: currentUser?.email || formData.email,
+        p_owner_email: formData.ownerEmail || currentUser?.email || formData.email,
         p_registration_source: "onboarding_wizard",
+        p_nif: formData.nif || null,
+        p_address: formData.address || null,
+        p_owner_name: formData.ownerName || null,
+        p_owner_phone: formData.ownerPhone || null,
       });
 
       if (rpcError) throw rpcError;
