@@ -37,6 +37,11 @@ interface FormData {
   categoryIds: string[];
   primaryCategoryId: string;
   subcategoryIds: string[];
+  nif: string;
+  address: string;
+  ownerName: string;
+  ownerPhone: string;
+  ownerEmail: string;
 }
 
 const ProgressBar = ({ step }: { step: Step }) => (
