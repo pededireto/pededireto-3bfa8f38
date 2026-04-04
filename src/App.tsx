@@ -58,6 +58,9 @@ import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import AffiliateLandingPage from "./pages/AffiliateLandingPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
+import JobOffers from "./pages/JobOffers";
+import JobOfferDetail from "./pages/JobOfferDetail";
+import MyJobOffers from "./pages/MyJobOffers";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
 
@@ -180,6 +183,9 @@ const App = () => {
                     <Route path="/p/:slug" element={<BusinessShortUrl />} />
                     <Route path="/pricing" element={<PricingPage />} />
                     <Route path="/afiliados" element={<AffiliateLandingPage />} />
+                    <Route path="/ofertas-emprego" element={<JobOffers />} />
+                    <Route path="/ofertas-emprego/:slug" element={<JobOfferDetail />} />
+                    <Route path="/minhas-ofertas" element={<MyJobOffers />} />
 
                     {/* AUTH */}
                     <Route path="/login" element={<UserLogin />} />

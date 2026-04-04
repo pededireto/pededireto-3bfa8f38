@@ -28,27 +28,31 @@ export const useClaimRequests = () => {
 
       if (error) throw error;
 
-      // Fetch requester profiles
-      const userIds = [...new Set((data || []).map(b => b.claim_requested_by).filter(Boolean))];
+      // Fetch requester profiles — claim_requested_by may be auth.uid OR profiles.id
+      const userIds = [...new Set((data || []).map(b => b.claim_requested_by).filter(Boolean))] as string[];
       let profilesMap: Record<string, { email: string | null; full_name: string | null }> = {};
 
       if (userIds.length > 0) {
+        const idList = userIds.map(id => `"${id}"`).join(",");
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("id, email, full_name")
-          .in("id", userIds as string[]);
+          .select("id, user_id, email, full_name")
+          .or(`id.in.(${userIds.join(",")}),user_id.in.(${userIds.join(",")})`);
 
         if (profiles) {
           for (const p of profiles) {
-            profilesMap[p.id] = { email: p.email, full_name: p.full_name };
+            // Map by both id and user_id so lookups work regardless of what was stored
+            const info = { email: p.email, full_name: p.full_name };
+            if (p.id) profilesMap[p.id] = info;
+            if (p.user_id) profilesMap[p.user_id] = info;
           }
         }
       }
 
       return (data || []).map(b => ({
         ...b,
-        requester_email: b.claim_requested_by ? profilesMap[b.claim_requested_by]?.email : null,
-        requester_name: b.claim_requested_by ? profilesMap[b.claim_requested_by]?.full_name : null,
+        requester_email: b.claim_requested_by ? profilesMap[b.claim_requested_by]?.email ?? null : null,
+        requester_name: b.claim_requested_by ? profilesMap[b.claim_requested_by]?.full_name ?? null : null,
       })) as ClaimRequest[];
     },
   });

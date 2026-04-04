@@ -20,6 +20,7 @@ import BadgesTab from "@/components/business/BadgesTab";
 import AffiliatePortalContent from "@/components/affiliate/AffiliatePortalContent";
 import BusinessQuotesContent from "@/components/business/BusinessQuotesContent";
 import BusinessSupportContent from "@/components/business/BusinessSupportContent";
+import BusinessJobOffersContent from "@/components/business/BusinessJobOffersContent";
 import FeaturePopupManager from "@/components/business/FeaturePopupManager";
 
 const BusinessDashboard = () => {
@@ -79,6 +80,8 @@ const BusinessDashboard = () => {
         return <BusinessQuotesContent businessId={business.id} />;
       case "support":
         return <BusinessSupportContent businessId={business.id} />;
+      case "job-offers":
+        return <BusinessJobOffersContent businessId={business.id} />;
       default:
         return null;
     }

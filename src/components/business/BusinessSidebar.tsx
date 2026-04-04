@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import logo from "@/assets/pede-direto-logo.png";
 import {
   LayoutDashboard,
+  Briefcase,
   Inbox,
   Bell,
   CreditCard,
@@ -42,7 +43,8 @@ export type BusinessTab =
   | "badges"
   | "affiliates"
   | "quotes"
-  | "support";
+  | "support"
+  | "job-offers";
 
 interface BusinessSidebarProps {
   businessName: string;
@@ -138,6 +140,7 @@ const BusinessSidebar = ({
           label: "NEGÓCIO",
           items: [
             { id: "quotes", label: "Orçamentos", icon: FileText, isNew: true },
+            { id: "job-offers", label: "Ofertas Emprego", icon: Briefcase },
             { id: "insights", label: "Insights", icon: TrendingUp, locked: isFreePlan },
           ],
         },
