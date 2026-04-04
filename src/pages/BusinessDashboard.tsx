@@ -80,6 +80,8 @@ const BusinessDashboard = () => {
         return <BusinessQuotesContent businessId={business.id} />;
       case "support":
         return <BusinessSupportContent businessId={business.id} />;
+      case "job-offers":
+        return <BusinessJobOffersContent businessId={business.id} />;
       default:
         return null;
     }
