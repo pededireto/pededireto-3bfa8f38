@@ -48,6 +48,7 @@ import NewsletterContent from "@/components/admin/NewsletterContent";
 import AffiliateAdminContent from "@/components/admin/AffiliateAdminContent";
 import BusinessAddonsManager from "@/components/admin/BusinessAddonsManager";
 import AdminSupportContent from "@/components/admin/AdminSupportContent";
+import JobOffersAdminContent from "@/components/admin/JobOffersAdminContent";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
