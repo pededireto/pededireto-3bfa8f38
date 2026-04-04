@@ -87,7 +87,8 @@ export type AdminTab =
   | "newsletter"
   | "affiliates"
   | "support"
-  | "marketing-addons";
+  | "marketing-addons"
+  | "job-offers";
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
