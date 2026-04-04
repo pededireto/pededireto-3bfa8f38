@@ -94,6 +94,7 @@ const AdminPage = () => {
     if (activeTab === "affiliates") return <AffiliateAdminContent />;
     if (activeTab === "support") return <AdminSupportContent />;
     if (activeTab === "marketing-addons") return <BusinessAddonsManager />;
+    if (activeTab === "job-offers") return <JobOffersAdminContent />;
 
     if (isLoading) {
       return (

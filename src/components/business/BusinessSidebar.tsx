@@ -139,6 +139,7 @@ const BusinessSidebar = ({
           label: "NEGÓCIO",
           items: [
             { id: "quotes", label: "Orçamentos", icon: FileText, isNew: true },
+            { id: "job-offers", label: "Ofertas Emprego", icon: Briefcase },
             { id: "insights", label: "Insights", icon: TrendingUp, locked: isFreePlan },
           ],
         },
