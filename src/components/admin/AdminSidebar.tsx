@@ -123,6 +123,7 @@ const SIDEBAR_STRUCTURE: Omit<SidebarItem, "badge">[][] = [
     { id: "marketing-addons", label: "Marketing AI", icon: Zap },
     { id: "featured", label: "Destaques", icon: Crown },
     { id: "reviews", label: "Avaliações", icon: Star },
+    { id: "job-offers", label: "Ofertas Emprego", icon: Briefcase },
   ],
   // 2 - utilizadores
   [
