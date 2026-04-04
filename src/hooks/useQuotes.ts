@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface QuoteItem {
   id?: string;
+  quote_id?: string;
   description: string;
   quantity: number;
   unit_price: number;
@@ -44,8 +45,12 @@ export interface CreateQuotePayload {
   subtotal: number;
   iva_amount: number;
   total: number;
-  items: Omit<QuoteItem, "id">[];
+  items: Omit<QuoteItem, "id" | "quote_id">[];
 }
+
+// Alias tipado para contornar tipos gerados desactualizados
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
 
 // ─────────────────────────────────────────────
 // LISTAGEM
@@ -55,12 +60,14 @@ export const useBusinessQuotes = (businessId: string) =>
   useQuery<Quote[]>({
     queryKey: ["business-quotes", businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("business_quotes")
-        .select(`
+        .select(
+          `
           *,
           items:business_quote_items(*)
-        `)
+        `,
+        )
         .eq("business_id", businessId)
         .order("created_at", { ascending: false });
 
@@ -79,8 +86,8 @@ export const useCreateQuote = () => {
 
   return useMutation({
     mutationFn: async (payload: CreateQuotePayload) => {
-      // 1. Contar orçamentos existentes para gerar número sequencial
-      const { count } = await supabase
+      // 1. Contar orçamentos existentes para número sequencial
+      const { count } = await db
         .from("business_quotes")
         .select("*", { count: "exact", head: true })
         .eq("business_id", payload.business_id);
@@ -88,21 +95,21 @@ export const useCreateQuote = () => {
       const number = `#${String((count ?? 0) + 1).padStart(3, "0")}`;
 
       // 2. Inserir orçamento
-      const { data: quote, error: quoteError } = await supabase
+      const { data: quote, error: quoteError } = await db
         .from("business_quotes")
         .insert({
-          business_id:  payload.business_id,
+          business_id: payload.business_id,
           number,
-          client_name:  payload.client_name,
+          client_name: payload.client_name,
           client_email: payload.client_email || null,
           client_phone: payload.client_phone || null,
-          notes:        payload.notes || null,
+          notes: payload.notes || null,
           validity_days: payload.validity_days,
-          iva_rate:     payload.iva_rate,
-          subtotal:     payload.subtotal,
-          iva_amount:   payload.iva_amount,
-          total:        payload.total,
-          status:       "draft",
+          iva_rate: payload.iva_rate,
+          subtotal: payload.subtotal,
+          iva_amount: payload.iva_amount,
+          total: payload.total,
+          status: "draft",
         })
         .select()
         .single();
@@ -111,22 +118,20 @@ export const useCreateQuote = () => {
 
       // 3. Inserir itens
       if (payload.items.length > 0) {
-        const { error: itemsError } = await supabase
-          .from("business_quote_items")
-          .insert(
-            payload.items.map((item, idx) => ({
-              quote_id:    quote.id,
-              description: item.description,
-              quantity:    item.quantity,
-              unit_price:  item.unit_price,
-              total:       item.total,
-              sort_order:  idx,
-            }))
-          );
+        const { error: itemsError } = await db.from("business_quote_items").insert(
+          payload.items.map((item, idx) => ({
+            quote_id: quote.id,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total: item.total,
+            sort_order: idx,
+          })),
+        );
         if (itemsError) throw itemsError;
       }
 
-      return quote;
+      return quote as Quote;
     },
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["business-quotes", variables.business_id] });
@@ -151,10 +156,7 @@ export const useUpdateQuoteStatus = () => {
       status: Quote["status"];
       businessId: string;
     }) => {
-      const { error } = await supabase
-        .from("business_quotes")
-        .update({ status })
-        .eq("id", quoteId);
+      const { error } = await db.from("business_quotes").update({ status }).eq("id", quoteId);
 
       if (error) throw error;
     },
@@ -172,17 +174,8 @@ export const useDeleteQuote = () => {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      quoteId,
-      businessId,
-    }: {
-      quoteId: string;
-      businessId: string;
-    }) => {
-      const { error } = await supabase
-        .from("business_quotes")
-        .delete()
-        .eq("id", quoteId);
+    mutationFn: async ({ quoteId, businessId }: { quoteId: string; businessId: string }) => {
+      const { error } = await db.from("business_quotes").delete().eq("id", quoteId);
 
       if (error) throw error;
     },
