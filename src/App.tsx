@@ -58,6 +58,9 @@ import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import AffiliateLandingPage from "./pages/AffiliateLandingPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
+import JobOffers from "./pages/JobOffers";
+import JobOfferDetail from "./pages/JobOfferDetail";
+import MyJobOffers from "./pages/MyJobOffers";
 import StripeSetup from "./pages/admin/StripeSetup";
 import StripeCleanup from "./pages/admin/StripeCleanup";
 
