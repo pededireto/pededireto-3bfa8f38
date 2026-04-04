@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import logo from "@/assets/pede-direto-logo.png";
 import {
   LayoutDashboard,
+  Briefcase,
   Inbox,
   Bell,
   CreditCard,
