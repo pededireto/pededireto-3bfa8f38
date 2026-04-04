@@ -5,20 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +13,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { jsPDF } from "jspdf";
+
+// ─────────────────────────────────────────────
+// TIPOS
+// ─────────────────────────────────────────────
 
 interface QuoteItem {
   description: string;
@@ -38,29 +30,237 @@ interface Quote {
   number: string;
   clientName: string;
   clientEmail: string;
+  clientPhone: string;
+  items: QuoteItem[];
+  notes: string;
+  validityDays: string;
   description: string;
   total: number;
+  subtotal: number;
   iva: number;
+  ivaRate: string;
   status: "draft" | "sent" | "accepted" | "rejected";
   createdAt: string;
 }
 
-// Mock quotes for initial UI
 const MOCK_QUOTES: Quote[] = [];
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   draft: { label: "Rascunho", color: "bg-muted text-muted-foreground" },
-  sent: { label: "Aguarda resposta", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300" },
+  sent: {
+    label: "Aguarda resposta",
+    color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+  },
   accepted: { label: "Aceite", color: "bg-primary/10 text-primary" },
   rejected: { label: "Recusado", color: "bg-destructive/10 text-destructive" },
 };
+
+// ─────────────────────────────────────────────
+// GERAÇÃO PDF — jsPDF puro (sem autotable)
+// ─────────────────────────────────────────────
+
+type RGB = [number, number, number];
+
+const GREEN: RGB = [22, 163, 74];
+const BLACK: RGB = [30, 30, 30];
+const GREY: RGB = [120, 120, 120];
+const LGREY: RGB = [220, 220, 220];
+const WHITE: RGB = [255, 255, 255];
+const ALTBG: RGB = [245, 245, 245];
+
+const generateQuotePDF = (quote: Quote): void => {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const PW = doc.internal.pageSize.getWidth();
+  const PH = doc.internal.pageSize.getHeight();
+  const L = 14;
+  const R = PW - 14;
+
+  const setRGB = (c: RGB) => doc.setTextColor(c[0], c[1], c[2]);
+  const setFill = (c: RGB) => doc.setFillColor(c[0], c[1], c[2]);
+  const setDraw = (c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
+
+  // ── CABEÇALHO ──────────────────────────────
+  setFill(GREEN);
+  doc.rect(0, 0, PW, 34, "F");
+
+  setRGB(WHITE);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text("ORÇAMENTO", L, 14);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(quote.number, L, 23);
+
+  doc.setFontSize(8);
+  doc.text("pededireto.pt", R, 12, { align: "right" });
+  doc.text(new Date(quote.createdAt).toLocaleDateString("pt-PT"), R, 20, { align: "right" });
+
+  const validadeDate = new Date(
+    new Date(quote.createdAt).getTime() + parseInt(quote.validityDays) * 86_400_000,
+  ).toLocaleDateString("pt-PT");
+  doc.text(`Válido até: ${validadeDate}`, R, 28, { align: "right" });
+
+  // ── CLIENTE ────────────────────────────────
+  let y = 44;
+
+  setRGB(BLACK);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("CLIENTE", L, y);
+
+  setDraw(LGREY);
+  doc.line(L, y + 2, R, y + 2);
+  y += 8;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  setRGB(BLACK);
+  doc.text(quote.clientName, L, y);
+  y += 6;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  setRGB(GREY);
+  if (quote.clientEmail) {
+    doc.text(quote.clientEmail, L, y);
+    y += 5;
+  }
+  if (quote.clientPhone) {
+    doc.text(quote.clientPhone, L, y);
+    y += 5;
+  }
+
+  // ── TABELA ─────────────────────────────────
+  y += 6;
+
+  // colunas (posição x do lado direito de cada coluna)
+  const COL = {
+    descL: L, // left edge da descrição
+    descR: 118, // right edge da descrição
+    qtdR: 133,
+    priceR: 160,
+    totalR: R,
+  };
+  const ROW_H = 8;
+
+  // cabeçalho
+  setFill(GREEN);
+  setDraw(GREEN);
+  doc.rect(L, y, R - L, ROW_H, "F");
+
+  setRGB(WHITE);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("Descrição", COL.descL + 2, y + 5.5);
+  doc.text("Qtd.", COL.qtdR, y + 5.5, { align: "right" });
+  doc.text("Preço Unit.", COL.priceR, y + 5.5, { align: "right" });
+  doc.text("Total", COL.totalR, y + 5.5, { align: "right" });
+  y += ROW_H;
+
+  // linhas de itens
+  const filteredItems = quote.items.filter((i) => i.description.trim());
+
+  filteredItems.forEach((item, idx) => {
+    const lineTotal = item.quantity * item.unitPrice;
+
+    if (idx % 2 === 0) {
+      setFill(ALTBG);
+      setDraw(ALTBG);
+      doc.rect(L, y, R - L, ROW_H, "F");
+    }
+
+    setDraw(LGREY);
+    doc.line(L, y + ROW_H, R, y + ROW_H);
+
+    setRGB(BLACK);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+
+    const maxW = COL.descR - COL.descL - 2;
+    const descTx = doc.splitTextToSize(item.description, maxW)[0] ?? item.description;
+
+    doc.text(descTx, COL.descL + 2, y + 5.5);
+    doc.text(String(item.quantity), COL.qtdR, y + 5.5, { align: "right" });
+    doc.text(`${item.unitPrice.toFixed(2)}€`, COL.priceR, y + 5.5, { align: "right" });
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`${lineTotal.toFixed(2)}€`, COL.totalR, y + 5.5, { align: "right" });
+
+    y += ROW_H;
+  });
+
+  // ── TOTAIS ─────────────────────────────────
+  y += 8;
+  const TX = 130; // x da label dos totais
+
+  setRGB(GREY);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("Subtotal:", TX, y);
+  setRGB(BLACK);
+  doc.text(`${quote.subtotal.toFixed(2)}€`, R, y, { align: "right" });
+
+  y += 6;
+  setRGB(GREY);
+  doc.text(`IVA (${quote.ivaRate}%):`, TX, y);
+  setRGB(BLACK);
+  doc.text(`${quote.iva.toFixed(2)}€`, R, y, { align: "right" });
+
+  y += 4;
+  setDraw(LGREY);
+  doc.line(TX, y, R, y);
+
+  y += 7;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  setRGB(BLACK);
+  doc.text("Total:", TX, y);
+  setRGB(GREEN);
+  doc.text(`${quote.total.toFixed(2)}€`, R, y, { align: "right" });
+
+  // ── NOTAS ──────────────────────────────────
+  if (quote.notes.trim()) {
+    y += 12;
+    setDraw(LGREY);
+    doc.line(L, y - 4, R, y - 4);
+
+    setRGB(BLACK);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text("NOTAS / CONDIÇÕES", L, y);
+
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    setRGB(GREY);
+    const noteLines = doc.splitTextToSize(quote.notes, R - L);
+    doc.text(noteLines, L, y);
+  }
+
+  // ── RODAPÉ ─────────────────────────────────
+  setFill(GREEN);
+  doc.rect(0, PH - 12, PW, 12, "F");
+  setRGB(WHITE);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text("Orçamento gerado via PedeDireto · pededireto.pt", PW / 2, PH - 4.5, { align: "center" });
+
+  // ── SAVE ───────────────────────────────────
+  const slug = quote.clientName.replace(/\s+/g, "-").toLowerCase();
+  const filename = `orcamento-${quote.number.replace("#", "")}-${slug}.pdf`;
+  doc.save(filename);
+};
+
+// ─────────────────────────────────────────────
+// COMPONENTE PRINCIPAL
+// ─────────────────────────────────────────────
 
 const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
   const { toast } = useToast();
   const [quotes, setQuotes] = useState<Quote[]>(MOCK_QUOTES);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Form state
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
@@ -69,14 +269,23 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
   const [notes, setNotes] = useState("");
   const [validityDays, setValidityDays] = useState("30");
 
-  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
   const ivaAmount = subtotal * (parseInt(ivaRate) / 100);
   const total = subtotal + ivaAmount;
 
   const addItem = () => setItems([...items, { description: "", quantity: 1, unitPrice: 0 }]);
-  const removeItem = (index: number) => setItems(items.filter((_, i) => i !== index));
-  const updateItem = (index: number, field: keyof QuoteItem, value: string | number) => {
-    setItems(items.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+  const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));
+  const updateItem = (idx: number, field: keyof QuoteItem, value: string | number) =>
+    setItems(items.map((item, i) => (i === idx ? { ...item, [field]: value } : item)));
+
+  const resetForm = () => {
+    setClientName("");
+    setClientEmail("");
+    setClientPhone("");
+    setItems([{ description: "", quantity: 1, unitPrice: 0 }]);
+    setNotes("");
+    setIvaRate("23");
+    setValidityDays("30");
   };
 
   const handleCreate = () => {
@@ -94,9 +303,15 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
       number: `#${String(quotes.length + 1).padStart(3, "0")}`,
       clientName,
       clientEmail,
+      clientPhone,
+      items: [...items],
+      notes,
+      validityDays,
       description: items[0]?.description || "",
       total,
+      subtotal,
       iva: ivaAmount,
+      ivaRate,
       status: "draft",
       createdAt: new Date().toISOString(),
     };
@@ -107,20 +322,22 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
     toast({ title: "Orçamento criado com sucesso!" });
   };
 
-  const resetForm = () => {
-    setClientName("");
-    setClientEmail("");
-    setClientPhone("");
-    setItems([{ description: "", quantity: 1, unitPrice: 0 }]);
-    setNotes("");
-  };
-
   const markAs = (id: string, status: Quote["status"]) => {
     setQuotes(quotes.map((q) => (q.id === id ? { ...q, status } : q)));
     toast({ title: `Orçamento marcado como ${statusLabels[status].label}` });
   };
 
-  // Empty state
+  const handleDownloadPDF = (quote: Quote) => {
+    try {
+      generateQuotePDF(quote);
+      toast({ title: "PDF gerado com sucesso!" });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Erro ao gerar PDF", variant: "destructive" });
+    }
+  };
+
+  // ── Empty state ───────────────────────────────
   if (quotes.length === 0 && !isCreating) {
     return (
       <div className="space-y-6">
@@ -130,12 +347,11 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
             <p className="text-sm text-muted-foreground">Cria e envia orçamentos profissionais</p>
           </div>
         </div>
-
         <div className="rounded-xl border border-dashed border-muted-foreground/30 p-10 text-center">
           <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">Ainda não tens orçamentos</h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-            Cria orçamentos PDF profissionais com o teu logo, NIF e dados de empresa. Envia diretamente por email ou partilha o link.
+            Cria orçamentos PDF profissionais. Envia diretamente por email ou partilha o link.
           </p>
           <Button onClick={() => setIsCreating(true)}>
             <Plus className="h-4 w-4 mr-2" /> Criar primeiro orçamento
@@ -145,7 +361,7 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
     );
   }
 
-  // Creator modal
+  // ── Formulário ─────────────────────────────────
   if (isCreating) {
     return (
       <div className="space-y-6">
@@ -154,13 +370,19 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
             <h1 className="text-2xl font-bold text-foreground">Novo Orçamento</h1>
             <p className="text-sm text-muted-foreground">Preenche os dados e cria o PDF</p>
           </div>
-          <Button variant="outline" onClick={() => { setIsCreating(false); resetForm(); }}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setIsCreating(false);
+              resetForm();
+            }}
+          >
             Cancelar
           </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Form */}
+          {/* FORM */}
           <div className="space-y-5">
             <div className="bg-card rounded-xl p-5 shadow-card space-y-4">
               <h3 className="font-semibold text-foreground">Dados do Cliente</h3>
@@ -171,16 +393,26 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
                 </div>
                 <div>
                   <Label className="text-xs">Email</Label>
-                  <Input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="joao@email.com" />
+                  <Input
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    placeholder="joao@email.com"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">Telefone</Label>
-                  <Input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="+351 900 000 000" />
+                  <Input
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                    placeholder="+351 900 000 000"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">Validade</Label>
                   <Select value={validityDays} onValueChange={setValidityDays}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="15">15 dias</SelectItem>
                       <SelectItem value="30">30 dias</SelectItem>
@@ -225,7 +457,12 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
                   </div>
                   <div className="col-span-1 flex justify-center">
                     {items.length > 1 && (
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removeItem(i)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-destructive"
+                        onClick={() => removeItem(i)}
+                      >
                         ×
                       </Button>
                     )}
@@ -241,7 +478,9 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
               <div className="flex items-center justify-between">
                 <Label className="text-xs">Taxa de IVA</Label>
                 <Select value={ivaRate} onValueChange={setIvaRate}>
-                  <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="0">Isento</SelectItem>
                     <SelectItem value="6">6%</SelectItem>
@@ -262,16 +501,14 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
             </div>
           </div>
 
-          {/* Preview */}
+          {/* PREVIEW */}
           <div className="bg-card rounded-xl p-6 shadow-card space-y-5 sticky top-4">
             <h3 className="font-semibold text-foreground">Preview</h3>
-
             <div className="border border-border rounded-lg p-5 space-y-4 text-sm">
               <div className="text-center border-b border-border pb-3">
                 <p className="font-bold text-lg">ORÇAMENTO</p>
                 <p className="text-muted-foreground text-xs">#{String(quotes.length + 1).padStart(3, "0")}</p>
               </div>
-
               {clientName && (
                 <div>
                   <p className="text-xs text-muted-foreground">Cliente</p>
@@ -279,7 +516,6 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
                   {clientEmail && <p className="text-xs text-muted-foreground">{clientEmail}</p>}
                 </div>
               )}
-
               {items.some((i) => i.description) && (
                 <div className="border border-border rounded-lg overflow-hidden">
                   <div className="grid grid-cols-12 gap-2 bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
@@ -302,7 +538,6 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
                     ))}
                 </div>
               )}
-
               <div className="space-y-1 pt-2 border-t border-border">
                 <div className="flex justify-between text-xs">
                   <span>Subtotal</span>
@@ -317,14 +552,12 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
                   <span>{total.toFixed(2)}€</span>
                 </div>
               </div>
-
               {notes && (
                 <div className="pt-2 border-t border-border">
                   <p className="text-xs text-muted-foreground">Notas:</p>
                   <p className="text-xs">{notes}</p>
                 </div>
               )}
-
               <div className="text-center pt-3 border-t border-border">
                 <p className="text-[10px] text-muted-foreground">Orçamento gerado via PedeDireto</p>
                 <p className="text-[10px] text-muted-foreground">
@@ -332,25 +565,24 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
                 </p>
               </div>
             </div>
-
-            <div className="flex gap-2">
-              <Button className="flex-1" onClick={handleCreate}>
-                <Check className="h-4 w-4 mr-1" /> Criar Orçamento
-              </Button>
-            </div>
+            <Button className="w-full" onClick={handleCreate}>
+              <Check className="h-4 w-4 mr-1" /> Criar Orçamento
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
-  // List view
+  // ── Listagem ────────────────────────────────────
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Orçamentos</h1>
-          <p className="text-sm text-muted-foreground">{quotes.length} orçamento{quotes.length !== 1 ? "s" : ""}</p>
+          <p className="text-sm text-muted-foreground">
+            {quotes.length} orçamento{quotes.length !== 1 ? "s" : ""}
+          </p>
         </div>
         <Button onClick={() => setIsCreating(true)}>
           <Plus className="h-4 w-4 mr-2" /> Novo Orçamento
@@ -394,7 +626,7 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
                   <DropdownMenuItem onClick={() => markAs(quote.id, "rejected")}>
                     <Clock className="h-4 w-4 mr-2" /> Marcar como recusado
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDownloadPDF(quote)}>
                     <Download className="h-4 w-4 mr-2" /> Download PDF
                   </DropdownMenuItem>
                 </DropdownMenuContent>
