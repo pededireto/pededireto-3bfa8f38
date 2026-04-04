@@ -48,7 +48,7 @@ export interface CreateQuotePayload {
   items: Omit<QuoteItem, "id" | "quote_id">[];
 }
 
-// Alias tipado para contornar tipos gerados desactualizados
+// Alias para contornar tipos Supabase desactualizados
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
@@ -86,13 +86,14 @@ export const useCreateQuote = () => {
 
   return useMutation({
     mutationFn: async (payload: CreateQuotePayload) => {
-      // 1. Contar orçamentos existentes para número sequencial
-      const { count } = await db
-        .from("business_quotes")
-        .select("*", { count: "exact", head: true })
-        .eq("business_id", payload.business_id);
+      // 1. Gerar número sequencial via função atómica no Postgres
+      //    Garante unicidade mesmo com criações simultâneas
+      const { data: numberData, error: numberError } = await db.rpc("generate_quote_number", {
+        p_business_id: payload.business_id,
+      });
 
-      const number = `#${String((count ?? 0) + 1).padStart(3, "0")}`;
+      if (numberError) throw numberError;
+      const number = numberData as string;
 
       // 2. Inserir orçamento
       const { data: quote, error: quoteError } = await db
