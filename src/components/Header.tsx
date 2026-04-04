@@ -85,6 +85,14 @@ const Header = () => {
           </Link>
 
           <Link
+            to="/ofertas-emprego"
+            aria-current={isActive("/ofertas-emprego") ? "page" : undefined}
+            className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+          >
+            💼 Empregos
+          </Link>
+
+          <Link
             to="/claim-business"
             aria-current={isActive("/claim-business") ? "page" : undefined}
             className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
