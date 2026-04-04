@@ -183,6 +183,9 @@ const App = () => {
                     <Route path="/p/:slug" element={<BusinessShortUrl />} />
                     <Route path="/pricing" element={<PricingPage />} />
                     <Route path="/afiliados" element={<AffiliateLandingPage />} />
+                    <Route path="/ofertas-emprego" element={<JobOffers />} />
+                    <Route path="/ofertas-emprego/:slug" element={<JobOfferDetail />} />
+                    <Route path="/minhas-ofertas" element={<MyJobOffers />} />
 
                     {/* AUTH */}
                     <Route path="/login" element={<UserLogin />} />
