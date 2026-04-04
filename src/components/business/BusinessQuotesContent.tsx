@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, FileText, Send, Download, Check, Clock, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,11 +13,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { jsPDF } from "jspdf";
 
 // ─────────────────────────────────────────────
 // TIPOS
 // ─────────────────────────────────────────────
+
+interface BusinessInfo {
+  name: string;
+  logo_url: string | null;
+  cta_website: string | null;
+}
 
 interface QuoteItem {
   description: string;
@@ -56,6 +64,25 @@ const statusLabels: Record<string, { label: string; color: string }> = {
 };
 
 // ─────────────────────────────────────────────
+// HOOK — dados do negócio
+// ─────────────────────────────────────────────
+
+const useBusinessInfo = (businessId: string) =>
+  useQuery<BusinessInfo>({
+    queryKey: ["business-info-pdf", businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("name, logo_url, cta_website")
+        .eq("id", businessId)
+        .single();
+      if (error) throw error;
+      return data as BusinessInfo;
+    },
+    enabled: !!businessId,
+  });
+
+// ─────────────────────────────────────────────
 // GERAÇÃO PDF — jsPDF puro (sem autotable)
 // ─────────────────────────────────────────────
 
@@ -68,7 +95,37 @@ const LGREY: RGB = [220, 220, 220];
 const WHITE: RGB = [255, 255, 255];
 const ALTBG: RGB = [245, 245, 245];
 
-const generateQuotePDF = (quote: Quote): void => {
+/**
+ * Tenta carregar uma imagem via URL e devolvê-la como base64.
+ * Retorna null em caso de falha (CORS, URL inválida, etc.)
+ */
+const loadImageAsBase64 = (url: string): Promise<{ data: string; format: string } | null> =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL("image/png");
+        const base64 = dataURL.split(",")[1];
+        resolve({ data: base64, format: "PNG" });
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+
+const generateQuotePDF = async (quote: Quote, business: BusinessInfo): Promise<void> => {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const PW = doc.internal.pageSize.getWidth();
   const PH = doc.internal.pageSize.getHeight();
@@ -80,29 +137,56 @@ const generateQuotePDF = (quote: Quote): void => {
   const setDraw = (c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
 
   // ── CABEÇALHO ──────────────────────────────
+  // Fundo verde
   setFill(GREEN);
-  doc.rect(0, 0, PW, 34, "F");
+  doc.rect(0, 0, PW, 38, "F");
+
+  // Tentar carregar logo do negócio
+  let logoLoaded = false;
+  if (business.logo_url) {
+    const logo = await loadImageAsBase64(business.logo_url);
+    if (logo) {
+      try {
+        // Logo no lado esquerdo, max 28x28mm, centrado verticalmente
+        doc.addImage(logo.data, logo.format, L, 5, 28, 28);
+        logoLoaded = true;
+      } catch {
+        // ignora erro de addImage e continua sem logo
+      }
+    }
+  }
+
+  // Nome do negócio e website
+  const textStartX = logoLoaded ? L + 32 : L;
 
   setRGB(WHITE);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text("ORÇAMENTO", L, 14);
+  doc.setFontSize(16);
+  doc.text(business.name, textStartX, 16);
+
+  if (business.cta_website) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(business.cta_website.replace(/^https?:\/\//, ""), textStartX, 24);
+  }
+
+  // Lado direito: "ORÇAMENTO", número, data, validade
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("ORÇAMENTO", R, 13, { align: "right" });
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(quote.number, L, 23);
-
-  doc.setFontSize(8);
-  doc.text("pededireto.pt", R, 12, { align: "right" });
-  doc.text(new Date(quote.createdAt).toLocaleDateString("pt-PT"), R, 20, { align: "right" });
+  doc.setFontSize(9);
+  doc.text(quote.number, R, 20, { align: "right" });
+  doc.text(new Date(quote.createdAt).toLocaleDateString("pt-PT"), R, 27, { align: "right" });
 
   const validadeDate = new Date(
     new Date(quote.createdAt).getTime() + parseInt(quote.validityDays) * 86_400_000,
   ).toLocaleDateString("pt-PT");
-  doc.text(`Válido até: ${validadeDate}`, R, 28, { align: "right" });
+  doc.text(`Válido até: ${validadeDate}`, R, 34, { align: "right" });
 
   // ── CLIENTE ────────────────────────────────
-  let y = 44;
+  let y = 50;
 
   setRGB(BLACK);
   doc.setFont("helvetica", "bold");
@@ -134,17 +218,16 @@ const generateQuotePDF = (quote: Quote): void => {
   // ── TABELA ─────────────────────────────────
   y += 6;
 
-  // colunas (posição x do lado direito de cada coluna)
   const COL = {
-    descL: L, // left edge da descrição
-    descR: 118, // right edge da descrição
+    descL: L,
+    descR: 118,
     qtdR: 133,
     priceR: 160,
     totalR: R,
   };
   const ROW_H = 8;
 
-  // cabeçalho
+  // cabeçalho da tabela
   setFill(GREEN);
   setDraw(GREEN);
   doc.rect(L, y, R - L, ROW_H, "F");
@@ -192,7 +275,7 @@ const generateQuotePDF = (quote: Quote): void => {
 
   // ── TOTAIS ─────────────────────────────────
   y += 8;
-  const TX = 130; // x da label dos totais
+  const TX = 130;
 
   setRGB(GREY);
   doc.setFont("helvetica", "normal");
@@ -238,7 +321,7 @@ const generateQuotePDF = (quote: Quote): void => {
     doc.text(noteLines, L, y);
   }
 
-  // ── RODAPÉ ─────────────────────────────────
+  // ── RODAPÉ — gerado via PedeDireto ─────────
   setFill(GREEN);
   doc.rect(0, PH - 12, PW, 12, "F");
   setRGB(WHITE);
@@ -260,6 +343,8 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
   const { toast } = useToast();
   const [quotes, setQuotes] = useState<Quote[]>(MOCK_QUOTES);
   const [isCreating, setIsCreating] = useState(false);
+
+  const { data: businessInfo } = useBusinessInfo(businessId);
 
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -327,9 +412,13 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
     toast({ title: `Orçamento marcado como ${statusLabels[status].label}` });
   };
 
-  const handleDownloadPDF = (quote: Quote) => {
+  const handleDownloadPDF = async (quote: Quote) => {
+    if (!businessInfo) {
+      toast({ title: "A carregar dados do negócio...", variant: "destructive" });
+      return;
+    }
     try {
-      generateQuotePDF(quote);
+      await generateQuotePDF(quote, businessInfo);
       toast({ title: "PDF gerado com sucesso!" });
     } catch (err) {
       console.error(err);
@@ -505,10 +594,32 @@ const BusinessQuotesContent = ({ businessId }: { businessId: string }) => {
           <div className="bg-card rounded-xl p-6 shadow-card space-y-5 sticky top-4">
             <h3 className="font-semibold text-foreground">Preview</h3>
             <div className="border border-border rounded-lg p-5 space-y-4 text-sm">
-              <div className="text-center border-b border-border pb-3">
-                <p className="font-bold text-lg">ORÇAMENTO</p>
-                <p className="text-muted-foreground text-xs">#{String(quotes.length + 1).padStart(3, "0")}</p>
+              {/* Cabeçalho do preview — mostra dados reais do negócio */}
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <div className="flex items-center gap-3">
+                  {businessInfo?.logo_url && (
+                    <img
+                      src={businessInfo.logo_url}
+                      alt="Logo"
+                      className="h-10 w-10 object-contain rounded"
+                      onError={(e) => (e.currentTarget.style.display = "none")}
+                    />
+                  )}
+                  <div>
+                    <p className="font-bold text-sm">{businessInfo?.name || "—"}</p>
+                    {businessInfo?.cta_website && (
+                      <p className="text-[10px] text-muted-foreground">
+                        {businessInfo.cta_website.replace(/^https?:\/\//, "")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-sm">ORÇAMENTO</p>
+                  <p className="text-muted-foreground text-xs">#{String(quotes.length + 1).padStart(3, "0")}</p>
+                </div>
               </div>
+
               {clientName && (
                 <div>
                   <p className="text-xs text-muted-foreground">Cliente</p>
