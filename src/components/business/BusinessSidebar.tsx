@@ -42,7 +42,8 @@ export type BusinessTab =
   | "badges"
   | "affiliates"
   | "quotes"
-  | "support";
+  | "support"
+  | "job-offers";
 
 interface BusinessSidebarProps {
   businessName: string;
