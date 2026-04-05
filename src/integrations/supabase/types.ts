@@ -5641,6 +5641,8 @@ export type Database = {
           id: string
           is_national_fallback: boolean | null
           price_quote: string | null
+          reminder_count: number | null
+          reminder_sent_at: string | null
           request_id: string
           responded_at: string | null
           sent_at: string
@@ -5656,6 +5658,8 @@ export type Database = {
           id?: string
           is_national_fallback?: boolean | null
           price_quote?: string | null
+          reminder_count?: number | null
+          reminder_sent_at?: string | null
           request_id: string
           responded_at?: string | null
           sent_at?: string
@@ -5671,6 +5675,8 @@ export type Database = {
           id?: string
           is_national_fallback?: boolean | null
           price_quote?: string | null
+          reminder_count?: number | null
+          reminder_sent_at?: string | null
           request_id?: string
           responded_at?: string | null
           sent_at?: string
@@ -6259,8 +6265,11 @@ export type Database = {
       }
       service_requests: {
         Row: {
+          additional_notes: string | null
           address: string | null
           assigned_to_admin: string | null
+          availability: string | null
+          budget_range: string | null
           category_id: string | null
           closed_at: string | null
           consumer_city: string | null
@@ -6270,9 +6279,11 @@ export type Database = {
           contact_unlocked: boolean | null
           created_at: string
           description: string | null
+          full_address: string | null
           id: string
           location_city: string | null
           location_postal_code: string | null
+          preferred_date: string | null
           status: Database["public"]["Enums"]["request_status"]
           subcategory_id: string | null
           updated_at: string
@@ -6280,8 +6291,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          additional_notes?: string | null
           address?: string | null
           assigned_to_admin?: string | null
+          availability?: string | null
+          budget_range?: string | null
           category_id?: string | null
           closed_at?: string | null
           consumer_city?: string | null
@@ -6291,9 +6305,11 @@ export type Database = {
           contact_unlocked?: boolean | null
           created_at?: string
           description?: string | null
+          full_address?: string | null
           id?: string
           location_city?: string | null
           location_postal_code?: string | null
+          preferred_date?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           subcategory_id?: string | null
           updated_at?: string
@@ -6301,8 +6317,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          additional_notes?: string | null
           address?: string | null
           assigned_to_admin?: string | null
+          availability?: string | null
+          budget_range?: string | null
           category_id?: string | null
           closed_at?: string | null
           consumer_city?: string | null
@@ -6312,9 +6331,11 @@ export type Database = {
           contact_unlocked?: boolean | null
           created_at?: string
           description?: string | null
+          full_address?: string | null
           id?: string
           location_city?: string | null
           location_postal_code?: string | null
+          preferred_date?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           subcategory_id?: string | null
           updated_at?: string

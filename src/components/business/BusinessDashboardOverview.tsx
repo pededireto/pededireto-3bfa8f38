@@ -33,6 +33,8 @@ import {
   Trophy,
   Timer,
   ChevronRight,
+  FileText,
+  Briefcase,
 } from "lucide-react";
 
 interface Props {
@@ -477,6 +479,39 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
           </div>
         </div>
       )}
+
+      {/* ── Quick Access — Quotes + Jobs ─────────────── */}
+      <div className="grid grid-cols-2 gap-4">
+        <button
+          onClick={() => onNavigate?.("quotes")}
+          className="bg-card rounded-xl p-5 shadow-card text-left hover:ring-2 hover:ring-primary/30 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary/10 p-2.5 shrink-0">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Orçamentos</p>
+              <p className="text-xs text-muted-foreground">Gerir pedidos de orçamento</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigate?.("job-offers")}
+          className="bg-card rounded-xl p-5 shadow-card text-left hover:ring-2 hover:ring-primary/30 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary/10 p-2.5 shrink-0">
+              <Briefcase className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Ofertas Emprego</p>
+              <p className="text-xs text-muted-foreground">Publicar e gerir vagas</p>
+            </div>
+          </div>
+        </button>
+      </div>
 
       {/* ── Badges Row ───────────────────────────────── */}
       {permissions.canViewProAnalytics && unlockedBadges.length > 0 && (
