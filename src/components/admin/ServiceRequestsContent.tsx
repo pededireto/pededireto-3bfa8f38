@@ -15,8 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Eye, Building2, AlertTriangle, MapPin, User, Mail, Send, Clock } from "lucide-react";
-import { differenceInHours } from "date-fns";
+import { Loader2, Search, Eye, Building2, AlertTriangle, MapPin, User, Mail, Send, Clock, Phone, Bell, CalendarDays, DollarSign, FileText, Timer, Trash2 } from "lucide-react";
+import { differenceInHours, formatDistanceToNow } from "date-fns";
+import { pt } from "date-fns/locale";
 
 // ═══ Correct enum values for request_status ═══
 const STATUS_ORDER = ["aberto", "em_conversa", "propostas_recebidas", "em_negociacao", "fechado"] as const;
@@ -47,6 +48,27 @@ const matchStatusLabels: Record<string, string> = {
   aceite: "Aceite",
   recusado: "Recusado",
   sem_resposta: "Sem Resposta",
+};
+
+const BUDGET_LABELS: Record<string, string> = {
+  "500": "Até 500€",
+  "500-1000": "500€ – 1.000€",
+  "1000-5000": "1.000€ – 5.000€",
+  "5000+": "Mais de 5.000€",
+};
+
+const AVAILABILITY_LABELS: Record<string, string> = {
+  mornings: "Manhãs",
+  afternoons: "Tardes",
+  weekends: "Fins de semana",
+};
+
+// ═══ Time-based alert color helper ═══
+const getTimeAlertColor = (hoursOld: number) => {
+  if (hoursOld > 72) return "text-destructive";
+  if (hoursOld > 48) return "text-orange-500";
+  if (hoursOld > 24) return "text-yellow-500";
+  return "text-muted-foreground";
 };
 
 // ═══ Status Stepper Component ═══
@@ -85,7 +107,6 @@ const StatusStepper = ({ currentStatus, onStatusChange }: { currentStatus: strin
           </div>
         );
       })}
-      {/* Side statuses */}
       <span className="mx-1 text-muted-foreground/30">|</span>
       {SIDE_STATUSES.map((status) => {
         const colors = statusColors[status];
@@ -109,6 +130,32 @@ const StatusStepper = ({ currentStatus, onStatusChange }: { currentStatus: strin
   );
 };
 
+// ═══ Match Counts Summary ═══
+const useMatchCounts = (requestIds: string[]) => {
+  return useQuery({
+    queryKey: ["admin-match-counts", requestIds],
+    enabled: requestIds.length > 0,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("request_business_matches" as any)
+        .select("request_id, status")
+        .in("request_id", requestIds);
+      if (error) throw error;
+
+      const counts: Record<string, { total: number; aceite: number; recusado: number; enviado: number }> = {};
+      (data || []).forEach((m: any) => {
+        if (!counts[m.request_id]) counts[m.request_id] = { total: 0, aceite: 0, recusado: 0, enviado: 0 };
+        counts[m.request_id].total++;
+        if (m.status === "aceite") counts[m.request_id].aceite++;
+        else if (m.status === "recusado") counts[m.request_id].recusado++;
+        else if (m.status === "enviado") counts[m.request_id].enviado++;
+      });
+      return counts;
+    },
+  });
+};
+
 const ServiceRequestsContent = () => {
   const { data: requests = [], isLoading } = useAllServiceRequests();
   const updateStatus = useUpdateRequestStatus();
@@ -118,6 +165,7 @@ const ServiceRequestsContent = () => {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [timeFilter, setTimeFilter] = useState<string>("all");
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [matchDialogOpen, setMatchDialogOpen] = useState(false);
   const [businessSearch, setBusinessSearch] = useState("");
@@ -129,6 +177,9 @@ const ServiceRequestsContent = () => {
     () => requests.find((r) => r.id === selectedRequestId),
     [requests, selectedRequestId]
   );
+
+  const requestIds = useMemo(() => requests.map((r) => r.id), [requests]);
+  const { data: matchCounts = {} } = useMatchCounts(requestIds);
 
   const { data: suggestedBusinesses = [], isLoading: suggestionsLoading } = useQuery({
     queryKey: ["suggested-businesses", selectedRequest?.category_id, selectedRequest?.subcategory_id, selectedRequestId],
@@ -175,12 +226,22 @@ const ServiceRequestsContent = () => {
         (r.profiles?.email || "").toLowerCase().includes(search.toLowerCase()) ||
         (r.description || "").toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+
+      // Time filter
+      if (timeFilter !== "all" && r.status === "aberto") {
+        const hoursOld = differenceInHours(new Date(), new Date(r.created_at));
+        if (timeFilter === "24h" && hoursOld < 24) return false;
+        if (timeFilter === "48h" && hoursOld < 48) return false;
+        if (timeFilter === "72h" && hoursOld < 72) return false;
+      } else if (timeFilter !== "all" && r.status !== "aberto") {
+        return false;
+      }
+
       return matchesSearch && matchesStatus;
     });
-  }, [requests, search, statusFilter]);
+  }, [requests, search, statusFilter, timeFilter]);
 
   const handleStatusChange = async (id: string, status: string) => {
-    // Require confirmation for terminal states
     if (status === "fechado" || status === "cancelado") {
       setConfirmDialog({ id, status });
       return;
@@ -224,6 +285,51 @@ const ServiceRequestsContent = () => {
     }
   };
 
+  const handleSendReminder = async (matchId: string, businessId: string) => {
+    try {
+      // Update reminder tracking
+      await supabase
+        .from("request_business_matches" as any)
+        .update({
+          reminder_sent_at: new Date().toISOString(),
+          reminder_count: 1, // Simplified — ideally increment
+        } as any)
+        .eq("id", matchId);
+
+      // Create notification for the business
+      await supabase
+        .from("business_notifications" as any)
+        .insert({
+          business_id: businessId,
+          type: "reminder_request",
+          payload: { request_id: selectedRequestId, message: "Tem um pedido pendente a aguardar a sua resposta." },
+        } as any);
+
+      // Invoke edge function
+      supabase.functions
+        .invoke("notify-business", {
+          body: { type: "reminder_request", business_id: businessId, request_id: selectedRequestId },
+        })
+        .catch(() => {});
+
+      toast({ title: "Lembrete enviado com sucesso" });
+    } catch {
+      toast({ title: "Erro ao enviar lembrete", variant: "destructive" });
+    }
+  };
+
+  const handleRemoveMatch = async (matchId: string) => {
+    try {
+      await supabase
+        .from("request_business_matches" as any)
+        .delete()
+        .eq("id", matchId);
+      toast({ title: "Match removido" });
+    } catch {
+      toast({ title: "Erro ao remover", variant: "destructive" });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -241,11 +347,7 @@ const ServiceRequestsContent = () => {
 
       {/* Status Tabs */}
       <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant={statusFilter === "all" ? "default" : "outline"}
-          onClick={() => setStatusFilter("all")}
-        >
+        <Button size="sm" variant={statusFilter === "all" ? "default" : "outline"} onClick={() => setStatusFilter("all")}>
           Todos ({statusCounts.all})
         </Button>
         {[...STATUS_ORDER, ...SIDE_STATUSES].map((s) => {
@@ -253,28 +355,30 @@ const ServiceRequestsContent = () => {
           const count = statusCounts[s] || 0;
           if (count === 0 && statusFilter !== s) return null;
           return (
-            <Button
-              key={s}
-              size="sm"
-              variant={statusFilter === s ? "default" : "outline"}
-              onClick={() => setStatusFilter(s)}
-              className={statusFilter === s ? "" : `${colors.text}`}
-            >
+            <Button key={s} size="sm" variant={statusFilter === s ? "default" : "outline"} onClick={() => setStatusFilter(s)} className={statusFilter === s ? "" : `${colors.text}`}>
               {statusLabels[s]} ({count})
             </Button>
           );
         })}
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Pesquisar por utilizador ou descrição..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search + Time Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Pesquisar por utilizador ou descrição..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={timeFilter} onValueChange={setTimeFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Tempo sem resposta" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os tempos</SelectItem>
+            <SelectItem value="24h">Sem resposta +24h</SelectItem>
+            <SelectItem value="48h">Sem resposta +48h</SelectItem>
+            <SelectItem value="72h">Sem resposta +72h</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -286,7 +390,8 @@ const ServiceRequestsContent = () => {
               <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Categoria</th>
               <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Descrição</th>
               <th className="text-left p-4 font-medium text-muted-foreground">Estado</th>
-              <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Data</th>
+              <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Empresas</th>
+              <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Tempo</th>
               <th className="text-center p-4 font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>
@@ -295,6 +400,8 @@ const ServiceRequestsContent = () => {
               const hoursOld = differenceInHours(new Date(), new Date(req.created_at));
               const isStale = hoursOld > 24 && req.status === "aberto";
               const colors = statusColors[req.status] || statusColors.aberto;
+              const mc = matchCounts[req.id];
+              const timeColor = req.status === "aberto" ? getTimeAlertColor(hoursOld) : "text-muted-foreground";
 
               return (
                 <tr key={req.id} className={`border-b border-border/50 hover:bg-secondary/20 ${isStale ? "bg-red-50/50 dark:bg-red-950/10" : ""}`}>
@@ -319,34 +426,29 @@ const ServiceRequestsContent = () => {
                       <Badge className={`${colors.bg} ${colors.text} border-0 text-xs`}>
                         {statusLabels[req.status] || req.status}
                       </Badge>
-                      {/* Quick action: advance to next status */}
                       {STATUS_ORDER.includes(req.status as any) && STATUS_ORDER.indexOf(req.status as any) < STATUS_ORDER.length - 1 && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
-                          onClick={() => handleStatusChange(req.id, STATUS_ORDER[STATUS_ORDER.indexOf(req.status as any) + 1])}
-                          title={`Avançar para ${statusLabels[STATUS_ORDER[STATUS_ORDER.indexOf(req.status as any) + 1]]}`}
-                        >
+                        <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => handleStatusChange(req.id, STATUS_ORDER[STATUS_ORDER.indexOf(req.status as any) + 1])} title={`Avançar para ${statusLabels[STATUS_ORDER[STATUS_ORDER.indexOf(req.status as any) + 1]]}`}>
                           →
                         </Button>
                       )}
                     </div>
                   </td>
-                  <td className="p-4 text-muted-foreground hidden md:table-cell">
-                    {new Date(req.created_at).toLocaleDateString("pt-PT")}
-                    {isStale && <span className="text-xs text-destructive block">+24h sem resposta</span>}
+                  <td className="p-4 hidden md:table-cell">
+                    {mc ? (
+                      <span className="text-xs">
+                        <span className="font-medium">{mc.total}</span> contactadas
+                        {mc.aceite > 0 && <span className="text-green-600"> · {mc.aceite} aceitou</span>}
+                        {mc.recusado > 0 && <span className="text-red-500"> · {mc.recusado} recusou</span>}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">0</span>
+                    )}
+                  </td>
+                  <td className={`p-4 hidden md:table-cell text-xs ${timeColor}`}>
+                    {formatDistanceToNow(new Date(req.created_at), { addSuffix: true, locale: pt })}
                   </td>
                   <td className="p-4 text-center">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setSelectedRequestId(req.id);
-                        setMatchDialogOpen(true);
-                        setBusinessSearch("");
-                      }}
-                    >
+                    <Button size="sm" variant="ghost" onClick={() => { setSelectedRequestId(req.id); setMatchDialogOpen(true); setBusinessSearch(""); }}>
                       <Eye className="h-4 w-4 mr-1" /> Ver
                     </Button>
                   </td>
@@ -362,7 +464,7 @@ const ServiceRequestsContent = () => {
 
       {/* Detail + Match Dialog */}
       <Dialog open={matchDialogOpen} onOpenChange={setMatchDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Pedido</DialogTitle>
           </DialogHeader>
@@ -370,35 +472,61 @@ const ServiceRequestsContent = () => {
           {selectedRequest && (
             <div className="space-y-5">
               {/* Status Stepper */}
-              <StatusStepper
-                currentStatus={selectedRequest.status}
-                onStatusChange={(status) => handleStatusChange(selectedRequest.id, status)}
-              />
+              <StatusStepper currentStatus={selectedRequest.status} onStatusChange={(status) => handleStatusChange(selectedRequest.id, status)} />
 
-              {/* Request details */}
+              {/* Full request details */}
               <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1 flex-1">
-                    {selectedRequest.urgency === "urgent" && (
-                      <div className="flex items-center gap-1 text-destructive text-xs font-bold">
-                        <AlertTriangle className="h-3.5 w-3.5" /> URGENTE
-                      </div>
-                    )}
-                    <p className="text-sm font-medium text-primary">
-                      {selectedRequest.categories?.name || "Sem categoria"}
-                      {selectedRequest.subcategories?.name ? ` → ${selectedRequest.subcategories.name}` : ""}
-                    </p>
-                    <p className="text-foreground">{selectedRequest.description || "Sem descrição"}</p>
-                  </div>
+                <div className="space-y-1">
+                  {(selectedRequest as any).urgency === "urgent" && (
+                    <div className="flex items-center gap-1 text-destructive text-xs font-bold">
+                      <AlertTriangle className="h-3.5 w-3.5" /> URGENTE
+                    </div>
+                  )}
+                  <p className="text-sm font-medium text-primary">
+                    {selectedRequest.categories?.name || "Sem categoria"}
+                    {selectedRequest.subcategories?.name ? ` → ${selectedRequest.subcategories.name}` : ""}
+                  </p>
+                  <p className="text-foreground">{selectedRequest.description || "Sem descrição"}</p>
                 </div>
 
-                {(selectedRequest as any).location_city && (
+                {/* Location */}
+                {((selectedRequest as any).location_city || (selectedRequest as any).full_address) && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" />
-                    {[(selectedRequest as any).location_city, (selectedRequest as any).location_postal_code].filter(Boolean).join(", ")}
+                    {[(selectedRequest as any).location_city, (selectedRequest as any).location_postal_code, (selectedRequest as any).full_address].filter(Boolean).join(", ")}
                   </div>
                 )}
 
+                {/* New fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border">
+                  {(selectedRequest as any).preferred_date && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Data: {new Date((selectedRequest as any).preferred_date).toLocaleDateString("pt-PT")}</span>
+                    </div>
+                  )}
+                  {(selectedRequest as any).budget_range && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Orçamento: {BUDGET_LABELS[(selectedRequest as any).budget_range] || (selectedRequest as any).budget_range}</span>
+                    </div>
+                  )}
+                  {(selectedRequest as any).availability && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Timer className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Disponibilidade: {AVAILABILITY_LABELS[(selectedRequest as any).availability] || (selectedRequest as any).availability}</span>
+                    </div>
+                  )}
+                </div>
+
+                {(selectedRequest as any).additional_notes && (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Notas adicionais</p>
+                    <p className="text-sm text-foreground">{(selectedRequest as any).additional_notes}</p>
+                  </div>
+                )}
+
+                {/* Consumer info */}
                 {selectedRequest.profiles && (
                   <div className="border-t border-border pt-3 space-y-1 text-sm">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Consumidor</p>
@@ -408,6 +536,12 @@ const ServiceRequestsContent = () => {
                     {selectedRequest.profiles.email && (
                       <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-muted-foreground" /><a href={`mailto:${selectedRequest.profiles.email}`} className="text-primary hover:underline">{selectedRequest.profiles.email}</a></div>
                     )}
+                    {(selectedRequest as any).consumer_phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        <a href={`tel:${(selectedRequest as any).consumer_phone}`} className="text-primary hover:underline">{(selectedRequest as any).consumer_phone}</a>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -415,6 +549,54 @@ const ServiceRequestsContent = () => {
                   Criado: {new Date(selectedRequest.created_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
+
+              {/* Timeline */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  Timeline do Pedido
+                </h3>
+                <div className="border-l-2 border-border pl-4 space-y-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-primary">✅</span>
+                    <span>Pedido recebido — {new Date(selectedRequest.created_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                  </div>
+                  {matches.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-primary">✅</span>
+                      <span>Enviado para {matches.length} negócio{matches.length > 1 ? "s" : ""}</span>
+                    </div>
+                  )}
+                  {matches.filter((m: any) => m.status === "aceite").length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✅</span>
+                      <span>{matches.filter((m: any) => m.status === "aceite").length} negócio{matches.filter((m: any) => m.status === "aceite").length > 1 ? "s" : ""} aceitou/aceitaram</span>
+                    </div>
+                  )}
+                  {matches.filter((m: any) => m.status === "enviado").length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-yellow-500">⏳</span>
+                      <span>Aguarda resposta de {matches.filter((m: any) => m.status === "enviado").length} negócio{matches.filter((m: any) => m.status === "enviado").length > 1 ? "s" : ""}</span>
+                    </div>
+                  )}
+                  {selectedRequest.status === "fechado" && selectedRequest.closed_at && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✅</span>
+                      <span>Pedido fechado — {new Date(selectedRequest.closed_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Match counter summary */}
+              {matches.length > 0 && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
+                  <strong>{matches.length}</strong> negócios contactados ·{" "}
+                  <span className="text-green-600">{matches.filter((m: any) => m.status === "aceite").length} aceitaram</span> ·{" "}
+                  <span className="text-red-500">{matches.filter((m: any) => m.status === "recusado").length} recusaram</span> ·{" "}
+                  <span className="text-yellow-500">{matches.filter((m: any) => m.status === "enviado").length} sem resposta</span>
+                </div>
+              )}
 
               {/* Suggested businesses */}
               <div className="space-y-2">
@@ -436,12 +618,7 @@ const ServiceRequestsContent = () => {
                             <p className="font-medium text-sm">{b.name}</p>
                             <p className="text-xs text-muted-foreground">{b.city || "—"}</p>
                           </div>
-                          <Button
-                            size="sm"
-                            variant={alreadyMatched ? "outline" : "default"}
-                            disabled={alreadyMatched}
-                            onClick={() => handleAddMatch(b.id)}
-                          >
+                          <Button size="sm" variant={alreadyMatched ? "outline" : "default"} disabled={alreadyMatched} onClick={() => handleAddMatch(b.id)}>
                             <Send className="h-3.5 w-3.5 mr-1" />
                             {alreadyMatched ? "Já enviado" : "Encaminhar"}
                           </Button>
@@ -457,27 +634,50 @@ const ServiceRequestsContent = () => {
                 <h3 className="text-sm font-bold">Negócios Associados ({matches.length})</h3>
                 {matches.length > 0 ? (
                   <div className="space-y-2">
-                    {matches.map((m: any) => (
-                      <div key={m.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
-                        <div>
-                          <p className="font-medium text-sm">{m.businesses?.name || "—"}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Enviado: {new Date(m.sent_at).toLocaleDateString("pt-PT")}
-                            {m.price_quote && ` • Orçamento: ${m.price_quote}`}
-                          </p>
+                    {matches.map((m: any) => {
+                      const matchHours = differenceInHours(new Date(), new Date(m.sent_at));
+                      const isMatchStale = m.status === "enviado" && matchHours > 24;
+                      const matchTimeColor = m.status === "enviado" ? getTimeAlertColor(matchHours) : "text-muted-foreground";
+
+                      return (
+                        <div key={m.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg ${isMatchStale ? "bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800" : "bg-secondary/30"}`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm">{m.businesses?.name || "—"}</p>
+                              {isMatchStale && <Badge variant="outline" className="text-[10px] border-yellow-500 text-yellow-600">Sem resposta</Badge>}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                              <span>Enviado: {new Date(m.sent_at).toLocaleDateString("pt-PT")}</span>
+                              <span className={matchTimeColor}>({formatDistanceToNow(new Date(m.sent_at), { addSuffix: true, locale: pt })})</span>
+                              {m.price_quote && <span>• Orçamento: {m.price_quote}</span>}
+                              {(m as any).reminder_sent_at && (
+                                <span className="text-primary">• Lembrete {formatDistanceToNow(new Date((m as any).reminder_sent_at), { addSuffix: true, locale: pt })}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                            {m.status === "enviado" && matchHours > 24 && (
+                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleSendReminder(m.id, m.business_id)} title="Enviar lembrete">
+                                <Bell className="h-3 w-3 mr-1" /> Lembrete
+                              </Button>
+                            )}
+                            <Select value={m.status} onValueChange={(v) => handleMatchStatusChange(m.id, v)}>
+                              <SelectTrigger className="w-[120px] h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(matchStatusLabels).map(([k, v]) => (
+                                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveMatch(m.id)} title="Remover match">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
-                        <Select value={m.status} onValueChange={(v) => handleMatchStatusChange(m.id, v)}>
-                          <SelectTrigger className="w-[130px] h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(matchStatusLabels).map(([k, v]) => (
-                              <SelectItem key={k} value={k}>{v}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Nenhum negócio associado ainda.</p>
@@ -486,18 +686,10 @@ const ServiceRequestsContent = () => {
 
               {/* Manual add */}
               <div className="border-t pt-4 space-y-2">
-                <p className="text-sm font-medium">Associar Manualmente</p>
-                <Input
-                  placeholder="Pesquisar negócio..."
-                  value={businessSearch}
-                  onChange={(e) => setBusinessSearch(e.target.value)}
-                />
+                <p className="text-sm font-medium">+ Associar Manualmente</p>
+                <Input placeholder="Pesquisar negócio..." value={businessSearch} onChange={(e) => setBusinessSearch(e.target.value)} />
                 {businessSearch && (
-                  <ManualBusinessSearch
-                    search={businessSearch}
-                    onSelect={handleAddMatch}
-                    existingMatchIds={matches.map((m: any) => m.business_id)}
-                  />
+                  <ManualBusinessSearch search={businessSearch} onSelect={handleAddMatch} existingMatchIds={matches.map((m: any) => m.business_id)} />
                 )}
               </div>
             </div>
@@ -505,7 +697,7 @@ const ServiceRequestsContent = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Dialog for terminal states */}
+      {/* Confirmation Dialog */}
       <AlertDialog open={!!confirmDialog} onOpenChange={() => setConfirmDialog(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

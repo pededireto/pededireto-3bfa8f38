@@ -33,6 +33,8 @@ import {
   Trophy,
   Timer,
   ChevronRight,
+  FileText,
+  Briefcase,
 } from "lucide-react";
 
 interface Props {
