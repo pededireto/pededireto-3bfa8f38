@@ -41,7 +41,7 @@ export const useAllServiceRequests = () => {
         .select(
           `
           *,
-          profiles:user_id (full_name, email),
+          profiles:user_id (full_name, email, phone),
           categories:category_id (name),
           subcategories:subcategory_id (name)
         `,
