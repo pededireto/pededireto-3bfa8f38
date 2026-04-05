@@ -29,6 +29,8 @@ export interface RequestBusinessMatch {
   status: string;
   responded_at: string | null;
   price_quote: string | null;
+  reminder_count: number | null;
+  reminder_sent_at: string | null;
   businesses?: { name: string } | null;
 }
 
@@ -41,7 +43,7 @@ export const useAllServiceRequests = () => {
         .select(
           `
           *,
-          profiles:user_id (full_name, email, phone),
+          profiles:user_id (full_name, email),
           categories:category_id (name),
           subcategories:subcategory_id (name)
         `,
@@ -122,10 +124,13 @@ export const useCreateMatch = () => {
   });
 };
 
+// ── Actualiza apenas o status do match (aceite/recusado/enviado) ─────────────
+// NÃO usar para lembretes — usar useSendMatchReminder
 export const useUpdateMatchStatus = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status, requestId }: { id: string; status: string; requestId: string }) => {
+      // Apenas campos que existem na tabela e são válidos para o enum match_status
       const updates: any = { status };
       if (status !== "enviado") {
         updates.responded_at = new Date().toISOString();
@@ -133,6 +138,52 @@ export const useUpdateMatchStatus = () => {
       const { error } = await supabase
         .from("request_business_matches" as any)
         .update(updates)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["request-matches", vars.requestId] });
+    },
+  });
+};
+
+// ── Envia lembrete — actualiza APENAS reminder_count e reminder_sent_at ──────
+// NÃO altera o status do match
+export const useSendMatchReminder = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      currentCount,
+      requestId,
+    }: {
+      id: string;
+      currentCount: number | null;
+      requestId: string;
+    }) => {
+      const { error } = await supabase
+        .from("request_business_matches" as any)
+        .update({
+          reminder_count: (currentCount ?? 0) + 1,
+          reminder_sent_at: new Date().toISOString(),
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["request-matches", vars.requestId] });
+    },
+  });
+};
+
+// ── Remove um match ───────────────────────────────────────────────────────────
+export const useRemoveMatch = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, requestId }: { id: string; requestId: string }) => {
+      const { error } = await supabase
+        .from("request_business_matches" as any)
+        .delete()
         .eq("id", id);
       if (error) throw error;
     },
@@ -184,9 +235,10 @@ export const useServiceRequestStats = () => {
       const total = requests.length;
       const thisMonth = requests.filter((r) => r.created_at >= startOfMonth).length;
       const concluded = requests.filter((r) => r.status === "fechado").length;
-      const forwarded = requests.filter((r) => r.status === "em_conversa" || r.status === "em_negociacao" || r.status === "fechado").length;
+      const forwarded = requests.filter(
+        (r) => r.status === "em_conversa" || r.status === "em_negociacao" || r.status === "fechado",
+      ).length;
 
-      // By category
       const byCat: Record<string, number> = {};
       requests.forEach((r) => {
         if (r.category_id) byCat[r.category_id] = (byCat[r.category_id] || 0) + 1;
@@ -204,7 +256,6 @@ export const useServiceRequestStats = () => {
   });
 };
 
-// ─── Meta-dados por pedido (respostas + não lidas + actividade) ───────────────
 export interface RequestMeta {
   responses: number;
   hasUnread: boolean;
@@ -215,7 +266,6 @@ export interface RequestMeta {
   hasMessages: boolean;
 }
 
-// ─── Review feedback por pedido ───────────────────────────────────────────────
 export interface RequestReviewInfo {
   rating: number;
   comment: string | null;
@@ -251,16 +301,17 @@ export const useConsumerRequestReviews = (requestIds: string[]) => {
         .in("business_id", allBusinessIds);
       if (revErr) throw revErr;
 
-      const { data: businesses } = await supabase
-        .from("businesses")
-        .select("id, name")
-        .in("id", allBusinessIds);
+      const { data: businesses } = await supabase.from("businesses").select("id, name").in("id", allBusinessIds);
 
       const bizNameMap: Record<string, string> = {};
-      (businesses || []).forEach((b: any) => { bizNameMap[b.id] = b.name; });
+      (businesses || []).forEach((b: any) => {
+        bizNameMap[b.id] = b.name;
+      });
 
-      const reviewMap: Record<string, typeof reviews extends (infer T)[] ? T : never> = {};
-      (reviews || []).forEach((r: any) => { reviewMap[r.business_id] = r; });
+      const reviewMap: Record<string, any> = {};
+      (reviews || []).forEach((r: any) => {
+        reviewMap[r.business_id] = r;
+      });
 
       const result: Record<string, RequestReviewInfo[]> = {};
       (matches || []).forEach((m: any) => {
@@ -268,10 +319,10 @@ export const useConsumerRequestReviews = (requestIds: string[]) => {
         if (rev) {
           if (!result[m.request_id]) result[m.request_id] = [];
           result[m.request_id].push({
-            rating: (rev as any).rating,
-            comment: (rev as any).comment,
-            businessResponse: (rev as any).business_response,
-            businessResponseAt: (rev as any).business_response_at,
+            rating: rev.rating,
+            comment: rev.comment,
+            businessResponse: rev.business_response,
+            businessResponseAt: rev.business_response_at,
             businessName: bizNameMap[m.business_id] || "Negócio",
           });
         }
@@ -292,14 +343,12 @@ export const useConsumerRequestsMeta = (requestIds: string[]) => {
       } = await supabase.auth.getUser();
       if (!user) return {} as Record<string, RequestMeta>;
 
-      // Buscar matches com detalhes de actividade
       const { data: matches, error: matchError } = await supabase
         .from("request_business_matches" as any)
         .select("request_id, status, viewed_at, responded_at, first_response_at")
         .in("request_id", requestIds);
       if (matchError) throw matchError;
 
-      // Buscar mensagens não lidas (enviadas por negócio, não lidas pelo consumidor)
       const { data: unread, error: msgError } = await supabase
         .from("request_messages" as any)
         .select("request_id")
@@ -308,7 +357,6 @@ export const useConsumerRequestsMeta = (requestIds: string[]) => {
         .is("read_at", null);
       if (msgError) throw msgError;
 
-      // Buscar se existem mensagens (para saber se conversa começou)
       const { data: allMessages, error: allMsgError } = await supabase
         .from("request_messages" as any)
         .select("request_id")
@@ -318,9 +366,7 @@ export const useConsumerRequestsMeta = (requestIds: string[]) => {
 
       const messageRequestIds = new Set((allMessages || []).map((m: any) => m.request_id));
 
-      // Agregar por request_id
       const meta: Record<string, RequestMeta> = {};
-
       requestIds.forEach((id) => {
         const reqMatches = (matches || []).filter((m: any) => m.request_id === id);
         const reqUnread = (unread || []).filter((m: any) => m.request_id === id);
@@ -331,9 +377,7 @@ export const useConsumerRequestsMeta = (requestIds: string[]) => {
           hasPending: reqMatches.some((m: any) => m.status === "enviado"),
           notified: reqMatches.length,
           viewed: reqMatches.filter((m: any) => m.viewed_at != null).length,
-          responded: reqMatches.filter(
-            (m: any) => m.responded_at != null || m.first_response_at != null
-          ).length,
+          responded: reqMatches.filter((m: any) => m.responded_at != null || m.first_response_at != null).length,
           hasMessages: messageRequestIds.has(id),
         };
       });
