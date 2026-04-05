@@ -384,7 +384,7 @@ const BusinessPage = () => {
     : "Encontre serviços e profissionais diretamente no Pede Direto.";
   const pageUrl = `${BASE_URL}/negocio/${business?.slug}`;
   const pageImage = business?.logo_url
-    ? `https://pnrqahgvhddhcucmccjp.supabase.co/functions/v1/og-image?name=${encodeURIComponent(business.name)}&logo=${encodeURIComponent(business.logo_url)}&city=${encodeURIComponent(business.city || "")}&category=${encodeURIComponent(business.categories?.name || "")}`
+    ? `https://mpnizkjntkutpxevqzxx.supabase.co/functions/v1/og-image?name=${encodeURIComponent(business.name)}&logo=${encodeURIComponent(business.logo_url)}&city=${encodeURIComponent(business.city || "")}&category=${encodeURIComponent(business.categories?.name || "")}`
     : `${BASE_URL}/og-default.jpg`;
 
   const schemaData = business
