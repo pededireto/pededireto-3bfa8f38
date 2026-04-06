@@ -24,6 +24,7 @@ import BusinessSuggestionForm from "@/components/BusinessSuggestionForm";
 import { GoogleMapsLink } from "@/components/business/GoogleMapsLink";
 import VideoPlayer from "@/components/business/VideoPlayer";
 import { Button } from "@/components/ui/button";
+import BusinessCTAPanel from "@/components/business/BusinessCTAPanel";
 
 import {
   ArrowLeft,
