@@ -15,10 +15,10 @@ serve(async (req) => {
     const { provider, api_key } = await req.json();
 
     if (!provider || !api_key) {
-      return new Response(
-        JSON.stringify({ valid: false, error: "Provider e chave são obrigatórios" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ valid: false, error: "Provider e chave são obrigatórios" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     let valid = false;
@@ -37,9 +37,7 @@ serve(async (req) => {
       }
     } else if (provider === "google") {
       // Test with Gemini models list
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${api_key}`
-      );
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${api_key}`);
       if (res.ok) {
         valid = true;
       } else {
@@ -65,15 +63,15 @@ serve(async (req) => {
       errorMsg = "Provider não suportado";
     }
 
-    return new Response(
-      JSON.stringify({ valid, error: errorMsg || undefined }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ valid, error: errorMsg || undefined }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("verify-api-key error:", err);
-    return new Response(
-      JSON.stringify({ valid: false, error: "Erro interno ao verificar chave" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ valid: false, error: "Erro interno ao verificar chave" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
