@@ -33,7 +33,6 @@ export const useBusinessApiKey = (businessId?: string) => {
 export const useSaveApiKey = () => {
   const qc = useQueryClient();
   const { toast } = useToast();
-
   return useMutation({
     mutationFn: async ({
       businessId,
@@ -45,7 +44,7 @@ export const useSaveApiKey = () => {
       apiKey: string;
     }) => {
       const hint = apiKey.slice(-4);
-
+      const now = new Date().toISOString();
       const { data, error } = await (supabase as any)
         .from("business_api_keys")
         .upsert(
@@ -55,13 +54,13 @@ export const useSaveApiKey = () => {
             api_key_encrypted: apiKey,
             api_key_hint: hint,
             is_active: true,
-            updated_at: new Date().toISOString(),
+            created_at: now, // ← fix
+            updated_at: now,
           },
-          { onConflict: "business_id,provider" }
+          { onConflict: "business_id,provider" },
         )
         .select("id, business_id, provider, api_key_hint, is_active, created_at, updated_at")
         .single();
-
       if (error) throw error;
       return data;
     },
@@ -78,13 +77,9 @@ export const useSaveApiKey = () => {
 export const useRemoveApiKey = () => {
   const qc = useQueryClient();
   const { toast } = useToast();
-
   return useMutation({
     mutationFn: async ({ id, businessId }: { id: string; businessId: string }) => {
-      const { error } = await (supabase as any)
-        .from("business_api_keys")
-        .delete()
-        .eq("id", id);
+      const { error } = await (supabase as any).from("business_api_keys").delete().eq("id", id);
       if (error) throw error;
       return businessId;
     },
@@ -100,13 +95,7 @@ export const useRemoveApiKey = () => {
 
 export const useVerifyApiKey = () => {
   return useMutation({
-    mutationFn: async ({
-      provider,
-      apiKey,
-    }: {
-      provider: "openai" | "google" | "ideogram";
-      apiKey: string;
-    }) => {
+    mutationFn: async ({ provider, apiKey }: { provider: "openai" | "google" | "ideogram"; apiKey: string }) => {
       const { data, error } = await supabase.functions.invoke("verify-api-key", {
         body: { provider, api_key: apiKey },
       });
