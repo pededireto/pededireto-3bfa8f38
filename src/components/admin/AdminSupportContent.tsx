@@ -22,24 +22,55 @@ const cleanPhone = (phone: string): string => {
 const getWhatsAppNumber = (biz: Business): string | null => {
   const raw = biz.cta_whatsapp || biz.owner_phone;
   if (!raw) return null;
+
   const cleaned = cleanPhone(raw);
-  // Adicionar 351 se não tiver indicativo
+
   if (cleaned.startsWith("351")) return cleaned;
   if (cleaned.startsWith("9") || cleaned.startsWith("2")) return `351${cleaned}`;
+
   return cleaned;
+};
+
+// 📱 detectar mobile
+const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+// 🧠 mensagem mais natural (estilo cliente real)
+const generateMessage = (biz: Business) => {
+  return `Olá! 👋 Vi o teu negócio "${biz.name}" na PedeDireto e gostava de saber mais informações. Podes ajudar-me?`;
+};
+
+// 🔗 abrir WhatsApp com fallback
+const openWhatsApp = (phone: string, text: string) => {
+  const encoded = encodeURIComponent(text);
+
+  const url = isMobile()
+    ? `https://wa.me/${phone}?text=${encoded}`
+    : `https://web.whatsapp.com/send?phone=${phone}&text=${encoded}`;
+
+  // tentativa normal
+  const win = window.open(url, "_blank");
+
+  // fallback (caso bloqueie)
+  if (!win) {
+    window.location.href = url;
+  }
 };
 
 const AdminSupportContent = () => {
   const { toast } = useToast();
+
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Business[]>([]);
   const [searched, setSearched] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
 
   const handleSearch = async () => {
     if (!search.trim()) return;
+
     setLoading(true);
     setSearched(true);
+
     try {
       const { data, error } = await supabase
         .from("businesses")
@@ -48,29 +79,71 @@ const AdminSupportContent = () => {
         .limit(10);
 
       if (error) throw error;
+
       setResults((data || []) as Business[]);
-    } catch (err: any) {
+    } catch (err) {
       toast({ title: "Erro ao pesquisar", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenWhatsApp = (biz: Business, message?: string) => {
+  // 📊 tracking simples (preparado para DB depois)
+  const trackClick = (biz: Business) => {
+    console.log("WhatsApp Click:", {
+      business_id: biz.id,
+      business_name: biz.name,
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  const handleOpenWhatsApp = (biz: Business) => {
     const phone = getWhatsAppNumber(biz);
+
     if (!phone) {
       toast({
         title: "Sem número de WhatsApp",
-        description: `${biz.name} não tem número de WhatsApp ou telefone registado.`,
+        description: `${biz.name} não tem contacto disponível.`,
         variant: "destructive",
       });
       return;
     }
-    const text =
-      message ||
-      `Olá! 👋 Somos a equipa PedeDireto. Estamos a contactar-te relativamente ao teu negócio "${biz.name}". Podemos ajudar-te com alguma questão?`;
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
-    window.open(url, "_blank");
+
+    const message = generateMessage(biz);
+
+    trackClick(biz);
+
+    openWhatsApp(phone, message);
+  };
+
+  // 🔥 contactar vários negócios
+  const handleBulkWhatsApp = () => {
+    const selectedBiz = results.filter((b) => selected.includes(b.id));
+
+    if (selectedBiz.length === 0) {
+      toast({
+        title: "Nenhum selecionado",
+        description: "Seleciona pelo menos um negócio",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    selectedBiz.forEach((biz, index) => {
+      const phone = getWhatsAppNumber(biz);
+      if (!phone) return;
+
+      const message = generateMessage(biz);
+
+      setTimeout(() => {
+        trackClick(biz);
+        openWhatsApp(phone, message);
+      }, index * 800); // delay para não bloquear
+    });
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   };
 
   return (
@@ -78,9 +151,7 @@ const AdminSupportContent = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">Suporte & Mensagens</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Pesquisa um negócio e abre uma conversa diretamente no WhatsApp
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Contacta negócios diretamente via WhatsApp</p>
       </div>
 
       {/* Pesquisa */}
@@ -97,6 +168,9 @@ const AdminSupportContent = () => {
         </Button>
       </div>
 
+      {/* Bulk action */}
+      {selected.length > 0 && <Button onClick={handleBulkWhatsApp}>🚀 Contactar {selected.length} negócios</Button>}
+
       {/* Resultados */}
       {searched && !loading && results.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
@@ -109,16 +183,20 @@ const AdminSupportContent = () => {
         <div className="space-y-2">
           {results.map((biz) => {
             const phone = getWhatsAppNumber(biz);
+
             return (
-              <div
-                key={biz.id}
-                className="flex items-center justify-between p-4 rounded-xl border border-border bg-card"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{biz.name}</p>
-                  <div className="flex items-center gap-3 mt-1">
-                    {biz.city && <span className="text-xs text-muted-foreground">{biz.city}</span>}
-                    {biz.owner_name && <span className="text-xs text-muted-foreground">{biz.owner_name}</span>}
+              <div key={biz.id} className="flex items-center justify-between p-4 rounded-xl border bg-card">
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" checked={selected.includes(biz.id)} onChange={() => toggleSelect(biz.id)} />
+
+                  <div>
+                    <p className="font-semibold text-sm">{biz.name}</p>
+
+                    <div className="flex gap-2 text-xs text-muted-foreground">
+                      {biz.city && <span>{biz.city}</span>}
+                      {biz.owner_name && <span>{biz.owner_name}</span>}
+                    </div>
+
                     {phone ? (
                       <span className="text-xs text-green-600 flex items-center gap-1">
                         <Phone className="h-3 w-3" />+{phone}
@@ -128,12 +206,8 @@ const AdminSupportContent = () => {
                     )}
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  className="gap-2 shrink-0 ml-4"
-                  onClick={() => handleOpenWhatsApp(biz)}
-                  disabled={!phone}
-                >
+
+                <Button size="sm" onClick={() => handleOpenWhatsApp(biz)} disabled={!phone} className="gap-2">
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp
                 </Button>
@@ -143,7 +217,6 @@ const AdminSupportContent = () => {
         </div>
       )}
 
-      {/* Estado inicial */}
       {!searched && (
         <div className="text-center py-16 text-muted-foreground">
           <Search className="h-10 w-10 mx-auto mb-3 opacity-20" />
