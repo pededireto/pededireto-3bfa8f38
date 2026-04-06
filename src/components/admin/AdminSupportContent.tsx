@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client"; // Import correto
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,19 +22,22 @@ export default function AdminSupportContent() {
   const [newTemplateCategory, setNewTemplateCategory] = useState("");
   const [newTemplateContent, setNewTemplateContent] = useState("");
 
-  const toast = useToast();
+  const { toast } = useToast();
 
-  // Carregar templates existentes
+  // Carregar templates
   useEffect(() => {
     const fetchTemplates = async () => {
-      const { data, error } = await supabase.from("message_templates").select("*").order("id", { ascending: true });
+      const { data, error } = await supabase
+        .from<Template>("message_templates") // ✅ tipagem Template
+        .select("*")
+        .order("id", { ascending: true });
 
       if (error) {
         toast({ title: "Erro ao carregar templates", variant: "destructive" });
         return;
       }
 
-      setTemplates(data as Template[]);
+      setTemplates(data || []);
     };
 
     fetchTemplates();
@@ -47,14 +50,8 @@ export default function AdminSupportContent() {
     }
 
     const { data, error } = await supabase
-      .from("message_templates")
-      .insert([
-        {
-          name: newTemplateName,
-          category: newTemplateCategory,
-          content: newTemplateContent,
-        },
-      ])
+      .from<Template>("message_templates")
+      .insert([{ name: newTemplateName, category: newTemplateCategory, content: newTemplateContent }])
       .select()
       .single();
 
@@ -65,7 +62,7 @@ export default function AdminSupportContent() {
 
     toast({ title: "Template criado com sucesso!", variant: "default" });
 
-    setTemplates([...templates, data as Template]);
+    setTemplates([...templates, data]);
     setShowNewTemplate(false);
     setNewTemplateName("");
     setNewTemplateCategory("");
@@ -76,8 +73,8 @@ export default function AdminSupportContent() {
     <div className="p-4 space-y-4">
       <h1 className="text-xl font-bold">Templates de Mensagem</h1>
 
-      {/* Select de templates existentes */}
-      <Select value={selectedTemplate || ""} onValueChange={(val) => setSelectedTemplate(Number(val))}>
+      {/* Select de templates */}
+      <Select value={selectedTemplate?.toString() || ""} onValueChange={(val) => setSelectedTemplate(Number(val))}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Selecionar template" />
         </SelectTrigger>
@@ -90,12 +87,12 @@ export default function AdminSupportContent() {
         </SelectContent>
       </Select>
 
-      {/* Mostrar conteúdo do template selecionado */}
+      {/* Conteúdo do template */}
       {selectedTemplate && (
         <Textarea value={templates.find((t) => t.id === selectedTemplate)?.content || ""} readOnly className="mt-2" />
       )}
 
-      {/* Botão Criar Novo Template */}
+      {/* Novo template */}
       <Button onClick={() => setShowNewTemplate(true)}>+ Novo Template</Button>
 
       {showNewTemplate && (
