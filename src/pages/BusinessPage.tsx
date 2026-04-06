@@ -893,7 +893,6 @@ const BusinessPage = () => {
                   />
                 </div>
               </div>
-              </div>
             </div>
           </div>
         </section>
