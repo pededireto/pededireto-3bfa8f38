@@ -158,6 +158,11 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
+// ─── Bypass: tabela ainda não está nos tipos gerados do Supabase ──────────────
+// Remover este cast assim que correres: supabase gen types typescript
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function MessageTemplatesPanel() {
@@ -172,10 +177,7 @@ export default function MessageTemplatesPanel() {
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchTemplates = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("message_templates")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await db.from("message_templates").select("*").order("created_at", { ascending: false });
 
     if (error) {
       toast({ title: "Erro ao carregar templates", variant: "destructive" });
@@ -191,7 +193,7 @@ export default function MessageTemplatesPanel() {
 
   // ── Create ───────────────────────────────────────────────────────────────
   const handleCreate = async (form: TemplateFormData) => {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("message_templates")
       .insert([
         {
@@ -218,7 +220,7 @@ export default function MessageTemplatesPanel() {
   const handleEdit = async (form: TemplateFormData) => {
     if (!editingTemplate) return;
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("message_templates")
       .update({
         name: form.name.trim(),
@@ -242,7 +244,7 @@ export default function MessageTemplatesPanel() {
 
   // ── Delete ───────────────────────────────────────────────────────────────
   const handleDelete = async (id: number) => {
-    const { error } = await supabase.from("message_templates").delete().eq("id", id);
+    const { error } = await db.from("message_templates").delete().eq("id", id);
     if (error) {
       toast({ title: "Erro ao eliminar template", variant: "destructive" });
       return;
