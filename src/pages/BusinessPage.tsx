@@ -632,6 +632,18 @@ const BusinessPage = () => {
                   </div>
                 )}
 
+                {/* ── MOBILE CTAs — shown only on mobile/tablet ── */}
+                <div className="lg:hidden">
+                  <BusinessCTAPanel
+                    business={business}
+                    responseTime={responseTime}
+                    sidebarBadges={sidebarBadges}
+                    badgeConfig={BADGE_CONFIG}
+                    onCtaClick={(type) => handleCtaClick(type as any)}
+                    onGA4Lead={trackGA4Lead}
+                  />
+                </div>
+
                 {/* Galeria principal */}
                 {businessImages.length > 0 && (business as any).show_gallery !== false && (
                   <GalleryGrid images={businessImages} label="Galeria" />
