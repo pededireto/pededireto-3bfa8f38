@@ -7,7 +7,8 @@ import { toast } from "@/components/ui/use-toast";
 type Template = {
   id: number;
   name: string;
-  category: string;
+  subcategory: string | null; // Pode ser null
+  message_type: string; // onboarding / ativacao / upsell / divulgacao
   content: string;
 };
 
@@ -17,35 +18,37 @@ export default function MessageTemplatesPanel() {
   const [showNewTemplate, setShowNewTemplate] = useState(false);
 
   const [newTemplateName, setNewTemplateName] = useState("");
-  const [newTemplateCategory, setNewTemplateCategory] = useState("");
+  const [newTemplateSubcategory, setNewTemplateSubcategory] = useState("");
+  const [newTemplateType, setNewTemplateType] = useState("");
   const [newTemplateContent, setNewTemplateContent] = useState("");
 
   // Carregar templates existentes
   useEffect(() => {
     const fetchTemplates = async () => {
-      const { data, error } = await supabase.from("message_templates").select("*").order("id", { ascending: true });
+      const { data, error } = await supabase.from("support_messages").select("*").order("id", { ascending: true });
 
       if (error) {
         toast({ title: "Erro ao carregar templates", variant: "destructive" });
         return;
       }
 
-      setTemplates(data);
+      setTemplates(data as Template[]);
     };
 
     fetchTemplates();
   }, []);
 
   const handleCreateTemplate = async () => {
-    if (!newTemplateName || !newTemplateCategory || !newTemplateContent) {
-      toast({ title: "Preencher todos os campos", variant: "destructive" });
+    if (!newTemplateName || !newTemplateType || !newTemplateContent) {
+      toast({ title: "Preencher todos os campos obrigatórios", variant: "destructive" });
       return;
     }
 
-    const { data, error } = await supabase.from("message_templates").insert([
+    const { data, error } = await supabase.from("support_messages").insert([
       {
         name: newTemplateName,
-        category: newTemplateCategory,
+        subcategory: newTemplateSubcategory || null,
+        message_type: newTemplateType,
         content: newTemplateContent,
       },
     ]);
@@ -57,10 +60,11 @@ export default function MessageTemplatesPanel() {
 
     toast({ title: "Template criado com sucesso!", variant: "default" });
 
-    setTemplates([...(templates || []), data[0]]);
+    setTemplates([...(templates || []), data[0] as Template]);
     setShowNewTemplate(false);
     setNewTemplateName("");
-    setNewTemplateCategory("");
+    setNewTemplateSubcategory("");
+    setNewTemplateType("");
     setNewTemplateContent("");
   };
 
@@ -77,7 +81,7 @@ export default function MessageTemplatesPanel() {
         <option value="">Selecionar template</option>
         {templates.map((t) => (
           <option key={t.id} value={t.id}>
-            {t.name} ({t.category})
+            {t.name} ({t.message_type}) {t.subcategory ? `- ${t.subcategory}` : ""}
           </option>
         ))}
       </select>
@@ -105,9 +109,15 @@ export default function MessageTemplatesPanel() {
             onChange={(e) => setNewTemplateName(e.target.value)}
           />
 
+          <Input
+            placeholder="Subcategoria / tipo de negócio (opcional)"
+            value={newTemplateSubcategory}
+            onChange={(e) => setNewTemplateSubcategory(e.target.value)}
+          />
+
           <select
-            value={newTemplateCategory}
-            onChange={(e) => setNewTemplateCategory(e.target.value)}
+            value={newTemplateType}
+            onChange={(e) => setNewTemplateType(e.target.value)}
             className="w-full border rounded-md px-2 py-2"
           >
             <option value="">Selecionar tipo de mensagem</option>
