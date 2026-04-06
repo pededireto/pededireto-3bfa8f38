@@ -1,31 +1,33 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/https://mpnizkjntkutpxevqzxx.supabase.co"; // Ajusta ao teu setup
+import { supabase } from "@/integrations/supabase/client"; // Import correto
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 type Template = {
   id: number;
   name: string;
-  subcategory: string | null; // Pode ser null
-  message_type: string; // onboarding / ativacao / upsell / divulgacao
+  category: string;
   content: string;
 };
 
-export default function MessageTemplatesPanel() {
+export default function AdminSupportContent() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
   const [showNewTemplate, setShowNewTemplate] = useState(false);
 
   const [newTemplateName, setNewTemplateName] = useState("");
-  const [newTemplateSubcategory, setNewTemplateSubcategory] = useState("");
-  const [newTemplateType, setNewTemplateType] = useState("");
+  const [newTemplateCategory, setNewTemplateCategory] = useState("");
   const [newTemplateContent, setNewTemplateContent] = useState("");
+
+  const toast = useToast();
 
   // Carregar templates existentes
   useEffect(() => {
     const fetchTemplates = async () => {
-      const { data, error } = await supabase.from("support_messages").select("*").order("id", { ascending: true });
+      const { data, error } = await supabase.from("message_templates").select("*").order("id", { ascending: true });
 
       if (error) {
         toast({ title: "Erro ao carregar templates", variant: "destructive" });
@@ -36,22 +38,25 @@ export default function MessageTemplatesPanel() {
     };
 
     fetchTemplates();
-  }, []);
+  }, [toast]);
 
   const handleCreateTemplate = async () => {
-    if (!newTemplateName || !newTemplateType || !newTemplateContent) {
-      toast({ title: "Preencher todos os campos obrigatórios", variant: "destructive" });
+    if (!newTemplateName || !newTemplateCategory || !newTemplateContent) {
+      toast({ title: "Preencher todos os campos", variant: "destructive" });
       return;
     }
 
-    const { data, error } = await supabase.from("support_messages").insert([
-      {
-        name: newTemplateName,
-        subcategory: newTemplateSubcategory || null,
-        message_type: newTemplateType,
-        content: newTemplateContent,
-      },
-    ]);
+    const { data, error } = await supabase
+      .from("message_templates")
+      .insert([
+        {
+          name: newTemplateName,
+          category: newTemplateCategory,
+          content: newTemplateContent,
+        },
+      ])
+      .select()
+      .single();
 
     if (error) {
       toast({ title: "Erro ao criar template", variant: "destructive" });
@@ -60,11 +65,10 @@ export default function MessageTemplatesPanel() {
 
     toast({ title: "Template criado com sucesso!", variant: "default" });
 
-    setTemplates([...(templates || []), data[0] as Template]);
+    setTemplates([...templates, data as Template]);
     setShowNewTemplate(false);
     setNewTemplateName("");
-    setNewTemplateSubcategory("");
-    setNewTemplateType("");
+    setNewTemplateCategory("");
     setNewTemplateContent("");
   };
 
@@ -73,27 +77,22 @@ export default function MessageTemplatesPanel() {
       <h1 className="text-xl font-bold">Templates de Mensagem</h1>
 
       {/* Select de templates existentes */}
-      <select
-        className="w-full border rounded-md p-2"
-        value={selectedTemplate || ""}
-        onChange={(e) => setSelectedTemplate(Number(e.target.value))}
-      >
-        <option value="">Selecionar template</option>
-        {templates.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name} ({t.message_type}) {t.subcategory ? `- ${t.subcategory}` : ""}
-          </option>
-        ))}
-      </select>
+      <Select value={selectedTemplate || ""} onValueChange={(val) => setSelectedTemplate(Number(val))}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Selecionar template" />
+        </SelectTrigger>
+        <SelectContent>
+          {templates.map((t) => (
+            <SelectItem key={t.id} value={t.id.toString()}>
+              {t.name} ({t.category})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {/* Mostrar conteúdo do template selecionado */}
       {selectedTemplate && (
-        <textarea
-          className="w-full border rounded-md p-2 mt-2"
-          rows={4}
-          value={templates.find((t) => t.id === selectedTemplate)?.content || ""}
-          readOnly
-        />
+        <Textarea value={templates.find((t) => t.id === selectedTemplate)?.content || ""} readOnly className="mt-2" />
       )}
 
       {/* Botão Criar Novo Template */}
@@ -109,29 +108,23 @@ export default function MessageTemplatesPanel() {
             onChange={(e) => setNewTemplateName(e.target.value)}
           />
 
-          <Input
-            placeholder="Subcategoria / tipo de negócio (opcional)"
-            value={newTemplateSubcategory}
-            onChange={(e) => setNewTemplateSubcategory(e.target.value)}
-          />
+          <Select value={newTemplateCategory} onValueChange={setNewTemplateCategory}>
+            <SelectTrigger className="w-full mt-2">
+              <SelectValue placeholder="Selecionar tipo de mensagem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="onboarding">Onboarding</SelectItem>
+              <SelectItem value="ativacao">Ativação</SelectItem>
+              <SelectItem value="upsell">Upsell</SelectItem>
+              <SelectItem value="divulgacao">Divulgação</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <select
-            value={newTemplateType}
-            onChange={(e) => setNewTemplateType(e.target.value)}
-            className="w-full border rounded-md px-2 py-2"
-          >
-            <option value="">Selecionar tipo de mensagem</option>
-            <option value="onboarding">Onboarding</option>
-            <option value="ativacao">Ativação</option>
-            <option value="upsell">Upsell</option>
-            <option value="divulgacao">Divulgação</option>
-          </select>
-
-          <textarea
+          <Textarea
             placeholder="Conteúdo da mensagem"
             value={newTemplateContent}
             onChange={(e) => setNewTemplateContent(e.target.value)}
-            className="w-full border rounded-md p-2 mt-2"
+            className="mt-2"
             rows={4}
           />
 
