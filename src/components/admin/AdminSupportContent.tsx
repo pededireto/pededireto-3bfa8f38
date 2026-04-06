@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MessageCircle, Search, Loader2, Phone } from "lucide-react";
+import { MessageCircle, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,9 @@ interface Business {
   cta_whatsapp: string | null;
   city: string | null;
   subcategory_id: string;
+  subcategories?: {
+    name: string;
+  };
 }
 
 interface Subcategory {
@@ -20,11 +23,12 @@ interface Subcategory {
   name: string;
 }
 
-const ADMIN_MESSAGES = [
-  "Olá! 👋 Somos da equipa PedeDireto. Estamos a validar os dados do teu negócio na plataforma.",
-  "Olá! 👋 Notámos o teu negócio na PedeDireto e queremos ajudar-te a receber mais pedidos.",
-  "Olá! 👋 Estamos a otimizar a presença do teu negócio na PedeDireto. Tens 2 minutos para falar?",
-];
+interface Template {
+  id: string;
+  name: string;
+  category: string;
+  content: string;
+}
 
 const cleanPhone = (phone: string): string => phone.replace(/\D/g, "");
 
@@ -55,18 +59,30 @@ const AdminSupportContent = () => {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [selectedSub, setSelectedSub] = useState("");
 
-  const [selectedMessage, setSelectedMessage] = useState(ADMIN_MESSAGES[0]);
-  const [customMessage, setCustomMessage] = useState(ADMIN_MESSAGES[0]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [customMessage, setCustomMessage] = useState("");
 
-  // 🔥 carregar subcategorias reais
+  // 🔥 carregar subcategorias
   useEffect(() => {
-    const loadSubs = async () => {
+    const load = async () => {
       const { data } = await supabase.from("subcategories").select("id, name").order("name");
 
-      setSubcategories((data || []) as Subcategory[]);
+      setSubcategories(data || []);
     };
 
-    loadSubs();
+    load();
+  }, []);
+
+  // 🔥 carregar templates
+  useEffect(() => {
+    const loadTemplates = async () => {
+      const { data } = await supabase.from("message_templates").select("*").order("created_at", { ascending: false });
+
+      setTemplates(data || []);
+    };
+
+    loadTemplates();
   }, []);
 
   const handleSearch = async () => {
@@ -75,10 +91,21 @@ const AdminSupportContent = () => {
     try {
       let query = supabase
         .from("businesses")
-        .select("id, name, owner_name, owner_phone, cta_whatsapp, city, subcategory_id")
+        .select(
+          `
+          id,
+          name,
+          owner_name,
+          owner_phone,
+          cta_whatsapp,
+          city,
+          subcategory_id,
+          subcategories ( name )
+        `,
+        )
         .limit(20);
 
-      if (search.trim()) {
+      if (search) {
         query = query.ilike("name", `%${search}%`);
       }
 
@@ -90,58 +117,30 @@ const AdminSupportContent = () => {
 
       if (error) throw error;
 
-      setResults((data || []) as Business[]);
-    } catch (err) {
-      toast({ title: "Erro ao pesquisar", variant: "destructive" });
+      setResults(data || []);
+    } catch {
+      toast({ title: "Erro", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpen = (biz: Business) => {
-    const phone = getWhatsAppNumber(biz);
-
-    if (!phone) {
-      toast({
-        title: "Sem número",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    openWhatsApp(phone, customMessage);
-  };
-
-  const handleContactAll = () => {
-    results.forEach((biz, i) => {
-      const phone = getWhatsAppNumber(biz);
-      if (!phone) return;
-
-      setTimeout(() => {
-        openWhatsApp(phone, customMessage);
-      }, i * 1200); // delay anti-spam
-    });
+  const handleTemplateChange = (id: string) => {
+    setSelectedTemplate(id);
+    const t = templates.find((t) => t.id === id);
+    if (t) setCustomMessage(t.content);
   };
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Suporte & Mensagens</h1>
 
-      {/* 🔥 FILTROS */}
+      {/* FILTROS */}
       <div className="flex gap-2 flex-wrap">
-        <Input
-          placeholder="Nome do negócio..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1"
-        />
+        <Input placeholder="Nome do negócio..." value={search} onChange={(e) => setSearch(e.target.value)} />
 
-        <select
-          value={selectedSub}
-          onChange={(e) => setSelectedSub(e.target.value)}
-          className="border rounded-md px-2 py-2"
-        >
-          <option value="">Todas subcategorias</option>
+        <select value={selectedSub} onChange={(e) => setSelectedSub(e.target.value)}>
+          <option value="">Todas</option>
           {subcategories.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -149,26 +148,22 @@ const AdminSupportContent = () => {
           ))}
         </select>
 
-        <Button onClick={handleSearch} disabled={loading}>
-          {loading ? <Loader2 className="animate-spin" /> : <Search />}
-        </Button>
+        <Button onClick={handleSearch}>{loading ? <Loader2 className="animate-spin" /> : <Search />}</Button>
       </div>
 
-      {/* 🔥 MENSAGENS ADMIN */}
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Mensagem</p>
+      {/* TEMPLATES */}
+      <div>
+        <p className="text-sm font-medium">Tipo de mensagem</p>
 
         <select
-          value={selectedMessage}
-          onChange={(e) => {
-            setSelectedMessage(e.target.value);
-            setCustomMessage(e.target.value);
-          }}
+          value={selectedTemplate}
+          onChange={(e) => handleTemplateChange(e.target.value)}
           className="w-full border rounded-md px-2 py-2"
         >
-          {ADMIN_MESSAGES.map((msg, i) => (
-            <option key={i} value={msg}>
-              {msg}
+          <option value="">Selecionar template</option>
+          {templates.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.category} — {t.name}
             </option>
           ))}
         </select>
@@ -176,33 +171,26 @@ const AdminSupportContent = () => {
         <textarea
           value={customMessage}
           onChange={(e) => setCustomMessage(e.target.value)}
-          className="w-full border rounded-md p-2 text-sm"
+          className="w-full border rounded-md p-2 mt-2"
           rows={3}
         />
       </div>
 
-      {/* 🔥 BOTÃO MASSIVO CONTROLADO */}
-      {results.length > 1 && (
-        <Button onClick={handleContactAll} variant="secondary">
-          Contactar todos ({results.length})
-        </Button>
-      )}
-
-      {/* 🔥 RESULTADOS */}
+      {/* RESULTADOS */}
       <div className="space-y-2">
         {results.map((biz) => {
           const phone = getWhatsAppNumber(biz);
 
           return (
-            <div key={biz.id} className="flex justify-between items-center border p-3 rounded-lg">
+            <div key={biz.id} className="border p-3 rounded-lg flex justify-between">
               <div>
                 <p className="font-semibold">{biz.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {biz.owner_name} • {biz.city}
+                  {biz.subcategories?.name} • {biz.city}
                 </p>
               </div>
 
-              <Button size="sm" onClick={() => handleOpen(biz)} disabled={!phone}>
+              <Button onClick={() => phone && openWhatsApp(phone, customMessage)}>
                 <MessageCircle className="h-4 w-4 mr-1" />
                 WhatsApp
               </Button>
