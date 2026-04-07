@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Loader2, LayoutDashboard, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, LayoutDashboard, ArrowUp, ArrowDown, Copy } from "lucide-react";
 
 const BLOCK_TYPES = [
   { value: "hero", label: "Hero" },

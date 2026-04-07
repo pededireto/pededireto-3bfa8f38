@@ -89,7 +89,15 @@ const StudioSettingsPage = () => {
   const provider = selectedProvider ? PROVIDERS.find((p) => p.key === selectedProvider) : null;
 
   const handleVerifyAndSave = async () => {
-    if (!selectedProvider || !keyInput.trim() || !selectedBusiness?.id) return;
+    if (!selectedProvider || !keyInput.trim()) return;
+    if (!selectedBusiness?.id) {
+      toast({
+        title: "Selecciona um negócio",
+        description: "Escolhe um negócio no topo antes de guardar a chave API.",
+        variant: "destructive",
+      });
+      return;
+    }
     setVerifying(true);
     setVerifyError("");
     setVerified(false);
