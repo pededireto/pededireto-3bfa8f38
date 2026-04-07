@@ -35,7 +35,7 @@ const FeaturedCategoriesManager = () => {
 
   const openEdit = (fc: any) => {
     setEditingId(fc.id);
-    setForm({ category_id: fc.category_id, cover_image_url: fc.cover_image_url, display_order: fc.display_order, is_active: fc.is_active });
+    setForm({ category_id: fc.category_id, cover_image_url: fc.cover_image_url || "", video_url: (fc as any).video_url || "", display_order: fc.display_order, is_active: fc.is_active });
     setDialogOpen(true);
   };
 
