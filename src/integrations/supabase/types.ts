@@ -4646,6 +4646,7 @@ export type Database = {
           id: string
           is_active: boolean
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           category_id: string
@@ -4655,6 +4656,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           category_id?: string
@@ -4664,6 +4666,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: [
           {

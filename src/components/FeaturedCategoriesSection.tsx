@@ -147,8 +147,8 @@ const FeaturedCategoriesSection = () => {
               const name = fc.categories?.name ?? "Categoria";
               const slug = fc.categories?.slug ?? "";
 
-              // Prioridade: video_url da categoria → cover_image_url do featured → image_url da categoria
-              const videoUrl = fc.categories?.video_url ?? null;
+              // Priority: featured video_url → category video_url → featured cover_image_url → category image_url
+              const videoUrl = fc.video_url || fc.categories?.video_url || null;
               const imageUrl = fc.cover_image_url || fc.categories?.image_url || null;
 
               return (
