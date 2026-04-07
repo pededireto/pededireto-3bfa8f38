@@ -329,7 +329,7 @@ const AdminSupportContent = () => {
         <select
           value={selectedSub}
           onChange={(e) => setSelectedSub(e.target.value)}
-          className="border rounded-md px-2 py-2 text-sm"
+          className="border border-border rounded-md px-2 py-2 text-sm bg-background text-foreground"
         >
           <option value="">Todas as subcategorias</option>
           {subcategories.map((s) => (
