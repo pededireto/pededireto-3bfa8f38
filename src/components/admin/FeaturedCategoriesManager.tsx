@@ -40,16 +40,16 @@ const FeaturedCategoriesManager = () => {
   };
 
   const handleSave = async () => {
-    if (!form.category_id || !form.cover_image_url) {
-      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
+    if (!form.category_id) {
+      toast({ title: "Seleccione uma categoria", variant: "destructive" });
       return;
     }
     try {
       if (editingId) {
-        await updateMutation.mutateAsync({ id: editingId, cover_image_url: form.cover_image_url, display_order: form.display_order, is_active: form.is_active });
+        await updateMutation.mutateAsync({ id: editingId, cover_image_url: form.cover_image_url || "", video_url: form.video_url || undefined, display_order: form.display_order, is_active: form.is_active } as any);
         toast({ title: "Categoria em destaque atualizada" });
       } else {
-        await createMutation.mutateAsync(form);
+        await createMutation.mutateAsync({ ...form, cover_image_url: form.cover_image_url || "" } as any);
         toast({ title: "Categoria em destaque adicionada" });
       }
       setDialogOpen(false);
