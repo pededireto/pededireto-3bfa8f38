@@ -29,7 +29,7 @@ const FeaturedCategoriesManager = () => {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ category_id: "", cover_image_url: "", display_order: featured.length, is_active: true });
+    setForm({ category_id: "", cover_image_url: "", video_url: "", display_order: featured.length, is_active: true });
     setDialogOpen(true);
   };
 
