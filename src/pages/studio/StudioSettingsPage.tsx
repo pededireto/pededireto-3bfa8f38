@@ -77,6 +77,7 @@ const StudioSettingsPage = () => {
   const saveKey = useSaveApiKey();
   const removeKey = useRemoveApiKey();
   const verifyKey = useVerifyApiKey();
+  const { toast } = useToast();
 
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [step, setStep] = useState(0);
