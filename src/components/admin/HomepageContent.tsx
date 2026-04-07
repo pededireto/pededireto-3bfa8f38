@@ -121,6 +121,23 @@ const HomepageContent = () => {
     }
   };
 
+  const handleDuplicate = async (block: HomepageBlock) => {
+    try {
+      await createBlock.mutateAsync({
+        type: block.type,
+        title: block.title ? `${block.title} (cópia)` : `${typeLabel(block.type)} (cópia)`,
+        config: block.config,
+        is_active: false,
+        order_index: block.order_index + 1,
+        start_date: block.start_date,
+        end_date: block.end_date,
+      } as any);
+      toast({ title: "Bloco duplicado" });
+    } catch {
+      toast({ title: "Erro ao duplicar", variant: "destructive" });
+    }
+  };
+
   const moveBlock = async (block: HomepageBlock, direction: "up" | "down") => {
     const sorted = [...blocks].sort((a, b) => a.order_index - b.order_index);
     const idx = sorted.findIndex((b) => b.id === block.id);
