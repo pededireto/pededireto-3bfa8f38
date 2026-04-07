@@ -136,11 +136,17 @@ const FeaturedCategoriesManager = () => {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">URL da Imagem de Capa</label>
-              <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://..." />
+              <label className="text-sm font-medium mb-1 block">URL da Imagem de Capa (externo)</label>
+              <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://... (Cloudinary, imgbb, etc.)" />
               {form.cover_image_url && (
                 <img src={form.cover_image_url} alt="Preview" className="mt-2 w-full aspect-video object-cover rounded-lg border" />
               )}
+              <p className="text-[11px] text-muted-foreground mt-1">Deixar vazio para usar ícone/emoji da categoria</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">URL do Vídeo (YouTube / Vimeo)</label>
+              <Input value={form.video_url} onChange={(e) => setForm((f) => ({ ...f, video_url: e.target.value }))} placeholder="https://youtube.com/watch?v=..." />
+              <p className="text-[11px] text-muted-foreground mt-1">Opcional — substitui a imagem por vídeo embed</p>
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
