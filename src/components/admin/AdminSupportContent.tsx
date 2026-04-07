@@ -346,14 +346,14 @@ const AdminSupportContent = () => {
       {/* ── TEMPLATES ────────────────────────────────────────────────────── */}
       <div className="border border-gray-200 rounded-xl overflow-hidden">
         {/* Header da secção */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <button
-            className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+            className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-foreground/80"
             onClick={() => setShowTemplates(!showTemplates)}
           >
             {showTemplates ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             Templates de Mensagem
-            <span className="text-xs text-gray-400 font-normal">({templates.length})</span>
+            <span className="text-xs text-muted-foreground font-normal">({templates.length})</span>
           </button>
           <Button
             size="sm"
@@ -372,7 +372,7 @@ const AdminSupportContent = () => {
           <select
             value={selectedTemplate}
             onChange={(e) => handleTemplateChange(e.target.value)}
-            className="w-full border rounded-md px-2 py-2 text-sm"
+            className="w-full border border-border rounded-md px-2 py-2 text-sm bg-background text-foreground"
           >
             <option value="">Selecionar template...</option>
             {templates.map((t) => (
@@ -385,7 +385,7 @@ const AdminSupportContent = () => {
           <textarea
             value={customMessage}
             onChange={(e) => setCustomMessage(e.target.value)}
-            className="w-full border rounded-md p-2 text-sm resize-none"
+            className="w-full border border-border rounded-md p-2 text-sm resize-none bg-background text-foreground placeholder:text-muted-foreground"
             rows={4}
             placeholder="Seleciona um template ou escreve uma mensagem..."
           />
