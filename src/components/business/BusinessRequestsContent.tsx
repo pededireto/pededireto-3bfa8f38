@@ -310,11 +310,29 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
   const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado", requestId?: string) => {
     setUpdatingStatus(matchId);
     try {
-      const { error } = await supabase
+      const now = new Date().toISOString();
+      const updates: Record<string, any> = { status: newStatus, responded_at: now };
+      if (newStatus === "aceite") {
+        updates.contact_unlocked = true;
+        updates.first_response_at = now;
+      }
+
+      const { error, data } = await supabase
         .from("request_business_matches" as any)
-        .update({ status: newStatus } as any)
-        .eq("id", matchId);
-      if (error) throw error;
+        .update(updates as any)
+        .eq("id", matchId)
+        .select();
+
+      if (error) {
+        console.error("Match update error:", error);
+        throw error;
+      }
+
+      // Verificar se o update realmente afectou uma row
+      if (!data || (data as any[]).length === 0) {
+        throw new Error("Sem permissão para atualizar este pedido.");
+      }
+
       toast({
         title: newStatus === "aceite" ? "Pedido aceite!" : "Pedido recusado",
         description:
@@ -323,8 +341,9 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             : "O pedido foi recusado.",
       });
       qc.invalidateQueries({ queryKey: ["business-requests"] });
+      qc.invalidateQueries({ queryKey: ["business-requests-meta"] });
 
-      // P2: Notify consumer via email when business accepts
+      // Notify consumer via email when business accepts
       if (newStatus === "aceite" && requestId) {
         supabase.functions
           .invoke("notify-consumer", {
@@ -332,8 +351,13 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
           })
           .catch((err) => console.error("notify-consumer error:", err));
       }
-    } catch {
-      toast({ title: "Erro ao atualizar pedido", variant: "destructive" });
+    } catch (err: any) {
+      console.error("handleStatusChange failed:", err);
+      toast({
+        title: "Erro ao atualizar pedido",
+        description: err?.message || "Verifica as tuas permissões e tenta novamente.",
+        variant: "destructive",
+      });
     } finally {
       setUpdatingStatus(null);
     }
