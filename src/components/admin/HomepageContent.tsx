@@ -317,9 +317,42 @@ const HomepageContent = () => {
                 />
               </div>
             </div>
+            {["banner", "negocios_premium", "texto", "personalizado", "hero", "featured_categories", "business_cta"].includes(form.type) && (
+              <div className="space-y-3">
+                <div>
+                  <Label>URL da Imagem (externo)</Label>
+                  <Input
+                    value={(() => { try { return JSON.parse(configJson)?.imagem_url || ""; } catch { return ""; } })()}
+                    onChange={(e) => {
+                      try {
+                        const c = JSON.parse(configJson || "{}");
+                        c.imagem_url = e.target.value || undefined;
+                        setConfigJson(JSON.stringify(c, null, 2));
+                      } catch { /* ignore */ }
+                    }}
+                    placeholder="https://..."
+                  />
+                  {(() => { try { const u = JSON.parse(configJson)?.imagem_url; return u ? <img src={u} alt="Preview" className="mt-1 w-full max-h-32 object-cover rounded-lg border border-border" /> : null; } catch { return null; } })()}
+                </div>
+                <div>
+                  <Label>URL do Vídeo (YouTube / Vimeo)</Label>
+                  <Input
+                    value={(() => { try { return JSON.parse(configJson)?.video_url || ""; } catch { return ""; } })()}
+                    onChange={(e) => {
+                      try {
+                        const c = JSON.parse(configJson || "{}");
+                        c.video_url = e.target.value || undefined;
+                        setConfigJson(JSON.stringify(c, null, 2));
+                      } catch { /* ignore */ }
+                    }}
+                    placeholder="https://youtube.com/watch?v=..."
+                  />
+                </div>
+              </div>
+            )}
             {["banner", "negocios_premium", "texto", "personalizado"].includes(form.type) && (
               <div>
-                <Label>Configuração (JSON)</Label>
+                <Label>Configuração avançada (JSON)</Label>
                 <Textarea
                   value={configJson}
                   onChange={(e) => setConfigJson(e.target.value)}
