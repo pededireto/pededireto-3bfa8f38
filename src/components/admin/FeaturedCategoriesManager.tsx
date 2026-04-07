@@ -20,7 +20,7 @@ const FeaturedCategoriesManager = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ category_id: "", cover_image_url: "", display_order: 0, is_active: true });
+  const [form, setForm] = useState({ category_id: "", cover_image_url: "", video_url: "", display_order: 0, is_active: true });
 
   const usedCategoryIds = featured.map((fc) => fc.category_id);
   const availableCategories = allCategories.filter(
