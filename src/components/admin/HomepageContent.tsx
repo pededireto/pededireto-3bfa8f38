@@ -233,8 +233,11 @@ const HomepageContent = () => {
 
             {/* Wrapper de ações com stopPropagation */}
             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-              <Button size="icon" variant="ghost" onClick={() => openEdit(block)}>
+              <Button size="icon" variant="ghost" onClick={() => openEdit(block)} title="Editar">
                 <Pencil className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant="ghost" onClick={() => handleDuplicate(block)} title="Duplicar">
+                <Copy className="w-4 h-4" />
               </Button>
               <Button
                 size="icon"
@@ -243,6 +246,7 @@ const HomepageContent = () => {
                   e.stopPropagation();
                   handleDelete(block.id);
                 }}
+                title="Eliminar"
               >
                 <Trash2 className="w-4 h-4 text-destructive" />
               </Button>
