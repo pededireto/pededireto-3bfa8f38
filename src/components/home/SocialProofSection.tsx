@@ -31,13 +31,13 @@ const SocialProofSection = ({ config }: SocialProofSectionProps) => {
     queryKey: ["social-proof-names", maxLogos],
     queryFn: async () => {
       const { data } = await supabase
-        .from("businesses")
+        .from("businesses" as any)
         .select("id, name")
         .eq("is_active", true)
         .eq("is_verified", true)
         .order("average_rating", { ascending: false })
         .limit(maxLogos);
-      return data || [];
+      return (data as any[]) || [];
     },
     staleTime: 300000,
     enabled: businesses.length === 0,
