@@ -12,6 +12,9 @@ import CategoryAccordion from "@/components/home/CategoryAccordion";
 import PlatformStats from "@/components/PlatformStats";
 import HowItWorks from "@/components/HowItWorks";
 import BusinessCTA from "@/components/BusinessCTA";
+import DualCTASection from "@/components/home/DualCTASection";
+import SocialProofSection from "@/components/home/SocialProofSection";
+import QuickServicesSection from "@/components/home/QuickServicesSection";
 import { useCategories } from "@/hooks/useCategories";
 import { useFeaturedBusinesses } from "@/hooks/useBusinesses";
 
@@ -52,6 +55,12 @@ const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBl
       return <HowItWorks />;
     case "business_cta":
       return <BusinessCTA />;
+    case "dual_cta":
+      return <DualCTASection config={block.config} />;
+    case "social_proof":
+      return <SocialProofSection config={block.config} />;
+    case "quick_services":
+      return <QuickServicesSection config={block.config} />;
     default:
       return null;
   }
