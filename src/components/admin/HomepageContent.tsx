@@ -354,7 +354,7 @@ const HomepageContent = () => {
                 </div>
               </div>
             )}
-            {["banner", "negocios_premium", "texto", "personalizado", "dual_cta", "quick_services", "social_proof"].includes(form.type) && (
+            {["banner", "negocios_premium", "texto", "personalizado", "dual_cta", "servicos_rapidos", "social_proof"].includes(form.type) && (
               <div>
                 <Label>Configuração avançada (JSON)</Label>
                 <Textarea
@@ -365,7 +365,7 @@ const HomepageContent = () => {
                   placeholder={
                     form.type === "dual_cta"
                       ? '{\n  "left_title": "Encontra quem resolve",\n  "left_bullets": ["Profissionais perto de ti"],\n  "left_cta_text": "Encontrar serviço →",\n  "left_cta_link": "/top",\n  "right_title": "Vais aparecer?",\n  "right_cta1_text": "Encontrar o meu negócio",\n  "right_cta1_link": "/claim-business"\n}'
-                      : form.type === "quick_services"
+                      : form.type === "servicos_rapidos"
                       ? '{\n  "title": "O que precisas resolver hoje?",\n  "items": [\n    { "icon": "💧", "label": "Fuga de água", "link": "/pesquisa?q=canalizador" }\n  ]\n}'
                       : form.type === "social_proof"
                       ? '{\n  "title": "Negócios na plataforma",\n  "subtitle": "Junta-te a centenas de profissionais...",\n  "max_logos": 8\n}'

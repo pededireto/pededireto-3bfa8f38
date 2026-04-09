@@ -324,6 +324,12 @@ const StudioSettingsPage = () => {
               {/* Step 2: Input key */}
               {step === 2 && provider && (
                 <>
+                  {!selectedBusiness?.id && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-xs">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>Selecciona um negócio no topo da página antes de guardar a chave API.</span>
+                    </div>
+                  )}
                   <div>
                     <label className="text-xs font-medium block mb-1.5">Cola aqui a tua chave API</label>
                     <div className="relative">
