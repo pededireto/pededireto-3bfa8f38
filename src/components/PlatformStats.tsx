@@ -8,9 +8,9 @@ const usePlatformStats = () => {
     queryKey: ["platform-stats"],
     queryFn: async () => {
       const [bizRes, catRes, cityRes] = await Promise.all([
-        supabase.from("businesses").select("id", { count: "exact", head: true }).eq("is_active", true),
+        (supabase as any).from("businesses_public").select("id", { count: "exact", head: true }),
         supabase.from("categories").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("businesses").select("city").eq("is_active", true).not("city", "is", null),
+        (supabase as any).from("businesses_public").select("city").not("city", "is", null),
       ]);
       const uniqueCities = new Set((cityRes.data || []).map((b: any) => b.city)).size;
       return { businesses: bizRes.count || 0, categories: catRes.count || 0, cities: uniqueCities };

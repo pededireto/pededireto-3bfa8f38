@@ -267,7 +267,7 @@ const RIBBON_BADGE_SLUGS = ["founding-member"];
 // ─────────────────────────────────────────────
 const BusinessPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { data: business, isLoading } = useBusiness(slug);
+  const { data: business, isLoading } = usePublicBusiness(slug);
   const { user } = useAuth();
   const navigate = useNavigate();
   const trackEvent = useTrackEvent();
