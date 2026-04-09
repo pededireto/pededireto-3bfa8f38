@@ -1,136 +1,67 @@
 
 
-# Redesign Completo da Homepage — Design Fresco e Moderno
+# Correcção de 5 Bugs Independentes
 
-## Objetivo
-Transformar a homepage para o design da imagem de referência, mantendo o sistema de blocos admin (`homepage_blocks`) funcional para edição contínua no painel.
+## Bug 1 — Variáveis de Ambiente (.env)
 
-## Estrutura Visual (baseada na imagem)
+**Problema:** O `.env` tem variáveis `VITE_*` a apontar para o projecto errado `pnrqahgvhddhcucmccjp`.
 
-```text
-┌─────────────────────────────────────────────────┐
-│ HEADER (manter atual)                           │
-├─────────────────────────────────────────────────┤
-│ HERO — fundo branco/gradiente suave             │
-│  Esq: badge + título + subtítulo                │
-│       + barra pesquisa (com cidade + botão)      │
-│       + trust badges (✓ ✓ ✓)                    │
-│       + 2 CTAs: "Pedir Orçamento" + "Sou Prof." │
-│  Dir: collage de fotos profissionais (externas)  │
-├─────────────────────────────────────────────────┤
-│ STATS BAR — fundo verde, 3 métricas inline      │
-├─────────────────────────────────────────────────┤
-│ "Funciona assim:" — 3 passos horizontais        │
-├─────────────────────────────────────────────────┤
-│ "O que precisas resolver hoje?" — 6 cards ícone │
-├─────────────────────────────────────────────────┤
-│ DUAL CTA BANNER — consumidor + empresa (2 cols) │
-├─────────────────────────────────────────────────┤
-│ SOCIAL PROOF — logos de negócios na plataforma  │
-├─────────────────────────────────────────────────┤
-│ CTA FINAL — "Resolve o que precisas agora"      │
-├─────────────────────────────────────────────────┤
-│ FOOTER (manter atual)                           │
-└─────────────────────────────────────────────────┘
-```
+**Correcção:** O `.env` é auto-gerado pelo Lovable Cloud e não pode ser editado manualmente. Contudo, as variáveis `VITE_*` são as que o `client.ts` usa (também auto-gerado). O projecto correcto do utilizador é `mpnizkjntkutpxevqzxx` (nas variáveis `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY`). Como ambos os ficheiros são geridos automaticamente pelo sistema, a correcção requer apenas garantir que não há referências hardcoded ao projecto errado no código-fonte. A pesquisa confirma que `pnrqahgvhddhcucmccjp` só aparece no `.env` — nenhum ficheiro `.ts/.tsx` tem hardcode. O `.env` e `client.ts` são regenerados automaticamente pelo Lovable Cloud e não devem ser editados.
 
-## Novos Tipos de Bloco no Admin
+**Acção:** Nenhuma alteração de código necessária. As variáveis são geridas pelo sistema.
 
-Adicionar ao `BLOCK_TYPES` e ao `HomepageBlockRenderer`:
+---
 
-| Tipo | Componente | Descrição |
-|------|-----------|-----------|
-| `dual_cta` | `DualCTASection` | Dois cards lado a lado (consumidor + empresa) com imagem externa |
-| `social_proof` | `SocialProofSection` | Logos de negócios + frase de prova social |
-| `quick_services` | `QuickServicesSection` | 6 cards de serviços rápidos com ícone/emoji |
+## Bug 2 — Homepage Blocks: Tipo "Serviços Rápidos" com value errado
 
-## CTAs e Routing
+**Problema:** No admin, o tipo "Serviços Rápidos" tem `value: "quick_services"` mas o renderer usa `case "quick_services"`. Estes batem certo. O verdadeiro problema é que o campo de configuração JSON pode estar a mostrar código JSX como placeholder em vez de JSON puro, e o JSON parse silencioso (`catch { /* ignore */ }`) faz com que configurações inválidas passem como `{}`.
 
-| Botão | Destino |
-|-------|---------|
-| "Pedir Orçamento Gratuito" | Se autenticado → `/pedir-servico`, senão → `/register` |
-| "Encontrar serviço" / "Encontrar Serviço" | `/top` |
-| "Sou profissional" | `/claim-business` |
-| "Criar perfil grátis" | `/register` |
-| "Encontrar o meu negócio" | `/claim-business` |
+**Correcção em `HomepageContent.tsx`:**
+- Validar JSON antes de guardar e mostrar erro claro se inválido (em vez de ignorar silenciosamente)
+- Garantir que o `configJson` inicial ao criar é sempre `"{}"` (já está correcto no `openCreate`)
 
-## Ficheiros a Modificar/Criar
+---
 
-### Modificar
-1. **`src/components/HeroSection.tsx`** — Redesign completo:
-   - Badge topo "A plataforma nº1 para encontrar serviços"
-   - Título em 2 linhas com "Resolve já." em verde
-   - Barra de pesquisa redesenhada (input + cidade + botão verde "Encontrar agora")
-   - Trust badges inline com checkmarks verdes
-   - 2 CTAs: "Pedir Orçamento Gratuito →" (verde) + "Sou profissional" (outline com ícone)
-   - Lado direito: collage de imagens (URLs do config JSONB, zero Storage)
+## Bug 3 — Pedidos: Enum `match_status` com valores errados
 
-2. **`src/components/PlatformStats.tsx`** — Redesign: barra verde horizontal com 3 métricas (800+ Serviços, Novos pedidos, Profissionais verificados) usando ícones circulares
+**Problema:** O enum `match_status` na DB aceita: `enviado`, `visualizado`, `em_conversa`, `orcamento_enviado`, `aceite`, `recusado`, `expirado`, `sem_resposta`. O código em `BusinessRequestsContent.tsx` já usa `"aceite"` e `"recusado"` correctamente (linhas 310, 433, 449). O erro na screenshot ("invalid input value for enum match_status: 'rejected'") sugere que havia um bug anterior que já foi corrigido no código actual.
 
-3. **`src/components/HowItWorks.tsx`** — Redesign: layout horizontal com setas entre passos, números em círculos verdes, ícones maiores
+**Acção:** Pesquisar todo o codebase por usos de `"rejected"`, `"accepted"`, `"expired"`, `"no_response"` em contexto de match_status para garantir que não restam usos em inglês.
 
-4. **`src/components/BusinessCTA.tsx`** — Redesign: fundo verde escuro, 2 botões lado a lado ("Encontrar serviço" + "Publicar pedido grátis →")
+**Ficheiros a verificar:** Hooks, componentes admin, edge functions.
 
-5. **`src/components/HomepageBlockRenderer.tsx`** — Adicionar cases para `dual_cta`, `social_proof`, `quick_services`
+---
 
-6. **`src/components/admin/HomepageContent.tsx`** — Adicionar novos tipos ao `BLOCK_TYPES`
+## Bug 4 — Orçamentos: Tabelas não existem na DB
 
-### Criar
-7. **`src/components/home/DualCTASection.tsx`** — Dois cards: "Para quem procura" (fundo verde) + "Para empresas" (fundo branco/laranja), cada um com bullet points e CTAs, suportando imagem por URL externo no config
+**Problema:** As tabelas `business_quotes`, `business_quote_items` e a função `generate_quote_number` não existem na base de dados. O código tenta inserir nelas e falha.
 
-8. **`src/components/home/SocialProofSection.tsx`** — Puxa automaticamente logos dos negócios mais bem classificados (campo `logo_url` da tabela `businesses`) + frase configurável
+**Correcção:** Criar migração SQL com:
+1. Tabela `business_quotes` (id, business_id, number, client_name, client_email, client_phone, notes, validity_days, iva_rate, subtotal, iva_amount, total, status, created_at, updated_at)
+2. Tabela `business_quote_items` (id, quote_id FK, description, quantity, unit_price, total, sort_order)
+3. Função `generate_quote_number(p_business_id uuid)` que gera números sequenciais (#001, #002, etc.)
+4. RLS policies para permitir que business owners/managers possam CRUD nos seus orçamentos
+5. Enable RLS em ambas as tabelas
 
-9. **`src/components/home/QuickServicesSection.tsx`** — Grid de 6 cards rápidos ("Tenho uma fuga de água", "Preciso de eletricista urgente", etc.) configuráveis via JSONB — cada card linka para pesquisa ou categoria
+---
 
-## Config JSONB dos Novos Blocos
+## Bug 5 — Chave API: "Selecciona um negócio" mesmo com negócio seleccionado
 
-```json
-// dual_cta
-{
-  "left_title": "Encontra rapidamente quem resolve",
-  "left_bullets": ["Profissionais perto de ti", "Contacto direto", "Sem complicações"],
-  "left_cta_text": "Encontrar serviço →",
-  "left_cta_link": "/top",
-  "left_image_url": "https://...",
-  "right_title": "Estão à tua procura. Vais aparecer?",
-  "right_subtitle": "Clientes entram todos os dias...",
-  "right_bullets": ["Mais visibilidade", "Mais contactos", "Mais clientes"],
-  "right_cta1_text": "Encontrar o meu negócio",
-  "right_cta1_link": "/claim-business",
-  "right_cta2_text": "Criar perfil grátis",
-  "right_cta2_link": "/register",
-  "right_image_url": "https://..."
-}
+**Problema:** Em `StudioSettingsPage.tsx`, o `selectedBusiness` vem do `useStudioContext()`. No `StudioLayout.tsx`, quando há apenas 1 negócio, `effectiveId` é atribuído automaticamente (`businesses[0].id`), mas `selectedId` permanece `""`. O `selectedBusiness` é derivado correctamente de `effectiveId`, por isso deveria funcionar.
 
-// quick_services
-{
-  "title": "O que precisas resolver hoje?",
-  "items": [
-    { "icon": "💧", "label": "Tenho uma fuga de água", "link": "/pesquisa?q=canalizador" },
-    { "icon": "⚡", "label": "Preciso de eletricista urgente", "link": "/pesquisa?q=eletricista" }
-  ]
-}
+O problema real é que `selectedBusiness` pode ser `null` se o utilizador tem múltiplos negócios e não seleccionou nenhum explicitamente. A validação em `handleVerifyAndSave` (linha 95) está correcta — verifica `selectedBusiness?.id`.
 
-// social_proof
-{
-  "title": "Negócios já presentes na plataforma",
-  "subtitle": "Junta-te a centenas de profissionais...",
-  "max_logos": 6
-}
-```
+**Correcção:** No modal de onboarding (step 2), se `selectedBusiness` é null, mostrar um aviso inline a pedir para seleccionar o negócio no topo, em vez de só falhar ao clicar "Verificar e guardar". Também garantir que a chave fica persistida na tabela `business_api_keys` (que já existe na DB) e que após guardar com sucesso, ao reabrir o Studio Settings, a chave guardada é detectada e mostrada (isto já funciona via `useBusinessApiKey`).
 
-## Regras
-- Zero imagens do Supabase Storage na homepage
-- Todas as imagens via URL externo no config JSONB
-- Dark mode suportado em todos os novos componentes
-- Mobile-first: hero em coluna única, cards empilhados
-- Todos os textos editáveis via admin (config JSONB ou site_settings)
-- Lógica de autenticação no CTA "Pedir Orçamento": verifica `useAuth().user` para decidir rota
+---
 
-## Detalhe Técnico
+## Resumo de Alterações
 
-- Os novos blocos são registados no `HomepageBlockRenderer` como cases normais
-- No admin, ao criar um bloco `dual_cta` ou `quick_services`, o editor mostra campos visuais (não só JSON raw) para facilitar a configuração
-- O `HeroSection` lê config do bloco `hero` via props passadas pelo renderer (campo `config` com `collage_images`, `badge_text`, etc.)
-- Para a barra de pesquisa no hero: manter a lógica existente de search + cidade, apenas redesenhar visualmente
+| # | Ficheiros | Tipo |
+|---|-----------|------|
+| 1 | Nenhum (sistema gerido) | — |
+| 2 | `HomepageContent.tsx` | Fix validação JSON |
+| 3 | Pesquisa global + correcções pontuais | Fix enum values |
+| 4 | Nova migração SQL | Criar tabelas de orçamentos |
+| 5 | `StudioSettingsPage.tsx` | Fix UX selecção de negócio |
 
