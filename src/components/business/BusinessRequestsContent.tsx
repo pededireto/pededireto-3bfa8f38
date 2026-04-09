@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatReviewerName } from "@/lib/utils";
+import { normalizeMatchStatus } from "@/utils/matchStatus";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -311,8 +312,9 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
     setUpdatingStatus(matchId);
     try {
       const now = new Date().toISOString();
-      const updates: Record<string, any> = { status: newStatus, responded_at: now };
-      if (newStatus === "aceite") {
+      const normalizedStatus = normalizeMatchStatus(newStatus);
+      const updates: Record<string, any> = { status: normalizedStatus, responded_at: now };
+      if (normalizedStatus === "aceite") {
         updates.contact_unlocked = true;
         updates.first_response_at = now;
       }
@@ -334,9 +336,9 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
       }
 
       toast({
-        title: newStatus === "aceite" ? "Pedido aceite!" : "Pedido recusado",
+        title: normalizedStatus === "aceite" ? "Pedido aceite!" : "Pedido recusado",
         description:
-          newStatus === "aceite"
+          normalizedStatus === "aceite"
             ? "Agora podes ver os dados de contacto e iniciar a conversa."
             : "O pedido foi recusado.",
       });
@@ -344,7 +346,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
       qc.invalidateQueries({ queryKey: ["business-requests-meta"] });
 
       // Notify consumer via email when business accepts
-      if (newStatus === "aceite" && requestId) {
+      if (normalizedStatus === "aceite" && requestId) {
         supabase.functions
           .invoke("notify-consumer", {
             body: { type: "match_accepted", request_id: requestId, business_id: businessId },

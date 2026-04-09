@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeMatchStatus } from "@/utils/matchStatus";
 
 export interface ServiceRequest {
   id: string;
@@ -130,9 +131,11 @@ export const useUpdateMatchStatus = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status, requestId }: { id: string; status: string; requestId: string }) => {
+      const normalizedStatus = normalizeMatchStatus(status);
+
       // Apenas campos que existem na tabela e são válidos para o enum match_status
-      const updates: any = { status };
-      if (status !== "enviado") {
+      const updates: any = { status: normalizedStatus };
+      if (normalizedStatus !== "enviado") {
         updates.responded_at = new Date().toISOString();
       }
       const { error } = await supabase
