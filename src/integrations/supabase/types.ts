@@ -2237,6 +2237,134 @@ export type Database = {
           },
         ]
       }
+      business_quote_items: {
+        Row: {
+          description: string
+          id: string
+          quantity: number
+          quote_id: string
+          sort_order: number
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          description: string
+          id?: string
+          quantity?: number
+          quote_id: string
+          sort_order?: number
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          description?: string
+          id?: string
+          quantity?: number
+          quote_id?: string
+          sort_order?: number
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "business_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_quotes: {
+        Row: {
+          business_id: string
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          created_at: string
+          id: string
+          iva_amount: number
+          iva_rate: number
+          notes: string | null
+          number: string
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+          validity_days: number
+        }
+        Insert: {
+          business_id: string
+          client_email?: string | null
+          client_name: string
+          client_phone?: string | null
+          created_at?: string
+          id?: string
+          iva_amount?: number
+          iva_rate?: number
+          notes?: string | null
+          number: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          validity_days?: number
+        }
+        Update: {
+          business_id?: string
+          client_email?: string | null
+          client_name?: string
+          client_phone?: string | null
+          created_at?: string
+          id?: string
+          iva_amount?: number
+          iva_rate?: number
+          notes?: string | null
+          number?: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          validity_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_quotes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_dashboard_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_quotes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_quotes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_quotes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_alerts_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_quotes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "top_rated_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_ranking_snapshots: {
         Row: {
           business_id: string
@@ -8013,6 +8141,10 @@ export type Database = {
       }
       force_cadence_ready: { Args: { p_cadence_id: string }; Returns: number }
       generate_affiliate_code: { Args: { p_user_id: string }; Returns: string }
+      generate_quote_number: {
+        Args: { p_business_id: string }
+        Returns: string
+      }
       get_admin_intelligence: { Args: { p_days?: number }; Returns: Json }
       get_all_users_for_onboarding: { Args: never; Returns: Json }
       get_business_benchmark: {

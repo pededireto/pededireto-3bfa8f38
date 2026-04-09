@@ -59,7 +59,7 @@ const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBl
       return <DualCTASection config={block.config} />;
     case "social_proof":
       return <SocialProofSection config={block.config} />;
-    case "quick_services":
+    case "servicos_rapidos":
       return <QuickServicesSection config={block.config} />;
     default:
       return null;
