@@ -15,13 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2,
   Inbox,
@@ -45,7 +39,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatReviewerName } from "@/lib/utils";
-import { normalizeMatchStatus } from "@/utils/matchStatus";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -72,7 +65,15 @@ const matchStatusConfig: Record<
 
 // ─── Sub-componente: Chat de um pedido (com Realtime) ─────────────────────────
 
-const RequestChat = ({ requestId, consumerDisplayName = "Consumidor", onRead }: { requestId: string; consumerDisplayName?: string; onRead: () => void }) => {
+const RequestChat = ({
+  requestId,
+  consumerDisplayName = "Consumidor",
+  onRead,
+}: {
+  requestId: string;
+  consumerDisplayName?: string;
+  onRead: () => void;
+}) => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -308,37 +309,41 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
 
   const handleRead = useCallback(() => {}, []);
 
+  // ─── CORRIGIDO: removido normalizeMatchStatus, usa newStatus diretamente ───
   const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado", requestId?: string) => {
     setUpdatingStatus(matchId);
     try {
       const now = new Date().toISOString();
-      const normalizedStatus = normalizeMatchStatus(newStatus);
-      const updates: Record<string, any> = { status: normalizedStatus, responded_at: now };
-      if (normalizedStatus === "aceite") {
+      const updates: Record<string, any> = { status: newStatus, responded_at: now };
+      if (newStatus === "aceite") {
         updates.contact_unlocked = true;
         updates.first_response_at = now;
       }
 
+      console.log("A atualizar match:", matchId, "| status:", newStatus, "| updates:", updates);
+
+      // ─── CORRIGIDO: .select('*') em vez de .select() ───
       const { error, data } = await supabase
         .from("request_business_matches" as any)
         .update(updates as any)
         .eq("id", matchId)
-        .select();
+        .select("*");
 
       if (error) {
         console.error("Match update error:", error);
         throw error;
       }
 
-      // Verificar se o update realmente afectou uma row
+      console.log("Resultado do update:", data);
+
       if (!data || (data as any[]).length === 0) {
         throw new Error("Sem permissão para atualizar este pedido.");
       }
 
       toast({
-        title: normalizedStatus === "aceite" ? "Pedido aceite!" : "Pedido recusado",
+        title: newStatus === "aceite" ? "Pedido aceite!" : "Pedido recusado",
         description:
-          normalizedStatus === "aceite"
+          newStatus === "aceite"
             ? "Agora podes ver os dados de contacto e iniciar a conversa."
             : "O pedido foi recusado.",
       });
@@ -346,7 +351,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
       qc.invalidateQueries({ queryKey: ["business-requests-meta"] });
 
       // Notify consumer via email when business accepts
-      if (normalizedStatus === "aceite" && requestId) {
+      if (newStatus === "aceite" && requestId) {
         supabase.functions
           .invoke("notify-consumer", {
             body: { type: "match_accepted", request_id: requestId, business_id: businessId },
@@ -418,7 +423,11 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
           </div>
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
             <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
-            {isArchived && <Badge variant="outline" className="text-xs">Arquivado</Badge>}
+            {isArchived && (
+              <Badge variant="outline" className="text-xs">
+                Arquivado
+              </Badge>
+            )}
             {meta?.hasUnread && (
               <span className="flex items-center gap-1 text-xs text-primary font-semibold animate-pulse">
                 <Bell className="h-3 w-3" /> Nova mensagem
@@ -463,7 +472,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             {(sr?.consumer_name || profile?.full_name) && (
               <div className="flex items-center gap-2 text-foreground">
                 <User className="h-3.5 w-3.5 text-muted-foreground" />
-               {profile?.full_name || sr?.consumer_name}
+                {profile?.full_name || sr?.consumer_name}
               </div>
             )}
             {(sr?.consumer_email || profile?.email) && (
@@ -562,7 +571,13 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
         </div>
 
         {/* Inline chat */}
-        {requestId && chatOpen && isAccepted && <RequestChat requestId={requestId} consumerDisplayName={formatReviewerName(profile?.full_name)} onRead={handleRead} />}
+        {requestId && chatOpen && isAccepted && (
+          <RequestChat
+            requestId={requestId}
+            consumerDisplayName={formatReviewerName(profile?.full_name)}
+            onRead={handleRead}
+          />
+        )}
       </div>
     );
   };
@@ -596,13 +611,17 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
           <TabsTrigger value="active" className="flex items-center gap-1.5">
             Ativos
             {allActiveCount > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs h-5 min-w-5 px-1.5">{allActiveCount}</Badge>
+              <Badge variant="secondary" className="ml-1 text-xs h-5 min-w-5 px-1.5">
+                {allActiveCount}
+              </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="archived" className="flex items-center gap-1.5">
             Arquivados
             {allArchivedCount > 0 && (
-              <Badge variant="outline" className="ml-1 text-xs h-5 min-w-5 px-1.5">{allArchivedCount}</Badge>
+              <Badge variant="outline" className="ml-1 text-xs h-5 min-w-5 px-1.5">
+                {allArchivedCount}
+              </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="all">Todos</TabsTrigger>
@@ -646,16 +665,14 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
         {/* Content */}
         {isPending ? (
           <div className="space-y-4 mt-4">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-40 w-full rounded-xl" />
             ))}
           </div>
         ) : filteredRequests.length === 0 ? (
           renderEmpty()
         ) : (
-          <div className="space-y-4 mt-4">
-            {filteredRequests.map(renderRequestCard)}
-          </div>
+          <div className="space-y-4 mt-4">{filteredRequests.map(renderRequestCard)}</div>
         )}
       </Tabs>
     </div>
