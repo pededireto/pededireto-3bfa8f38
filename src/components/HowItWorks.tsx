@@ -1,10 +1,10 @@
-import { Search, Users, MessageCircle, ArrowRight } from "lucide-react";
+import { Search, Users, MessageCircle } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const HowItWorks = () => {
   const { data: settings } = useSiteSettings();
 
-  const title = settings?.how_it_works_title || "Funciona assim:";
+  const title = settings?.how_it_works_title || "Como funciona";
 
   const steps = [
     {
@@ -28,30 +28,24 @@ const HowItWorks = () => {
   ];
 
   return (
-    <section className="py-14 md:py-20 bg-card">
+    <section className="py-12 md:py-16 bg-muted/50">
       <div className="container">
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-12">{title}</h2>
+        <div className="text-center mb-10">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">{title}</h2>
+          <p className="text-muted-foreground mt-2">Simples, rápido e sem complicações</p>
+        </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {steps.map((step, i) => (
-            <div key={step.number} className="relative text-center space-y-4 group">
-              {/* Number badge */}
-              <div className="relative mx-auto w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <step.icon className="w-9 h-9 text-primary" />
-                <span className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center shadow-md">
+        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          {steps.map((step) => (
+            <div key={step.number} className="relative text-center space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center relative">
+                <step.icon className="w-7 h-7 text-primary" />
+                <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-[hsl(var(--cta))] text-white text-sm font-bold flex items-center justify-center">
                   {step.number}
                 </span>
               </div>
-
               <h3 className="text-lg font-bold text-foreground">{step.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">{step.description}</p>
-
-              {/* Arrow between steps (desktop only) */}
-              {i < steps.length - 1 && (
-                <div className="hidden md:block absolute top-10 -right-3 translate-x-1/2">
-                  <ArrowRight className="w-6 h-6 text-primary/30" />
-                </div>
-              )}
+              <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
             </div>
           ))}
         </div>

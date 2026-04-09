@@ -1,1 +1,0 @@
-ALTER TABLE public.featured_categories ADD COLUMN IF NOT EXISTS video_url TEXT;

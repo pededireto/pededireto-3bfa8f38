@@ -115,10 +115,7 @@ export const useCreateQuote = () => {
         .select()
         .single();
 
-      if (quoteError) {
-        console.error("[useCreateQuote] Insert error:", quoteError);
-        throw quoteError;
-      }
+      if (quoteError) throw quoteError;
 
       // 3. Inserir itens
       if (payload.items.length > 0) {

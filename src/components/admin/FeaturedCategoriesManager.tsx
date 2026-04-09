@@ -20,7 +20,7 @@ const FeaturedCategoriesManager = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ category_id: "", cover_image_url: "", video_url: "", display_order: 0, is_active: true });
+  const [form, setForm] = useState({ category_id: "", cover_image_url: "", display_order: 0, is_active: true });
 
   const usedCategoryIds = featured.map((fc) => fc.category_id);
   const availableCategories = allCategories.filter(
@@ -29,27 +29,27 @@ const FeaturedCategoriesManager = () => {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ category_id: "", cover_image_url: "", video_url: "", display_order: featured.length, is_active: true });
+    setForm({ category_id: "", cover_image_url: "", display_order: featured.length, is_active: true });
     setDialogOpen(true);
   };
 
   const openEdit = (fc: any) => {
     setEditingId(fc.id);
-    setForm({ category_id: fc.category_id, cover_image_url: fc.cover_image_url || "", video_url: (fc as any).video_url || "", display_order: fc.display_order, is_active: fc.is_active });
+    setForm({ category_id: fc.category_id, cover_image_url: fc.cover_image_url, display_order: fc.display_order, is_active: fc.is_active });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.category_id) {
-      toast({ title: "Seleccione uma categoria", variant: "destructive" });
+    if (!form.category_id || !form.cover_image_url) {
+      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
       return;
     }
     try {
       if (editingId) {
-        await updateMutation.mutateAsync({ id: editingId, cover_image_url: form.cover_image_url || "", video_url: form.video_url || undefined, display_order: form.display_order, is_active: form.is_active } as any);
+        await updateMutation.mutateAsync({ id: editingId, cover_image_url: form.cover_image_url, display_order: form.display_order, is_active: form.is_active });
         toast({ title: "Categoria em destaque atualizada" });
       } else {
-        await createMutation.mutateAsync({ ...form, cover_image_url: form.cover_image_url || "" } as any);
+        await createMutation.mutateAsync(form);
         toast({ title: "Categoria em destaque adicionada" });
       }
       setDialogOpen(false);
@@ -136,17 +136,11 @@ const FeaturedCategoriesManager = () => {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">URL da Imagem de Capa (externo)</label>
-              <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://... (Cloudinary, imgbb, etc.)" />
+              <label className="text-sm font-medium mb-1 block">URL da Imagem de Capa</label>
+              <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://..." />
               {form.cover_image_url && (
                 <img src={form.cover_image_url} alt="Preview" className="mt-2 w-full aspect-video object-cover rounded-lg border" />
               )}
-              <p className="text-[11px] text-muted-foreground mt-1">Deixar vazio para usar ícone/emoji da categoria</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">URL do Vídeo (YouTube / Vimeo)</label>
-              <Input value={form.video_url} onChange={(e) => setForm((f) => ({ ...f, video_url: e.target.value }))} placeholder="https://youtube.com/watch?v=..." />
-              <p className="text-[11px] text-muted-foreground mt-1">Opcional — substitui a imagem por vídeo embed</p>
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
