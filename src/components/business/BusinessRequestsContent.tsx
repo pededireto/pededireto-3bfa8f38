@@ -192,11 +192,10 @@ const RequestChat = ({
             return (
               <div key={msg.id} className={`flex ${isBusiness ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
-                    isBusiness
+                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${isBusiness
                       ? "bg-primary text-primary-foreground rounded-br-sm"
                       : "bg-muted text-foreground rounded-bl-sm"
-                  }`}
+                    }`}
                 >
                   {!isBusiness && <p className="text-xs font-semibold mb-1 opacity-70">{consumerDisplayName}</p>}
                   <p className="whitespace-pre-wrap break-words">{msg.message}</p>
@@ -307,7 +306,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
     setOpenChats((prev) => ({ ...prev, [requestId]: !prev[requestId] }));
   };
 
-  const handleRead = useCallback(() => {}, []);
+  const handleRead = useCallback(() => { }, []);
 
   // ─── CORRIGIDO: removido normalizeMatchStatus, usa newStatus diretamente ───
   const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado", requestId?: string) => {
@@ -403,9 +402,8 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
     return (
       <div
         key={match.id}
-        className={`bg-card rounded-xl p-5 shadow-sm border transition-colors space-y-3 ${
-          meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : "border-border"
-        } ${isArchived ? "opacity-70" : ""}`}
+        className={`bg-card rounded-xl p-5 shadow-sm border transition-colors space-y-3 ${meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : "border-border"
+          } ${isArchived ? "opacity-70" : ""}`}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
