@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useBusiness } from "@/hooks/useBusinesses";
+import { usePublicBusiness } from "@/hooks/usePublicBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
 import { useActiveBusinessModules, useBusinessModuleValues } from "@/hooks/useBusinessModules";
 import { useBusinessNavigation } from "@/hooks/useCategoryBusinesses";
@@ -267,7 +267,7 @@ const RIBBON_BADGE_SLUGS = ["founding-member"];
 // ─────────────────────────────────────────────
 const BusinessPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { data: business, isLoading } = useBusiness(slug);
+  const { data: business, isLoading } = usePublicBusiness(slug);
   const { user } = useAuth();
   const navigate = useNavigate();
   const trackEvent = useTrackEvent();
@@ -469,7 +469,7 @@ const BusinessPage = () => {
 
       <Header />
 
-      {userIsOwner && business.claim_status === "verified" && (
+      {userIsOwner && (business as any).claim_status === "verified" && (
         <div className="bg-primary/10 border-b border-primary/20">
           <div className="container py-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -491,10 +491,10 @@ const BusinessPage = () => {
         </div>
       )}
 
-      {!(business as any).is_claimed && !(business.claim_status === "verified" && userIsOwner) && (
+      {!(business as any).is_claimed && !((business as any).claim_status === "verified" && userIsOwner) && (
         <UnclaimedBusinessBanner
           businessId={business.id}
-          claimStatus={business.claim_status}
+          claimStatus={(business as any).claim_status}
           isClaimed={(business as any).is_claimed}
         />
       )}
