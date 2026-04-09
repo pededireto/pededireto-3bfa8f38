@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useBusiness } from "@/hooks/useBusinesses";
+import { usePublicBusiness } from "@/hooks/usePublicBusinesses";
 import { useTrackEvent } from "@/hooks/useAnalytics";
 import { useActiveBusinessModules, useBusinessModuleValues } from "@/hooks/useBusinessModules";
 import { useBusinessNavigation } from "@/hooks/useCategoryBusinesses";
