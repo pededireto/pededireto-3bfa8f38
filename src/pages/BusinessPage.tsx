@@ -469,7 +469,7 @@ const BusinessPage = () => {
 
       <Header />
 
-      {userIsOwner && business.claim_status === "verified" && (
+      {userIsOwner && (business as any).claim_status === "verified" && (
         <div className="bg-primary/10 border-b border-primary/20">
           <div className="container py-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
