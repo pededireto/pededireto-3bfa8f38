@@ -28,7 +28,7 @@ const BLOCK_TYPES = [
   { value: "negocios_premium", label: "Negócios Premium" },
   { value: "business_cta", label: "CTA para Negócios" },
   { value: "dual_cta", label: "CTA Duplo (Consumidor + Empresa)" },
-  { value: "quick_services", label: "Serviços Rápidos" },
+  { value: "servicos_rapidos", label: "Serviços Rápidos" },
   { value: "social_proof", label: "Prova Social (Logos)" },
   { value: "banner", label: "Banner" },
   { value: "texto", label: "Texto" },
