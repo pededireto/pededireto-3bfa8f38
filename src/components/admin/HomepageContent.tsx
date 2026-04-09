@@ -88,7 +88,8 @@ const HomepageContent = () => {
       try {
         parsedConfig = JSON.parse(configJson);
       } catch {
-        /* ignore */
+        toast({ title: "JSON inválido", description: "A configuração avançada não é JSON válido.", variant: "destructive" });
+        return;
       }
 
       const payload: any = {
