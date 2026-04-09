@@ -5,6 +5,7 @@ export interface FeaturedCategory {
   id: string;
   category_id: string;
   cover_image_url: string | null;
+  video_url: string | null;
   display_order: number;
   is_active: boolean;
   created_at: string;

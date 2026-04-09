@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Loader2, LayoutDashboard, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, LayoutDashboard, ArrowUp, ArrowDown, Copy } from "lucide-react";
 
 const BLOCK_TYPES = [
   { value: "hero", label: "Hero" },
@@ -27,6 +27,9 @@ const BLOCK_TYPES = [
   { value: "how_it_works", label: "Como Funciona" },
   { value: "negocios_premium", label: "Negócios Premium" },
   { value: "business_cta", label: "CTA para Negócios" },
+  { value: "dual_cta", label: "CTA Duplo (Consumidor + Empresa)" },
+  { value: "servicos_rapidos", label: "Serviços Rápidos" },
+  { value: "social_proof", label: "Prova Social (Logos)" },
   { value: "banner", label: "Banner" },
   { value: "texto", label: "Texto" },
   { value: "personalizado", label: "Personalizado" },
@@ -85,7 +88,8 @@ const HomepageContent = () => {
       try {
         parsedConfig = JSON.parse(configJson);
       } catch {
-        /* ignore */
+        toast({ title: "JSON inválido", description: "A configuração avançada não é JSON válido.", variant: "destructive" });
+        return;
       }
 
       const payload: any = {
@@ -118,6 +122,23 @@ const HomepageContent = () => {
       toast({ title: "Bloco eliminado" });
     } catch {
       toast({ title: "Erro ao eliminar", variant: "destructive" });
+    }
+  };
+
+  const handleDuplicate = async (block: HomepageBlock) => {
+    try {
+      await createBlock.mutateAsync({
+        type: block.type,
+        title: block.title ? `${block.title} (cópia)` : `${typeLabel(block.type)} (cópia)`,
+        config: block.config,
+        is_active: false,
+        order_index: block.order_index + 1,
+        start_date: block.start_date,
+        end_date: block.end_date,
+      } as any);
+      toast({ title: "Bloco duplicado" });
+    } catch {
+      toast({ title: "Erro ao duplicar", variant: "destructive" });
     }
   };
 
@@ -216,8 +237,11 @@ const HomepageContent = () => {
 
             {/* Wrapper de ações com stopPropagation */}
             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-              <Button size="icon" variant="ghost" onClick={() => openEdit(block)}>
+              <Button size="icon" variant="ghost" onClick={() => openEdit(block)} title="Editar">
                 <Pencil className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant="ghost" onClick={() => handleDuplicate(block)} title="Duplicar">
+                <Copy className="w-4 h-4" />
               </Button>
               <Button
                 size="icon"
@@ -226,6 +250,7 @@ const HomepageContent = () => {
                   e.stopPropagation();
                   handleDelete(block.id);
                 }}
+                title="Eliminar"
               >
                 <Trash2 className="w-4 h-4 text-destructive" />
               </Button>
@@ -296,16 +321,55 @@ const HomepageContent = () => {
                 />
               </div>
             </div>
-            {["banner", "negocios_premium", "texto", "personalizado"].includes(form.type) && (
+            {["banner", "negocios_premium", "texto", "personalizado", "hero", "featured_categories", "business_cta"].includes(form.type) && (
+              <div className="space-y-3">
+                <div>
+                  <Label>URL da Imagem (externo)</Label>
+                  <Input
+                    value={(() => { try { return JSON.parse(configJson)?.imagem_url || ""; } catch { return ""; } })()}
+                    onChange={(e) => {
+                      try {
+                        const c = JSON.parse(configJson || "{}");
+                        c.imagem_url = e.target.value || undefined;
+                        setConfigJson(JSON.stringify(c, null, 2));
+                      } catch { /* ignore */ }
+                    }}
+                    placeholder="https://..."
+                  />
+                  {(() => { try { const u = JSON.parse(configJson)?.imagem_url; return u ? <img src={u} alt="Preview" className="mt-1 w-full max-h-32 object-cover rounded-lg border border-border" /> : null; } catch { return null; } })()}
+                </div>
+                <div>
+                  <Label>URL do Vídeo (YouTube / Vimeo)</Label>
+                  <Input
+                    value={(() => { try { return JSON.parse(configJson)?.video_url || ""; } catch { return ""; } })()}
+                    onChange={(e) => {
+                      try {
+                        const c = JSON.parse(configJson || "{}");
+                        c.video_url = e.target.value || undefined;
+                        setConfigJson(JSON.stringify(c, null, 2));
+                      } catch { /* ignore */ }
+                    }}
+                    placeholder="https://youtube.com/watch?v=..."
+                  />
+                </div>
+              </div>
+            )}
+            {["banner", "negocios_premium", "texto", "personalizado", "dual_cta", "servicos_rapidos", "social_proof"].includes(form.type) && (
               <div>
-                <Label>Configuração (JSON)</Label>
+                <Label>Configuração avançada (JSON)</Label>
                 <Textarea
                   value={configJson}
                   onChange={(e) => setConfigJson(e.target.value)}
-                  rows={6}
+                  rows={8}
                   className="font-mono text-xs"
                   placeholder={
-                    form.type === "banner"
+                    form.type === "dual_cta"
+                      ? '{\n  "left_title": "Encontra quem resolve",\n  "left_bullets": ["Profissionais perto de ti"],\n  "left_cta_text": "Encontrar serviço →",\n  "left_cta_link": "/top",\n  "right_title": "Vais aparecer?",\n  "right_cta1_text": "Encontrar o meu negócio",\n  "right_cta1_link": "/claim-business"\n}'
+                      : form.type === "servicos_rapidos"
+                      ? '{\n  "title": "O que precisas resolver hoje?",\n  "items": [\n    { "icon": "💧", "label": "Fuga de água", "link": "/pesquisa?q=canalizador" }\n  ]\n}'
+                      : form.type === "social_proof"
+                      ? '{\n  "title": "Negócios na plataforma",\n  "subtitle": "Junta-te a centenas de profissionais...",\n  "max_logos": 8\n}'
+                      : form.type === "banner"
                       ? '{\n  "titulo": "...",\n  "descricao": "...",\n  "link": "...",\n  "imagem_url": "..."\n}'
                       : "{}"
                   }

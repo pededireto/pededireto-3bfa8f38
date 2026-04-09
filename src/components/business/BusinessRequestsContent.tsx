@@ -15,13 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2,
   Inbox,
@@ -71,7 +65,15 @@ const matchStatusConfig: Record<
 
 // ─── Sub-componente: Chat de um pedido (com Realtime) ─────────────────────────
 
-const RequestChat = ({ requestId, consumerDisplayName = "Consumidor", onRead }: { requestId: string; consumerDisplayName?: string; onRead: () => void }) => {
+const RequestChat = ({
+  requestId,
+  consumerDisplayName = "Consumidor",
+  onRead,
+}: {
+  requestId: string;
+  consumerDisplayName?: string;
+  onRead: () => void;
+}) => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -190,11 +192,10 @@ const RequestChat = ({ requestId, consumerDisplayName = "Consumidor", onRead }: 
             return (
               <div key={msg.id} className={`flex ${isBusiness ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
-                    isBusiness
+                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${isBusiness
                       ? "bg-primary text-primary-foreground rounded-br-sm"
                       : "bg-muted text-foreground rounded-bl-sm"
-                  }`}
+                    }`}
                 >
                   {!isBusiness && <p className="text-xs font-semibold mb-1 opacity-70">{consumerDisplayName}</p>}
                   <p className="whitespace-pre-wrap break-words">{msg.message}</p>
@@ -305,16 +306,39 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
     setOpenChats((prev) => ({ ...prev, [requestId]: !prev[requestId] }));
   };
 
-  const handleRead = useCallback(() => {}, []);
+  const handleRead = useCallback(() => { }, []);
 
+  // ─── CORRIGIDO: removido normalizeMatchStatus, usa newStatus diretamente ───
   const handleStatusChange = async (matchId: string, newStatus: "aceite" | "recusado", requestId?: string) => {
     setUpdatingStatus(matchId);
     try {
-      const { error } = await supabase
+      const now = new Date().toISOString();
+      const updates: Record<string, any> = { status: newStatus, responded_at: now };
+      if (newStatus === "aceite") {
+        updates.contact_unlocked = true;
+        updates.first_response_at = now;
+      }
+
+      console.log("A atualizar match:", matchId, "| status:", newStatus, "| updates:", updates);
+
+      // ─── CORRIGIDO: .select('*') em vez de .select() ───
+      const { error, data } = await supabase
         .from("request_business_matches" as any)
-        .update({ status: newStatus } as any)
-        .eq("id", matchId);
-      if (error) throw error;
+        .update(updates as any)
+        .eq("id", matchId)
+        .select("*");
+
+      if (error) {
+        console.error("Match update error:", error);
+        throw error;
+      }
+
+      console.log("Resultado do update:", data);
+
+      if (!data || (data as any[]).length === 0) {
+        throw new Error("Sem permissão para atualizar este pedido.");
+      }
+
       toast({
         title: newStatus === "aceite" ? "Pedido aceite!" : "Pedido recusado",
         description:
@@ -323,8 +347,9 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             : "O pedido foi recusado.",
       });
       qc.invalidateQueries({ queryKey: ["business-requests"] });
+      qc.invalidateQueries({ queryKey: ["business-requests-meta"] });
 
-      // P2: Notify consumer via email when business accepts
+      // Notify consumer via email when business accepts
       if (newStatus === "aceite" && requestId) {
         supabase.functions
           .invoke("notify-consumer", {
@@ -332,8 +357,13 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
           })
           .catch((err) => console.error("notify-consumer error:", err));
       }
-    } catch {
-      toast({ title: "Erro ao atualizar pedido", variant: "destructive" });
+    } catch (err: any) {
+      console.error("handleStatusChange failed:", err);
+      toast({
+        title: "Erro ao atualizar pedido",
+        description: err?.message || "Verifica as tuas permissões e tenta novamente.",
+        variant: "destructive",
+      });
     } finally {
       setUpdatingStatus(null);
     }
@@ -372,9 +402,8 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
     return (
       <div
         key={match.id}
-        className={`bg-card rounded-xl p-5 shadow-sm border transition-colors space-y-3 ${
-          meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : "border-border"
-        } ${isArchived ? "opacity-70" : ""}`}
+        className={`bg-card rounded-xl p-5 shadow-sm border transition-colors space-y-3 ${meta?.hasUnread ? "border-primary/50 bg-primary/[0.02] dark:bg-primary/[0.04]" : "border-border"
+          } ${isArchived ? "opacity-70" : ""}`}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
@@ -392,7 +421,11 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
           </div>
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
             <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
-            {isArchived && <Badge variant="outline" className="text-xs">Arquivado</Badge>}
+            {isArchived && (
+              <Badge variant="outline" className="text-xs">
+                Arquivado
+              </Badge>
+            )}
             {meta?.hasUnread && (
               <span className="flex items-center gap-1 text-xs text-primary font-semibold animate-pulse">
                 <Bell className="h-3 w-3" /> Nova mensagem
@@ -437,7 +470,7 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
             {(sr?.consumer_name || profile?.full_name) && (
               <div className="flex items-center gap-2 text-foreground">
                 <User className="h-3.5 w-3.5 text-muted-foreground" />
-               {profile?.full_name || sr?.consumer_name}
+                {profile?.full_name || sr?.consumer_name}
               </div>
             )}
             {(sr?.consumer_email || profile?.email) && (
@@ -536,7 +569,13 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
         </div>
 
         {/* Inline chat */}
-        {requestId && chatOpen && isAccepted && <RequestChat requestId={requestId} consumerDisplayName={formatReviewerName(profile?.full_name)} onRead={handleRead} />}
+        {requestId && chatOpen && isAccepted && (
+          <RequestChat
+            requestId={requestId}
+            consumerDisplayName={formatReviewerName(profile?.full_name)}
+            onRead={handleRead}
+          />
+        )}
       </div>
     );
   };
@@ -570,13 +609,17 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
           <TabsTrigger value="active" className="flex items-center gap-1.5">
             Ativos
             {allActiveCount > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs h-5 min-w-5 px-1.5">{allActiveCount}</Badge>
+              <Badge variant="secondary" className="ml-1 text-xs h-5 min-w-5 px-1.5">
+                {allActiveCount}
+              </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="archived" className="flex items-center gap-1.5">
             Arquivados
             {allArchivedCount > 0 && (
-              <Badge variant="outline" className="ml-1 text-xs h-5 min-w-5 px-1.5">{allArchivedCount}</Badge>
+              <Badge variant="outline" className="ml-1 text-xs h-5 min-w-5 px-1.5">
+                {allArchivedCount}
+              </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="all">Todos</TabsTrigger>
@@ -620,16 +663,14 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
         {/* Content */}
         {isPending ? (
           <div className="space-y-4 mt-4">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-40 w-full rounded-xl" />
             ))}
           </div>
         ) : filteredRequests.length === 0 ? (
           renderEmpty()
         ) : (
-          <div className="space-y-4 mt-4">
-            {filteredRequests.map(renderRequestCard)}
-          </div>
+          <div className="space-y-4 mt-4">{filteredRequests.map(renderRequestCard)}</div>
         )}
       </Tabs>
     </div>
