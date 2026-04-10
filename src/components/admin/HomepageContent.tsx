@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   useAllHomepageBlocks,
   useCreateHomepageBlock,
@@ -9,13 +9,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Loader2, LayoutDashboard, ArrowUp, ArrowDown, Copy } from "lucide-react";
+import BlockFormRenderer from "./homepage-blocks/BlockFormRenderer";
 
 const BLOCK_TYPES = [
   { value: "hero", label: "Hero" },
@@ -59,26 +60,48 @@ const HomepageContent = () => {
   const [editing, setEditing] = useState<HomepageBlock | null>(null);
   const [form, setForm] = useState(emptyBlock);
   const [configJson, setConfigJson] = useState("");
+  const [visualConfig, setVisualConfig] = useState<Record<string, any>>({});
+
+  // Sync visual config → JSON
+  useEffect(() => {
+    if (form.type !== "personalizado") {
+      setConfigJson(JSON.stringify(visualConfig, null, 2));
+    }
+  }, [visualConfig, form.type]);
+
+  // When JSON is edited directly, sync back to visual config
+  const handleConfigJsonChange = useCallback((val: string) => {
+    setConfigJson(val);
+    try {
+      const parsed = JSON.parse(val);
+      setVisualConfig(parsed);
+    } catch {
+      // invalid JSON, keep text but don't update visual
+    }
+  }, []);
 
   const openCreate = () => {
     setEditing(null);
     setForm(emptyBlock);
     setConfigJson("{}");
+    setVisualConfig({});
     setDialogOpen(true);
   };
 
   const openEdit = (block: HomepageBlock) => {
     setEditing(block);
+    const cfg = block.config || {};
     setForm({
       type: block.type,
       title: block.title || "",
-      config: block.config || {},
+      config: cfg,
       is_active: block.is_active,
       order_index: block.order_index,
       start_date: block.start_date ? block.start_date.split("T")[0] : "",
       end_date: block.end_date ? block.end_date.split("T")[0] : "",
     });
-    setConfigJson(JSON.stringify(block.config || {}, null, 2));
+    setConfigJson(JSON.stringify(cfg, null, 2));
+    setVisualConfig(cfg);
     setDialogOpen(true);
   };
 
@@ -88,7 +111,7 @@ const HomepageContent = () => {
       try {
         parsedConfig = JSON.parse(configJson);
       } catch {
-        toast({ title: "JSON inválido", description: "A configuração avançada não é JSON válido.", variant: "destructive" });
+        toast({ title: "JSON inválido", description: "A configuração não é JSON válido.", variant: "destructive" });
         return;
       }
 
@@ -182,30 +205,16 @@ const HomepageContent = () => {
         {sorted.map((block, i) => (
           <div
             key={block.id}
-            // Torna o card clicável e altera o cursor
             onClick={() => openEdit(block)}
             className={`flex items-center gap-4 p-4 rounded-xl bg-card shadow-card border cursor-pointer transition-colors hover:bg-accent/50 ${
               block.is_active ? "border-transparent" : "border-destructive/20 opacity-60"
             }`}
           >
-            {/* Wrapper de ordenação com stopPropagation para não abrir o modal ao mover */}
             <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0"
-                onClick={() => moveBlock(block, "up")}
-                disabled={i === 0}
-              >
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveBlock(block, "up")} disabled={i === 0}>
                 <ArrowUp className="h-4 w-4" />
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0"
-                onClick={() => moveBlock(block, "down")}
-                disabled={i === sorted.length - 1}
-              >
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => moveBlock(block, "down")} disabled={i === sorted.length - 1}>
                 <ArrowDown className="h-4 w-4" />
               </Button>
             </div>
@@ -235,7 +244,6 @@ const HomepageContent = () => {
               </div>
             </div>
 
-            {/* Wrapper de ações com stopPropagation */}
             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
               <Button size="icon" variant="ghost" onClick={() => openEdit(block)} title="Editar">
                 <Pencil className="w-4 h-4" />
@@ -246,10 +254,7 @@ const HomepageContent = () => {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(block.id);
-                }}
+                onClick={(e) => { e.stopPropagation(); handleDelete(block.id); }}
                 title="Eliminar"
               >
                 <Trash2 className="w-4 h-4 text-destructive" />
@@ -265,121 +270,69 @@ const HomepageContent = () => {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-0">
             <DialogTitle>{editing ? "Editar Bloco" : "Novo Bloco"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Tipo</Label>
-              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })} disabled={!!editing}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BLOCK_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Título (opcional)</Label>
-              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+          <ScrollArea className="max-h-[calc(90vh-80px)] px-6 pb-6">
+            <div className="space-y-4 pt-2">
               <div>
-                <Label>Ordem</Label>
-                <Input
-                  type="number"
-                  value={form.order_index}
-                  onChange={(e) => setForm({ ...form, order_index: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="flex items-center gap-2 pt-6">
-                <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
-                <Label>Ativo</Label>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Data início</Label>
-                <Input
-                  type="date"
-                  value={form.start_date}
-                  onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                />
+                <Label>Tipo</Label>
+                <Select value={form.type} onValueChange={(v) => { setForm({ ...form, type: v }); setVisualConfig({}); setConfigJson("{}"); }} disabled={!!editing}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BLOCK_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label>Data fim</Label>
-                <Input
-                  type="date"
-                  value={form.end_date}
-                  onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                />
+                <Label>Título (opcional)</Label>
+                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
               </div>
-            </div>
-            {["banner", "negocios_premium", "texto", "personalizado", "hero", "featured_categories", "business_cta"].includes(form.type) && (
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>URL da Imagem (externo)</Label>
+                  <Label>Ordem</Label>
                   <Input
-                    value={(() => { try { return JSON.parse(configJson)?.imagem_url || ""; } catch { return ""; } })()}
-                    onChange={(e) => {
-                      try {
-                        const c = JSON.parse(configJson || "{}");
-                        c.imagem_url = e.target.value || undefined;
-                        setConfigJson(JSON.stringify(c, null, 2));
-                      } catch { /* ignore */ }
-                    }}
-                    placeholder="https://..."
-                  />
-                  {(() => { try { const u = JSON.parse(configJson)?.imagem_url; return u ? <img src={u} alt="Preview" className="mt-1 w-full max-h-32 object-cover rounded-lg border border-border" /> : null; } catch { return null; } })()}
-                </div>
-                <div>
-                  <Label>URL do Vídeo (YouTube / Vimeo)</Label>
-                  <Input
-                    value={(() => { try { return JSON.parse(configJson)?.video_url || ""; } catch { return ""; } })()}
-                    onChange={(e) => {
-                      try {
-                        const c = JSON.parse(configJson || "{}");
-                        c.video_url = e.target.value || undefined;
-                        setConfigJson(JSON.stringify(c, null, 2));
-                      } catch { /* ignore */ }
-                    }}
-                    placeholder="https://youtube.com/watch?v=..."
+                    type="number"
+                    value={form.order_index}
+                    onChange={(e) => setForm({ ...form, order_index: parseInt(e.target.value) || 0 })}
                   />
                 </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+                  <Label>Ativo</Label>
+                </div>
               </div>
-            )}
-            {["banner", "negocios_premium", "texto", "personalizado", "dual_cta", "servicos_rapidos", "social_proof"].includes(form.type) && (
-              <div>
-                <Label>Configuração avançada (JSON)</Label>
-                <Textarea
-                  value={configJson}
-                  onChange={(e) => setConfigJson(e.target.value)}
-                  rows={8}
-                  className="font-mono text-xs"
-                  placeholder={
-                    form.type === "dual_cta"
-                      ? '{\n  "left_title": "Encontra quem resolve",\n  "left_bullets": ["Profissionais perto de ti"],\n  "left_cta_text": "Encontrar serviço →",\n  "left_cta_link": "/top",\n  "right_title": "Vais aparecer?",\n  "right_cta1_text": "Encontrar o meu negócio",\n  "right_cta1_link": "/claim-business"\n}'
-                      : form.type === "servicos_rapidos"
-                      ? '{\n  "title": "O que precisas resolver hoje?",\n  "items": [\n    { "icon": "💧", "label": "Fuga de água", "link": "/pesquisa?q=canalizador" }\n  ]\n}'
-                      : form.type === "social_proof"
-                      ? '{\n  "title": "Negócios na plataforma",\n  "subtitle": "Junta-te a centenas de profissionais...",\n  "max_logos": 8\n}'
-                      : form.type === "banner"
-                      ? '{\n  "titulo": "...",\n  "descricao": "...",\n  "link": "...",\n  "imagem_url": "..."\n}'
-                      : "{}"
-                  }
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Data início</Label>
+                  <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Data fim</Label>
+                  <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+                </div>
               </div>
-            )}
-            <Button className="w-full" onClick={handleSave} disabled={!form.type}>
-              {editing ? "Guardar Alterações" : "Criar Bloco"}
-            </Button>
-          </div>
+
+              <BlockFormRenderer
+                type={form.type}
+                config={visualConfig}
+                onChange={setVisualConfig}
+                configJson={configJson}
+                onConfigJsonChange={handleConfigJsonChange}
+              />
+
+              <Button className="w-full" onClick={handleSave} disabled={!form.type}>
+                {editing ? "Guardar Alterações" : "Criar Bloco"}
+              </Button>
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
