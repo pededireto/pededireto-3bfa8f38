@@ -269,8 +269,6 @@ export interface RequestMeta {
 export interface RequestReviewInfo {
   rating: number;
   comment: string | null;
-  businessResponse: string | null;
-  businessResponseAt: string | null;
   businessName: string;
 }
 
@@ -280,27 +278,18 @@ export const useConsumerRequestReviews = (requestIds: string[]) => {
     enabled: requestIds.length > 0,
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return {} as Record<string, RequestReviewInfo[]>;
+      if (requestIds.length === 0) return {} as Record<string, RequestReviewInfo[]>;
 
-      const { data: matches, error: matchErr } = await supabase
-        .from("request_business_matches" as any)
-        .select("request_id, business_id")
+      // Query request_ratings directly by request_id
+      const { data: ratings, error: ratErr } = await supabase
+        .from("request_ratings" as any)
+        .select("request_id, business_id, rating, comment")
         .in("request_id", requestIds);
-      if (matchErr) throw matchErr;
+      if (ratErr) throw ratErr;
 
-      const allBusinessIds = [...new Set((matches || []).map((m: any) => m.business_id))];
-      if (allBusinessIds.length === 0) return {} as Record<string, RequestReviewInfo[]>;
+      if (!ratings || ratings.length === 0) return {} as Record<string, RequestReviewInfo[]>;
 
-      const { data: reviews, error: revErr } = await supabase
-        .from("business_reviews")
-        .select("business_id, rating, comment, business_response, business_response_at")
-        .eq("user_id", user.id)
-        .in("business_id", allBusinessIds);
-      if (revErr) throw revErr;
-
+      const allBusinessIds = [...new Set((ratings as any[]).map((r: any) => r.business_id))];
       const { data: businesses } = await supabase.from("businesses").select("id, name").in("id", allBusinessIds);
 
       const bizNameMap: Record<string, string> = {};
@@ -308,24 +297,14 @@ export const useConsumerRequestReviews = (requestIds: string[]) => {
         bizNameMap[b.id] = b.name;
       });
 
-      const reviewMap: Record<string, any> = {};
-      (reviews || []).forEach((r: any) => {
-        reviewMap[r.business_id] = r;
-      });
-
       const result: Record<string, RequestReviewInfo[]> = {};
-      (matches || []).forEach((m: any) => {
-        const rev = reviewMap[m.business_id];
-        if (rev) {
-          if (!result[m.request_id]) result[m.request_id] = [];
-          result[m.request_id].push({
-            rating: rev.rating,
-            comment: rev.comment,
-            businessResponse: rev.business_response,
-            businessResponseAt: rev.business_response_at,
-            businessName: bizNameMap[m.business_id] || "Negócio",
-          });
-        }
+      (ratings as any[]).forEach((r: any) => {
+        if (!result[r.request_id]) result[r.request_id] = [];
+        result[r.request_id].push({
+          rating: r.rating,
+          comment: r.comment,
+          businessName: bizNameMap[r.business_id] || "Negócio",
+        });
       });
 
       return result;

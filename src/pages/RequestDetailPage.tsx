@@ -701,6 +701,18 @@ const RequestDetailPage = () => {
                 Marcar como Resolvido
               </Button>
             )}
+            {/* Avaliar button for resolved requests without ratings */}
+            {isResolved && hasAcceptedMatch && existingRatings.length === 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleResolve}
+                className="flex items-center gap-1.5 text-yellow-600 border-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-950/20"
+              >
+                <Star className="h-3.5 w-3.5" />
+                Avaliar este pedido
+              </Button>
+            )}
           </div>
         </div>
 
@@ -933,12 +945,15 @@ const RequestDetailPage = () => {
                                 Orçamento: <span className="font-medium text-foreground">{match.price_quote}</span>
                               </p>
                             )}
-                            {isAccepted && isResolved && alreadyRated && (
-                              <span className="flex items-center gap-1 text-xs text-yellow-600 mt-1">
-                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                Avaliado
-                              </span>
-                            )}
+                            {isAccepted && isResolved && alreadyRated && (() => {
+                              const ratingData = existingRatings.find((r) => r.match_id === match.id);
+                              return (
+                                <span className="flex items-center gap-1 text-xs text-yellow-600 mt-1">
+                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                  {ratingData ? `${ratingData.rating}.0 Avaliado` : "Avaliado"}
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
                       );
