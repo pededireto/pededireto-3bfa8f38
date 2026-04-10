@@ -97,7 +97,7 @@ const StudioSettingsPage = () => {
 
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [step, setStep] = useState(0);
-  const [selectedProvider, setSelectedProvider] = useState<"openai" | "google" | "ideogram" | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<"openai" | "google" | "ideogram" | "fal" | null>(null);
   const [keyInput, setKeyInput] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [verifying, setVerifying] = useState(false);
