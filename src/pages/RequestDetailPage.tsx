@@ -945,12 +945,15 @@ const RequestDetailPage = () => {
                                 Orçamento: <span className="font-medium text-foreground">{match.price_quote}</span>
                               </p>
                             )}
-                            {isAccepted && isResolved && alreadyRated && (
-                              <span className="flex items-center gap-1 text-xs text-yellow-600 mt-1">
-                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                Avaliado
-                              </span>
-                            )}
+                            {isAccepted && isResolved && alreadyRated && (() => {
+                              const ratingData = existingRatings.find((r) => r.match_id === match.id);
+                              return (
+                                <span className="flex items-center gap-1 text-xs text-yellow-600 mt-1">
+                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                  {ratingData ? `${ratingData.rating}.0 Avaliado` : "Avaliado"}
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
                       );
