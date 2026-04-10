@@ -6,6 +6,7 @@ import { useBusinessRequests } from "@/hooks/useBusinessDashboard";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
+import { useBusinessScore } from "@/hooks/useBusinessScore";
 import { useBusinessPlan } from "@/hooks/useBusinessPlan";
 import { useBusinessResponseTime } from "@/hooks/useBusinessResponseTime";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
@@ -154,6 +155,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
   const { data: requests = [] } = useBusinessRequests(business.id);
   const { data: unreadCount = 0 } = useUnreadNotificationsCount(business.id);
   const { data: analytics, refetch } = useBusinessAnalytics(business.id);
+  const { data: scoreData } = useBusinessScore(business.id);
   const permissions = useBusinessClaimPermissions(business);
   const { data: responseTime } = useBusinessResponseTime(business.id);
   const { isOnTrial, trialDaysLeft } = useBusinessPlan({
