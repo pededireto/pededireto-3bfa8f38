@@ -450,7 +450,7 @@ const BusinessPage = () => {
     !!(scheduleWeekdays || scheduleWeekend || scheduleClosed) && (business as any).show_schedule !== false;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col pb-20 lg:pb-0">
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
@@ -632,18 +632,6 @@ const BusinessPage = () => {
                   </div>
                 )}
 
-                {/* ── MOBILE CTAs — shown only on mobile/tablet ── */}
-                <div className="lg:hidden">
-                  <BusinessCTAPanel
-                    business={business}
-                    responseTime={responseTime}
-                    sidebarBadges={sidebarBadges}
-                    badgeConfig={BADGE_CONFIG}
-                    onCtaClick={(type) => handleCtaClick(type as any)}
-                    onGA4Lead={trackGA4Lead}
-                  />
-                </div>
-
                 {/* Galeria principal */}
                 {businessImages.length > 0 && (business as any).show_gallery !== false && (
                   <GalleryGrid images={businessImages} label="Galeria" />
@@ -691,6 +679,18 @@ const BusinessPage = () => {
                       {topPosition.city ? ` em ${topPosition.city}` : ""}
                     </Link>
                   )}
+
+                  {/* ── MOBILE CTAs — shown only on mobile/tablet, after name/badges ── */}
+                  <div className="lg:hidden">
+                    <BusinessCTAPanel
+                      business={business}
+                      responseTime={responseTime}
+                      sidebarBadges={sidebarBadges}
+                      badgeConfig={BADGE_CONFIG}
+                      onCtaClick={(type) => handleCtaClick(type as any)}
+                      onGA4Lead={trackGA4Lead}
+                    />
+                  </div>
 
                   {/* WhatsApp Share CTA */}
                   <div className="flex items-center gap-2 flex-wrap">
@@ -921,6 +921,52 @@ const BusinessPage = () => {
       )}
 
       <Footer />
+
+      {/* ── STICKY BOTTOM CTA (mobile only) ── */}
+      {(business.cta_whatsapp || business.cta_phone) && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-card/95 backdrop-blur-sm border-t border-border px-4 py-3 flex gap-2">
+          {business.cta_whatsapp && (business as any).show_whatsapp !== false ? (
+            <>
+              <Button
+                className="btn-cta-whatsapp flex-1 justify-center text-base font-bold"
+                onClick={() => {
+                  handleCtaClick("whatsapp");
+                  trackGA4Lead("whatsapp");
+                  window.open(`https://wa.me/${business.cta_whatsapp!.replace(/\D/g, "")}`, "_blank");
+                }}
+              >
+                <MessageCircle className="w-5 h-5" />
+                Contactar via WhatsApp
+              </Button>
+              {business.cta_phone && (
+                <Button
+                  variant="outline"
+                  className="justify-center"
+                  onClick={() => {
+                    handleCtaClick("phone");
+                    trackGA4Lead("phone");
+                    window.open(`tel:${business.cta_phone}`, "_blank");
+                  }}
+                >
+                  <Phone className="w-5 h-5" />
+                </Button>
+              )}
+            </>
+          ) : business.cta_phone ? (
+            <Button
+              className="btn-cta-phone flex-1 justify-center text-base font-bold"
+              onClick={() => {
+                handleCtaClick("phone");
+                trackGA4Lead("phone");
+                window.open(`tel:${business.cta_phone}`, "_blank");
+              }}
+            >
+              <Phone className="w-5 h-5" />
+              Ligar Agora
+            </Button>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 };
