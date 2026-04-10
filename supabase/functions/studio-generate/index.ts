@@ -286,30 +286,99 @@ Responde APENAS com JSON válido:
 
 function buildImagePrompt(p: any): string {
   const hasContext = p.nome || p.sector || p.descricao || p.personagens || p.ambiente;
-  return `És especialista em criar prompts de geração de imagem para marketing de negócios locais em Portugal.
 
-CONTEXTO:
-${p.objectivoImagem ? `- Objectivo: ${p.objectivoImagem}` : ""}
-${p.nome ? `- Nome/Marca: ${p.nome}` : ""}
+  // Map estilo key to English style description
+  const estiloMap: Record<string, string> = {
+    foto: "professional commercial photography, photorealistic, DSLR quality",
+    cinematografico: "cinematic photography, rich colors, shallow depth of field, anamorphic lens",
+    oleo: "oil painting style, rich textures, classical fine art",
+    ilustracao: "editorial illustration, clean lines, modern graphic design",
+    aguarela: "watercolor painting, soft washes, organic textures",
+    dupla: "double exposure photography, surreal overlay composition",
+    neon: "cyberpunk neon aesthetic, vibrant glowing colors, futuristic",
+    vintage: "vintage film photography, grain texture, warm faded tones, nostalgic",
+    minimalista: "minimalist photography, clean negative space, simple composition",
+    cartoon: "cartoon illustration style, bold outlines, vibrant colors",
+    surrealismo: "surrealist art, dreamlike impossible scenes, Salvador Dali inspired",
+    artdeco: "art deco style, geometric patterns, gold accents, 1920s glamour",
+    polaroid: "polaroid lo-fi photography, candid spontaneous feel, authentic",
+    popart: "pop art style, bold flat colors, Andy Warhol inspired",
+    pb: "black and white photography, dramatic contrast, timeless",
+  };
+
+  // Map iluminacao key to English lighting
+  const ilumMap: Record<string, string> = {
+    manha: "soft morning light, gentle warm sunrise glow",
+    dia: "bright natural daylight, clear and crisp",
+    golden: "golden hour warm lighting, long shadows, amber tones",
+    noite: "nighttime ambient lighting, moody atmosphere",
+    estudio: "professional studio lighting with softbox, even illumination",
+    velas: "warm candlelight atmosphere, intimate flickering glow",
+  };
+
+  // Map humor key to English mood
+  const humorMap: Record<string, string> = {
+    acolhedor: "warm and inviting, cozy welcoming atmosphere",
+    energetico: "energetic and dynamic, vibrant motion",
+    sereno: "serene and peaceful, calm tranquility",
+    festivo: "festive and celebratory, joyful atmosphere",
+    profissional: "professional and trustworthy, corporate confidence",
+    natural: "natural and organic, earthy authentic feel",
+    luxuoso: "luxurious and premium, sophisticated elegance",
+    urgente: "urgent and compelling, bold attention-grabbing",
+  };
+
+  const estiloDesc = estiloMap[p.estilo] || "professional commercial photography";
+  const ilumDesc = p.iluminacao ? ilumMap[p.iluminacao] || "" : "";
+  const humorDesc = p.humor ? humorMap[p.humor] || "" : "";
+  const paletaDesc = p.paletas || "";
+
+  return `És um especialista em criação de prompts para geradores de imagem IA (Midjourney, DALL-E, Stable Diffusion, Flux, Ideogram).
+
+Cria um prompt DETALHADO e PROFISSIONAL em inglês que produza uma imagem de alta qualidade para uso comercial e marketing.
+
+O prompt DEVE seguir esta estrutura exacta:
+[SUBJECT] — descrição principal clara e específica do que aparece na imagem
+[STYLE] — estilo visual: ${estiloDesc}
+[LIGHTING] — iluminação específica${ilumDesc ? `: ${ilumDesc}` : ""}
+[COMPOSITION] — composição da imagem (close-up, wide shot, overhead, rule of thirds, etc.)
+[MOOD] — atmosfera e emoção${humorDesc ? `: ${humorDesc}` : ""}
+${paletaDesc ? `[COLOR PALETTE] — ${paletaDesc}` : ""}
+[TECHNICAL] — parâmetros técnicos de qualidade
+[NEGATIVE] — elementos a excluir
+
+DADOS DO PEDIDO:
+${p.objectivoImagem ? `- Objectivo: imagem de ${p.objectivoImagem}` : ""}
+${p.nome ? `- Marca/Negócio: ${p.nome} (NÃO incluir o nome como texto na imagem)` : ""}
 ${p.sector ? `- Sector: ${p.sector}` : ""}
-${p.descricao ? `- O que deve aparecer: ${p.descricao}` : ""}
+${p.descricao ? `- Cena principal: ${p.descricao}` : ""}
 ${p.personagens ? `- Personagens: ${p.personagens}` : ""}
-${p.ambiente ? `- Ambiente: ${p.ambiente}` : ""}
-${p.textoSobreposto ? `- Texto sobreposto: ${p.textoSobreposto}` : ""}
-${p.extras ? `- Extras: ${p.extras}` : ""}
-- Estilo: ${p.estilo || "local"}
+${p.ambiente ? `- Ambiente/Cenário: ${p.ambiente}` : ""}
+${p.localizacao ? `- Localização: ${p.localizacao}` : ""}
+${p.elementosFundo ? `- Elementos de fundo: ${p.elementosFundo}` : ""}
+${p.estacao ? `- Estação: ${p.estacao}` : ""}
+${p.textoSobreposto ? `- Texto sobreposto desejado: "${p.textoSobreposto}"${p.textoPosicao ? ` (posição: ${p.textoPosicao})` : ""}` : ""}
+- Estilo visual: ${estiloDesc}
 - Proporção: ${p.proporcao || "9:16"}
 
-${!hasContext ? "MODO CRIATIVO: sem contexto específico, sê criativo e visualmente rico.\n" : ""}
+${!hasContext ? "MODO CRIATIVO: sem contexto específico, cria uma cena visualmente impactante e comercialmente apelativa.\n" : ""}
 
-REGRAS: Prompts em inglês, fotorrealista, cinematográfico, proporção ${p.proporcao || "9:16"}.
+REGRAS OBRIGATÓRIAS:
+1. O prompt deve ser escrito INTEIRAMENTE em inglês
+2. Ter entre 80 e 150 palavras
+3. Incluir detalhes específicos de iluminação, composição, estilo fotográfico e mood
+4. Ser visual e concreto — NUNCA usar palavras vagas como "beautiful", "nice", "good"
+5. Terminar SEMPRE com: sharp focus, high resolution, professional quality --no text, watermark, logo, blur, distortion, amateur, low quality
+6. NÃO incluir o nome da marca/empresa como texto visível na imagem
+7. NÃO incluir explicações, introduções ou aspas — APENAS o prompt
+8. Adicionar aspect ratio no fim: --ar ${p.proporcao || "9:16"}
 
 Responde APENAS com JSON válido:
 {
-  "prompt_principal": "prompt completa em inglês, máx 150 palavras, proporção ${p.proporcao || "9:16"}",
-  "variante_a": "variante ângulo diferente, 100 palavras",
-  "variante_b": "variante iluminação diferente, 100 palavras",
-  "instrucoes": "3-4 passos práticos em português sobre como usar no Grok/Midjourney e depois no workflow Reel 5×6s"
+  "prompt_principal": "prompt completo profissional em inglês, 80-150 palavras, seguindo a estrutura acima",
+  "variante_a": "variante com ângulo/composição diferente, 80-120 palavras",
+  "variante_b": "variante com iluminação/mood diferente, 80-120 palavras",
+  "instrucoes": "3-4 passos práticos em português sobre como usar este prompt"
 }`;
 }
 

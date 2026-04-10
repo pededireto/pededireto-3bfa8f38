@@ -185,6 +185,43 @@ serve(async (req) => {
 
       const data = await res.json();
       imageUrl = data.data?.[0]?.url || "";
+    } else if (provider === "fal") {
+      // fal.ai Flux integration
+      const sizeMap: Record<string, { width: number; height: number }> = {
+        "9:16": { width: 576, height: 1024 },
+        "1:1": { width: 1024, height: 1024 },
+        "16:9": { width: 1024, height: 576 },
+        "4:5": { width: 819, height: 1024 },
+        "2:3": { width: 683, height: 1024 },
+      };
+      const dims = sizeMap[aspect_ratio || "1:1"] || sizeMap["1:1"];
+
+      const res = await fetch("https://fal.run/fal-ai/flux/schnell", {
+        method: "POST",
+        headers: {
+          "Authorization": `Key ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          image_size: { width: dims.width, height: dims.height },
+          num_inference_steps: 4,
+          num_images: 1,
+          enable_safety_checker: true,
+        }),
+      });
+
+      if (!res.ok) {
+        const errBody = await res.text();
+        console.error("fal.ai error:", errBody);
+        return new Response(
+          JSON.stringify({ error: `Erro fal.ai: ${res.status}. Verifica a tua chave e créditos.` }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const data = await res.json();
+      imageUrl = data.images?.[0]?.url || "";
     }
 
     if (!imageUrl) {

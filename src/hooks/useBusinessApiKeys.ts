@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 export interface BusinessApiKey {
   id: string;
   business_id: string;
-  provider: "openai" | "google" | "ideogram";
+  provider: "openai" | "google" | "ideogram" | "fal";
   api_key_hint: string;
   is_active: boolean;
   created_at: string;
@@ -40,7 +40,7 @@ export const useSaveApiKey = () => {
       apiKey,
     }: {
       businessId: string;
-      provider: "openai" | "google" | "ideogram";
+      provider: "openai" | "google" | "ideogram" | "fal";
       apiKey: string;
     }) => {
       const hint = apiKey.slice(-4);
@@ -95,7 +95,7 @@ export const useRemoveApiKey = () => {
 
 export const useVerifyApiKey = () => {
   return useMutation({
-    mutationFn: async ({ provider, apiKey }: { provider: "openai" | "google" | "ideogram"; apiKey: string }) => {
+    mutationFn: async ({ provider, apiKey }: { provider: "openai" | "google" | "ideogram" | "fal"; apiKey: string }) => {
       const { data, error } = await supabase.functions.invoke("verify-api-key", {
         body: { provider, api_key: apiKey },
       });

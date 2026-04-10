@@ -11,6 +11,7 @@ import { useSaveGeneration } from "@/hooks/useGenerations";
 import { useCategories } from "@/hooks/useCategories";
 import { useStudioContext } from "@/pages/studio/StudioLayout";
 import { useBusinessApiKey } from "@/hooks/useBusinessApiKeys";
+import { useStudioGenerate } from "@/hooks/useStudioGenerate";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -188,6 +189,7 @@ const Section = ({
 // ── Main Component ──
 const StudioImagePage = () => {
   const { lookupPrompt } = useImageLookup();
+  const { generate: generateAI } = useStudioGenerate();
   const saveGen = useSaveGeneration();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -301,7 +303,50 @@ const StudioImagePage = () => {
     setPrompt("");
     setGeneratedImageUrl("");
 
-    // Try library lookup first, fallback to constructed prompt
+    const estiloObj = ESTILOS.find((e) => e.key === estilo);
+    const ilumObj = ILUMINACAO.find((i) => i.key === iluminacao);
+    const estObj = ESTACOES.find((e) => e.key === estacao);
+    const humObj = HUMOR.find((h) => h.key === humor);
+    const palLabel = paletas.map((p) => PALETAS.find((x) => x.key === p)?.label || p).join(", ");
+
+    // Primary: use AI via studio-generate for rich professional prompts
+    try {
+      const aiResult = await generateAI("generate_image_prompt", {
+        objectivoImagem: OBJECTIVOS.find((o) => o.key === objectivoImagem)?.label || objectivoImagem || "",
+        nome,
+        sector,
+        descricao,
+        personagens,
+        ambiente: [localizacao, elementosFundo].filter(Boolean).join(", "),
+        localizacao,
+        elementosFundo,
+        estilo: estiloObj?.label || estilo,
+        iluminacao,
+        estacao: estObj?.label || "",
+        humor: humObj?.label || "",
+        paletas: palLabel,
+        textoSobreposto: textoSobreposto || "",
+        textoPosicao: textoPosicao || "",
+        proporcao,
+      });
+
+      if (aiResult?.prompt_principal) {
+        setPrompt(aiResult.prompt_principal);
+        saveGen.mutate({
+          type: "image",
+          title: `${nome || categoriaAtual?.name || "Imagem"} · ${sector || estilo}`,
+          subtitle: `${proporcao} · ${estilo}`,
+          data: aiResult,
+        });
+        setGenerating(false);
+        setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
+        return;
+      }
+    } catch {
+      console.warn("[StudioImage] AI prompt generation failed, falling back to library/local");
+    }
+
+    // Fallback: library lookup
     const data = await lookupPrompt({
       categoria: categoriaSlug,
       subcategoria: subcategoriaSlug || undefined,
@@ -316,8 +361,6 @@ const StudioImagePage = () => {
       textoSobreposto: textoSobreposto || undefined,
     });
 
-    setGenerating(false);
-
     if (data?.prompt_principal) {
       setPrompt(data.prompt_principal);
       saveGen.mutate({
@@ -327,10 +370,11 @@ const StudioImagePage = () => {
         data,
       });
     } else {
-      // Fallback: construct prompt from form fields
+      // Final fallback: constructed prompt
       setPrompt(buildPromptParts());
     }
 
+    setGenerating(false);
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
   };
 
@@ -623,7 +667,7 @@ const StudioImagePage = () => {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-medium">
                     <Check className="w-2.5 h-2.5" />
-                    {apiKey.provider === "openai" ? "OpenAI" : apiKey.provider === "google" ? "Google" : "Ideogram"} activo
+                    {apiKey.provider === "openai" ? "OpenAI" : apiKey.provider === "google" ? "Google" : apiKey.provider === "fal" ? "fal.ai Flux" : "Ideogram"} activo
                   </span>
                 </div>
                 <Button

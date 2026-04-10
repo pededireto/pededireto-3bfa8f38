@@ -59,6 +59,26 @@ serve(async (req) => {
       } else {
         valid = true;
       }
+    } else if (provider === "fal") {
+      // Test fal.ai key with a lightweight call
+      const res = await fetch("https://fal.run/fal-ai/flux/schnell", {
+        method: "POST",
+        headers: {
+          "Authorization": `Key ${api_key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: "test",
+          image_size: { width: 64, height: 64 },
+          num_inference_steps: 1,
+          num_images: 1,
+        }),
+      });
+      if (res.status === 401 || res.status === 403) {
+        errorMsg = "Chave inválida";
+      } else {
+        valid = true;
+      }
     } else {
       errorMsg = "Provider não suportado";
     }
