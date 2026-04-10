@@ -715,6 +715,17 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
               );
 
               suggestionGroups = suggestionResults.filter(Boolean) as SuggestionGroup[];
+
+              // Apply city filter to suggestion groups too
+              if (userCity) {
+                const cityLower = userCity.toLowerCase();
+                suggestionGroups = suggestionGroups
+                  .map((sg) => ({
+                    ...sg,
+                    businesses: sg.businesses.filter((b) => b.city?.toLowerCase().includes(cityLower)),
+                  }))
+                  .filter((sg) => sg.businesses.length > 0);
+              }
               // Also populate complementaryServices from suggestions
               if (complementaryServices.length === 0) {
                 complementaryServices = suggestionGroups.map((sg) => sg.label);
