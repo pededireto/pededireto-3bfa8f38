@@ -10,6 +10,7 @@ export interface ContactBreakdown {
   click_facebook: number;
   click_reservation: number;
   click_order: number;
+  click_address: number;
 }
 
 export interface BusinessIntelligenceData {
@@ -69,6 +70,7 @@ export const useBusinessIntelligence = (businessId: string | null | undefined, d
         click_facebook: contactsArray.find((c) => c.event_type === "click_facebook")?.total ?? 0,
         click_reservation: contactsArray.find((c) => c.event_type === "click_reservation")?.total ?? 0,
         click_order: contactsArray.find((c) => c.event_type === "click_order")?.total ?? 0,
+        click_address: contactsArray.find((c) => c.event_type === "click_address")?.total ?? 0,
       };
 
       return {

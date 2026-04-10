@@ -13,6 +13,7 @@ export interface BusinessAnalyticsData {
     facebook: number;
     reservation: number;
     order: number;
+    address: number;
   };
 }
 
@@ -42,11 +43,12 @@ export const useBusinessAnalytics = (businessId: string | null, days = 30) => {
       const facebook = events.filter((e: any) => e.event_type === "click_facebook").length;
       const reservation = events.filter((e: any) => e.event_type === "click_reservation").length;
       const order = events.filter((e: any) => e.event_type === "click_order").length;
+      const address = events.filter((e: any) => e.event_type === "click_address").length;
 
       return {
         views,
-        totalContacts: phone + whatsapp + website + email + instagram + facebook + reservation + order,
-        breakdown: { phone, whatsapp, website, email, instagram, facebook, reservation, order },
+        totalContacts: phone + whatsapp + website + email + instagram + facebook + reservation + order + address,
+        breakdown: { phone, whatsapp, website, email, instagram, facebook, reservation, order, address },
       };
     },
   });
