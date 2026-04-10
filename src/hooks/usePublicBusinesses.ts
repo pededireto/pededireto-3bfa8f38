@@ -42,6 +42,7 @@ export interface PublicBusiness {
   instagram_url: string | null;
   facebook_url: string | null;
   other_social_url: string | null;
+  claim_status: string | null;
 }
 
 export interface PublicBusinessWithCategory extends PublicBusiness {
