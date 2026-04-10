@@ -491,10 +491,36 @@ const StudioImagePage = () => {
 
   return (
     <div className="max-w-[900px] space-y-4">
+      {/* Mode Toggle */}
+      <div className="flex rounded-lg border border-border bg-card p-1 gap-1">
+        <button
+          type="button"
+          onClick={() => handleModeChange("guided")}
+          className={cn(
+            "flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all",
+            mode === "guided" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          📋 Formulário Guiado
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange("direct")}
+          className={cn(
+            "flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all",
+            mode === "direct" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          ✏️ Prompt Directo
+        </button>
+      </div>
+
       {/* Hint */}
       <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground flex items-start gap-2">
         <span className="text-primary">💡</span>
-        Quanto mais campos preencheres, mais rica e precisa será a imagem gerada.
+        {mode === "guided"
+          ? "Quanto mais campos preencheres, mais rica e precisa será a imagem gerada."
+          : "Cola ou escreve o teu prompt directamente. Ideal se já sabes o que queres."}
       </div>
 
       {/* SECÇÃO 1 — Negócio */}
