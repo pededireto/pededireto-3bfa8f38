@@ -458,45 +458,55 @@ const BusinessRequestsContent = ({ businessId }: Props) => {
         {isAccepted ? (
           <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
             <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">Consumidor</p>
-            {(sr?.consumer_name || profile?.full_name) && (
+            {(profile?.full_name || sr?.consumer_name) && (
               <div className="flex items-center gap-2 text-foreground">
                 <User className="h-3.5 w-3.5 text-muted-foreground" />
-               {profile?.full_name || sr?.consumer_name}
+                {profile?.full_name || sr?.consumer_name}
               </div>
             )}
-            {(sr?.consumer_email || profile?.email) && (
+            {(profile?.email || sr?.consumer_email) && (
               <div className="flex items-center gap-2">
                 <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                <a href={`mailto:${sr?.consumer_email || profile?.email}`} className="text-primary hover:underline">
-                  {sr?.consumer_email || profile?.email}
+                <a href={`mailto:${profile?.email || sr?.consumer_email}`} className="text-primary hover:underline">
+                  {profile?.email || sr?.consumer_email}
                 </a>
               </div>
             )}
-            {(sr?.consumer_phone || profile?.phone) && (
+            {(profile?.phone || sr?.consumer_phone) && (
               <div className="flex items-center gap-2">
                 <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                <a href={`tel:${sr?.consumer_phone || profile?.phone}`} className="text-primary hover:underline">
-                  {sr?.consumer_phone || profile?.phone}
+                <a href={`tel:${profile?.phone || sr?.consumer_phone}`} className="text-primary hover:underline">
+                  {profile?.phone || sr?.consumer_phone}
                 </a>
+              </div>
+            )}
+            {(sr?.location_city || profile?.city || sr?.consumer_city) && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5" />
+                {sr?.location_city || profile?.city || sr?.consumer_city}
               </div>
             )}
           </div>
         ) : (
-          profile && (
-            <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
-              <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">Consumidor</p>
-              {(sr?.consumer_name || profile?.full_name) && (
-                <div className="flex items-center gap-2 text-foreground">
-                  <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  {formatReviewerName(profile?.full_name || sr?.consumer_name)}
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-muted-foreground text-xs mt-1">
-                <Lock className="h-3 w-3" />
-                Aceita o pedido para ver o contacto do consumidor
+          <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+            <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">Consumidor</p>
+            {(profile?.full_name || sr?.consumer_name) && (
+              <div className="flex items-center gap-2 text-foreground">
+                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                {formatReviewerName(profile?.full_name || sr?.consumer_name)}
               </div>
+            )}
+            {profile?.email && (
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                <Mail className="h-3 w-3" />
+                Conta verificada ✓
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mt-1">
+              <Lock className="h-3 w-3" />
+              Aceita o pedido para ver o contacto do consumidor
             </div>
-          )
+          </div>
         )}
 
         {/* Location */}
