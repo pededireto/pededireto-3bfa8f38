@@ -303,7 +303,50 @@ const StudioImagePage = () => {
     setPrompt("");
     setGeneratedImageUrl("");
 
-    // Try library lookup first, fallback to constructed prompt
+    const estiloObj = ESTILOS.find((e) => e.key === estilo);
+    const ilumObj = ILUMINACAO.find((i) => i.key === iluminacao);
+    const estObj = ESTACOES.find((e) => e.key === estacao);
+    const humObj = HUMOR.find((h) => h.key === humor);
+    const palLabel = paletas.map((p) => PALETAS.find((x) => x.key === p)?.label || p).join(", ");
+
+    // Primary: use AI via studio-generate for rich professional prompts
+    try {
+      const aiResult = await generateAI("generate_image_prompt", {
+        objectivoImagem: OBJECTIVOS.find((o) => o.key === objectivoImagem)?.label || objectivoImagem || "",
+        nome,
+        sector,
+        descricao,
+        personagens,
+        ambiente: [localizacao, elementosFundo].filter(Boolean).join(", "),
+        localizacao,
+        elementosFundo,
+        estilo: estiloObj?.label || estilo,
+        iluminacao,
+        estacao: estObj?.label || "",
+        humor: humObj?.label || "",
+        paletas: palLabel,
+        textoSobreposto: textoSobreposto || "",
+        textoPosicao: textoPosicao || "",
+        proporcao,
+      });
+
+      if (aiResult?.prompt_principal) {
+        setPrompt(aiResult.prompt_principal);
+        saveGen.mutate({
+          type: "image",
+          title: `${nome || categoriaAtual?.name || "Imagem"} · ${sector || estilo}`,
+          subtitle: `${proporcao} · ${estilo}`,
+          data: aiResult,
+        });
+        setGenerating(false);
+        setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
+        return;
+      }
+    } catch {
+      console.warn("[StudioImage] AI prompt generation failed, falling back to library/local");
+    }
+
+    // Fallback: library lookup
     const data = await lookupPrompt({
       categoria: categoriaSlug,
       subcategoria: subcategoriaSlug || undefined,
@@ -318,8 +361,6 @@ const StudioImagePage = () => {
       textoSobreposto: textoSobreposto || undefined,
     });
 
-    setGenerating(false);
-
     if (data?.prompt_principal) {
       setPrompt(data.prompt_principal);
       saveGen.mutate({
@@ -329,10 +370,11 @@ const StudioImagePage = () => {
         data,
       });
     } else {
-      // Fallback: construct prompt from form fields
+      // Final fallback: constructed prompt
       setPrompt(buildPromptParts());
     }
 
+    setGenerating(false);
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
   };
 
