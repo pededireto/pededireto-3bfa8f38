@@ -623,12 +623,25 @@ export const useSmartSearch = (term: string, userCity?: string | null) => {
         }
       }
 
-      // ── Filtro soft de cidade ─────────────────────────────────────────
+      // ── Filtro de cidade (hard filter quando selecionada) ─────────────
       if (userCity && businessGroups.length > 0) {
+        const cityLower = userCity.toLowerCase();
+
+        // Also check business_cities junction for multi-city businesses
+        const allBizIds = businessGroups.flatMap((g) => g.businesses.map((b) => b.id));
+        const { data: cityJunctionMatches } = await supabase
+          .from("business_cities")
+          .select("business_id")
+          .in("business_id", allBizIds)
+          .ilike("city_name", `%${cityLower}%`);
+        const cityJunctionIds = new Set((cityJunctionMatches || []).map((c: any) => c.business_id));
+
         businessGroups = businessGroups.map((group) => {
-          const cityFiltered = group.businesses.filter((b) => b.city?.toLowerCase().includes(userCity.toLowerCase()));
-          return { ...group, businesses: cityFiltered.length > 0 ? cityFiltered : group.businesses };
-        });
+          const cityFiltered = group.businesses.filter(
+            (b) => b.city?.toLowerCase().includes(cityLower) || cityJunctionIds.has(b.id)
+          );
+          return { ...group, businesses: cityFiltered };
+        }).filter((g) => g.businesses.length > 0);
       }
 
       // ── CAMADA 4: Urgência ────────────────────────────────────────────
