@@ -116,37 +116,44 @@ serve(async (req) => {
       const data = await res.json();
       imageUrl = data.data?.[0]?.url || "";
     } else if (provider === "google") {
-      // Use Gemini image generation
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `Generate an image: ${prompt}` }] }],
-            generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-          }),
-        }
-      );
+      // Use Lovable AI Gateway to avoid geo-restrictions on direct Google API
+      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+      if (!lovableKey) {
+        return new Response(
+          JSON.stringify({ error: "Chave Lovable AI não configurada. Contacta o suporte." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [{ role: "user", content: `Generate an image: ${prompt}` }],
+          modalities: ["image", "text"],
+        }),
+      });
 
       if (!res.ok) {
         const errBody = await res.text();
-        console.error("Google error:", errBody);
+        console.error("Lovable AI Gateway error:", errBody);
         return new Response(
-          JSON.stringify({ error: `Erro Google: ${res.status}. Verifica a tua chave.` }),
+          JSON.stringify({ error: `Erro ao gerar imagem: ${res.status}. Tenta novamente.` }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       const data = await res.json();
-      // Try to extract image from response
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const imagePart = parts.find((p: any) => p.inlineData);
-      if (imagePart?.inlineData) {
-        imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+      const imgData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (imgData) {
+        imageUrl = imgData;
       } else {
         return new Response(
-          JSON.stringify({ error: "O Google não devolveu uma imagem. Tenta reformular a prompt." }),
+          JSON.stringify({ error: "Não foi possível gerar a imagem. Tenta reformular a prompt." }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
