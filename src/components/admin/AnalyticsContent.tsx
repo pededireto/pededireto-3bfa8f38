@@ -305,10 +305,10 @@ const AnalyticsContent = () => {
                 <p className="text-2xl font-bold">{analytics.clicksBreakdown.order}</p>
                 <p className="text-sm text-muted-foreground">Pedidos Online</p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-pink-500/10">
-                <Globe className="h-8 w-8 text-pink-500 mx-auto mb-2" />
-                <p className="text-2xl font-bold">{analytics.clicksBreakdown.app}</p>
-                <p className="text-sm text-muted-foreground">App</p>
+              <div className="text-center p-4 rounded-lg bg-cyan-500/10">
+                <MapPin className="h-8 w-8 text-cyan-500 mx-auto mb-2" />
+                <p className="text-2xl font-bold">{analytics.clicksBreakdown.address ?? 0}</p>
+                <p className="text-sm text-muted-foreground">Morada</p>
               </div>
             </div>
           </div>
