@@ -491,7 +491,7 @@ const BusinessPage = () => {
         </div>
       )}
 
-      {!(business as any).is_claimed && !((business as any).claim_status === "verified" && userIsOwner) && (
+      {(business as any).claim_status !== "verified" && (
         <UnclaimedBusinessBanner
           businessId={business.id}
           claimStatus={(business as any).claim_status}
