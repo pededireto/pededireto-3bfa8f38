@@ -55,14 +55,19 @@ export const useMarkNotificationAsRead = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("business_notifications" as any)
-        .update({ is_read: true } as any)
+        .update({ is_read: true, read_at: new Date().toISOString() } as any)
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
-    onError: (error: any) => {
-      console.error("[useMarkNotificationAsRead] error:", error);
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["business-notifications"] });
+      // Optimistic update on all matching queries
+      qc.setQueriesData<BusinessNotification[]>(
+        { queryKey: ["business-notifications"], exact: false },
+        (old) => old?.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      );
     },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
   });
 };
 
@@ -72,14 +77,68 @@ export const useMarkAllNotificationsAsRead = () => {
     mutationFn: async (businessId: string) => {
       const { error } = await supabase
         .from("business_notifications" as any)
-        .update({ is_read: true } as any)
+        .update({ is_read: true, read_at: new Date().toISOString() } as any)
         .eq("business_id", businessId)
         .eq("is_read", false);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
-    onError: (error: any) => {
-      console.error("[useMarkAllNotificationsAsRead] error:", error);
+    onMutate: async (businessId) => {
+      await qc.cancelQueries({ queryKey: ["business-notifications"] });
+      qc.setQueriesData<BusinessNotification[]>(
+        { queryKey: ["business-notifications"], exact: false },
+        (old) => old?.map((n) => (n.business_id === businessId ? { ...n, is_read: true } : n))
+      );
+      qc.setQueriesData<number>(
+        { queryKey: ["business-notifications", businessId, "unread-count"] },
+        () => 0
+      );
     },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
+  });
+};
+
+export const useDeleteNotification = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("business_notifications" as any)
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["business-notifications"] });
+      qc.setQueriesData<BusinessNotification[]>(
+        { queryKey: ["business-notifications"], exact: false },
+        (old) => old?.filter((n) => n.id !== id)
+      );
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
+  });
+};
+
+export const useDeleteAllNotifications = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (businessId: string) => {
+      const { error } = await supabase
+        .from("business_notifications" as any)
+        .delete()
+        .eq("business_id", businessId);
+      if (error) throw error;
+    },
+    onMutate: async (businessId) => {
+      await qc.cancelQueries({ queryKey: ["business-notifications"] });
+      qc.setQueriesData<BusinessNotification[]>(
+        { queryKey: ["business-notifications", businessId] },
+        () => []
+      );
+      qc.setQueriesData<number>(
+        { queryKey: ["business-notifications", businessId, "unread-count"] },
+        () => 0
+      );
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
   });
 };
