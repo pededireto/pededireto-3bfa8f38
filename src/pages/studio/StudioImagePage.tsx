@@ -667,7 +667,7 @@ const StudioImagePage = () => {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-medium">
                     <Check className="w-2.5 h-2.5" />
-                    {apiKey.provider === "openai" ? "OpenAI" : apiKey.provider === "google" ? "Google" : "Ideogram"} activo
+                    {apiKey.provider === "openai" ? "OpenAI" : apiKey.provider === "google" ? "Google" : apiKey.provider === "fal" ? "fal.ai Flux" : "Ideogram"} activo
                   </span>
                 </div>
                 <Button
