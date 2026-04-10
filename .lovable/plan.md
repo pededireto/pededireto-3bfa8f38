@@ -1,58 +1,93 @@
 
 
-# Correcção de 4 Bugs Independentes
+# Plano: Formulários Visuais por Tipo de Bloco no Editor da Homepage
 
-## Bug 1 — Banner "É o proprietário" aparece em negócios reclamados
+## Resumo
 
-**Causa raiz:** A `BusinessPage.tsx` usa `usePublicBusiness` que lê da view `businesses_public`. Esta view **não inclui** as colunas `is_claimed` nem `claim_status`. Logo, `(business as any).is_claimed` é sempre `undefined` (falsy) e `(business as any).claim_status` nunca é `"verified"`, fazendo o banner aparecer sempre.
+Substituir o textarea JSON manual no modal de edição de blocos (`HomepageContent.tsx`) por formulários visuais específicos para cada tipo de bloco. O JSON continua a ser gerado automaticamente por baixo. O textarea JSON fica disponível como acordeão colapsável para debug.
 
-**Correcção:**
-1. Alterar a view `businesses_public` via migração SQL para incluir `claim_status` (sem expor PII)
-2. Actualizar a condição no `BusinessPage.tsx` (linha 494) para: `(business as any).claim_status !== 'verified'`
-3. Actualizar o tipo `PublicBusiness` em `usePublicBusinesses.ts` para incluir `claim_status`
+## Contexto Actual
 
----
+O modal actual (`HomepageContent.tsx`, ~387 linhas) tem:
+- Select de tipo, título, ordem, toggle ativo, datas
+- Inputs de imagem/vídeo condicionais para alguns tipos
+- Textarea JSON cru para `banner`, `negocios_premium`, `texto`, `personalizado`, `dual_cta`, `servicos_rapidos`, `social_proof`
+- Todos os outros tipos (hero, categorias, how_it_works, platform_stats, etc.) não têm nenhum campo de configuração
 
-## Bug 2 — Pesquisa autocomplete: relevância invertida
+## Arquitectura da Solução
 
-**Causa raiz:** Em `useSearch.ts` linha 33, a ordenação `(a, b) => a.relevance - b.relevance` é ascendente. A RPC `search_businesses_and_subcategories` usa relevância 1 = melhor match, então a ordenação ascendente está **correcta**. No entanto, o limite `slice(0, 10)` pode cortar resultados legítimos. O autocomplete parece funcional — a questão pode ser que os dados não estão na DB ou o RPC não devolve resultados por causa de RLS na tabela `businesses` que bloqueia `anon` SELECT.
+### Ficheiros a criar
 
-**Investigação adicional:** A migration anterior bloqueou `anon` SELECT na tabela `businesses` com `USING (false)`. O RPC `search_businesses_and_subcategories` é `SECURITY INVOKER` por defeito, logo quando executado por utilizadores anónimos, a query interna `FROM businesses b WHERE b.is_active = true` devolve **zero linhas** porque o RLS bloqueia.
+1. **`src/components/admin/homepage-blocks/BlockFormRenderer.tsx`** — componente que recebe `type` e `config` e renderiza o formulário correcto
+2. **`src/components/admin/homepage-blocks/HeroBlockForm.tsx`**
+3. **`src/components/admin/homepage-blocks/PlatformStatsBlockForm.tsx`**
+4. **`src/components/admin/homepage-blocks/CategoriasBlockForm.tsx`** — usa `useCategories` para lista de checkboxes
+5. **`src/components/admin/homepage-blocks/HowItWorksBlockForm.tsx`** — lista dinâmica de passos (max 5)
+6. **`src/components/admin/homepage-blocks/DualCtaBlockForm.tsx`** — duas colunas
+7. **`src/components/admin/homepage-blocks/ServicosRapidosBlockForm.tsx`** — lista dinâmica de items (max 8)
+8. **`src/components/admin/homepage-blocks/SocialProofBlockForm.tsx`**
+9. **`src/components/admin/homepage-blocks/BannerBlockForm.tsx`**
+10. **`src/components/admin/homepage-blocks/NovosNegociosBlockForm.tsx`**
+11. **`src/components/admin/homepage-blocks/GenericBlockForm.tsx`** — para `negocios_premium`, `destaques`, `featured_categories`, `super_destaques`, `categorias_accordion`
+12. **`src/components/admin/homepage-blocks/TextoBlockForm.tsx`**
+13. **`src/components/admin/homepage-blocks/BlockInfoBanner.tsx`** — nota informativa por tipo
 
-**Correcção:** Recriar a função `search_businesses_and_subcategories` com `SECURITY DEFINER` para que possa ler a tabela `businesses` internamente, mantendo a segurança (a função só devolve nome, slug e categoria — sem PII).
+### Ficheiro a modificar
 
----
+- **`src/components/admin/HomepageContent.tsx`** — substituir a secção de campos condicionais (linhas 324-378) pelo `BlockFormRenderer`. Aumentar `max-w-lg` para `max-w-2xl` no dialog. Adicionar acordeão "Ver JSON gerado" colapsável.
 
-## Bug 3 — Negócios desaparecem no mobile (e possivelmente desktop)
+## Detalhes por Formulário
 
-**Causa raiz:** Mesmo problema do Bug 2. A view `businesses_public` e os hooks `usePublicBusinesses` fazem queries à view que internamente acede à tabela `businesses`. Se o RLS da tabela base bloqueia `anon` SELECT com `USING (false)`, a view (que tem `security_invoker=on`) também devolve zero linhas para utilizadores não autenticados.
+Cada componente recebe `{ config, onChange }` onde `config` é `Record<string, any>` e `onChange` actualiza o objecto config (que depois é serializado como JSON no `handleSave`).
 
-**Correcção:** Na mesma migração, garantir que a política RLS da tabela `businesses` permite SELECT via view `businesses_public`. Opções:
-- Adicionar uma policy que permita SELECT para `anon` apenas das colunas expostas na view (não é possível por coluna em RLS)
-- **Melhor opção:** Remover a policy `USING (false)` e substituir por uma que permita SELECT de linhas `is_active = true` (a view já filtra isso). A PII continua protegida porque a view não expõe essas colunas, e o acesso directo à tabela por API está bloqueado pela view ser o ponto de entrada.
+### Padrão comum
+- O estado `configJson` existente passa a ser derivado do objecto `config` no formulário
+- Quando o utilizador edita campos visuais → actualiza `config` → `configJson` é recalculado automaticamente
+- Quando o utilizador edita JSON directamente (acordeão avançado) → faz parse → actualiza `config`
+- Acordeão `<Collapsible>` com trigger "⚙️ Ver JSON gerado" no fundo de cada formulário (excepto `personalizado` que mantém o textarea como principal)
 
-Nota: o scan de segurança anterior adicionou `USING (false)` para proteger PII, mas isso quebrou o acesso público legítimo. A solução correcta é permitir SELECT público com `is_active = true` e confiar na view para esconder PII.
+### Formulários específicos
 
----
+**HeroBlockForm**: título, subtítulo, badge, 3 trust badges, toggle pesquisa, tamanho barra (Select), CTA primário (texto+link), CTA secundário (texto+link), tipo media (Select), URL condicional.
 
-## Bug 4 — Templates de mensagem: "Erro ao criar template"
+**PlatformStatsBlockForm**: Array de até 4 métricas, cada com toggle + label + valor + sufixo. Select cor de fundo.
 
-**Causa raiz:** A tabela `message_templates` **não existe** na base de dados. O código tenta inserir nela e falha.
+**CategoriasBlockForm**: Título, subtítulo, modo apresentação (Select 3 opções), nº categorias (Input number), toggle "Ver mais", texto botão, colunas mobile/desktop (Selects). Lista de categorias com checkboxes (via `useCategories`).
 
-**Correcção:** Criar migração SQL com a tabela `message_templates`:
-- Colunas: `id` (uuid PK), `name` (text NOT NULL), `message_type` (text NOT NULL), `subcategory` (text), `content` (text NOT NULL), `created_at`, `updated_at`
-- RLS habilitado com policies para admin/staff
+**HowItWorksBlockForm**: Título, lista dinâmica de 1-5 passos (ícone emoji + título + descrição), botões adicionar/remover, toggle setas.
 
----
+**DualCtaBlockForm**: Layout em duas colunas — cada coluna com badge, título, bullets dinâmicos (max 4), CTAs. Usa os mesmos nomes de campo que `DualCTASection` já consome (`left_title`, `left_bullets`, etc.).
 
-## Resumo de Alterações
+**ServicosRapidosBlockForm**: Título, toggle "Ver todos", texto/link botão, lista de 1-8 items (emoji + label + link + cor Select).
 
-| Bug | Ficheiro(s) | Tipo |
-|-----|-------------|------|
-| 1 | Migração SQL + `BusinessPage.tsx` + `usePublicBusinesses.ts` | View + condição |
-| 2 | Migração SQL (recriar RPC como SECURITY DEFINER) | RLS/RPC fix |
-| 3 | Migração SQL (policy businesses SELECT) | RLS fix |
-| 4 | Migração SQL (criar tabela message_templates) | Tabela nova |
+**SocialProofBlockForm**: Título, subtítulo, max logos (Input number), modo (Select), lista condicional de URLs.
 
-Todos os fixes na mesma migração SQL. Código frontend alterado em 2 ficheiros apenas.
+**BannerBlockForm**: Título, descrição, URL link, cor fundo (Select), URL imagem + preview, URL vídeo, posição imagem (Select), CTA texto.
+
+**NovosNegociosBlockForm**: Título, nº negócios (Input number), toggle "Ver mais", ordenação (Select).
+
+**GenericBlockForm**: Título, max a mostrar (Input number), toggle badge destaque. Usado para `negocios_premium`, `destaques`, `featured_categories`, `super_destaques`.
+
+**TextoBlockForm**: Título, textarea conteúdo, alinhamento (Select).
+
+**BlockInfoBanner**: Componente simples que recebe `type` e retorna `<div>` com fundo azul claro + ícone ℹ️ + texto descritivo do bloco.
+
+## Alterações no HomepageContent.tsx
+
+1. Substituir linhas 324-378 (campos condicionais + textarea JSON) por `<BlockFormRenderer>`
+2. O `configJson` passa a ser sincronizado bidireccionalmente com o estado `config` do formulário
+3. Dialog `max-w-lg` → `max-w-2xl` (para acomodar formulários mais largos como dual_cta)
+4. Adicionar `ScrollArea` no conteúdo do dialog para formulários longos
+5. Manter o `handleSave` inalterado — continua a fazer `JSON.parse(configJson)` como payload
+
+## Notas de ajuda por tipo
+
+Cada formulário mostra no topo um `BlockInfoBanner` com texto contextual (ex: "O bloco principal da homepage..." para hero). Junto ao acordeão JSON, texto: "O JSON deve ser um objecto válido. Começa e termina com { }."
+
+## Impacto
+
+- Nenhuma alteração nos componentes de renderização da homepage (HeroSection, DualCTASection, etc.)
+- Nenhuma alteração na lógica de guardar/actualizar blocos
+- Nenhuma alteração no layout da lista de blocos nem no comportamento de ordenação
+- Nenhuma migração de DB necessária
 
