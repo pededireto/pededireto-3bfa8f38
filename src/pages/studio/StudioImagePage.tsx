@@ -198,6 +198,15 @@ const StudioImagePage = () => {
   const { data: apiKey } = useBusinessApiKey(selectedBusiness?.id);
   const resultRef = useRef<HTMLDivElement>(null);
 
+  // ── Mode State ──
+  const [mode, setMode] = useState<"guided" | "direct">(() => {
+    return (localStorage.getItem("studio-image-mode") as "guided" | "direct") || "guided";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("studio-image-mode", mode);
+  }, [mode]);
+
   // ── Form State ──
   const [categoriaSlug, setCategoriaSlug] = useState("");
   const [subcategoriaSlug, setSubcategoriaSlug] = useState("");
@@ -216,6 +225,9 @@ const StudioImagePage = () => {
   const [textoSobreposto, setTextoSobreposto] = useState("");
   const [textoPosicao, setTextoPosicao] = useState("");
   const [proporcao, setProporcao] = useState("9:16");
+
+  // ── Direct Prompt State ──
+  const [directPrompt, setDirectPrompt] = useState("");
 
   // ── Output State ──
   const [prompt, setPrompt] = useState("");
@@ -256,6 +268,14 @@ const StudioImagePage = () => {
   useEffect(() => {
     localStorage.setItem("studio-image-form", JSON.stringify({ categoriaSlug, objectivoImagem, estilo, proporcao }));
   }, [categoriaSlug, objectivoImagem, estilo, proporcao]);
+
+  // When switching to direct mode, pre-fill with generated prompt
+  const handleModeChange = (newMode: "guided" | "direct") => {
+    if (newMode === "direct" && prompt) {
+      setDirectPrompt(prompt);
+    }
+    setMode(newMode);
+  };
 
   const sectionsFilled = {
     negocio: !!(nome || categoriaSlug),
