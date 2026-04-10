@@ -2,11 +2,13 @@ import {
   useBusinessNotifications,
   useMarkNotificationAsRead,
   useMarkAllNotificationsAsRead,
+  useDeleteNotification,
+  useDeleteAllNotifications,
   BusinessNotification,
 } from "@/hooks/useBusinessNotifications";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Bell, Check, CheckCheck, Inbox, MessageCircle, CreditCard, Star, AlertCircle } from "lucide-react";
+import { Loader2, Bell, Check, CheckCheck, Inbox, MessageCircle, CreditCard, Star, AlertCircle, Trash2, X } from "lucide-react";
 
 interface Props {
   businessId: string;
@@ -27,6 +29,8 @@ const BusinessNotificationsContent = ({ businessId }: Props) => {
   const { data: notifications = [], isLoading } = useBusinessNotifications(businessId);
   const markAsRead = useMarkNotificationAsRead();
   const markAllAsRead = useMarkAllNotificationsAsRead();
+  const deleteNotification = useDeleteNotification();
+  const deleteAll = useDeleteAllNotifications();
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -54,22 +58,40 @@ const BusinessNotificationsContent = ({ businessId }: Props) => {
           <p className="text-muted-foreground mt-1">Alertas e atualizações do seu negócio</p>
         </div>
 
-        {unreadCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => markAllAsRead.mutate(businessId)}
-            disabled={markAllAsRead.isPending}
-            className="flex-shrink-0 flex items-center gap-1.5"
-          >
-            {markAllAsRead.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <CheckCheck className="h-3.5 w-3.5" />
-            )}
-            Marcar todas como lidas
-          </Button>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => markAllAsRead.mutate(businessId)}
+              disabled={markAllAsRead.isPending}
+              className="flex items-center gap-1.5"
+            >
+              {markAllAsRead.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCheck className="h-3.5 w-3.5" />
+              )}
+              Marcar todas como lidas
+            </Button>
+          )}
+          {notifications.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => deleteAll.mutate(businessId)}
+              disabled={deleteAll.isPending}
+              className="flex items-center gap-1.5 text-destructive hover:text-destructive"
+            >
+              {deleteAll.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+              Apagar todas
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* ── Lista ── */}
@@ -116,18 +138,31 @@ const BusinessNotificationsContent = ({ businessId }: Props) => {
                     <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
                   </div>
 
-                  {/* Botão marcar como lida */}
-                  {!n.is_read && (
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {!n.is_read && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                        onClick={() => markAsRead.mutate(n.id)}
+                        disabled={markAsRead.isPending}
+                        title="Marcar como lida"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="flex-shrink-0 h-7 w-7 text-muted-foreground hover:text-primary"
-                      onClick={() => markAsRead.mutate(n.id)}
-                      disabled={markAsRead.isPending}
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => deleteNotification.mutate(n.id)}
+                      disabled={deleteNotification.isPending}
+                      title="Apagar notificação"
                     >
-                      <Check className="h-3.5 w-3.5" />
+                      <X className="h-3.5 w-3.5" />
                     </Button>
-                  )}
+                  </div>
                 </div>
               </div>
             );

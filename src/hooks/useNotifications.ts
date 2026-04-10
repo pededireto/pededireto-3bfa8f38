@@ -12,7 +12,6 @@ export const useInternalNotifications = (targetRole: string | undefined) => {
         .eq("target_role", targetRole)
         .order("created_at", { ascending: false })
         .limit(50);
-
       if (error) throw error;
       return data;
     },
@@ -30,7 +29,6 @@ export const useUnreadInternalCount = (targetRole: string | undefined) => {
         .select("*", { count: "exact", head: true })
         .eq("target_role", targetRole)
         .eq("is_read", false);
-
       if (error) throw error;
       return count || 0;
     },
@@ -40,7 +38,6 @@ export const useUnreadInternalCount = (targetRole: string | undefined) => {
 
 export const useMarkNotificationRead = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (notificationId: string) => {
       const { error } = await supabase
@@ -49,7 +46,38 @@ export const useMarkNotificationRead = () => {
         .eq("id", notificationId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["internal-notifications"] });
+      queryClient.setQueriesData<any[]>(
+        { queryKey: ["internal-notifications"], exact: false },
+        (old) => old?.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["internal-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["internal-notifications-unread"] });
+    },
+  });
+};
+
+export const useDeleteInternalNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("internal_notifications")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["internal-notifications"] });
+      queryClient.setQueriesData<any[]>(
+        { queryKey: ["internal-notifications"], exact: false },
+        (old) => old?.filter((n) => n.id !== id)
+      );
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["internal-notifications"] });
       queryClient.invalidateQueries({ queryKey: ["internal-notifications-unread"] });
     },
@@ -101,7 +129,38 @@ export const useMarkUserNotifRead = () => {
         .eq("id", notificationId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["user-notifications"] });
+      queryClient.setQueriesData<any[]>(
+        { queryKey: ["user-notifications"], exact: false },
+        (old) => old?.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["user-notifications-unread"] });
+    },
+  });
+};
+
+export const useDeleteUserNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("user_notifications" as any)
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["user-notifications"] });
+      queryClient.setQueriesData<any[]>(
+        { queryKey: ["user-notifications"], exact: false },
+        (old) => old?.filter((n) => n.id !== id)
+      );
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
       queryClient.invalidateQueries({ queryKey: ["user-notifications-unread"] });
     },

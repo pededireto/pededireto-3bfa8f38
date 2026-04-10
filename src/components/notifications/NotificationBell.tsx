@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell } from "lucide-react";
+import { Bell, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   useInternalNotifications,
   useUnreadInternalCount,
   useMarkNotificationRead,
+  useDeleteInternalNotification,
   useUserNotifications,
   useUnreadUserNotifCount,
   useMarkUserNotifRead,
+  useDeleteUserNotification,
 } from "@/hooks/useNotifications";
 import {
   useTicketNotifications,
@@ -49,18 +51,17 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
   const { data: internalNotifications = [] } = useInternalNotifications(targetRole);
   const { data: internalUnread = 0 } = useUnreadInternalCount(targetRole);
   const markInternalRead = useMarkNotificationRead();
+  const deleteInternal = useDeleteInternalNotification();
 
   const { data: ticketNotifications = [] } = useTicketNotifications();
   const { data: ticketUnread = 0 } = useUnreadTicketNotifCount();
   const markTicketRead = useMarkTicketNotifRead();
-  const markAllTicketRead = useMarkAllTicketNotifsRead();
 
-  // Consumer/user notifications
   const { data: userNotifications = [] } = useUserNotifications();
   const { data: userUnread = 0 } = useUnreadUserNotifCount();
   const markUserRead = useMarkUserNotifRead();
+  const deleteUser = useDeleteUserNotification();
 
-  // Platform critical alerts — only for admin/cs roles
   const isStaff = roles.includes("admin") || roles.includes("super_admin") || roles.includes("cs");
   const { data: criticalAlerts = [] } = useCriticalAlertsForBell();
 
@@ -71,24 +72,12 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
     if (!user?.id) return;
     const channel = supabase
       .channel(`ticket-notifs-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "ticket_notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["ticket-notifications"] });
-          queryClient.invalidateQueries({ queryKey: ["ticket-notifications-unread"] });
-        }
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ticket_notifications", filter: `user_id=eq.${user.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["ticket-notifications"] });
+        queryClient.invalidateQueries({ queryKey: ["ticket-notifications-unread"] });
+      })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user?.id, queryClient]);
 
   // Realtime subscription for user notifications
@@ -96,64 +85,48 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
     if (!user?.id) return;
     const channel = supabase
       .channel(`user-notifs-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "user_notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
-          queryClient.invalidateQueries({ queryKey: ["user-notifications-unread"] });
-        }
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "user_notifications", filter: `user_id=eq.${user.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
+        queryClient.invalidateQueries({ queryKey: ["user-notifications-unread"] });
+      })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user?.id, queryClient]);
 
-  const handleInternalClick = (id: string, isRead: boolean) => {
-    if (!isRead) markInternalRead.mutate(id);
-  };
+  const handleClick = (n: any) => {
+    if (n.source === "internal" && !n.is_read) markInternalRead.mutate(n.id);
+    else if (n.source === "ticket" && !n.is_read) markTicketRead.mutate(n.id);
+    else if (n.source === "user" && !n.is_read) markUserRead.mutate(n.id);
 
-  const handleTicketClick = (id: string, isRead: boolean) => {
-    if (!isRead) markTicketRead.mutate(id);
-  };
-
-  const handleUserNotifClick = (notif: any) => {
-    if (!notif.is_read) markUserRead.mutate(notif.id);
-    if (notif.action_url) {
-      navigate(notif.action_url);
+    if (n.source === "platform_alert" && n.action_url) {
+      navigate(n.action_url);
+      setOpen(false);
+    } else if (n.source === "user" && n.action_url) {
+      navigate(n.action_url);
       setOpen(false);
     }
   };
 
-  const handleAlertClick = (alert: any) => {
-    if (alert.action_url) {
-      navigate(alert.action_url);
-      setOpen(false);
-    }
+  const handleDelete = (e: React.MouseEvent, n: any) => {
+    e.stopPropagation();
+    if (n.source === "internal") deleteInternal.mutate(n.id);
+    else if (n.source === "user") deleteUser.mutate(n.id);
   };
 
-  // Merge and sort all notifications
+  const handleMarkAllRead = () => {
+    internalNotifications.filter((n: any) => !n.is_read).forEach((n: any) => markInternalRead.mutate(n.id));
+    ticketNotifications.filter((n: any) => !n.is_read).forEach((n: any) => markTicketRead.mutate(n.id));
+    userNotifications.filter((n: any) => !n.is_read).forEach((n: any) => markUserRead.mutate(n.id));
+  };
+
   const allNotifications = [
     ...internalNotifications.map((n: any) => ({ ...n, source: "internal" })),
     ...ticketNotifications.map((n: any) => ({ ...n, source: "ticket" })),
     ...userNotifications.map((n: any) => ({ ...n, source: "user" })),
     ...(isStaff
       ? criticalAlerts.map((a) => ({
-          id: a.id,
-          title: a.title,
-          message: a.message,
-          created_at: a.created_at,
-          is_read: false,
-          source: "platform_alert" as const,
-          action_url: a.action_url,
-          type: a.type,
+          id: a.id, title: a.title, message: a.message, created_at: a.created_at,
+          is_read: false, source: "platform_alert" as const, action_url: a.action_url, type: a.type,
         }))
       : []),
   ]
@@ -176,17 +149,7 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
         <div className="p-3 border-b border-border flex items-center justify-between">
           <p className="font-semibold text-sm text-foreground">Notificações</p>
           {totalUnread > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs h-6"
-              onClick={() => {
-                // Mark all types as read
-                internalNotifications.filter((n: any) => !n.is_read).forEach((n: any) => markInternalRead.mutate(n.id));
-                ticketNotifications.filter((n: any) => !n.is_read).forEach((n: any) => markTicketRead.mutate(n.id));
-                userNotifications.filter((n: any) => !n.is_read).forEach((n: any) => markUserRead.mutate(n.id));
-              }}
-            >
+            <Button variant="ghost" size="sm" className="text-xs h-6" onClick={handleMarkAllRead}>
               Marcar todas lidas
             </Button>
           )}
@@ -196,31 +159,37 @@ const NotificationBell = ({ targetRole }: NotificationBellProps) => {
         ) : (
           <div className="divide-y divide-border">
             {allNotifications.map((n: any) => (
-              <button
+              <div
                 key={`${n.source}-${n.id}`}
-                onClick={() => {
-                  if (n.source === "internal") handleInternalClick(n.id, n.is_read);
-                  else if (n.source === "ticket") handleTicketClick(n.id, n.is_read);
-                  else if (n.source === "platform_alert") handleAlertClick(n);
-                  else handleUserNotifClick(n);
-                }}
-                className={`w-full text-left p-3 hover:bg-secondary/50 transition-colors ${!n.is_read ? "bg-primary/5" : ""}`}
+                onClick={() => handleClick(n)}
+                className={`w-full text-left p-3 hover:bg-secondary/50 transition-colors cursor-pointer flex items-start gap-2 ${!n.is_read ? "bg-primary/5" : ""}`}
               >
-                <p className="text-sm font-medium text-foreground">
-                  {n.source === "platform_alert"
-                    ? "🔴 "
-                    : (n.source === "ticket" || n.source === "user") && TYPE_ICONS[n.type]
-                      ? `${TYPE_ICONS[n.type]} `
-                      : ""}
-                  {n.title || n.message || "Notificação"}
-                </p>
-                {n.message && n.title && (
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {n.source === "platform_alert"
+                      ? "🔴 "
+                      : (n.source === "ticket" || n.source === "user") && TYPE_ICONS[n.type]
+                        ? `${TYPE_ICONS[n.type]} `
+                        : ""}
+                    {n.title || n.message || "Notificação"}
+                  </p>
+                  {n.message && n.title && (
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: pt })}
+                  </p>
+                </div>
+                {(n.source === "internal" || n.source === "user") && (
+                  <button
+                    onClick={(e) => handleDelete(e, n)}
+                    className="flex-shrink-0 p-1 text-muted-foreground hover:text-destructive rounded"
+                    title="Apagar"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: pt })}
-                </p>
-              </button>
+              </div>
             ))}
             {isStaff && criticalAlerts.length > 0 && (
               <button

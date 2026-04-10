@@ -43,6 +43,7 @@ const BusinessPerformanceCard = ({ data }: BusinessPerformanceCardProps) => {
     { name: "Facebook", value: data.contacts.click_facebook ?? 0, icon: "📘" },
     { name: "Reservas", value: data.contacts.click_reservation ?? 0, icon: "📅" },
     { name: "Pedidos Online", value: data.contacts.click_order ?? 0, icon: "🛒" },
+    { name: "Morada", value: data.contacts.click_address ?? 0, icon: "📍" },
   ];
 
   const sortedContacts = [...allContactTypes].sort((a, b) => b.value - a.value);

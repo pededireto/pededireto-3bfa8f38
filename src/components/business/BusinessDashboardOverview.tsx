@@ -6,6 +6,7 @@ import { useBusinessRequests } from "@/hooks/useBusinessDashboard";
 import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
+import { useBusinessScore } from "@/hooks/useBusinessScore";
 import { useBusinessPlan } from "@/hooks/useBusinessPlan";
 import { useBusinessResponseTime } from "@/hooks/useBusinessResponseTime";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
@@ -154,6 +155,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
   const { data: requests = [] } = useBusinessRequests(business.id);
   const { data: unreadCount = 0 } = useUnreadNotificationsCount(business.id);
   const { data: analytics, refetch } = useBusinessAnalytics(business.id);
+  const { data: scoreData } = useBusinessScore(business.id);
   const permissions = useBusinessClaimPermissions(business);
   const { data: responseTime } = useBusinessResponseTime(business.id);
   const { isOnTrial, trialDaysLeft } = useBusinessPlan({
@@ -315,8 +317,8 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         />
       )}
 
-      {/* ── KPI Cards (4 cols) ───────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* ── KPI Cards (5 cols) ───────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-card rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-2 mb-2">
             <Eye className="h-4 w-4 text-primary" />
@@ -389,6 +391,25 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
               <p className="text-xs text-muted-foreground mt-1">Sem dados ainda</p>
             </>
           )}
+        </div>
+
+        {/* Score / Pontos do Ranking */}
+        <div className="bg-card rounded-xl p-5 shadow-card border border-primary/20">
+          <div className="flex items-center gap-2 mb-2">
+            <Trophy className="h-4 w-4 text-primary" />
+            <span className="text-xs text-muted-foreground">Pontos</span>
+          </div>
+          <p className="text-2xl font-bold">
+            🏆 {scoreData?.score ?? business.ranking_score ?? 0}
+          </p>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs p-0 h-auto text-primary mt-1"
+            onClick={() => onNavigate?.("insights")}
+          >
+            Ver evolução →
+          </Button>
         </div>
       </div>
 

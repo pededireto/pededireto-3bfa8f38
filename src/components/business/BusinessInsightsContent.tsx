@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Loader2, TrendingUp, Lock, Download } from "lucide-react";
+import RankingEvolutionChart from "@/components/business/RankingEvolutionChart";
 import { useBusinessIntelligence, getPeakHourLabel, getPeakDowLabel } from "@/hooks/useBusinessIntelligence";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { usePlanRuleByPlanId } from "@/hooks/usePlanRules";
@@ -235,6 +236,11 @@ const BusinessInsightsContent = ({ businessId, planId, claimStatus = "verified",
         <BusinessBenchmarkCard businessId={businessId} days={days} />
         <BenchmarkInsightsPanel data={benchmarkData} isLoading={benchmarkLoading} />
       </div>
+
+      <div className="border-t border-border/50" />
+
+      {/* Evolução de Pontos do Ranking */}
+      <RankingEvolutionChart businessId={businessId} days={days} />
 
       <div className="border-t border-border/50" />
 
