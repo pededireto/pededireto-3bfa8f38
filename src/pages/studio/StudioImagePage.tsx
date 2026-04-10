@@ -398,6 +398,43 @@ const StudioImagePage = () => {
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
   };
 
+  const handleGenerateImageDirect = async () => {
+    if (!selectedBusiness?.id || !directPrompt.trim()) return;
+    if (!apiKey) {
+      toast({ title: "Sem chave API", description: "Configura a tua chave API nas Definições → Gerador de Imagem", variant: "destructive" });
+      return;
+    }
+    setGeneratingImage(true);
+    setGeneratedImageUrl("");
+    setPrompt(directPrompt);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-business-image", {
+        body: {
+          business_id: selectedBusiness.id,
+          prompt: directPrompt,
+          aspect_ratio: proporcao,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.image_url) {
+        setGeneratedImageUrl(data.image_url);
+        saveGen.mutate({
+          type: "image",
+          title: `${nome || "Imagem"} · gerada`,
+          subtitle: `${proporcao} · ${apiKey?.provider || "api"}`,
+          data: { prompt: directPrompt, image_url: data.image_url, provider: data.provider },
+        });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao gerar imagem", description: err.message, variant: "destructive" });
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
+
   const handleGenerateImage = async () => {
     if (!selectedBusiness?.id || !prompt) return;
     setGeneratingImage(true);
