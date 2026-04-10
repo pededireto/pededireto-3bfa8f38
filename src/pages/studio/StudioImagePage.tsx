@@ -198,6 +198,15 @@ const StudioImagePage = () => {
   const { data: apiKey } = useBusinessApiKey(selectedBusiness?.id);
   const resultRef = useRef<HTMLDivElement>(null);
 
+  // ── Mode State ──
+  const [mode, setMode] = useState<"guided" | "direct">(() => {
+    return (localStorage.getItem("studio-image-mode") as "guided" | "direct") || "guided";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("studio-image-mode", mode);
+  }, [mode]);
+
   // ── Form State ──
   const [categoriaSlug, setCategoriaSlug] = useState("");
   const [subcategoriaSlug, setSubcategoriaSlug] = useState("");
@@ -216,6 +225,9 @@ const StudioImagePage = () => {
   const [textoSobreposto, setTextoSobreposto] = useState("");
   const [textoPosicao, setTextoPosicao] = useState("");
   const [proporcao, setProporcao] = useState("9:16");
+
+  // ── Direct Prompt State ──
+  const [directPrompt, setDirectPrompt] = useState("");
 
   // ── Output State ──
   const [prompt, setPrompt] = useState("");
@@ -256,6 +268,14 @@ const StudioImagePage = () => {
   useEffect(() => {
     localStorage.setItem("studio-image-form", JSON.stringify({ categoriaSlug, objectivoImagem, estilo, proporcao }));
   }, [categoriaSlug, objectivoImagem, estilo, proporcao]);
+
+  // When switching to direct mode, pre-fill with generated prompt
+  const handleModeChange = (newMode: "guided" | "direct") => {
+    if (newMode === "direct" && prompt) {
+      setDirectPrompt(prompt);
+    }
+    setMode(newMode);
+  };
 
   const sectionsFilled = {
     negocio: !!(nome || categoriaSlug),
@@ -378,6 +398,43 @@ const StudioImagePage = () => {
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
   };
 
+  const handleGenerateImageDirect = async () => {
+    if (!selectedBusiness?.id || !directPrompt.trim()) return;
+    if (!apiKey) {
+      toast({ title: "Sem chave API", description: "Configura a tua chave API nas Definições → Gerador de Imagem", variant: "destructive" });
+      return;
+    }
+    setGeneratingImage(true);
+    setGeneratedImageUrl("");
+    setPrompt(directPrompt);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-business-image", {
+        body: {
+          business_id: selectedBusiness.id,
+          prompt: directPrompt,
+          aspect_ratio: proporcao,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.image_url) {
+        setGeneratedImageUrl(data.image_url);
+        saveGen.mutate({
+          type: "image",
+          title: `${nome || "Imagem"} · gerada`,
+          subtitle: `${proporcao} · ${apiKey?.provider || "api"}`,
+          data: { prompt: directPrompt, image_url: data.image_url, provider: data.provider },
+        });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao gerar imagem", description: err.message, variant: "destructive" });
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
+
   const handleGenerateImage = async () => {
     if (!selectedBusiness?.id || !prompt) return;
     setGeneratingImage(true);
@@ -434,189 +491,311 @@ const StudioImagePage = () => {
 
   return (
     <div className="max-w-[900px] space-y-4">
+      {/* Mode Toggle */}
+      <div className="flex rounded-lg border border-border bg-card p-1 gap-1">
+        <button
+          type="button"
+          onClick={() => handleModeChange("guided")}
+          className={cn(
+            "flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all",
+            mode === "guided" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          📋 Formulário Guiado
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange("direct")}
+          className={cn(
+            "flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all",
+            mode === "direct" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          ✏️ Prompt Directo
+        </button>
+      </div>
+
       {/* Hint */}
       <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground flex items-start gap-2">
         <span className="text-primary">💡</span>
-        Quanto mais campos preencheres, mais rica e precisa será a imagem gerada.
+        {mode === "guided"
+          ? "Quanto mais campos preencheres, mais rica e precisa será a imagem gerada."
+          : "Cola ou escreve o teu prompt directamente. Ideal se já sabes o que queres."}
       </div>
 
-      {/* SECÇÃO 1 — Negócio */}
-      <Section title="O negócio" filled={sectionsFilled.negocio} defaultOpen={true}>
-        {categoriesLoading ? (
-          <Skeleton className="h-10 w-full" />
-        ) : (
-          <Select value={categoriaSlug} onValueChange={(v) => { setCategoriaSlug(v); setSubcategoriaSlug(""); }}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Seleciona a categoria..." />
-            </SelectTrigger>
-            <SelectContent>
-              {categories?.map((cat) => (
-                <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
+      {mode === "guided" ? (
+        <>
+          {/* SECÇÃO 1 — Negócio */}
+          <Section title="O negócio" filled={sectionsFilled.negocio} defaultOpen={true}>
+            {categoriesLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Select value={categoriaSlug} onValueChange={(v) => { setCategoriaSlug(v); setSubcategoriaSlug(""); }}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleciona a categoria..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories?.map((cat) => (
+                    <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {categoriaAtual && subcategoriasDisponiveis.length > 0 && (
+              <Select value={subcategoriaSlug} onValueChange={setSubcategoriaSlug}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Subcategoria (opcional)..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {subcategoriasDisponiveis.map((sub: any) => (
+                    <SelectItem key={sub.slug} value={sub.slug}>{sub.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Nome do negócio ou marca</label>
+                <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Taberna do Borges" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Sector / Tipo</label>
+                <Input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Ex: Restauração..." />
+              </div>
+            </div>
+          </Section>
+
+          {/* SECÇÃO 2 — O que queres criar */}
+          <Section title="O que queres criar" filled={sectionsFilled.criar} defaultOpen={true}>
+            <div>
+              <label className="text-xs text-muted-foreground mb-2 block">Objectivo da imagem</label>
+              <ChipSelect options={OBJECTIVOS} value={objectivoImagem} onChange={(v) => setObjectivoImagem(v as string)} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Descreve o que deve aparecer na imagem *</label>
+              <Textarea
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                rows={3}
+                className="resize-none"
+                maxLength={300}
+                placeholder="Ex: vista do interior do restaurante ao jantar, com mesa posta e luz ambiente..."
+              />
+              <p className="text-[10px] text-muted-foreground text-right mt-0.5">{descricao.length}/300</p>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Personagens ou pessoas?</label>
+              <Input
+                value={personagens}
+                onChange={(e) => setPersonagens(e.target.value)}
+                placeholder="Ex: barista jovem, casal de 30 anos, sem pessoas..."
+              />
+              <p className="text-[10px] text-muted-foreground mt-0.5">Deixa vazio para imagem sem pessoas</p>
+            </div>
+          </Section>
+
+          {/* SECÇÃO 3 — Ambiente & Contexto */}
+          <Section title="Ambiente & Contexto" filled={sectionsFilled.ambiente} hint="Enriquece a atmosfera da imagem">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Localização / Cenário</label>
+              <Input value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} placeholder="Ex: interior rústico português, esplanada..." />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-2 block">Hora do dia / Iluminação</label>
+              <ChipSelect options={ILUMINACAO} value={iluminacao} onChange={(v) => setIluminacao(v as string)} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-2 block">Estação do ano</label>
+              <ChipSelect options={ESTACOES} value={estacao} onChange={(v) => setEstacao(v as string)} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Elementos de fundo / atmosfera</label>
+              <Input value={elementosFundo} onChange={(e) => setElementosFundo(e.target.value)} placeholder="Ex: fumo de cozinha, flores silvestres..." />
+            </div>
+          </Section>
+
+          {/* SECÇÃO 4 — Estilo Visual */}
+          <Section title="Estilo Visual" filled={sectionsFilled.estilo} hint="Define o look & feel da imagem">
+            <div>
+              <label className="text-xs text-muted-foreground mb-2 block">Estilo artístico</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {ESTILOS.map((e) => (
+                  <button
+                    key={e.key}
+                    type="button"
+                    onClick={() => setEstilo(e.key)}
+                    className={cn(
+                      "p-3 rounded-xl border text-left transition-all",
+                      estilo === e.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                    )}
+                  >
+                    <span className="text-lg">{e.emoji}</span>
+                    <div className="text-xs font-medium mt-1">{e.label}</div>
+                    <div className="text-[10px] text-muted-foreground">{e.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-2 block">Paleta de cores (até 2)</label>
+              <ChipSelect options={PALETAS} value={paletas} onChange={(v) => setPaletas(v as string[])} multi />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-2 block">Humor / Emoção</label>
+              <ChipSelect options={HUMOR} value={humor} onChange={(v) => setHumor(v as string)} />
+            </div>
+          </Section>
+
+          {/* SECÇÃO 5 — Texto sobreposto */}
+          <Section title="Texto sobreposto" filled={sectionsFilled.texto} hint="Para texto em imagem, o Ideogram dá melhores resultados">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Mensagem / texto na imagem</label>
+              <Input
+                value={textoSobreposto}
+                onChange={(e) => setTextoSobreposto(e.target.value)}
+                placeholder="Ex: Promoção de Verão · -20% | Menu do dia · 8,50€"
+              />
+            </div>
+            {textoSobreposto && (
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">Posição do texto</label>
+                <ChipSelect options={TEXTO_POSICAO} value={textoPosicao} onChange={(v) => setTextoPosicao(v as string)} />
+              </div>
+            )}
+          </Section>
+
+          {/* SECÇÃO 6 — Formato */}
+          <Section title="Formato / Proporção" filled={sectionsFilled.formato} defaultOpen={true}>
+            <div className="flex flex-wrap gap-2">
+              {PROPORCOES.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setProporcao(p.key)}
+                  className={cn(
+                    "flex-1 min-w-[100px] px-3 py-3 rounded-xl text-xs border transition-all text-center",
+                    proporcao === p.key ? "bg-primary/10 border-primary text-primary font-medium" : "border-border hover:border-primary/30"
+                  )}
+                >
+                  <div className="font-semibold">{p.label}</div>
+                  <div className="text-[10px] text-muted-foreground">{p.desc}</div>
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-        )}
-        {categoriaAtual && subcategoriasDisponiveis.length > 0 && (
-          <Select value={subcategoriaSlug} onValueChange={setSubcategoriaSlug}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Subcategoria (opcional)..." />
-            </SelectTrigger>
-            <SelectContent>
-              {subcategoriasDisponiveis.map((sub: any) => (
-                <SelectItem key={sub.slug} value={sub.slug}>{sub.name}</SelectItem>
+            </div>
+          </Section>
+
+          {/* Generate Prompt Button */}
+          <Button
+            onClick={handleGeneratePrompt}
+            disabled={generating || !canGenerate}
+            className="w-full h-12 font-display font-bold text-base"
+            size="lg"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />A construir a tua prompt...
+              </>
+            ) : (
+              "✦ Gerar Prompt"
+            )}
+          </Button>
+        </>
+      ) : (
+        /* ── MODO PROMPT DIRECTO ── */
+        <div className="space-y-4">
+          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+            <label className="text-sm font-display font-semibold block">O teu prompt</label>
+            <Textarea
+              value={directPrompt}
+              onChange={(e) => setDirectPrompt(e.target.value)}
+              rows={6}
+              className="resize-none font-mono text-sm"
+              placeholder="Ex: Professional photo of a modern restaurant interior, warm golden lighting, wooden tables, bokeh background, 8K, photorealistic --ar 16:9"
+            />
+            <p className="text-[10px] text-muted-foreground">{directPrompt.length} caracteres · Escreve em inglês para melhores resultados</p>
+          </div>
+
+          {/* Formato / Proporção */}
+          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+            <label className="text-sm font-display font-semibold block">Formato / Proporção</label>
+            <div className="flex flex-wrap gap-2">
+              {PROPORCOES.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setProporcao(p.key)}
+                  className={cn(
+                    "flex-1 min-w-[100px] px-3 py-3 rounded-xl text-xs border transition-all text-center",
+                    proporcao === p.key ? "bg-primary/10 border-primary text-primary font-medium" : "border-border hover:border-primary/30"
+                  )}
+                >
+                  <div className="font-semibold">{p.label}</div>
+                  <div className="text-[10px] text-muted-foreground">{p.desc}</div>
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Nome do negócio ou marca</label>
-            <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Taberna do Borges" />
+            </div>
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Sector / Tipo</label>
-            <Input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Ex: Restauração..." />
-          </div>
-        </div>
-      </Section>
 
-      {/* SECÇÃO 2 — O que queres criar */}
-      <Section title="O que queres criar" filled={sectionsFilled.criar} defaultOpen={true}>
-        <div>
-          <label className="text-xs text-muted-foreground mb-2 block">Objectivo da imagem</label>
-          <ChipSelect options={OBJECTIVOS} value={objectivoImagem} onChange={(v) => setObjectivoImagem(v as string)} />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Descreve o que deve aparecer na imagem *</label>
-          <Textarea
-            value={descricao}
-            onChange={(e) => setDescricao(e.target.value)}
-            rows={3}
-            className="resize-none"
-            maxLength={300}
-            placeholder="Ex: vista do interior do restaurante ao jantar, com mesa posta e luz ambiente..."
-          />
-          <p className="text-[10px] text-muted-foreground text-right mt-0.5">{descricao.length}/300</p>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Personagens ou pessoas?</label>
-          <Input
-            value={personagens}
-            onChange={(e) => setPersonagens(e.target.value)}
-            placeholder="Ex: barista jovem, casal de 30 anos, sem pessoas..."
-          />
-          <p className="text-[10px] text-muted-foreground mt-0.5">Deixa vazio para imagem sem pessoas</p>
-        </div>
-      </Section>
-
-      {/* SECÇÃO 3 — Ambiente & Contexto */}
-      <Section title="Ambiente & Contexto" filled={sectionsFilled.ambiente} hint="Enriquece a atmosfera da imagem">
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Localização / Cenário</label>
-          <Input value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} placeholder="Ex: interior rústico português, esplanada..." />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-2 block">Hora do dia / Iluminação</label>
-          <ChipSelect options={ILUMINACAO} value={iluminacao} onChange={(v) => setIluminacao(v as string)} />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-2 block">Estação do ano</label>
-          <ChipSelect options={ESTACOES} value={estacao} onChange={(v) => setEstacao(v as string)} />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Elementos de fundo / atmosfera</label>
-          <Input value={elementosFundo} onChange={(e) => setElementosFundo(e.target.value)} placeholder="Ex: fumo de cozinha, flores silvestres..." />
-        </div>
-      </Section>
-
-      {/* SECÇÃO 4 — Estilo Visual */}
-      <Section title="Estilo Visual" filled={sectionsFilled.estilo} hint="Define o look & feel da imagem">
-        <div>
-          <label className="text-xs text-muted-foreground mb-2 block">Estilo artístico</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {ESTILOS.map((e) => (
-              <button
-                key={e.key}
-                type="button"
-                onClick={() => setEstilo(e.key)}
-                className={cn(
-                  "p-3 rounded-xl border text-left transition-all",
-                  estilo === e.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                )}
-              >
-                <span className="text-lg">{e.emoji}</span>
-                <div className="text-xs font-medium mt-1">{e.label}</div>
-                <div className="text-[10px] text-muted-foreground">{e.desc}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-2 block">Paleta de cores (até 2)</label>
-          <ChipSelect options={PALETAS} value={paletas} onChange={(v) => setPaletas(v as string[])} multi />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-2 block">Humor / Emoção</label>
-          <ChipSelect options={HUMOR} value={humor} onChange={(v) => setHumor(v as string)} />
-        </div>
-      </Section>
-
-      {/* SECÇÃO 5 — Texto sobreposto */}
-      <Section title="Texto sobreposto" filled={sectionsFilled.texto} hint="Para texto em imagem, o Ideogram dá melhores resultados">
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Mensagem / texto na imagem</label>
-          <Input
-            value={textoSobreposto}
-            onChange={(e) => setTextoSobreposto(e.target.value)}
-            placeholder="Ex: Promoção de Verão · -20% | Menu do dia · 8,50€"
-          />
-        </div>
-        {textoSobreposto && (
-          <div>
-            <label className="text-xs text-muted-foreground mb-2 block">Posição do texto</label>
-            <ChipSelect options={TEXTO_POSICAO} value={textoPosicao} onChange={(v) => setTextoPosicao(v as string)} />
-          </div>
-        )}
-      </Section>
-
-      {/* SECÇÃO 6 — Formato */}
-      <Section title="Formato / Proporção" filled={sectionsFilled.formato} defaultOpen={true}>
-        <div className="flex flex-wrap gap-2">
-          {PROPORCOES.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => setProporcao(p.key)}
-              className={cn(
-                "flex-1 min-w-[100px] px-3 py-3 rounded-xl text-xs border transition-all text-center",
-                proporcao === p.key ? "bg-primary/10 border-primary text-primary font-medium" : "border-border hover:border-primary/30"
-              )}
+          {/* Generate Image Button (direct) */}
+          {apiKey ? (
+            <Button
+              onClick={handleGenerateImageDirect}
+              disabled={generatingImage || !directPrompt.trim()}
+              className="w-full h-12 font-display font-bold text-base bg-emerald-600 hover:bg-emerald-700 text-white"
+              size="lg"
             >
-              <div className="font-semibold">{p.label}</div>
-              <div className="text-[10px] text-muted-foreground">{p.desc}</div>
-            </button>
-          ))}
+              {generatingImage ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />A gerar a tua imagem...
+                </>
+              ) : (
+                "🎨 Gerar Imagem"
+              )}
+            </Button>
+          ) : (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center space-y-2">
+              <p className="text-sm font-medium">💡 Para gerar imagens directamente, configura a tua chave API</p>
+              <p className="text-xs text-muted-foreground">
+                Liga a tua conta OpenAI, Google, Ideogram ou fal.ai nas Definições.
+              </p>
+              <Button size="sm" onClick={() => navigate("/app/settings")} className="gap-1">
+                <Zap className="w-3 h-3" />
+                Ir para Definições
+              </Button>
+            </div>
+          )}
         </div>
-      </Section>
+      )}
 
-      {/* Generate Prompt Button */}
-      <Button
-        onClick={handleGeneratePrompt}
-        disabled={generating || !canGenerate}
-        className="w-full h-12 font-display font-bold text-base"
-        size="lg"
-      >
-        {generating ? (
-          <>
-            <Loader2 className="h-5 w-5 mr-2 animate-spin" />A construir a tua prompt...
-          </>
-        ) : (
-          "✦ Gerar Prompt"
-        )}
-      </Button>
+      {/* ── Direct mode: show generated image inline ── */}
+      {mode === "direct" && generatedImageUrl && (
+        <div ref={resultRef} className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="p-4 space-y-3">
+            <div className="rounded-xl overflow-hidden bg-muted border border-border">
+              <img src={generatedImageUrl} alt="Imagem gerada" className="w-full h-auto object-contain" />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" onClick={handleDownload} className="gap-1">
+                <Download className="w-3 h-3" />Descarregar
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleGenerateImageDirect} disabled={generatingImage} className="gap-1">
+                <RefreshCw className="w-3 h-3" />Gerar nova versão
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* ── Prompt Result ── */}
-      {prompt && (
+      {/* ── Direct mode: generating skeleton ── */}
+      {mode === "direct" && generatingImage && !generatedImageUrl && (
+        <div className="rounded-xl border border-border bg-card p-6 text-center space-y-3">
+          <Skeleton className="w-full aspect-square max-w-sm mx-auto rounded-xl" />
+          <p className="text-sm text-muted-foreground">A criar a tua imagem... (15-30 segundos)</p>
+        </div>
+      )}
+
+      {/* ── Prompt Result (guided mode only) ── */}
+      {mode === "guided" && prompt && (
         <div ref={resultRef} className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b border-border">
             <h3 className="text-sm font-display font-semibold flex items-center gap-1.5">

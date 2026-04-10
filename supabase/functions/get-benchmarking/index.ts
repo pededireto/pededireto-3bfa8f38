@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 const ZHIPU_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
 function buildPrompt(category: string, subcategory: string): string {
