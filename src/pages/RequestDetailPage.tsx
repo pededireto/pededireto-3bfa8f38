@@ -701,6 +701,18 @@ const RequestDetailPage = () => {
                 Marcar como Resolvido
               </Button>
             )}
+            {/* Avaliar button for resolved requests without ratings */}
+            {isResolved && hasAcceptedMatch && existingRatings.length === 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleResolve}
+                className="flex items-center gap-1.5 text-yellow-600 border-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-950/20"
+              >
+                <Star className="h-3.5 w-3.5" />
+                Avaliar este pedido
+              </Button>
+            )}
           </div>
         </div>
 
