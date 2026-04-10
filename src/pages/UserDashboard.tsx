@@ -245,29 +245,44 @@ const UserDashboard = () => {
           </Card>
         )}
 
-        {/* ── Profile warning ───────────────────────────────────────────── */}
-        {profileIncomplete && (
-          <Card className="border-amber-400 dark:border-amber-500">
+        {/* ── Profile card ───────────────────────────────────────────── */}
+        {profile && (
+          <Card className={profileIncomplete ? "border-amber-400 dark:border-amber-500" : "border-border"}>
             <CardContent className="py-4 px-6">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                {profileIncomplete ? (
+                  <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                ) : (
+                  <User className="h-5 w-5 text-primary flex-shrink-0" />
+                )}
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">Complete o seu perfil para criar pedidos</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {profileIncomplete ? "Complete o seu perfil para criar pedidos" : "O Meu Perfil"}
+                  </p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
+                    {profile?.full_name?.trim() && (
+                      <span className="flex items-center gap-1">
+                        <User className="h-3 w-3" /> {profile.full_name}
+                      </span>
+                    )}
                     {profile?.email && (
                       <span className="flex items-center gap-1">
                         <Mail className="h-3 w-3" /> {profile.email}
                       </span>
                     )}
-                    {!profile?.phone?.trim() && (
+                    {profile?.phone?.trim() ? (
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" /> {profile.phone}
+                      </span>
+                    ) : (
                       <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
                         <Phone className="h-3 w-3" /> Telefone em falta
                       </span>
                     )}
                   </div>
                 </div>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/perfil">Completar</Link>
+                <Button asChild variant={profileIncomplete ? "outline" : "ghost"} size="sm">
+                  <Link to="/perfil">{profileIncomplete ? "Completar" : "Editar"}</Link>
                 </Button>
               </div>
             </CardContent>
