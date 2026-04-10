@@ -11,6 +11,7 @@ import { useSaveGeneration } from "@/hooks/useGenerations";
 import { useCategories } from "@/hooks/useCategories";
 import { useStudioContext } from "@/pages/studio/StudioLayout";
 import { useBusinessApiKey } from "@/hooks/useBusinessApiKeys";
+import { useStudioGenerate } from "@/hooks/useStudioGenerate";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
