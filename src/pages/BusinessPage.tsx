@@ -632,18 +632,6 @@ const BusinessPage = () => {
                   </div>
                 )}
 
-                {/* ── MOBILE CTAs — shown only on mobile/tablet ── */}
-                <div className="lg:hidden">
-                  <BusinessCTAPanel
-                    business={business}
-                    responseTime={responseTime}
-                    sidebarBadges={sidebarBadges}
-                    badgeConfig={BADGE_CONFIG}
-                    onCtaClick={(type) => handleCtaClick(type as any)}
-                    onGA4Lead={trackGA4Lead}
-                  />
-                </div>
-
                 {/* Galeria principal */}
                 {businessImages.length > 0 && (business as any).show_gallery !== false && (
                   <GalleryGrid images={businessImages} label="Galeria" />
@@ -691,6 +679,18 @@ const BusinessPage = () => {
                       {topPosition.city ? ` em ${topPosition.city}` : ""}
                     </Link>
                   )}
+
+                  {/* ── MOBILE CTAs — shown only on mobile/tablet, after name/badges ── */}
+                  <div className="lg:hidden">
+                    <BusinessCTAPanel
+                      business={business}
+                      responseTime={responseTime}
+                      sidebarBadges={sidebarBadges}
+                      badgeConfig={BADGE_CONFIG}
+                      onCtaClick={(type) => handleCtaClick(type as any)}
+                      onGA4Lead={trackGA4Lead}
+                    />
+                  </div>
 
                   {/* WhatsApp Share CTA */}
                   <div className="flex items-center gap-2 flex-wrap">
