@@ -30,15 +30,15 @@ const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBl
 
   switch (block.type) {
     case "hero":
-      return <HeroSection searchTerm={searchTerm} onSearchChange={onSearchChange} />;
+      return <HeroSection searchTerm={searchTerm} onSearchChange={onSearchChange} config={block.config} />;
     case "super_destaques":
-      return <SuperHighlightsSection />;
+      return <SuperHighlightsSection config={block.config} />;
     case "featured_categories":
-      return <FeaturedCategoriesSection />;
+      return <FeaturedCategoriesSection config={block.config} />;
     case "categorias":
-      return <CategoriesGrid categories={categories} isLoading={categoriesLoading} />;
+      return <CategoriesGrid categories={categories} isLoading={categoriesLoading} config={block.config} />;
     case "destaques":
-      return <FeaturedSection businesses={featuredBusinesses} isLoading={featuredLoading} />;
+      return <FeaturedSection businesses={featuredBusinesses} isLoading={featuredLoading} config={block.config} />;
     case "banner":
       return <BannerBlock config={block.config} />;
     case "texto":
@@ -48,13 +48,13 @@ const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBl
     case "novos_negocios":
       return <NewBusinessesBlock config={block.config} title={block.title} />;
     case "categorias_accordion":
-      return <CategoryAccordion />;
+      return <CategoryAccordion config={block.config} />;
     case "platform_stats":
-      return <PlatformStats />;
+      return <PlatformStats config={block.config} />;
     case "how_it_works":
-      return <HowItWorks />;
+      return <HowItWorks config={block.config} />;
     case "business_cta":
-      return <BusinessCTA />;
+      return <BusinessCTA config={block.config} />;
     case "dual_cta":
       return <DualCTASection config={block.config} />;
     case "social_proof":
