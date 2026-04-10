@@ -767,8 +767,35 @@ const StudioImagePage = () => {
         </div>
       )}
 
-      {/* ── Prompt Result ── */}
-      {prompt && (
+      {/* ── Direct mode: show generated image inline ── */}
+      {mode === "direct" && generatedImageUrl && (
+        <div ref={resultRef} className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="p-4 space-y-3">
+            <div className="rounded-xl overflow-hidden bg-muted border border-border">
+              <img src={generatedImageUrl} alt="Imagem gerada" className="w-full h-auto object-contain" />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" onClick={handleDownload} className="gap-1">
+                <Download className="w-3 h-3" />Descarregar
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleGenerateImageDirect} disabled={generatingImage} className="gap-1">
+                <RefreshCw className="w-3 h-3" />Gerar nova versão
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Direct mode: generating skeleton ── */}
+      {mode === "direct" && generatingImage && !generatedImageUrl && (
+        <div className="rounded-xl border border-border bg-card p-6 text-center space-y-3">
+          <Skeleton className="w-full aspect-square max-w-sm mx-auto rounded-xl" />
+          <p className="text-sm text-muted-foreground">A criar a tua imagem... (15-30 segundos)</p>
+        </div>
+      )}
+
+      {/* ── Prompt Result (guided mode only) ── */}
+      {mode === "guided" && prompt && (
         <div ref={resultRef} className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b border-border">
             <h3 className="text-sm font-display font-semibold flex items-center gap-1.5">
