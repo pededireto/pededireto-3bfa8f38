@@ -27,6 +27,7 @@ import {
   Facebook,
   CalendarCheck,
   ShoppingBag,
+  MapPin,
 } from "lucide-react";
 
 // ─── Filtros ────────────────────────────────────────────────────────────────
