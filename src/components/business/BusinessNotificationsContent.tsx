@@ -18,6 +18,9 @@ const typeConfig: Record<string, { label: string; icon: React.ReactNode; color: 
   plan: { label: "Plano", icon: <CreditCard className="h-4 w-4" />, color: "text-blue-500" },
   highlight: { label: "Destaque", icon: <Star className="h-4 w-4" />, color: "text-yellow-500" },
   nova_mensagem: { label: "Mensagem", icon: <MessageCircle className="h-4 w-4" />, color: "text-primary" },
+  badge_earned: { label: "Badge", icon: <Star className="h-4 w-4" />, color: "text-violet-500" },
+  lead: { label: "Novo Pedido", icon: <Inbox className="h-4 w-4" />, color: "text-green-500" },
+  verification: { label: "Verificação", icon: <Check className="h-4 w-4" />, color: "text-green-600" },
 };
 
 const BusinessNotificationsContent = ({ businessId }: Props) => {

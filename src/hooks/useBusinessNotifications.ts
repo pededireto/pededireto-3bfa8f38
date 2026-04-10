@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface BusinessNotification {
   id: string;
   business_id: string;
-  type: "request" | "system" | "plan" | "highlight";
+  type: "request" | "system" | "plan" | "highlight" | "badge_earned" | "lead" | "verification" | "verified";
   title: string;
   message: string;
   is_read: boolean;
