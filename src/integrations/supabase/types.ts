@@ -8310,6 +8310,33 @@ export type Database = {
       process_followups: { Args: never; Returns: undefined }
       recalculate_all_ranking_scores: { Args: never; Returns: undefined }
       recalculate_all_scores: { Args: never; Returns: undefined }
+      register_affiliate_business: {
+        Args: {
+          p_affiliate_id?: string
+          p_category_id?: string
+          p_city: string
+          p_cta_email?: string
+          p_cta_phone?: string
+          p_cta_website?: string
+          p_description?: string
+          p_facebook_url?: string
+          p_instagram_url?: string
+          p_logo_url?: string
+          p_name: string
+          p_nif?: string
+          p_notes?: string
+          p_other_social_url?: string
+          p_owner_email?: string
+          p_owner_name?: string
+          p_owner_phone?: string
+          p_public_address?: string
+          p_schedule_weekdays?: string
+          p_schedule_weekend?: string
+          p_slug: string
+          p_subcategory_id?: string
+        }
+        Returns: Json
+      }
       register_business_with_owner: {
         Args: {
           p_address?: string
