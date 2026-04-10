@@ -189,6 +189,7 @@ const Section = ({
 // ── Main Component ──
 const StudioImagePage = () => {
   const { lookupPrompt } = useImageLookup();
+  const { generate: generateAI } = useStudioGenerate();
   const saveGen = useSaveGeneration();
   const navigate = useNavigate();
   const { toast } = useToast();
