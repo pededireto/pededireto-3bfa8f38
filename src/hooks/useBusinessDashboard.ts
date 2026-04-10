@@ -91,6 +91,7 @@ export const useBusinessRequests = (businessId: string | undefined, archiveFilte
           service_requests (
             id, description, address, status, created_at, urgency,
             location_city, location_postal_code,
+            consumer_name, consumer_email, consumer_phone, consumer_city,
             categories (id, name),
             subcategories (id, name),
             profiles:user_id (full_name, email, phone, city)
