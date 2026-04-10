@@ -68,6 +68,22 @@ const PROVIDERS = [
       { icon: "✅", title: "Cola aqui", desc: 'Cola no campo abaixo e clica em "Verificar e guardar".' },
     ],
   },
+  {
+    key: "fal" as const,
+    name: "fal.ai · Flux",
+    desc: "Rápido e de alta qualidade. Modelo Flux Schnell.",
+    badge: "💰 A partir de ~€0,003/imagem",
+    link: "https://fal.ai",
+    linkLabel: "fal.ai",
+    placeholder: "fal-...",
+    steps: [
+      { icon: "🌐", title: "Acede ao fal.ai", desc: "Vai a fal.ai e cria conta (ou inicia sessão com GitHub/Google)." },
+      { icon: "💳", title: "Adiciona créditos", desc: 'Vai a "Dashboard" → "Billing" e adiciona créditos. Começa com $5 — dá para milhares de imagens.' },
+      { icon: "🔑", title: "Cria a chave", desc: 'Vai a "Dashboard" → "Keys" → "Create Key".' },
+      { icon: "📋", title: "Copia a chave", desc: "Copia a chave mostrada." },
+      { icon: "✅", title: "Cola aqui", desc: 'Cola no campo abaixo e clica em "Verificar e guardar".' },
+    ],
+  },
 ];
 
 const StudioSettingsPage = () => {
