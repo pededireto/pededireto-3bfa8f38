@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export type EventType = "view" | "click_whatsapp" | "click_phone" | "click_website" | "click_email" | "click_app" | "click_instagram" | "click_facebook" | "click_reservation" | "click_order";
+export type EventType = "view" | "click_whatsapp" | "click_phone" | "click_website" | "click_email" | "click_app" | "click_instagram" | "click_facebook" | "click_reservation" | "click_order" | "click_address";
 
 export type PeriodFilter = "7d" | "30d" | "90d" | "all";
 
@@ -73,7 +73,7 @@ export const useAnalyticsSummary = (filters: AnalyticsFilters = { period: "30d" 
       let clicksQuery = supabase
         .from("analytics_events")
         .select("*", { count: "exact", head: true })
-        .in("event_type", ["click_whatsapp", "click_phone", "click_website", "click_email", "click_app", "click_instagram", "click_facebook", "click_reservation", "click_order"]);
+        .in("event_type", ["click_whatsapp", "click_phone", "click_website", "click_email", "click_app", "click_instagram", "click_facebook", "click_reservation", "click_order", "click_address"]);
       clicksQuery = buildBase(clicksQuery);
       const { count: totalClicks } = await clicksQuery;
 
@@ -81,7 +81,7 @@ export const useAnalyticsSummary = (filters: AnalyticsFilters = { period: "30d" 
       let clicksByTypeQuery = supabase
         .from("analytics_events")
         .select("event_type")
-        .in("event_type", ["click_whatsapp", "click_phone", "click_website", "click_email", "click_app", "click_instagram", "click_facebook", "click_reservation", "click_order"]);
+        .in("event_type", ["click_whatsapp", "click_phone", "click_website", "click_email", "click_app", "click_instagram", "click_facebook", "click_reservation", "click_order", "click_address"]);
       clicksByTypeQuery = buildBase(clicksByTypeQuery);
       const { data: clicksByType } = await clicksByTypeQuery;
 
@@ -95,6 +95,7 @@ export const useAnalyticsSummary = (filters: AnalyticsFilters = { period: "30d" 
         facebook: clicksByType?.filter((e) => e.event_type === "click_facebook").length || 0,
         reservation: clicksByType?.filter((e) => e.event_type === "click_reservation").length || 0,
         order: clicksByType?.filter((e) => e.event_type === "click_order").length || 0,
+        address: clicksByType?.filter((e) => e.event_type === "click_address").length || 0,
       };
 
       // Top categories

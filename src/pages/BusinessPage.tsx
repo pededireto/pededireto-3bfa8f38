@@ -729,6 +729,9 @@ const BusinessPage = () => {
                             address={business.public_address}
                             businessName={business.name}
                             variant="button"
+                            businessId={business.id}
+                            categoryId={business.category_id || undefined}
+                            city={business.city || undefined}
                           />
                         </div>
                       </div>
