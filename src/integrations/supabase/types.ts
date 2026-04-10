@@ -5232,6 +5232,36 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          message_type: string
+          name: string
+          subcategory: string | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          name: string
+          subcategory?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          name?: string
+          subcategory?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       monthly_digest_logs: {
         Row: {
           business_id: string
@@ -7506,6 +7536,7 @@ export type Database = {
           badge: string | null
           category_id: string | null
           city: string | null
+          claim_status: string | null
           cta_email: string | null
           cta_phone: string | null
           cta_website: string | null
