@@ -1,67 +1,58 @@
 
 
-# Correcção de 5 Bugs Independentes
+# Correcção de 4 Bugs Independentes
 
-## Bug 1 — Variáveis de Ambiente (.env)
+## Bug 1 — Banner "É o proprietário" aparece em negócios reclamados
 
-**Problema:** O `.env` tem variáveis `VITE_*` a apontar para o projecto errado `pnrqahgvhddhcucmccjp`.
+**Causa raiz:** A `BusinessPage.tsx` usa `usePublicBusiness` que lê da view `businesses_public`. Esta view **não inclui** as colunas `is_claimed` nem `claim_status`. Logo, `(business as any).is_claimed` é sempre `undefined` (falsy) e `(business as any).claim_status` nunca é `"verified"`, fazendo o banner aparecer sempre.
 
-**Correcção:** O `.env` é auto-gerado pelo Lovable Cloud e não pode ser editado manualmente. Contudo, as variáveis `VITE_*` são as que o `client.ts` usa (também auto-gerado). O projecto correcto do utilizador é `mpnizkjntkutpxevqzxx` (nas variáveis `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY`). Como ambos os ficheiros são geridos automaticamente pelo sistema, a correcção requer apenas garantir que não há referências hardcoded ao projecto errado no código-fonte. A pesquisa confirma que `pnrqahgvhddhcucmccjp` só aparece no `.env` — nenhum ficheiro `.ts/.tsx` tem hardcode. O `.env` e `client.ts` são regenerados automaticamente pelo Lovable Cloud e não devem ser editados.
-
-**Acção:** Nenhuma alteração de código necessária. As variáveis são geridas pelo sistema.
-
----
-
-## Bug 2 — Homepage Blocks: Tipo "Serviços Rápidos" com value errado
-
-**Problema:** No admin, o tipo "Serviços Rápidos" tem `value: "quick_services"` mas o renderer usa `case "quick_services"`. Estes batem certo. O verdadeiro problema é que o campo de configuração JSON pode estar a mostrar código JSX como placeholder em vez de JSON puro, e o JSON parse silencioso (`catch { /* ignore */ }`) faz com que configurações inválidas passem como `{}`.
-
-**Correcção em `HomepageContent.tsx`:**
-- Validar JSON antes de guardar e mostrar erro claro se inválido (em vez de ignorar silenciosamente)
-- Garantir que o `configJson` inicial ao criar é sempre `"{}"` (já está correcto no `openCreate`)
+**Correcção:**
+1. Alterar a view `businesses_public` via migração SQL para incluir `claim_status` (sem expor PII)
+2. Actualizar a condição no `BusinessPage.tsx` (linha 494) para: `(business as any).claim_status !== 'verified'`
+3. Actualizar o tipo `PublicBusiness` em `usePublicBusinesses.ts` para incluir `claim_status`
 
 ---
 
-## Bug 3 — Pedidos: Enum `match_status` com valores errados
+## Bug 2 — Pesquisa autocomplete: relevância invertida
 
-**Problema:** O enum `match_status` na DB aceita: `enviado`, `visualizado`, `em_conversa`, `orcamento_enviado`, `aceite`, `recusado`, `expirado`, `sem_resposta`. O código em `BusinessRequestsContent.tsx` já usa `"aceite"` e `"recusado"` correctamente (linhas 310, 433, 449). O erro na screenshot ("invalid input value for enum match_status: 'rejected'") sugere que havia um bug anterior que já foi corrigido no código actual.
+**Causa raiz:** Em `useSearch.ts` linha 33, a ordenação `(a, b) => a.relevance - b.relevance` é ascendente. A RPC `search_businesses_and_subcategories` usa relevância 1 = melhor match, então a ordenação ascendente está **correcta**. No entanto, o limite `slice(0, 10)` pode cortar resultados legítimos. O autocomplete parece funcional — a questão pode ser que os dados não estão na DB ou o RPC não devolve resultados por causa de RLS na tabela `businesses` que bloqueia `anon` SELECT.
 
-**Acção:** Pesquisar todo o codebase por usos de `"rejected"`, `"accepted"`, `"expired"`, `"no_response"` em contexto de match_status para garantir que não restam usos em inglês.
+**Investigação adicional:** A migration anterior bloqueou `anon` SELECT na tabela `businesses` com `USING (false)`. O RPC `search_businesses_and_subcategories` é `SECURITY INVOKER` por defeito, logo quando executado por utilizadores anónimos, a query interna `FROM businesses b WHERE b.is_active = true` devolve **zero linhas** porque o RLS bloqueia.
 
-**Ficheiros a verificar:** Hooks, componentes admin, edge functions.
-
----
-
-## Bug 4 — Orçamentos: Tabelas não existem na DB
-
-**Problema:** As tabelas `business_quotes`, `business_quote_items` e a função `generate_quote_number` não existem na base de dados. O código tenta inserir nelas e falha.
-
-**Correcção:** Criar migração SQL com:
-1. Tabela `business_quotes` (id, business_id, number, client_name, client_email, client_phone, notes, validity_days, iva_rate, subtotal, iva_amount, total, status, created_at, updated_at)
-2. Tabela `business_quote_items` (id, quote_id FK, description, quantity, unit_price, total, sort_order)
-3. Função `generate_quote_number(p_business_id uuid)` que gera números sequenciais (#001, #002, etc.)
-4. RLS policies para permitir que business owners/managers possam CRUD nos seus orçamentos
-5. Enable RLS em ambas as tabelas
+**Correcção:** Recriar a função `search_businesses_and_subcategories` com `SECURITY DEFINER` para que possa ler a tabela `businesses` internamente, mantendo a segurança (a função só devolve nome, slug e categoria — sem PII).
 
 ---
 
-## Bug 5 — Chave API: "Selecciona um negócio" mesmo com negócio seleccionado
+## Bug 3 — Negócios desaparecem no mobile (e possivelmente desktop)
 
-**Problema:** Em `StudioSettingsPage.tsx`, o `selectedBusiness` vem do `useStudioContext()`. No `StudioLayout.tsx`, quando há apenas 1 negócio, `effectiveId` é atribuído automaticamente (`businesses[0].id`), mas `selectedId` permanece `""`. O `selectedBusiness` é derivado correctamente de `effectiveId`, por isso deveria funcionar.
+**Causa raiz:** Mesmo problema do Bug 2. A view `businesses_public` e os hooks `usePublicBusinesses` fazem queries à view que internamente acede à tabela `businesses`. Se o RLS da tabela base bloqueia `anon` SELECT com `USING (false)`, a view (que tem `security_invoker=on`) também devolve zero linhas para utilizadores não autenticados.
 
-O problema real é que `selectedBusiness` pode ser `null` se o utilizador tem múltiplos negócios e não seleccionou nenhum explicitamente. A validação em `handleVerifyAndSave` (linha 95) está correcta — verifica `selectedBusiness?.id`.
+**Correcção:** Na mesma migração, garantir que a política RLS da tabela `businesses` permite SELECT via view `businesses_public`. Opções:
+- Adicionar uma policy que permita SELECT para `anon` apenas das colunas expostas na view (não é possível por coluna em RLS)
+- **Melhor opção:** Remover a policy `USING (false)` e substituir por uma que permita SELECT de linhas `is_active = true` (a view já filtra isso). A PII continua protegida porque a view não expõe essas colunas, e o acesso directo à tabela por API está bloqueado pela view ser o ponto de entrada.
 
-**Correcção:** No modal de onboarding (step 2), se `selectedBusiness` é null, mostrar um aviso inline a pedir para seleccionar o negócio no topo, em vez de só falhar ao clicar "Verificar e guardar". Também garantir que a chave fica persistida na tabela `business_api_keys` (que já existe na DB) e que após guardar com sucesso, ao reabrir o Studio Settings, a chave guardada é detectada e mostrada (isto já funciona via `useBusinessApiKey`).
+Nota: o scan de segurança anterior adicionou `USING (false)` para proteger PII, mas isso quebrou o acesso público legítimo. A solução correcta é permitir SELECT público com `is_active = true` e confiar na view para esconder PII.
+
+---
+
+## Bug 4 — Templates de mensagem: "Erro ao criar template"
+
+**Causa raiz:** A tabela `message_templates` **não existe** na base de dados. O código tenta inserir nela e falha.
+
+**Correcção:** Criar migração SQL com a tabela `message_templates`:
+- Colunas: `id` (uuid PK), `name` (text NOT NULL), `message_type` (text NOT NULL), `subcategory` (text), `content` (text NOT NULL), `created_at`, `updated_at`
+- RLS habilitado com policies para admin/staff
 
 ---
 
 ## Resumo de Alterações
 
-| # | Ficheiros | Tipo |
-|---|-----------|------|
-| 1 | Nenhum (sistema gerido) | — |
-| 2 | `HomepageContent.tsx` | Fix validação JSON |
-| 3 | Pesquisa global + correcções pontuais | Fix enum values |
-| 4 | Nova migração SQL | Criar tabelas de orçamentos |
-| 5 | `StudioSettingsPage.tsx` | Fix UX selecção de negócio |
+| Bug | Ficheiro(s) | Tipo |
+|-----|-------------|------|
+| 1 | Migração SQL + `BusinessPage.tsx` + `usePublicBusinesses.ts` | View + condição |
+| 2 | Migração SQL (recriar RPC como SECURITY DEFINER) | RLS/RPC fix |
+| 3 | Migração SQL (policy businesses SELECT) | RLS fix |
+| 4 | Migração SQL (criar tabela message_templates) | Tabela nova |
+
+Todos os fixes na mesma migração SQL. Código frontend alterado em 2 ficheiros apenas.
 
