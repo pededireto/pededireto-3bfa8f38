@@ -12,10 +12,10 @@ interface Props {
 }
 
 const defaults: Metric[] = [
-  { enabled: true, label: "Negócios listados", value: "500", suffix: "+" },
-  { enabled: true, label: "Cidades cobertas", value: "50", suffix: "+" },
-  { enabled: true, label: "Categorias", value: "30", suffix: "" },
-  { enabled: true, label: "Comissões", value: "0€", suffix: "" },
+  { enabled: true, label: "negócios registados", value: "businesses", suffix: "+" },
+  { enabled: true, label: "cidades cobertas", value: "cities", suffix: "+" },
+  { enabled: true, label: "categorias de serviços", value: "categories", suffix: "+" },
+  { enabled: true, label: "grátis para consumidores", value: "100%", suffix: "" },
 ];
 
 const PlatformStatsBlockForm = ({ config, onChange }: Props) => {
@@ -31,11 +31,14 @@ const PlatformStatsBlockForm = ({ config, onChange }: Props) => {
   return (
     <div className="space-y-4">
       <Label className="text-sm font-medium">Métricas (mín 2, máx 4)</Label>
+      <p className="text-xs text-muted-foreground">
+        Valores especiais: <code className="bg-muted px-1 rounded">businesses</code>, <code className="bg-muted px-1 rounded">cities</code>, <code className="bg-muted px-1 rounded">categories</code> — lêem os números reais da base de dados automaticamente.
+      </p>
       {metrics.map((m, i) => (
         <div key={i} className="flex items-center gap-2 p-2 border rounded-lg">
           <Switch checked={m.enabled} onCheckedChange={v => updateMetric(i, "enabled", v)} />
           <Input className="flex-1" value={m.label} onChange={e => updateMetric(i, "label", e.target.value)} placeholder="Label" />
-          <Input className="w-20" value={m.value} onChange={e => updateMetric(i, "value", e.target.value)} placeholder="Valor" />
+          <Input className="w-24" value={m.value} onChange={e => updateMetric(i, "value", e.target.value)} placeholder="businesses" />
           <Input className="w-16" value={m.suffix} onChange={e => updateMetric(i, "suffix", e.target.value)} placeholder="+" />
           {metrics.length > 2 && (
             <Button size="icon" variant="ghost" onClick={() => setMetrics(metrics.filter((_, j) => j !== i))}>

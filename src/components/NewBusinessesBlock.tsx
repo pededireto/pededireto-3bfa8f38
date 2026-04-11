@@ -1,25 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { Building2, MapPin, Sparkles, Loader2 } from "lucide-react";
+import { Building2, MapPin, Sparkles, Loader2, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface NewBusinessesBlockProps {
   config?: {
     limite?: number;
     titulo_secao?: string;
-  };
+    titulo?: string;
+    show_more?: boolean;
+    ordenacao?: string;
+  } | null;
   title?: string | null;
 }
 
 const NewBusinessesBlock = ({ config, title }: NewBusinessesBlockProps) => {
-  const limite = config?.limite || 3;
-  const tituloSecao = title || config?.titulo_secao || "Novos na Plataforma";
+  const limite = config?.limite || 6;
+  const tituloSecao = title || config?.titulo || config?.titulo_secao || "Novos na Plataforma";
+  const showMore = config?.show_more !== false;
+  const ordenacao = config?.ordenacao || "recentes";
 
   const { data: businesses = [], isLoading } = useQuery({
-    queryKey: ["new-businesses", limite],
+    queryKey: ["new-businesses", limite, ordenacao],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("businesses")
         .select(`
           id,
@@ -29,14 +35,21 @@ const NewBusinessesBlock = ({ config, title }: NewBusinessesBlockProps) => {
           description,
           logo_url,
           created_at,
+          ranking_score,
           categories (
             name,
             slug
           )
         `)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(limite);
+        .eq("is_active", true);
+
+      if (ordenacao === "melhor_avaliados") {
+        query = query.order("ranking_score", { ascending: false, nullsFirst: false });
+      } else {
+        query = query.order("created_at", { ascending: false });
+      }
+
+      const { data, error } = await query.limit(limite);
 
       if (error) throw error;
       return data || [];
@@ -129,6 +142,16 @@ const NewBusinessesBlock = ({ config, title }: NewBusinessesBlockProps) => {
             </Link>
           ))}
         </div>
+
+        {showMore && (
+          <div className="flex justify-center mt-8">
+            <Button asChild variant="outline" size="lg" className="rounded-xl">
+              <Link to="/pesquisa?ordem=recentes">
+                Ver mais negócios <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

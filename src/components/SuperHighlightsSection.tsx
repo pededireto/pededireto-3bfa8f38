@@ -4,10 +4,16 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Crown, MessageCircle, Phone, ExternalLink } from "lucide-react";
 
-const SuperHighlightsSection = () => {
+interface SuperHighlightsSectionProps {
+  config?: Record<string, any> | null;
+}
+
+const SuperHighlightsSection = ({ config }: SuperHighlightsSectionProps) => {
   const { data: settings } = useSiteSettings();
   const enabled = settings?.super_highlights_enabled !== "false";
-  const limit = parseInt(settings?.super_highlights_limit || "6", 10);
+  const limit = config?.max_items || parseInt(settings?.super_highlights_limit || "6", 10);
+  const titulo = config?.titulo || "Super Destaques";
+  const mostrarBadge = config?.mostrar_badge !== false;
   const { data: highlights = [], isLoading } = useSuperHighlights(limit);
 
   if (!enabled || (!isLoading && highlights.length === 0)) return null;
@@ -17,8 +23,7 @@ const SuperHighlightsSection = () => {
       <section className="py-12 bg-gradient-to-b from-primary/5 to-transparent">
         <div className="container">
           <div className="flex items-center gap-3 mb-8">
-            <Crown className="w-6 h-6 text-accent" />
-            <h2 className="text-2xl md:text-3xl font-bold">Super Destaques</h2>
+             <h2 className="text-2xl md:text-3xl font-bold">{titulo}</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
@@ -41,7 +46,7 @@ const SuperHighlightsSection = () => {
       <div className="container">
         <div className="flex items-center gap-3 mb-8">
           <Crown className="w-6 h-6 text-accent" />
-          <h2 className="text-2xl md:text-3xl font-bold">Super Destaques</h2>
+          <h2 className="text-2xl md:text-3xl font-bold">{titulo}</h2>
           <span className="text-muted-foreground">Os melhores da plataforma</span>
         </div>
 

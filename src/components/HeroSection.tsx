@@ -50,7 +50,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const { data: searchResults = [], isLoading: searchLoading } = useSearch(searchTerm);
   const { data: settings } = useSiteSettings();
   const autoSaveSearch = useAutoSaveSearch();
-  const { data: dynamicCities = [] } = useCities(15);
+  const { data: dynamicCities = [] } = useCities(50);
   const { city: detectedCity, isDetecting, hasAsked, detectLocation, setManualCity, clearCity } = useUserLocation();
 
   const searchRef = useRef<HTMLDivElement>(null);
@@ -71,11 +71,16 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const trustBadges =
     config?.trust_badges && config.trust_badges.length > 0 ? config.trust_badges : DEFAULT_TRUST_BADGES;
   const mostrarPesquisa = config?.mostrar_pesquisa !== false; // default true
+  const tamanhoPesquisa = config?.tamanho_pesquisa || "grande";
+  const searchHeight = tamanhoPesquisa === "pequena" ? "h-10" : tamanhoPesquisa === "media" ? "h-12" : "h-14";
+  const searchTextSize = tamanhoPesquisa === "pequena" ? "text-sm" : tamanhoPesquisa === "media" ? "text-base" : "text-base";
   const ctaPrimarioTexto = config?.cta_primario_texto || "Pedir Orçamento Gratuito";
   const ctaSecundarioTexto = config?.cta_secundario_texto || "Sou profissional";
   const ctaSecundarioLink = config?.cta_secundario_link || "/claim-business";
-  const mediaType = config?.media_type || (settings?.hero_video_url ? "video" : "sem_media");
-  const mediaImageUrl = config?.imagem_url || null;
+  // Media: config overrides → then site settings
+  const settingsMediaType = settings?.hero_media_type === "video" ? "video" : (settings?.mascot_enabled === "true" && settings?.mascot_url ? "image" : "sem_media");
+  const mediaType = config?.media_type || settingsMediaType;
+  const mediaImageUrl = config?.imagem_url || (mediaType === "image" ? settings?.mascot_url : null) || null;
   const mediaVideoUrl = config?.video_url || settings?.hero_video_url || null;
 
   // CTA primário: config → fallback baseado em auth
@@ -153,11 +158,11 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const renderRightPanel = () => {
     if (mediaType === "image" && mediaImageUrl) {
       return (
-        <div className="hidden lg:flex items-center justify-center" aria-hidden="true">
+      <div className="hidden lg:flex items-center justify-center h-full" aria-hidden="true">
           <img
             src={mediaImageUrl}
             alt="Hero visual"
-            className="rounded-2xl shadow-xl object-cover max-h-[520px] w-full"
+            className="rounded-2xl shadow-xl object-contain max-h-[580px] w-auto max-w-full"
           />
         </div>
       );
@@ -267,7 +272,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
                       type="text"
                       value={searchTerm}
                       placeholder={`Procurar ${PLACEHOLDER_WORDS[placeholderIndex]}...`}
-                      className="w-full h-14 pl-12 pr-4 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none text-base"
+                      className={`w-full ${searchHeight} pl-12 pr-4 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none ${searchTextSize}`}
                       aria-autocomplete="list"
                       aria-expanded={showResults}
                       aria-controls="search-results"
@@ -304,7 +309,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
                     <button
                       type="button"
                       onClick={() => setShowCityDropdown((v) => !v)}
-                      className="flex items-center gap-2 h-14 px-4 hover:bg-accent/30 transition-colors w-full sm:w-auto whitespace-nowrap"
+                      className={`flex items-center gap-2 ${searchHeight} px-4 hover:bg-accent/30 transition-colors w-full sm:w-auto whitespace-nowrap`}
                       aria-expanded={showCityDropdown}
                       aria-haspopup="listbox"
                     >
@@ -352,7 +357,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
                   {/* Submit */}
                   <Button
                     type="submit"
-                    className="h-14 px-6 rounded-none sm:rounded-r-2xl sm:rounded-l-none bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base shrink-0"
+                    className={`${searchHeight} px-6 rounded-none sm:rounded-r-2xl sm:rounded-l-none bg-primary hover:bg-primary/90 text-primary-foreground font-bold ${searchTextSize} shrink-0`}
                   >
                     Encontrar agora
                   </Button>
