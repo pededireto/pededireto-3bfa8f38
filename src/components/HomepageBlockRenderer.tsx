@@ -32,7 +32,7 @@ const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBl
     case "hero":
       return <HeroSection searchTerm={searchTerm} onSearchChange={onSearchChange} config={block.config} />;
     case "super_destaques":
-      return <SuperHighlightsSection />;
+      return <SuperHighlightsSection config={block.config} />;
     case "featured_categories":
       return <FeaturedCategoriesSection />;
     case "categorias":
@@ -50,7 +50,7 @@ const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBl
     case "categorias_accordion":
       return <CategoryAccordion />;
     case "platform_stats":
-      return <PlatformStats />;
+      return <PlatformStats config={block.config} />;
     case "how_it_works":
       return <HowItWorks />;
     case "business_cta":
