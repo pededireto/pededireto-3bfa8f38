@@ -71,6 +71,9 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const trustBadges =
     config?.trust_badges && config.trust_badges.length > 0 ? config.trust_badges : DEFAULT_TRUST_BADGES;
   const mostrarPesquisa = config?.mostrar_pesquisa !== false; // default true
+  const tamanhoPesquisa = config?.tamanho_pesquisa || "grande";
+  const searchHeight = tamanhoPesquisa === "pequena" ? "h-10" : tamanhoPesquisa === "media" ? "h-12" : "h-14";
+  const searchTextSize = tamanhoPesquisa === "pequena" ? "text-sm" : tamanhoPesquisa === "media" ? "text-base" : "text-base";
   const ctaPrimarioTexto = config?.cta_primario_texto || "Pedir Orçamento Gratuito";
   const ctaSecundarioTexto = config?.cta_secundario_texto || "Sou profissional";
   const ctaSecundarioLink = config?.cta_secundario_link || "/claim-business";
