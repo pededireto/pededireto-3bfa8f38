@@ -11,6 +11,7 @@ const INFO: Record<string, string> = {
   novos_negocios: "Mostra os negócios mais recentemente registados.",
   banner: "Banner livre com imagem, texto e botão de acção.",
   negocios_premium: "Secção de negócios premium em destaque.",
+  business_cta: "Bloco de chamada para negócios locais. Ideal para explicar benefícios e mostrar botões de adesão.",
   destaques: "Secção de destaques da plataforma.",
   featured_categories: "Categorias em destaque na homepage.",
   super_destaques: "Super destaques — os negócios com maior visibilidade.",

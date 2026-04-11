@@ -11,6 +11,7 @@ import ServicosRapidosBlockForm from "./ServicosRapidosBlockForm";
 import SocialProofBlockForm from "./SocialProofBlockForm";
 import BannerBlockForm from "./BannerBlockForm";
 import NovosNegociosBlockForm from "./NovosNegociosBlockForm";
+import BusinessCtaBlockForm from "./BusinessCtaBlockForm";
 import GenericBlockForm from "./GenericBlockForm";
 import TextoBlockForm from "./TextoBlockForm";
 
@@ -37,6 +38,7 @@ const BlockFormRenderer = ({ type, config, onChange, configJson, onConfigJsonCha
       case "servicos_rapidos": return <ServicosRapidosBlockForm config={config} onChange={onChange} />;
       case "social_proof": return <SocialProofBlockForm config={config} onChange={onChange} />;
       case "banner": return <BannerBlockForm config={config} onChange={onChange} />;
+      case "business_cta": return <BusinessCtaBlockForm config={config} onChange={onChange} />;
       case "novos_negocios": return <NovosNegociosBlockForm config={config} onChange={onChange} />;
       case "texto": return <TextoBlockForm config={config} onChange={onChange} />;
       default:
