@@ -22,9 +22,9 @@ const NewBusinessesBlock = ({ config, title }: NewBusinessesBlockProps) => {
   const ordenacao = config?.ordenacao || "recentes";
 
   const { data: businesses = [], isLoading } = useQuery({
-    queryKey: ["new-businesses", limite],
+    queryKey: ["new-businesses", limite, ordenacao],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("businesses")
         .select(`
           id,
@@ -34,14 +34,21 @@ const NewBusinessesBlock = ({ config, title }: NewBusinessesBlockProps) => {
           description,
           logo_url,
           created_at,
+          ranking_score,
           categories (
             name,
             slug
           )
         `)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(limite);
+        .eq("is_active", true);
+
+      if (ordenacao === "melhor_avaliados") {
+        query = query.order("ranking_score", { ascending: false, nullsFirst: false });
+      } else {
+        query = query.order("created_at", { ascending: false });
+      }
+
+      const { data, error } = await query.limit(limite);
 
       if (error) throw error;
       return data || [];
