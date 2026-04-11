@@ -23,8 +23,7 @@ const SuperHighlightsSection = ({ config }: SuperHighlightsSectionProps) => {
       <section className="py-12 bg-gradient-to-b from-primary/5 to-transparent">
         <div className="container">
           <div className="flex items-center gap-3 mb-8">
-            <Crown className="w-6 h-6 text-accent" />
-            <h2 className="text-2xl md:text-3xl font-bold">Super Destaques</h2>
+             <h2 className="text-2xl md:text-3xl font-bold">{titulo}</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
@@ -47,7 +46,7 @@ const SuperHighlightsSection = ({ config }: SuperHighlightsSectionProps) => {
       <div className="container">
         <div className="flex items-center gap-3 mb-8">
           <Crown className="w-6 h-6 text-accent" />
-          <h2 className="text-2xl md:text-3xl font-bold">Super Destaques</h2>
+          <h2 className="text-2xl md:text-3xl font-bold">{titulo}</h2>
           <span className="text-muted-foreground">Os melhores da plataforma</span>
         </div>
 
