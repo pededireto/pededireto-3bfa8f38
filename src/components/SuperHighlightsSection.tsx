@@ -4,10 +4,16 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Crown, MessageCircle, Phone, ExternalLink } from "lucide-react";
 
-const SuperHighlightsSection = () => {
+interface SuperHighlightsSectionProps {
+  config?: Record<string, any> | null;
+}
+
+const SuperHighlightsSection = ({ config }: SuperHighlightsSectionProps) => {
   const { data: settings } = useSiteSettings();
   const enabled = settings?.super_highlights_enabled !== "false";
-  const limit = parseInt(settings?.super_highlights_limit || "6", 10);
+  const limit = config?.max_items || parseInt(settings?.super_highlights_limit || "6", 10);
+  const titulo = config?.titulo || "Super Destaques";
+  const mostrarBadge = config?.mostrar_badge !== false;
   const { data: highlights = [], isLoading } = useSuperHighlights(limit);
 
   if (!enabled || (!isLoading && highlights.length === 0)) return null;
