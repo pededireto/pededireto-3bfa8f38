@@ -12,10 +12,10 @@ interface Props {
 }
 
 const defaults: Metric[] = [
-  { enabled: true, label: "Negócios listados", value: "500", suffix: "+" },
-  { enabled: true, label: "Cidades cobertas", value: "50", suffix: "+" },
-  { enabled: true, label: "Categorias", value: "30", suffix: "" },
-  { enabled: true, label: "Comissões", value: "0€", suffix: "" },
+  { enabled: true, label: "negócios registados", value: "businesses", suffix: "+" },
+  { enabled: true, label: "cidades cobertas", value: "cities", suffix: "+" },
+  { enabled: true, label: "categorias de serviços", value: "categories", suffix: "+" },
+  { enabled: true, label: "grátis para consumidores", value: "100%", suffix: "" },
 ];
 
 const PlatformStatsBlockForm = ({ config, onChange }: Props) => {
