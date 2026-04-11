@@ -8,13 +8,18 @@ interface NewBusinessesBlockProps {
   config?: {
     limite?: number;
     titulo_secao?: string;
-  };
+    titulo?: string;
+    show_more?: boolean;
+    ordenacao?: string;
+  } | null;
   title?: string | null;
 }
 
 const NewBusinessesBlock = ({ config, title }: NewBusinessesBlockProps) => {
-  const limite = config?.limite || 3;
-  const tituloSecao = title || config?.titulo_secao || "Novos na Plataforma";
+  const limite = config?.limite || 6;
+  const tituloSecao = title || config?.titulo || config?.titulo_secao || "Novos na Plataforma";
+  const showMore = config?.show_more !== false;
+  const ordenacao = config?.ordenacao || "recentes";
 
   const { data: businesses = [], isLoading } = useQuery({
     queryKey: ["new-businesses", limite],
