@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { Building2, MapPin, Sparkles, Loader2 } from "lucide-react";
+import { Building2, MapPin, Sparkles, Loader2, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface NewBusinessesBlockProps {
   config?: {
@@ -141,6 +142,16 @@ const NewBusinessesBlock = ({ config, title }: NewBusinessesBlockProps) => {
             </Link>
           ))}
         </div>
+
+        {showMore && (
+          <div className="flex justify-center mt-8">
+            <Button asChild variant="outline" size="lg" className="rounded-xl">
+              <Link to="/pesquisa?ordem=recentes">
+                Ver mais negócios <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );
