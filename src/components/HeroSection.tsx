@@ -272,7 +272,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
                       type="text"
                       value={searchTerm}
                       placeholder={`Procurar ${PLACEHOLDER_WORDS[placeholderIndex]}...`}
-                      className="w-full h-14 pl-12 pr-4 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none text-base"
+                      className={`w-full ${searchHeight} pl-12 pr-4 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none ${searchTextSize}`}
                       aria-autocomplete="list"
                       aria-expanded={showResults}
                       aria-controls="search-results"
@@ -309,7 +309,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
                     <button
                       type="button"
                       onClick={() => setShowCityDropdown((v) => !v)}
-                      className="flex items-center gap-2 h-14 px-4 hover:bg-accent/30 transition-colors w-full sm:w-auto whitespace-nowrap"
+                      className={`flex items-center gap-2 ${searchHeight} px-4 hover:bg-accent/30 transition-colors w-full sm:w-auto whitespace-nowrap`}
                       aria-expanded={showCityDropdown}
                       aria-haspopup="listbox"
                     >
@@ -357,7 +357,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
                   {/* Submit */}
                   <Button
                     type="submit"
-                    className="h-14 px-6 rounded-none sm:rounded-r-2xl sm:rounded-l-none bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base shrink-0"
+                    className={`${searchHeight} px-6 rounded-none sm:rounded-r-2xl sm:rounded-l-none bg-primary hover:bg-primary/90 text-primary-foreground font-bold ${searchTextSize} shrink-0`}
                   >
                     Encontrar agora
                   </Button>
