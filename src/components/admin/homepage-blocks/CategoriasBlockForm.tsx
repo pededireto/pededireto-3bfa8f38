@@ -91,7 +91,6 @@ const CategoriasBlockForm = ({ config, onChange }: Props) => {
             {categories.map(cat => (
               <label key={cat.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer hover:bg-accent/50 rounded px-1">
                 <Checkbox checked={selected.includes(cat.id)} onCheckedChange={() => toggleCat(cat.id)} />
-                {cat.icon && <span>{cat.icon}</span>}
                 <span className="truncate">{cat.name}</span>
               </label>
             ))}

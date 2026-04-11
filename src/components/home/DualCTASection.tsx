@@ -10,20 +10,32 @@ interface DualCTASectionProps {
 const DualCTASection = ({ config }: DualCTASectionProps) => {
   const { user } = useAuth();
 
+  const normalizeBullets = (value: unknown, fallback: string[]) => {
+    if (Array.isArray(value)) {
+      const cleaned = value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+      return cleaned.length ? cleaned : fallback;
+    }
+    return fallback;
+  };
+
+  const leftBadge = config?.left_badge || "Para quem procura";
   const leftTitle = config?.left_title || "Encontra rapidamente quem resolve";
-  const leftBullets = config?.left_bullets || ["Profissionais perto de ti", "Contacto direto", "Sem complicações"];
+  const leftBullets = normalizeBullets(config?.left_bullets, ["Profissionais perto de ti", "Contacto direto", "Sem complicações"]);
   const leftCtaText = config?.left_cta_text || "Encontrar serviço →";
   const leftCtaLink = config?.left_cta_link || "/top";
+  const leftImage = config?.left_image || null;
 
+  const rightBadge = config?.right_badge || "Para empresas";
   const rightTitle = config?.right_title || "Estão à tua procura. Vais aparecer?";
   const rightSubtitle = config?.right_subtitle || "Clientes entram todos os dias à procura de profissionais como tu.";
-  const rightBullets = config?.right_bullets || ["Mais visibilidade", "Mais contactos", "Mais clientes"];
+  const rightBullets = normalizeBullets(config?.right_bullets, ["Mais visibilidade", "Mais contactos", "Mais clientes"]);
   const rightCta1Text = config?.right_cta1_text || "Encontrar o meu negócio";
   const rightCta1Link = config?.right_cta1_link || "/claim-business";
   const rightCta2Text = config?.right_cta2_text || "Criar perfil grátis";
   const rightCta2Link = config?.right_cta2_link || "/register";
+  const rightImage = config?.right_image || null;
 
-  const quoteCTALink = user ? "/pedir-servico" : "/register";
+  const resolvedRightCta2Link = config?.right_cta2_link || (user ? "/pedir-servico" : "/register");
 
   return (
     <section className="py-14 md:py-20 bg-muted/30">
@@ -31,7 +43,12 @@ const DualCTASection = ({ config }: DualCTASectionProps) => {
         <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
           {/* Left — Consumer */}
           <div className="rounded-2xl bg-primary p-8 md:p-10 text-primary-foreground flex flex-col">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/60 mb-3">Para quem procura</p>
+            {leftImage && (
+              <div className="mb-6 overflow-hidden rounded-2xl border border-primary-foreground/15">
+                <img src={leftImage} alt={leftTitle} className="h-44 w-full object-cover" loading="lazy" />
+              </div>
+            )}
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/60 mb-3">{leftBadge}</p>
             <h3 className="text-xl md:text-2xl font-bold mb-4">{leftTitle}</h3>
             <ul className="space-y-2 mb-8 flex-1">
               {leftBullets.map((b: string) => (
@@ -47,7 +64,12 @@ const DualCTASection = ({ config }: DualCTASectionProps) => {
 
           {/* Right — Business */}
           <div className="rounded-2xl bg-card border border-border p-8 md:p-10 flex flex-col shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Para empresas</p>
+            {rightImage && (
+              <div className="mb-6 overflow-hidden rounded-2xl border border-border">
+                <img src={rightImage} alt={rightTitle} className="h-44 w-full object-cover" loading="lazy" />
+              </div>
+            )}
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">{rightBadge}</p>
             <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2">{rightTitle}</h3>
             <p className="text-sm text-muted-foreground mb-4">{rightSubtitle}</p>
             <ul className="space-y-2 mb-8 flex-1">
@@ -64,7 +86,7 @@ const DualCTASection = ({ config }: DualCTASectionProps) => {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="rounded-xl font-semibold">
-                <Link to={rightCta2Link}>{rightCta2Text}</Link>
+                <Link to={resolvedRightCta2Link}>{rightCta2Text}</Link>
               </Button>
             </div>
           </div>

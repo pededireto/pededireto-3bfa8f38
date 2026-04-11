@@ -34,9 +34,9 @@ const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBl
     case "super_destaques":
       return <SuperHighlightsSection config={block.config} />;
     case "featured_categories":
-      return <FeaturedCategoriesSection />;
+      return <FeaturedCategoriesSection config={block.config} />;
     case "categorias":
-      return <CategoriesGrid categories={categories} isLoading={categoriesLoading} />;
+      return <CategoriesGrid categories={categories} isLoading={categoriesLoading} config={block.config} />;
     case "destaques":
       return <FeaturedSection businesses={featuredBusinesses} isLoading={featuredLoading} />;
     case "banner":
@@ -54,7 +54,7 @@ const HomepageBlockRenderer = ({ block, searchTerm, onSearchChange }: HomepageBl
     case "how_it_works":
       return <HowItWorks />;
     case "business_cta":
-      return <BusinessCTA />;
+      return <BusinessCTA config={block.config} />;
     case "dual_cta":
       return <DualCTASection config={block.config} />;
     case "social_proof":

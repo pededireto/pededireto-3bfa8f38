@@ -3,6 +3,10 @@ import { useFeaturedCategories } from "@/hooks/useFeaturedCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRef, useEffect } from "react";
 
+interface FeaturedCategoriesSectionProps {
+  config?: Record<string, any> | null;
+}
+
 const BENTO_PATTERN: Array<"normal" | "tall" | "wide"> = [
   "wide",
   "tall",
@@ -110,16 +114,26 @@ const CategoryMedia = ({
   );
 };
 
-const FeaturedCategoriesSection = () => {
+const FeaturedCategoriesSection = ({ config }: FeaturedCategoriesSectionProps) => {
   const { data: featured = [], isLoading } = useFeaturedCategories();
 
-  if (!isLoading && featured.length === 0) return null;
+  const title = config?.titulo || "Encontre por categoria";
+  const subtitle = config?.subtitulo || "Escolha a área de negócio que procura";
+  const maxItems = Math.max(1, Number(config?.max_items) || 8);
+  const selectedIds = Array.isArray(config?.selected_categories) ? config.selected_categories : [];
+
+  const visibleFeatured = (selectedIds.length
+    ? featured.filter((item) => item.category_id && selectedIds.includes(item.category_id))
+    : featured
+  ).slice(0, maxItems);
+
+  if (!isLoading && visibleFeatured.length === 0) return null;
 
   return (
     <section id="categorias" className="py-10 md:py-16 bg-secondary/30">
       <div className="container mx-auto px-4">
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2 text-center">Encontre por categoria</h2>
-        <p className="text-muted-foreground text-center mb-8">Escolha a área de negócio que procura</p>
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2 text-center">{title}</h2>
+        <p className="text-muted-foreground text-center mb-8">{subtitle}</p>
 
         {isLoading ? (
           <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(4, 1fr)", gridAutoRows: "180px" }}>
@@ -139,7 +153,7 @@ const FeaturedCategoriesSection = () => {
           </div>
         ) : (
           <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(4, 1fr)", gridAutoRows: "180px" }}>
-            {featured.map((fc, index) => {
+            {visibleFeatured.map((fc, index) => {
               const pattern = BENTO_PATTERN[index % BENTO_PATTERN.length];
               const isWide = pattern === "wide";
               const isTall = pattern === "tall";

@@ -82,6 +82,14 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const mediaType = config?.media_type || settingsMediaType;
   const mediaImageUrl = config?.imagem_url || (mediaType === "image" ? settings?.mascot_url : null) || null;
   const mediaVideoUrl = config?.video_url || settings?.hero_video_url || null;
+  const searchWidthClass =
+    tamanhoPesquisa === "pequena"
+      ? "lg:max-w-xl"
+      : tamanhoPesquisa === "media"
+        ? "lg:max-w-[46rem]"
+        : mediaType !== "sem_media"
+          ? "lg:w-[calc(100%+8rem)] xl:w-[calc(100%+10rem)]"
+          : "lg:max-w-[56rem]";
 
   // CTA primário: config → fallback baseado em auth
   const quoteCTALink = config?.cta_primario_link || (user ? "/pedir-servico" : "/register");
@@ -240,7 +248,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
       <div className="container">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           {/* LEFT */}
-          <div className="space-y-6 max-w-xl">
+          <div className="space-y-6 lg:pr-8">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -258,7 +266,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
 
             {/* Search bar */}
             {mostrarPesquisa && (
-              <form onSubmit={handleSubmit} role="search" className="space-y-3">
+              <form onSubmit={handleSubmit} role="search" className={`relative z-10 w-full space-y-3 ${searchWidthClass}`}>
                 <div className="flex flex-col sm:flex-row bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
                   {/* Search input */}
                   <div className="relative flex-1" ref={searchRef}>

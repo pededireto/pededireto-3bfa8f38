@@ -11,6 +11,7 @@ const INFO: Record<string, string> = {
   novos_negocios: "Mostra os negócios mais recentemente registados.",
   banner: "Banner livre com imagem, texto e botão de acção.",
   negocios_premium: "Secção de negócios premium em destaque.",
+  business_cta: "Bloco de chamada para negócios locais. Ideal para explicar benefícios e mostrar botões de adesão.",
   destaques: "Secção de destaques da plataforma.",
   featured_categories: "Categorias em destaque na homepage.",
   super_destaques: "Super destaques — os negócios com maior visibilidade.",
@@ -25,8 +26,8 @@ const BlockInfoBanner = ({ type }: Props) => {
   const text = INFO[type];
   if (!text) return null;
   return (
-    <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-sm text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-      <Info className="h-4 w-4 mt-0.5 shrink-0" />
+    <div className="flex items-start gap-2 rounded-lg border border-primary/15 bg-primary/5 p-3 text-sm text-foreground">
+      <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
       <span>{text}</span>
     </div>
   );

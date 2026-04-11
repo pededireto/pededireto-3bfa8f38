@@ -22,6 +22,7 @@ import {
 interface CategoriesGridProps {
   categories: Category[];
   isLoading?: boolean;
+  config?: Record<string, any> | null;
 }
 
 const iconMap: Record<string, LucideIcon> = {
@@ -439,16 +440,17 @@ const CategoryCard = ({
   pattern,
   desktopPattern,
   businessCount,
+  displayMode = "misto",
 }: {
   category: Category;
   onOpen: () => void;
   pattern: "normal" | "wide";
   desktopPattern?: "normal" | "wide";
   businessCount?: number;
+  displayMode?: "fotos" | "icones" | "misto";
 }) => {
   const IconComponent = iconMap[category.icon || "Briefcase"] || Briefcase;
-  // Cards da grelha: apenas imagem, nunca vídeo
-  const hasMedia = !!category.image_url;
+  const hasMedia = displayMode !== "icones" && !!category.image_url;
   const isDesktopWide = desktopPattern === "wide";
 
   return (
@@ -495,19 +497,42 @@ const CategoryCard = ({
 };
 
 // ─── Grid principal ───────────────────────────────────────────────────────────
-const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
+const CategoriesGrid = ({ categories, isLoading, config }: CategoriesGridProps) => {
   const [modalIndex, setModalIndex] = useState<number | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const { data: counts } = useCategoryCounts();
+
+  const title = config?.titulo || "Encontre por categoria";
+  const subtitle = config?.subtitulo || "Escolha a área de negócio que procura";
+  const displayMode = (config?.modo || "misto") as "fotos" | "icones" | "misto";
+  const maxVisible = Math.max(1, Number(config?.max_visible) || 6);
+  const showMoreEnabled = config?.mostrar_ver_mais !== false;
+  const showMoreText = config?.texto_ver_mais || "Ver todas as categorias";
+  const selectedIds = Array.isArray(config?.selected_categories) ? config.selected_categories : [];
+  const colsMobile = Number(config?.cols_mobile) === 3 ? 3 : 2;
+  const colsDesktop = [3, 4, 6].includes(Number(config?.cols_desktop)) ? Number(config?.cols_desktop) : 3;
+
+  const filteredCategories = selectedIds.length
+    ? categories.filter((category) => selectedIds.includes(category.id))
+    : categories;
+
+  const visibleCategories = showAll ? filteredCategories : filteredCategories.slice(0, maxVisible);
+  const mobileGridClass = colsMobile === 3 ? "grid-cols-3" : "grid-cols-2";
+  const desktopGridClass = colsDesktop === 6 ? "md:grid-cols-6" : colsDesktop === 4 ? "md:grid-cols-4" : "md:grid-cols-3";
+
+  useEffect(() => {
+    setShowAll(false);
+  }, [config, categories]);
 
   if (isLoading) {
     return (
       <section id="categorias" className="py-12 md:py-16">
         <div className="container">
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">Encontre por categoria</h2>
-            <p className="text-muted-foreground text-lg">Escolha a área de negócio que procura</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">{title}</h2>
+            <p className="text-muted-foreground text-lg">{subtitle}</p>
           </div>
-          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
+          <div className={`grid gap-4 ${mobileGridClass} ${desktopGridClass}`}>
             {[...Array(6)].map((_, i) => (
               <div key={i} className="animate-pulse rounded-2xl bg-muted" style={{ aspectRatio: "4/3" }} />
             ))}
@@ -522,13 +547,12 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
       <section id="categorias" className="py-12 md:py-16">
         <div className="container">
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">Encontre por categoria</h2>
-            <p className="text-muted-foreground text-lg">Escolha a área de negócio que procura</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">{title}</h2>
+            <p className="text-muted-foreground text-lg">{subtitle}</p>
           </div>
 
-          {/* Bento grid — 2 colunas mobile, 4 colunas desktop */}
-          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
-            {categories.map((category, index) => (
+          <div className={`grid gap-4 ${mobileGridClass} ${desktopGridClass}`}>
+            {visibleCategories.map((category, index) => (
               <CategoryCard
                 key={category.id}
                 category={category}
@@ -536,14 +560,27 @@ const CategoriesGrid = ({ categories, isLoading }: CategoriesGridProps) => {
                 desktopPattern={BENTO[index % BENTO.length]}
                 onOpen={() => setModalIndex(index)}
                 businessCount={counts?.get(category.id)}
+                displayMode={displayMode}
               />
             ))}
           </div>
+
+          {showMoreEnabled && filteredCategories.length > maxVisible && (
+            <div className="mt-8 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAll((current) => !current)}
+                className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                {showAll ? "Ver menos" : showMoreText}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
       {modalIndex !== null && (
-        <CategoryModal categories={categories} initialIndex={modalIndex} onClose={() => setModalIndex(null)} />
+        <CategoryModal categories={visibleCategories} initialIndex={modalIndex} onClose={() => setModalIndex(null)} />
       )}
     </>
   );
