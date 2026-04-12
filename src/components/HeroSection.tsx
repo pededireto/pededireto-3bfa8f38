@@ -22,7 +22,7 @@ interface HeroConfig {
   cta_primario_link?: string;
   cta_secundario_texto?: string;
   cta_secundario_link?: string;
-  media_type?: "sem_media" | "image" | "video" | "background_image";
+  media_type?: "none" | "sem_media" | "image" | "video" | "background_image";
   imagem_url?: string;
   video_url?: string;
   overlay_opacity?: number;
