@@ -23,6 +23,7 @@ interface TierConfig {
   cta: string;
   inheritLabel?: string;
   features: string[];
+  isAnnualOnly?: boolean;
 }
 
 const TIERS: TierConfig[] = [
