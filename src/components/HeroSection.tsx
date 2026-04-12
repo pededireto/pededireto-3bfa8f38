@@ -74,12 +74,18 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const mostrarPesquisa = config?.mostrar_pesquisa !== false; // default true
   const tamanhoPesquisa = config?.tamanho_pesquisa || "grande";
   const searchHeight = tamanhoPesquisa === "pequena" ? "h-10" : tamanhoPesquisa === "media" ? "h-12" : "h-14";
-  const searchTextSize = tamanhoPesquisa === "pequena" ? "text-sm" : tamanhoPesquisa === "media" ? "text-base" : "text-base";
+  const searchTextSize =
+    tamanhoPesquisa === "pequena" ? "text-sm" : tamanhoPesquisa === "media" ? "text-base" : "text-base";
   const ctaPrimarioTexto = config?.cta_primario_texto || "Pedir Orçamento Gratuito";
   const ctaSecundarioTexto = config?.cta_secundario_texto || "Sou profissional";
   const ctaSecundarioLink = config?.cta_secundario_link || "/claim-business";
   // Media: config overrides → then site settings
-  const settingsMediaType = settings?.hero_media_type === "video" ? "video" : (settings?.mascot_enabled === "true" && settings?.mascot_url ? "image" : "none");
+  const settingsMediaType =
+    settings?.hero_media_type === "video"
+      ? "video"
+      : settings?.mascot_enabled === "true" && settings?.mascot_url
+        ? "image"
+        : "none";
   const rawMediaType = config?.media_type || settingsMediaType;
   const mediaType = rawMediaType === "sem_media" ? "none" : rawMediaType; // normalise legacy value
   const mediaImageUrl = config?.imagem_url || (mediaType === "image" ? settings?.mascot_url : null) || null;
@@ -170,7 +176,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const renderRightPanel = () => {
     if (mediaType === "image" && mediaImageUrl) {
       return (
-      <div className="hidden lg:flex items-center justify-center h-full" aria-hidden="true">
+        <div className="hidden lg:flex items-center justify-center h-full" aria-hidden="true">
           <img
             src={mediaImageUrl}
             alt="Hero visual"
@@ -268,13 +274,25 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
       )}
 
       <div className="container relative z-10">
-        <div className={isBackgroundMode ? "flex flex-col items-center text-center max-w-3xl mx-auto space-y-6" : "grid lg:grid-cols-2 gap-10 lg:gap-16 items-center"}>
+        <div
+          className={
+            isBackgroundMode
+              ? "flex flex-col items-center text-center max-w-3xl mx-auto space-y-6"
+              : "grid lg:grid-cols-2 gap-10 lg:gap-16 items-center"
+          }
+        >
           {/* LEFT / CENTER */}
           <div className={isBackgroundMode ? "space-y-6" : "space-y-6 lg:pr-8"}>
             {/* Badge */}
-            <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${isBackgroundMode ? "bg-white/20 border border-white/30" : "bg-primary/10 border border-primary/20"}`}>
+            <div
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${isBackgroundMode ? "bg-white/20 border border-white/30" : "bg-primary/10 border border-primary/20"}`}
+            >
               <span className={`w-2 h-2 rounded-full ${isBackgroundMode ? "bg-white" : "bg-primary"} animate-pulse`} />
-              <span className={`text-xs font-semibold tracking-wide uppercase ${isBackgroundMode ? "text-white" : "text-primary"}`}>{heroBadge}</span>
+              <span
+                className={`text-xs font-semibold tracking-wide uppercase ${isBackgroundMode ? "text-white" : "text-primary"}`}
+              >
+                {heroBadge}
+              </span>
             </div>
 
             <h1
@@ -284,11 +302,19 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
               {renderTitle()}
             </h1>
 
-            <p className={`text-base md:text-lg leading-relaxed ${isBackgroundMode ? "text-white/80" : "text-muted-foreground"}`}>{heroSubtitle}</p>
+            <p
+              className={`text-base md:text-lg leading-relaxed ${isBackgroundMode ? "text-white/80" : "text-muted-foreground"}`}
+            >
+              {heroSubtitle}
+            </p>
 
             {/* Search bar */}
             {mostrarPesquisa && (
-              <form onSubmit={handleSubmit} role="search" className={`relative z-10 w-full space-y-3 ${isBackgroundMode ? "max-w-2xl mx-auto" : searchWidthClass}`}>
+              <form
+                onSubmit={handleSubmit}
+                role="search"
+                className={`relative z-10 w-full space-y-3 ${isBackgroundMode ? "max-w-2xl mx-auto" : searchWidthClass}`}
+              >
                 <div className="flex flex-col sm:flex-row bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
                   {/* Search input */}
                   <div className="relative flex-1" ref={searchRef}>
@@ -396,7 +422,9 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
             )}
 
             {/* Trust badges */}
-            <div className={`flex flex-wrap ${isBackgroundMode ? "justify-center" : ""} gap-x-5 gap-y-2 text-sm ${isBackgroundMode ? "text-white/70" : "text-muted-foreground"}`}>
+            <div
+              className={`flex flex-wrap ${isBackgroundMode ? "justify-center" : ""} gap-x-5 gap-y-2 text-sm ${isBackgroundMode ? "text-white/70" : "text-muted-foreground"}`}
+            >
               {trustBadges.map((badge, i) => (
                 <span key={i} className="flex items-center gap-1.5">
                   <CheckCircle2 className={`h-4 w-4 ${isBackgroundMode ? "text-white" : "text-primary"}`} /> {badge}
@@ -419,7 +447,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
                 asChild
                 size="lg"
                 variant="outline"
-                className={`border-2 font-semibold text-base px-6 rounded-xl ${isBackgroundMode ? "border-white/40 text-white hover:bg-white/10" : "border-foreground/20 text-foreground hover:bg-accent/50"}`}
+                className={`border-2 font-semibold text-base px-6 rounded-xl ${isBackgroundMode ? "border-primary text-primary bg-white hover:bg-white/90" : "border-foreground/20 text-foreground hover:bg-accent/50"}`}
               >
                 <Link to={ctaSecundarioLink}>
                   <Briefcase className="mr-2 h-5 w-5" /> {ctaSecundarioTexto}
