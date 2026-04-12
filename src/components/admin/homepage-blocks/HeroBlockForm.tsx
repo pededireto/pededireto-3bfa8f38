@@ -102,6 +102,11 @@ const HeroBlockForm = ({ config, onChange }: Props) => {
           <Label>URL da imagem</Label>
           <Input value={config.imagem_url || ""} onChange={e => u("imagem_url", e.target.value)} placeholder="https://..." />
           {config.imagem_url && <img src={config.imagem_url} alt="Preview" className="mt-1 w-full max-h-32 object-cover rounded-lg border border-border" />}
+          {config.media_type === "background_image" && (
+            <p className="mt-2 text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+              💡 Dimensões recomendadas: 1920×1080px (horizontal, formato 16:9). Tamanho máximo: 2MB. Formatos: JPG ou WebP (melhor performance). A imagem será centrada e redimensionada para cobrir toda a área.
+            </p>
+          )}
         </div>
       )}
 
@@ -111,7 +116,7 @@ const HeroBlockForm = ({ config, onChange }: Props) => {
           <input
             type="range"
             min={0}
-            max={90}
+            max={100}
             value={config.overlay_opacity ?? 50}
             onChange={e => u("overlay_opacity", Number(e.target.value))}
             className="w-full mt-1"
