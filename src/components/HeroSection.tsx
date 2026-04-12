@@ -22,7 +22,7 @@ interface HeroConfig {
   cta_primario_link?: string;
   cta_secundario_texto?: string;
   cta_secundario_link?: string;
-  media_type?: "sem_media" | "image" | "video" | "background_image";
+  media_type?: "none" | "sem_media" | "image" | "video" | "background_image";
   imagem_url?: string;
   video_url?: string;
   overlay_opacity?: number;
@@ -79,8 +79,9 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const ctaSecundarioTexto = config?.cta_secundario_texto || "Sou profissional";
   const ctaSecundarioLink = config?.cta_secundario_link || "/claim-business";
   // Media: config overrides → then site settings
-  const settingsMediaType = settings?.hero_media_type === "video" ? "video" : (settings?.mascot_enabled === "true" && settings?.mascot_url ? "image" : "sem_media");
-  const mediaType = config?.media_type || settingsMediaType;
+  const settingsMediaType = settings?.hero_media_type === "video" ? "video" : (settings?.mascot_enabled === "true" && settings?.mascot_url ? "image" : "none");
+  const rawMediaType = config?.media_type || settingsMediaType;
+  const mediaType = rawMediaType === "sem_media" ? "none" : rawMediaType; // normalise legacy value
   const mediaImageUrl = config?.imagem_url || (mediaType === "image" ? settings?.mascot_url : null) || null;
   const mediaVideoUrl = config?.video_url || settings?.hero_video_url || null;
   const isBackgroundMode = mediaType === "background_image";
@@ -90,7 +91,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
       ? "lg:max-w-xl"
       : tamanhoPesquisa === "media"
         ? "lg:max-w-[46rem]"
-        : mediaType !== "sem_media"
+        : mediaType !== "none"
           ? "lg:w-[calc(100%+8rem)] xl:w-[calc(100%+10rem)]"
           : "lg:max-w-[56rem]";
 
