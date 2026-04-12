@@ -87,7 +87,7 @@ const TIERS: TierConfig[] = [
     label: "PRO Pioneiro",
     icon: Crown,
     description: "Máxima visibilidade e suporte prioritário",
-    priceAnnual: "99.90",
+    priceMonthly: "99.90",
     badge: "Oferta limitada",
     color: "border-accent",
     cta: "Começar agora",
