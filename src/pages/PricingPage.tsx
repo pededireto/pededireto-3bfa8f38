@@ -91,6 +91,7 @@ const TIERS: TierConfig[] = [
     badge: "Oferta limitada",
     color: "border-accent",
     cta: "Começar agora",
+    isAnnualOnly: true,
     inheritLabel: "Tudo o que está no PRO, mais:",
     features: [
       "Destaque na categoria",
