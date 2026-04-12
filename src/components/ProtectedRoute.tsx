@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
   requireOnboarding?: boolean;
   requireCs?: boolean;
   requireAnyStaff?: boolean;
+  redirectTo?: string;
 }
 
 const ProtectedRoute = ({ 
@@ -17,7 +18,8 @@ const ProtectedRoute = ({
   requireCommercial = false, 
   requireOnboarding = false,
   requireCs = false,
-  requireAnyStaff = false 
+  requireAnyStaff = false,
+  redirectTo = "/admin/login"
 }: ProtectedRouteProps) => {
   const { user, isAdmin, isCommercial, isSuperAdmin, isCs, isOnboarding, isLoading } = useAuth();
   const location = useLocation();
@@ -34,7 +36,7 @@ const ProtectedRoute = ({
   }
 
   if (!user) {
-    return <Navigate to="/admin/login" state={{ from: location }} replace />;
+    return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
   if (requireAdmin && !isAdmin && !isSuperAdmin) {
