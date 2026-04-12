@@ -323,7 +323,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         {isLocked ? (
           <LockedCard
             icon={Inbox}
-            label="Pedidos Ativos"
+            label="Pedidos"
             reason="Ativa um plano para receber"
             onUnlock={() => onNavigate?.("plan")}
           />
@@ -331,7 +331,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
           <div className="bg-card rounded-xl p-5 shadow-card">
             <div className="flex items-center gap-2 mb-2">
               <Inbox className="h-4 w-4 text-primary" />
-              <span className="text-xs text-muted-foreground">Pedidos Ativos</span>
+              <span className="text-xs text-muted-foreground">Orçamentos</span>
             </div>
             <p className="text-2xl font-bold">{requests.length}</p>
             <p className="text-xs text-muted-foreground mt-1">Total recebidos</p>
