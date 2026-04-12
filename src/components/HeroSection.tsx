@@ -91,7 +91,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
       ? "lg:max-w-xl"
       : tamanhoPesquisa === "media"
         ? "lg:max-w-[46rem]"
-        : mediaType !== "sem_media"
+        : mediaType !== "none"
           ? "lg:w-[calc(100%+8rem)] xl:w-[calc(100%+10rem)]"
           : "lg:max-w-[56rem]";
 
