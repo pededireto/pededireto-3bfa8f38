@@ -23,6 +23,7 @@ interface TierConfig {
   cta: string;
   inheritLabel?: string;
   features: string[];
+  isAnnualOnly?: boolean;
 }
 
 const TIERS: TierConfig[] = [
@@ -91,6 +92,7 @@ const TIERS: TierConfig[] = [
     badge: "Oferta limitada",
     color: "border-accent",
     cta: "Começar agora",
+    isAnnualOnly: true,
     inheritLabel: "Tudo o que está no PRO, mais:",
     features: [
       "Destaque na categoria",
@@ -207,9 +209,11 @@ const PricingPage = () => {
                         <>
                           <div className="text-3xl font-bold text-foreground">
                             €{price}
-                            <span className="text-sm font-normal text-muted-foreground">/mês</span>
+                            <span className="text-sm font-normal text-muted-foreground">
+                              /{tier.isAnnualOnly ? "ano" : "mês"}
+                            </span>
                           </div>
-                          {billing === "annual" && tier.priceAnnual && (
+                          {!tier.isAnnualOnly && billing === "annual" && tier.priceAnnual && (
                             <p className="text-xs text-muted-foreground mt-1">Facturado €{tier.priceAnnual}/ano</p>
                           )}
                         </>
