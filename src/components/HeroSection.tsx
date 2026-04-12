@@ -22,9 +22,10 @@ interface HeroConfig {
   cta_primario_link?: string;
   cta_secundario_texto?: string;
   cta_secundario_link?: string;
-  media_type?: "sem_media" | "image" | "video";
+  media_type?: "sem_media" | "image" | "video" | "background_image";
   imagem_url?: string;
   video_url?: string;
+  overlay_opacity?: number;
 }
 
 interface HeroSectionProps {
@@ -82,6 +83,8 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const mediaType = config?.media_type || settingsMediaType;
   const mediaImageUrl = config?.imagem_url || (mediaType === "image" ? settings?.mascot_url : null) || null;
   const mediaVideoUrl = config?.video_url || settings?.hero_video_url || null;
+  const isBackgroundMode = mediaType === "background_image";
+  const overlayOpacity = config?.overlay_opacity ?? 50;
   const searchWidthClass =
     tamanhoPesquisa === "pequena"
       ? "lg:max-w-xl"
