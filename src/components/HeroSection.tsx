@@ -79,8 +79,9 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const ctaSecundarioTexto = config?.cta_secundario_texto || "Sou profissional";
   const ctaSecundarioLink = config?.cta_secundario_link || "/claim-business";
   // Media: config overrides → then site settings
-  const settingsMediaType = settings?.hero_media_type === "video" ? "video" : (settings?.mascot_enabled === "true" && settings?.mascot_url ? "image" : "sem_media");
-  const mediaType = config?.media_type || settingsMediaType;
+  const settingsMediaType = settings?.hero_media_type === "video" ? "video" : (settings?.mascot_enabled === "true" && settings?.mascot_url ? "image" : "none");
+  const rawMediaType = config?.media_type || settingsMediaType;
+  const mediaType = rawMediaType === "sem_media" ? "none" : rawMediaType; // normalise legacy value
   const mediaImageUrl = config?.imagem_url || (mediaType === "image" ? settings?.mascot_url : null) || null;
   const mediaVideoUrl = config?.video_url || settings?.hero_video_url || null;
   const isBackgroundMode = mediaType === "background_image";
