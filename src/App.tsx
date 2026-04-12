@@ -261,7 +261,7 @@ const App = () => {
                     />
 
                     {/* SERVICES */}
-                    <Route path="/pedir-servico" element={<RequestServicePage />} />
+                    <Route path="/pedir-servico" element={<ProtectedRoute redirectTo="/login"><RequestServicePage /></ProtectedRoute>} />
                     <Route path="/upgrade" element={<UpgradePage />} />
 
                     <Route path="/unsubscribe" element={<UnsubscribePage />} />

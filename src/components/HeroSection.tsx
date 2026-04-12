@@ -22,9 +22,10 @@ interface HeroConfig {
   cta_primario_link?: string;
   cta_secundario_texto?: string;
   cta_secundario_link?: string;
-  media_type?: "sem_media" | "image" | "video";
+  media_type?: "sem_media" | "image" | "video" | "background_image";
   imagem_url?: string;
   video_url?: string;
+  overlay_opacity?: number;
 }
 
 interface HeroSectionProps {
@@ -82,6 +83,8 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   const mediaType = config?.media_type || settingsMediaType;
   const mediaImageUrl = config?.imagem_url || (mediaType === "image" ? settings?.mascot_url : null) || null;
   const mediaVideoUrl = config?.video_url || settings?.hero_video_url || null;
+  const isBackgroundMode = mediaType === "background_image";
+  const overlayOpacity = config?.overlay_opacity ?? 50;
   const searchWidthClass =
     tamanhoPesquisa === "pequena"
       ? "lg:max-w-xl"
@@ -242,31 +245,49 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
   return (
     <section
       className="relative overflow-hidden py-16 md:py-24"
-      style={{ background: "var(--gradient-hero)" }}
+      style={{
+        background: isBackgroundMode && mediaImageUrl ? undefined : "var(--gradient-hero)",
+      }}
       aria-labelledby="hero-heading"
     >
-      <div className="container">
-        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-          {/* LEFT */}
-          <div className="space-y-6 lg:pr-8">
+      {/* Background image mode */}
+      {isBackgroundMode && mediaImageUrl && (
+        <>
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${mediaImageUrl})` }}
+            aria-hidden="true"
+          />
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: `rgba(0,0,0,${overlayOpacity / 100})` }}
+            aria-hidden="true"
+          />
+        </>
+      )}
+
+      <div className="container relative z-10">
+        <div className={isBackgroundMode ? "flex flex-col items-center text-center max-w-3xl mx-auto space-y-6" : "grid lg:grid-cols-2 gap-10 lg:gap-16 items-center"}>
+          {/* LEFT / CENTER */}
+          <div className={isBackgroundMode ? "space-y-6" : "space-y-6 lg:pr-8"}>
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs font-semibold text-primary tracking-wide uppercase">{heroBadge}</span>
+            <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${isBackgroundMode ? "bg-white/20 border border-white/30" : "bg-primary/10 border border-primary/20"}`}>
+              <span className={`w-2 h-2 rounded-full ${isBackgroundMode ? "bg-white" : "bg-primary"} animate-pulse`} />
+              <span className={`text-xs font-semibold tracking-wide uppercase ${isBackgroundMode ? "text-white" : "text-primary"}`}>{heroBadge}</span>
             </div>
 
             <h1
               id="hero-heading"
-              className="text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.1] text-foreground tracking-tight"
+              className={`text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.1] tracking-tight ${isBackgroundMode ? "text-white" : "text-foreground"}`}
             >
               {renderTitle()}
             </h1>
 
-            <p className="text-base md:text-lg text-muted-foreground leading-relaxed">{heroSubtitle}</p>
+            <p className={`text-base md:text-lg leading-relaxed ${isBackgroundMode ? "text-white/80" : "text-muted-foreground"}`}>{heroSubtitle}</p>
 
             {/* Search bar */}
             {mostrarPesquisa && (
-              <form onSubmit={handleSubmit} role="search" className={`relative z-10 w-full space-y-3 ${searchWidthClass}`}>
+              <form onSubmit={handleSubmit} role="search" className={`relative z-10 w-full space-y-3 ${isBackgroundMode ? "max-w-2xl mx-auto" : searchWidthClass}`}>
                 <div className="flex flex-col sm:flex-row bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
                   {/* Search input */}
                   <div className="relative flex-1" ref={searchRef}>
@@ -374,16 +395,16 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
             )}
 
             {/* Trust badges */}
-            <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
+            <div className={`flex flex-wrap ${isBackgroundMode ? "justify-center" : ""} gap-x-5 gap-y-2 text-sm ${isBackgroundMode ? "text-white/70" : "text-muted-foreground"}`}>
               {trustBadges.map((badge, i) => (
                 <span key={i} className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-primary" /> {badge}
+                  <CheckCircle2 className={`h-4 w-4 ${isBackgroundMode ? "text-white" : "text-primary"}`} /> {badge}
                 </span>
               ))}
             </div>
 
             {/* CTA buttons */}
-            <div className="flex flex-wrap gap-3 pt-1">
+            <div className={`flex flex-wrap gap-3 pt-1 ${isBackgroundMode ? "justify-center" : ""}`}>
               <Button
                 asChild
                 size="lg"
@@ -397,7 +418,7 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
                 asChild
                 size="lg"
                 variant="outline"
-                className="border-2 border-foreground/20 text-foreground font-semibold text-base px-6 rounded-xl hover:bg-accent/50"
+                className={`border-2 font-semibold text-base px-6 rounded-xl ${isBackgroundMode ? "border-white/40 text-white hover:bg-white/10" : "border-foreground/20 text-foreground hover:bg-accent/50"}`}
               >
                 <Link to={ctaSecundarioLink}>
                   <Briefcase className="mr-2 h-5 w-5" /> {ctaSecundarioTexto}
@@ -406,8 +427,8 @@ const HeroSection = ({ onSearch, searchTerm = "", onSearchChange, config }: Hero
             </div>
           </div>
 
-          {/* RIGHT — image / video / placeholder */}
-          {renderRightPanel()}
+          {/* RIGHT — image / video / placeholder (hidden in background mode) */}
+          {!isBackgroundMode && renderRightPanel()}
         </div>
       </div>
     </section>

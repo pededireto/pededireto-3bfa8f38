@@ -90,17 +90,32 @@ const HeroBlockForm = ({ config, onChange }: Props) => {
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Sem media</SelectItem>
-            <SelectItem value="image">Imagem</SelectItem>
+            <SelectItem value="image">Imagem (ao lado)</SelectItem>
             <SelectItem value="video">Vídeo YouTube</SelectItem>
+            <SelectItem value="background_image">Imagem de fundo (texto sobreposto)</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {config.media_type === "image" && (
+      {(config.media_type === "image" || config.media_type === "background_image") && (
         <div>
           <Label>URL da imagem</Label>
           <Input value={config.imagem_url || ""} onChange={e => u("imagem_url", e.target.value)} placeholder="https://..." />
           {config.imagem_url && <img src={config.imagem_url} alt="Preview" className="mt-1 w-full max-h-32 object-cover rounded-lg border border-border" />}
+        </div>
+      )}
+
+      {config.media_type === "background_image" && (
+        <div>
+          <Label>Opacidade do overlay escuro ({config.overlay_opacity ?? 50}%)</Label>
+          <input
+            type="range"
+            min={0}
+            max={90}
+            value={config.overlay_opacity ?? 50}
+            onChange={e => u("overlay_opacity", Number(e.target.value))}
+            className="w-full mt-1"
+          />
         </div>
       )}
 
