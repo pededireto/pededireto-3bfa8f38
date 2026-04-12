@@ -164,9 +164,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
     trial_ends_at: (business as any).trial_ends_at,
   });
   const plan = plans.find((p) => p.id === business.plan_id);
-  const { data: badges = [] } = useBusinessBadges(
-    permissions.canViewProAnalytics ? business.id : null
-  );
+  const { data: badges = [] } = useBusinessBadges(permissions.canViewProAnalytics ? business.id : null);
   const unlockedBadges = badges.filter((b) => b.unlocked);
 
   useEffect(() => {
@@ -190,13 +188,11 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
   const isLocked = permissions.isPreview || permissions.isFreePlan;
 
   // Recent requests (last 5, sorted by most recent)
-  const recentRequests = requests
-    .filter((r: any) => r.service_requests)
-    .slice(0, 4);
+  const recentRequests = requests.filter((r: any) => r.service_requests).slice(0, 4);
 
   // Pending responses count
   const pendingResponses = requests.filter(
-    (r: any) => r.service_requests?.status === "active" && !r.first_response_at
+    (r: any) => r.service_requests?.status === "active" && !r.first_response_at,
   ).length;
 
   // Greeting based on time of day
@@ -213,7 +209,8 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
               <p className="text-lg font-bold text-foreground">🎉 Bem-vindo à Pede Direto!</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Estamos a verificar os seus dados e o negócio ficará visível em breve.
-                <br />Complete o perfil enquanto isso para aparecer mais acima nos resultados!
+                <br />
+                Complete o perfil enquanto isso para aparecer mais acima nos resultados!
               </p>
             </div>
             <button
@@ -239,15 +236,10 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">
             {greeting}, {business.name} 👋
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Aqui está o resumo do teu negócio hoje
-          </p>
+          <p className="text-muted-foreground text-sm mt-1">Aqui está o resumo do teu negócio hoje</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge
-            variant={business.subscription_status === "active" ? "default" : "secondary"}
-            className="text-xs"
-          >
+          <Badge variant={business.subscription_status === "active" ? "default" : "secondary"} className="text-xs">
             {plan?.name || "Gratuito"}
             {business.subscription_status === "active" ? " ✓" : ""}
           </Badge>
@@ -322,7 +314,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         <div className="bg-card rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-2 mb-2">
             <Eye className="h-4 w-4 text-primary" />
-            <span className="text-xs text-muted-foreground">Visitas hoje</span>
+            <span className="text-xs text-muted-foreground">Visitas</span>
           </div>
           <p className="text-2xl font-bold">{analytics?.views ?? "—"}</p>
           <p className="text-xs text-muted-foreground mt-1">Últimos 30 dias</p>
@@ -381,9 +373,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
           {responseTime ? (
             <>
               <p className="text-2xl font-bold">⚡ {responseTime.label}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Tempo médio de resposta
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Tempo médio de resposta</p>
             </>
           ) : (
             <>
@@ -399,9 +389,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
             <Trophy className="h-4 w-4 text-primary" />
             <span className="text-xs text-muted-foreground">Pontos</span>
           </div>
-          <p className="text-2xl font-bold">
-            🏆 {scoreData?.score ?? business.ranking_score ?? 0}
-          </p>
+          <p className="text-2xl font-bold">🏆 {scoreData?.score ?? business.ranking_score ?? 0}</p>
           <Button
             size="sm"
             variant="ghost"
@@ -423,10 +411,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
             onUpgradeClick={() => onNavigate?.("plan")}
           />
         </div>
-        <BusinessRankingWidget
-          businessId={business.id}
-          onNavigate={onNavigate}
-        />
+        <BusinessRankingWidget businessId={business.id} onNavigate={onNavigate} />
       </div>
 
       {/* ── Recent Requests ──────────────────────────── */}
@@ -581,10 +566,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
           </div>
           <div>
             <p className="text-lg font-bold">{plan?.name || "Gratuito"}</p>
-            <Badge
-              variant={business.subscription_status === "active" ? "default" : "secondary"}
-              className="mt-1"
-            >
+            <Badge variant={business.subscription_status === "active" ? "default" : "secondary"} className="mt-1">
               {business.subscription_status === "active"
                 ? "Ativo"
                 : business.subscription_status === "expired"
@@ -596,9 +578,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
                 <Calendar className="h-3 w-3" />
                 <span>
                   {daysUntilExpiry !== null && daysUntilExpiry <= 30 ? (
-                    <span className="text-yellow-500 font-medium">
-                      Expira em {daysUntilExpiry} dias
-                    </span>
+                    <span className="text-yellow-500 font-medium">Expira em {daysUntilExpiry} dias</span>
                   ) : (
                     `Válido até ${subscriptionEndDate}`
                   )}
@@ -606,11 +586,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
               </div>
             )}
             {(permissions.isFreePlan || permissions.isPreview) && (
-              <Button
-                size="sm"
-                className="w-full mt-3 text-xs"
-                onClick={() => onNavigate?.("plan")}
-              >
+              <Button size="sm" className="w-full mt-3 text-xs" onClick={() => onNavigate?.("plan")}>
                 {permissions.isPreview ? "Ativar Plano" : "Melhorar Plano"}
                 <ArrowRight className="h-3 w-3 ml-1" />
               </Button>
@@ -624,10 +600,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
               <Building2 className="h-5 w-5 text-primary" />
               <span className="text-sm text-muted-foreground">Estado do Negócio</span>
             </div>
-            <Badge
-              variant={business.is_active ? "default" : "secondary"}
-              className="text-sm px-3 py-1"
-            >
+            <Badge variant={business.is_active ? "default" : "secondary"} className="text-sm px-3 py-1">
               {business.is_active ? "✅ Visível ao público" : "🔍 Em verificação"}
             </Badge>
             {!business.is_active && (
@@ -668,14 +641,8 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
                 <span className="text-sm font-medium text-foreground">O teu Potencial</span>
               </div>
               <p className="text-2xl font-bold text-primary">{analytics.views}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                pessoas viram o teu perfil nos últimos 30 dias
-              </p>
-              <Button
-                size="sm"
-                className="w-full mt-3 text-xs"
-                onClick={() => onNavigate?.("plan")}
-              >
+              <p className="text-xs text-muted-foreground mt-1">pessoas viram o teu perfil nos últimos 30 dias</p>
+              <Button size="sm" className="w-full mt-3 text-xs" onClick={() => onNavigate?.("plan")}>
                 Começar a receber contactos →
               </Button>
             </div>
