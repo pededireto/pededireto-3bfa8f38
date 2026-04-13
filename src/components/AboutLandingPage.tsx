@@ -35,17 +35,54 @@ interface Belief {
 }
 
 const BELIEFS: Belief[] = [
-  { emoji: "📞", title: "O contacto direto é essencial", description: "Sem barreiras entre quem precisa e quem resolve. O cliente fala directamente com o negócio — sem intermediários, sem comissões." },
-  { emoji: "📍", title: "A proximidade faz a diferença", description: "O negócio certo, perto de si, quando precisa. A distância geográfica importa na vida real — e a nossa plataforma foi construída com isso em mente." },
-  { emoji: "⚡", title: "Rapidez vale mais do que excesso de opções", description: "Sem burocracias. Sem comissões escondidas. Sem perder tempo. Quando o tempo conta, a clareza é a melhor funcionalidade." },
-  { emoji: "🏆", title: "O mérito deve ser visível", description: "Os negócios que respondem bem, têm boas avaliações e perfis completos merecem aparecer primeiro. O nosso ranking é calculado por mérito — não por quem paga mais." },
-  { emoji: "🛡️", title: "Transparência não é opcional", description: "Avaliações moderadas, identidade real dos avaliadores, algoritmo de ranking claro. Construímos confiança com regras que toda a gente pode ver." },
+  {
+    emoji: "📞",
+    title: "O contacto direto é essencial",
+    description:
+      "Sem barreiras entre quem precisa e quem resolve. O cliente fala directamente com o negócio — sem intermediários, sem comissões.",
+  },
+  {
+    emoji: "📍",
+    title: "A proximidade faz a diferença",
+    description:
+      "O negócio certo, perto de si, quando precisa. A distância geográfica importa na vida real — e a nossa plataforma foi construída com isso em mente.",
+  },
+  {
+    emoji: "⚡",
+    title: "Rapidez vale mais do que excesso de opções",
+    description:
+      "Sem burocracias. Sem comissões escondidas. Sem perder tempo. Quando o tempo conta, a clareza é a melhor funcionalidade.",
+  },
+  {
+    emoji: "🏆",
+    title: "O mérito deve ser visível",
+    description:
+      "Os negócios que respondem bem, têm boas avaliações e perfis completos merecem aparecer primeiro. O nosso ranking é calculado por mérito — não por quem paga mais.",
+  },
+  {
+    emoji: "🛡️",
+    title: "Transparência não é opcional",
+    description:
+      "Avaliações moderadas, identidade real dos avaliadores, algoritmo de ranking claro. Construímos confiança com regras que toda a gente pode ver.",
+  },
 ];
 
 const MISSION_CONTEXTS = [
-  { emoji: "🏠", title: "No dia a dia", description: "Quando alguém procura um restaurante, um serviço ou um profissional local." },
-  { emoji: "🚨", title: "Em situações urgentes", description: "Quando encontrar quem resolve é prioritário e o tempo não espera." },
-  { emoji: "🏥", title: "Em momentos sensíveis", description: "Quando serviços essenciais fazem verdadeiramente a diferença." },
+  {
+    emoji: "🏠",
+    title: "No dia a dia",
+    description: "Quando alguém procura um restaurante, um serviço ou um profissional local.",
+  },
+  {
+    emoji: "🚨",
+    title: "Em situações urgentes",
+    description: "Quando encontrar quem resolve é prioritário e o tempo não espera.",
+  },
+  {
+    emoji: "🏥",
+    title: "Em momentos sensíveis",
+    description: "Quando serviços essenciais fazem verdadeiramente a diferença.",
+  },
 ];
 
 const STATS = [
@@ -56,11 +93,36 @@ const STATS = [
 ];
 
 const HOW_IT_WORKS = [
-  { emoji: "🔍", title: "Pesquisa inteligente em 4 camadas", description: "O motor de pesquisa reconhece padrões, sinónimos, urgência e negócios directamente — sem precisar da palavra exacta." },
-  { emoji: "📋", title: "Pedidos de orçamento com matching automático", description: "O consumidor descreve o que precisa — a plataforma notifica os negócios certos na sua zona automaticamente." },
-  { emoji: "⭐", title: "Avaliações verificadas com moderação", description: "As avaliações têm identidade real, moderação automática para ≥3★ e revisão humana para ≤2★. Os negócios podem responder publicamente." },
-  { emoji: "📊", title: "Analytics e Intelligence para os negócios", description: "Cada negócio tem acesso a dados reais — visitas, canais de contacto, benchmarking vs. concorrência e relatório semanal." },
-  { emoji: "🏆", title: "Ranking por mérito, não por pagamento", description: "A posição de cada negócio é calculada com base em completude do perfil (25%), avaliações (30%), tempo de resposta (20%) e engagement (25%)." },
+  {
+    emoji: "🔍",
+    title: "Pesquisa inteligente em 4 camadas",
+    description:
+      "O motor de pesquisa reconhece padrões, sinónimos, urgência e negócios directamente — sem precisar da palavra exacta.",
+  },
+  {
+    emoji: "📋",
+    title: "Pedidos de orçamento com matching automático",
+    description:
+      "O consumidor descreve o que precisa — a plataforma notifica os negócios certos na sua zona automaticamente.",
+  },
+  {
+    emoji: "⭐",
+    title: "Avaliações verificadas com moderação",
+    description:
+      "As avaliações têm identidade real, moderação automática para ≥3★ e revisão humana para ≤2★. Os negócios podem responder publicamente.",
+  },
+  {
+    emoji: "📊",
+    title: "Analytics e Intelligence para os negócios",
+    description:
+      "Cada negócio tem acesso a dados reais — visitas, canais de contacto, benchmarking vs. concorrência e relatório semanal.",
+  },
+  {
+    emoji: "🏆",
+    title: "Ranking por mérito, não por pagamento",
+    description:
+      "A posição de cada negócio é calculada com base em completude do perfil (25%), avaliações (30%), tempo de resposta (20%) e engagement (25%).",
+  },
 ];
 
 const WE_ARE = [
@@ -102,11 +164,12 @@ const AboutLandingPage = () => {
           </Badge>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight">
             Uma ideia simples.
-            <br className="hidden sm:block" />{" "}
-            <span className="text-primary">E muito prática.</span>
+            <br className="hidden sm:block" /> <span className="text-primary">E muito prática.</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Ajudar as pessoas a encontrar rapidamente quem resolve. No dia a dia, quando alguém precisa de um serviço, um restaurante ou um profissional local, o que mais faz falta não é escolha infinita — é a pessoa certa, no momento certo, perto de si.
+            Ajudar as pessoas a encontrar rapidamente quem resolve. No dia a dia, quando alguém precisa de um serviço,
+            um restaurante ou um profissional local, o que mais faz falta não é escolha infinita — é a pessoa certa, no
+            momento certo, perto de si.
           </p>
         </div>
       </section>
@@ -129,10 +192,12 @@ const AboutLandingPage = () => {
           </div>
           <div className="mt-8 text-center space-y-2 text-sm text-muted-foreground max-w-2xl mx-auto">
             <p>
-              E quando surge um imprevisto — um problema em casa, um serviço urgente, uma necessidade local? As plataformas atuais por vezes tornam tudo mais complicado do que devia ser.
+              E quando surge um imprevisto — um problema em casa, um serviço urgente, uma necessidade local? As
+              plataformas atuais por vezes tornam tudo mais complicado do que devia ser.
             </p>
             <p>
-              Foi a partir dessa realidade, intensificada por períodos de tempestades e situações críticas em Portugal, que o Pede Direto começou a ganhar forma.
+              Foi a partir dessa realidade, intensificada por períodos de tempestades e situações críticas em Portugal,
+              que o Pede Direto começou a ganhar forma.
             </p>
           </div>
         </div>
@@ -141,9 +206,7 @@ const AboutLandingPage = () => {
       {/* ─── O QUE ACREDITAMOS ─── */}
       <section className="py-16">
         <div className="container max-w-4xl">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">
-            O que acreditamos
-          </h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">O que acreditamos</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {BELIEFS.map((b) => (
               <Card key={b.title} className="hover:shadow-[var(--shadow-card-hover)] transition-shadow">
@@ -169,11 +232,10 @@ const AboutLandingPage = () => {
             <span className="text-4xl">🎯</span>
             <h2 className="text-2xl md:text-3xl font-bold">A nossa missão</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Ligar pessoas a negócios, serviços e profissionais locais, de forma simples, transparente e orientada a necessidades reais.
+              Ligar pessoas a negócios, serviços e profissionais locais, de forma simples, transparente e orientada a
+              necessidades reais.
             </p>
-            <p className="text-sm text-muted-foreground">
-              Queremos ser úteis nos momentos que realmente importam.
-            </p>
+            <p className="text-sm text-muted-foreground">Queremos ser úteis nos momentos que realmente importam.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {MISSION_CONTEXTS.map((m) => (
@@ -212,9 +274,7 @@ const AboutLandingPage = () => {
       {/* ─── COMO FUNCIONA ─── */}
       <section className="py-16">
         <div className="container max-w-4xl">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">
-            Como funciona
-          </h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">Como funciona para os consumidores?</h2>
           <div className="space-y-4">
             {HOW_IT_WORKS.map((item) => (
               <Card key={item.title} className="hover:shadow-[var(--shadow-card-hover)] transition-shadow">
@@ -236,9 +296,7 @@ const AboutLandingPage = () => {
       {/* ─── SOMOS / NÃO SOMOS ─── */}
       <section className="py-16 bg-secondary/30">
         <div className="container max-w-4xl">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">
-            O que somos (e não somos)
-          </h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">O que somos (e não somos)</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardContent className="p-6 space-y-3">
@@ -280,7 +338,8 @@ const AboutLandingPage = () => {
           <span className="text-4xl">🏗️</span>
           <h2 className="text-2xl md:text-3xl font-bold">Sempre a melhorar</h2>
           <p className="text-muted-foreground">
-            Um projeto com os pés no chão. Estamos a construir o Pede Direto passo a passo, com foco na utilidade real, na confiança e no comércio local.
+            Um projeto com os pés no chão. Estamos a construir o Pede Direto passo a passo, com foco na utilidade real,
+            na confiança e no comércio local.
           </p>
           <div className="max-w-md mx-auto text-left space-y-2">
             {ROADMAP.map((r) => (
@@ -313,7 +372,10 @@ const AboutLandingPage = () => {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
             <Link to="/registar/consumidor">
-              <Button size="lg" className="text-base px-8 bg-[hsl(var(--cta))] hover:bg-[hsl(var(--cta-hover))] text-[hsl(var(--cta-foreground))] shadow-[var(--shadow-cta)]">
+              <Button
+                size="lg"
+                className="text-base px-8 bg-[hsl(var(--cta))] hover:bg-[hsl(var(--cta-hover))] text-[hsl(var(--cta-foreground))] shadow-[var(--shadow-cta)]"
+              >
                 Criar conta gratuita <ArrowRight className="ml-1 h-5 w-5" />
               </Button>
             </Link>
