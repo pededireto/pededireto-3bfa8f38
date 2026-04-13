@@ -964,9 +964,11 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
           title="Dados Legais e Administrativos"
           icon={Scale}
           defaultOpen={false}
+          badge={planInfo.isFree ? "START +" : "START"}
           sectionRef={legalSectionRef}
           forceOpen={openLegalSection}
         >
+          <PlanLockedOverlay locked={planInfo.isFree} requiredPlan="start">
           {legalDataIncomplete && (
             <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 mb-4">
               <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -1032,6 +1034,7 @@ const BusinessOwnerEditForm = ({ business, onSaved }: BusinessOwnerEditFormProps
               />
             </div>
           </div>
+          </PlanLockedOverlay>
         </Section>
 
         {/* 6. Administração */}
