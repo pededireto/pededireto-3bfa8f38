@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { isFieldVisible, getVisibleFieldCount, type PlanTier } from "@/utils/planFieldVisibility";
 
 export interface ProfileScoreData {
   score: number;
@@ -10,7 +11,7 @@ export interface ProfileScoreData {
 
 /**
  * 29 fields that make up 100% profile completeness.
- * Denominator is always 29 regardless of plan.
+ * Denominator adjusts to the active tier.
  */
 const PROFILE_FIELDS: { key: string; label: string; check: (b: any, extra: any) => boolean }[] = [
   { key: "name", label: "Nome do negócio", check: (b) => !!b.name?.trim() },
@@ -35,22 +36,43 @@ const PROFILE_FIELDS: { key: string; label: string; check: (b: any, extra: any) 
   { key: "owner_name", label: "Responsável", check: (b) => !!b.owner_name?.trim() },
   { key: "owner_phone", label: "Telefone do responsável", check: (b) => !!b.owner_phone?.trim() },
   { key: "owner_email", label: "Email do responsável", check: (b) => !!b.owner_email?.trim() },
-  { key: "attendance_type", label: "Tipo de Atendimento", check: () => false }, // field doesn't exist yet
+  { key: "attendance_type", label: "Tipo de Atendimento", check: () => false },
   { key: "photo_3", label: "3.ª Foto", check: (b) => Array.isArray(b.images) && b.images.length >= 3 && !!b.images[2] },
   { key: "photo_4", label: "4.ª Foto", check: (b) => Array.isArray(b.images) && b.images.length >= 4 && !!b.images[3] },
   { key: "photo_5", label: "5.ª Foto", check: (b) => Array.isArray(b.images) && b.images.length >= 5 && !!b.images[4] },
   { key: "photo_6", label: "6.ª Foto", check: (b) => Array.isArray(b.images) && b.images.length >= 6 && !!b.images[5] },
-  { key: "video", label: "Vídeo", check: () => false }, // field doesn't exist yet
-  { key: "promotions", label: "Promoções activas", check: () => false }, // field doesn't exist yet
+  { key: "video", label: "Vídeo", check: () => false },
+  { key: "promotions", label: "Promoções activas", check: () => false },
 ];
 
-const TOTAL_FIELDS = 29;
+/**
+ * Resolve the active tier from business data.
+ */
+const resolveActiveTier = (biz: any): PlanTier => {
+  const now = new Date();
+  const trialEnd = biz.trial_ends_at ? new Date(biz.trial_ends_at) : null;
+  const isOnTrial = !!trialEnd && trialEnd > now;
+
+  if (isOnTrial) return "pro";
+
+  const hasActive = biz.subscription_status === "active";
+  if (hasActive) {
+    // is_premium = true → PRO (matches the DB view logic)
+    if (biz.is_premium) return "pro";
+    const plan = biz.subscription_plan;
+    if (plan === "pro" || plan === "1_year" || plan === "1_month") return "pro";
+    if (plan === "start") return "start";
+    // Any other active non-free plan = start
+    if (plan && plan !== "free") return "start";
+  }
+
+  return "free";
+};
 
 export const useBusinessProfileScore = (businessId: string | null | undefined) => {
   return useQuery({
     queryKey: ["business-profile-score", businessId],
     queryFn: async (): Promise<ProfileScoreData> => {
-      // Fetch business data
       const { data: biz, error } = await supabase
         .from("businesses")
         .select("*")
@@ -58,9 +80,11 @@ export const useBusinessProfileScore = (businessId: string | null | undefined) =
         .maybeSingle();
 
       if (error) throw error;
-      if (!biz) return { score: 0, max: TOTAL_FIELDS, percentage: 0, suggestions: [] };
+      if (!biz) return { score: 0, max: 0, percentage: 0, suggestions: [] };
 
-      // Fetch extra counts for junction tables
+      const tier = resolveActiveTier(biz);
+      const tierMax = getVisibleFieldCount(tier);
+
       const [catRes, cityRes] = await Promise.all([
         supabase
           .from("business_categories")
@@ -81,6 +105,9 @@ export const useBusinessProfileScore = (businessId: string | null | undefined) =
       const suggestions: string[] = [];
 
       for (const field of PROFILE_FIELDS) {
+        // Skip fields not visible in the active tier
+        if (!isFieldVisible(field.key, tier)) continue;
+
         if (field.check(biz, extra)) {
           score++;
         } else {
@@ -88,11 +115,11 @@ export const useBusinessProfileScore = (businessId: string | null | undefined) =
         }
       }
 
-      const percentage = Math.round((score / TOTAL_FIELDS) * 100);
+      const percentage = tierMax > 0 ? Math.round((score / tierMax) * 100) : 0;
 
       return {
         score,
-        max: TOTAL_FIELDS,
+        max: tierMax,
         percentage,
         suggestions,
       };
