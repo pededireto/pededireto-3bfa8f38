@@ -57,9 +57,13 @@ const resolveActiveTier = (biz: any): PlanTier => {
 
   const hasActive = biz.subscription_status === "active";
   if (hasActive) {
+    // is_premium = true → PRO (matches the DB view logic)
+    if (biz.is_premium) return "pro";
     const plan = biz.subscription_plan;
     if (plan === "pro" || plan === "1_year" || plan === "1_month") return "pro";
     if (plan === "start") return "start";
+    // Any other active non-free plan = start
+    if (plan && plan !== "free") return "start";
   }
 
   return "free";
