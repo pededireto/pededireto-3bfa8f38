@@ -46,9 +46,9 @@ const PROFILE_FIELDS: { key: string; label: string; check: (b: any, extra: any) 
 ];
 
 /**
- * Resolve the active tier from business data.
+ * Resolve the active tier by looking up commercial_plans.tier via plan_id.
  */
-const resolveActiveTier = (biz: any): PlanTier => {
+const resolveActiveTier = async (biz: any): Promise<PlanTier> => {
   const now = new Date();
   const trialEnd = biz.trial_ends_at ? new Date(biz.trial_ends_at) : null;
   const isOnTrial = !!trialEnd && trialEnd > now;
@@ -56,15 +56,22 @@ const resolveActiveTier = (biz: any): PlanTier => {
   if (isOnTrial) return "pro";
 
   const hasActive = biz.subscription_status === "active";
-  if (hasActive) {
-    // is_premium = true → PRO (matches the DB view logic)
-    if (biz.is_premium) return "pro";
-    const plan = biz.subscription_plan;
-    if (plan === "pro" || plan === "1_year" || plan === "1_month") return "pro";
-    if (plan === "start") return "start";
-    // Any other active non-free plan = start
-    if (plan && plan !== "free") return "start";
+  if (!hasActive) return "free";
+
+  // Look up the tier from commercial_plans
+  if (biz.plan_id) {
+    const { data: plan } = await supabase
+      .from("commercial_plans")
+      .select("tier")
+      .eq("id", biz.plan_id)
+      .maybeSingle();
+
+    if (plan?.tier === "pro") return "pro";
+    if (plan?.tier === "start") return "start";
   }
+
+  // Fallback: is_premium
+  if (biz.is_premium) return "pro";
 
   return "free";
 };
@@ -82,7 +89,7 @@ export const useBusinessProfileScore = (businessId: string | null | undefined) =
       if (error) throw error;
       if (!biz) return { score: 0, max: 0, percentage: 0, suggestions: [] };
 
-      const tier = resolveActiveTier(biz);
+      const tier = await resolveActiveTier(biz);
       const tierMax = getVisibleFieldCount(tier);
 
       const [catRes, cityRes] = await Promise.all([
@@ -105,7 +112,6 @@ export const useBusinessProfileScore = (businessId: string | null | undefined) =
       const suggestions: string[] = [];
 
       for (const field of PROFILE_FIELDS) {
-        // Skip fields not visible in the active tier
         if (!isFieldVisible(field.key, tier)) continue;
 
         if (field.check(biz, extra)) {
@@ -117,12 +123,7 @@ export const useBusinessProfileScore = (businessId: string | null | undefined) =
 
       const percentage = tierMax > 0 ? Math.round((score / tierMax) * 100) : 0;
 
-      return {
-        score,
-        max: tierMax,
-        percentage,
-        suggestions,
-      };
+      return { score, max: tierMax, percentage, suggestions };
     },
     enabled: !!businessId,
     staleTime: 60 * 1000,
