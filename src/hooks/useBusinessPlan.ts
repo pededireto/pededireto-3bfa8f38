@@ -4,13 +4,17 @@ interface BusinessPlanInput {
   subscription_plan: string | null;
   subscription_status: string | null;
   trial_ends_at: string | null;
+  is_premium?: boolean;
 }
+
+export type BusinessTier = "free" | "start" | "pro";
 
 export const useBusinessPlan = (business: BusinessPlanInput | null | undefined) => {
   return useMemo(() => {
     if (!business) return {
       isPro: false, isStart: false, isFree: true,
       isOnTrial: false, trialDaysLeft: 0,
+      tier: "free" as BusinessTier,
     };
 
     const now = new Date();
@@ -27,13 +31,17 @@ export const useBusinessPlan = (business: BusinessPlanInput | null | undefined) 
         business.subscription_plan === "pro" ||
         business.subscription_plan === "1_year" ||
         business.subscription_plan === "1_month"
-      ));
+      )) ||
+      (hasActiveSubscription && business.is_premium === true);
 
-    const isStart = !isOnTrial && hasActiveSubscription && 
-      business.subscription_plan === "start";
+    const isStart = !isPro && !isOnTrial && hasActiveSubscription && 
+      (business.subscription_plan === "start" ||
+       (business.subscription_plan !== "free" && business.subscription_plan !== null));
 
     const isFree = !isPro && !isStart;
 
-    return { isPro, isStart, isFree, isOnTrial, trialDaysLeft };
+    const tier: BusinessTier = isPro ? "pro" : isStart ? "start" : "free";
+
+    return { isPro, isStart, isFree, isOnTrial, trialDaysLeft, tier };
   }, [business]);
 };
