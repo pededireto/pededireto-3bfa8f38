@@ -159,9 +159,11 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
   const permissions = useBusinessClaimPermissions(business);
   const { data: responseTime } = useBusinessResponseTime(business.id);
   const { isOnTrial, trialDaysLeft } = useBusinessPlan({
+    plan_id: business.plan_id,
     subscription_plan: (business as any).subscription_plan,
     subscription_status: business.subscription_status,
     trial_ends_at: (business as any).trial_ends_at,
+    is_premium: (business as any).is_premium,
   });
   const plan = plans.find((p) => p.id === business.plan_id);
   const { data: badges = [] } = useBusinessBadges(permissions.canViewProAnalytics ? business.id : null);
