@@ -8235,6 +8235,13 @@ export type Database = {
         }
         Returns: Json
       }
+      get_category_business_counts: {
+        Args: never
+        Returns: {
+          category_id: string
+          count: number
+        }[]
+      }
       get_my_profile_id: { Args: never; Returns: string }
       get_request_ids_for_business: {
         Args: { p_user_id: string }

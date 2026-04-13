@@ -145,7 +145,7 @@ const BusinessNotificationsContent = ({ businessId }: Props) => {
                         size="icon"
                         variant="ghost"
                         className="h-7 w-7 text-muted-foreground hover:text-primary"
-                        onClick={() => markAsRead.mutate(n.id)}
+                        onClick={() => markAsRead.mutate({ id: n.id, businessId })}
                         disabled={markAsRead.isPending}
                         title="Marcar como lida"
                       >
@@ -156,7 +156,7 @@ const BusinessNotificationsContent = ({ businessId }: Props) => {
                       size="icon"
                       variant="ghost"
                       className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                      onClick={() => deleteNotification.mutate(n.id)}
+                      onClick={() => deleteNotification.mutate({ id: n.id, businessId, wasUnread: !n.is_read })}
                       disabled={deleteNotification.isPending}
                       title="Apagar notificação"
                     >
