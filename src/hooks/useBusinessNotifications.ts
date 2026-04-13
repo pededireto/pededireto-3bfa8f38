@@ -52,22 +52,30 @@ export const useUnreadNotificationsCount = (businessId: string | undefined) => {
 export const useMarkNotificationAsRead = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, businessId }: { id: string; businessId: string }) => {
       const { error } = await supabase
         .from("business_notifications" as any)
         .update({ is_read: true, read_at: new Date().toISOString() } as any)
         .eq("id", id);
       if (error) throw error;
     },
-    onMutate: async (id) => {
+    onMutate: async ({ id, businessId }) => {
       await qc.cancelQueries({ queryKey: ["business-notifications"] });
-      // Optimistic update on all matching queries
+      // Optimistic update on notification list
       qc.setQueriesData<BusinessNotification[]>(
-        { queryKey: ["business-notifications"], exact: false },
+        { queryKey: ["business-notifications", businessId], exact: true },
         (old) => old?.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
+      // Optimistic decrement of unread count
+      qc.setQueryData<number>(
+        ["business-notifications", businessId, "unread-count"],
+        (old) => Math.max((old ?? 1) - 1, 0)
+      );
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
+    onSettled: (_d, _e, { businessId }) => {
+      qc.invalidateQueries({ queryKey: ["business-notifications", businessId] });
+      qc.invalidateQueries({ queryKey: ["business-notifications", businessId, "unread-count"] });
+    },
   });
 };
 
@@ -85,36 +93,48 @@ export const useMarkAllNotificationsAsRead = () => {
     onMutate: async (businessId) => {
       await qc.cancelQueries({ queryKey: ["business-notifications"] });
       qc.setQueriesData<BusinessNotification[]>(
-        { queryKey: ["business-notifications"], exact: false },
+        { queryKey: ["business-notifications", businessId], exact: true },
         (old) => old?.map((n) => (n.business_id === businessId ? { ...n, is_read: true } : n))
       );
-      qc.setQueriesData<number>(
-        { queryKey: ["business-notifications", businessId, "unread-count"] },
+      qc.setQueryData<number>(
+        ["business-notifications", businessId, "unread-count"],
         () => 0
       );
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
+    onSettled: (_d, _e, businessId) => {
+      qc.invalidateQueries({ queryKey: ["business-notifications", businessId] });
+      qc.invalidateQueries({ queryKey: ["business-notifications", businessId, "unread-count"] });
+    },
   });
 };
 
 export const useDeleteNotification = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, businessId, wasUnread }: { id: string; businessId: string; wasUnread: boolean }) => {
       const { error } = await supabase
         .from("business_notifications" as any)
         .delete()
         .eq("id", id);
       if (error) throw error;
     },
-    onMutate: async (id) => {
+    onMutate: async ({ id, businessId, wasUnread }) => {
       await qc.cancelQueries({ queryKey: ["business-notifications"] });
       qc.setQueriesData<BusinessNotification[]>(
-        { queryKey: ["business-notifications"], exact: false },
+        { queryKey: ["business-notifications", businessId], exact: true },
         (old) => old?.filter((n) => n.id !== id)
       );
+      if (wasUnread) {
+        qc.setQueryData<number>(
+          ["business-notifications", businessId, "unread-count"],
+          (old) => Math.max((old ?? 1) - 1, 0)
+        );
+      }
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
+    onSettled: (_d, _e, { businessId }) => {
+      qc.invalidateQueries({ queryKey: ["business-notifications", businessId] });
+      qc.invalidateQueries({ queryKey: ["business-notifications", businessId, "unread-count"] });
+    },
   });
 };
 
@@ -131,14 +151,17 @@ export const useDeleteAllNotifications = () => {
     onMutate: async (businessId) => {
       await qc.cancelQueries({ queryKey: ["business-notifications"] });
       qc.setQueriesData<BusinessNotification[]>(
-        { queryKey: ["business-notifications", businessId] },
+        { queryKey: ["business-notifications", businessId], exact: true },
         () => []
       );
-      qc.setQueriesData<number>(
-        { queryKey: ["business-notifications", businessId, "unread-count"] },
+      qc.setQueryData<number>(
+        ["business-notifications", businessId, "unread-count"],
         () => 0
       );
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["business-notifications"] }),
+    onSettled: (_d, _e, businessId) => {
+      qc.invalidateQueries({ queryKey: ["business-notifications", businessId] });
+      qc.invalidateQueries({ queryKey: ["business-notifications", businessId, "unread-count"] });
+    },
   });
 };
