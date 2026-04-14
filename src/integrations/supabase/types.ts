@@ -8421,6 +8421,7 @@ export type Database = {
           category_id: string
           city: string
           id: string
+          is_active: boolean
           name: string
         }[]
       }
