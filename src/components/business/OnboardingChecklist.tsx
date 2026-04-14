@@ -102,7 +102,7 @@ const OnboardingChecklist = ({ business, onNavigate }: OnboardingChecklistProps)
       done: subcatCount > 0,
       action: "edit",
     },
-  ], [business, maxImages, currentImages]);
+  ], [business, maxImages, currentImages, subcatCount]);
 
   // Filter steps by tier visibility
   const visibleSteps = useMemo(() => {
