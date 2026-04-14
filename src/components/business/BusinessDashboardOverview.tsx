@@ -14,6 +14,7 @@ import OnboardingChecklist from "@/components/business/OnboardingChecklist";
 import BusinessProAlerts from "@/components/business/BusinessProAlerts";
 import BusinessRankingWidget from "@/components/business/BusinessRankingWidget";
 import ShareProfileCard from "@/components/business/ShareProfileCard";
+import RankingScoreBreakdown from "@/components/business/RankingScoreBreakdown";
 import { useBusinessBadges } from "@/hooks/useBusinessDashboardPro";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -396,9 +397,12 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
             size="sm"
             variant="ghost"
             className="text-xs p-0 h-auto text-primary mt-1"
-            onClick={() => onNavigate?.("insights")}
+            onClick={() => {
+              const el = document.getElementById("score-breakdown");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
           >
-            Ver evolução →
+            Ver detalhes →
           </Button>
         </div>
       </div>
