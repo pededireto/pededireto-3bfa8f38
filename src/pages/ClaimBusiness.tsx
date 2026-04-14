@@ -29,7 +29,7 @@ const ClaimBusiness = () => {
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBusiness, setSelectedBusiness] = useState<{ id: string; name: string } | null>(null);
+  const [selectedBusiness, setSelectedBusiness] = useState<{ id: string; name: string; legal_fields_count: number } | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCity, setNewCity] = useState("");

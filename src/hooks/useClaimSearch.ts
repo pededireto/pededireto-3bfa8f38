@@ -7,6 +7,7 @@ interface ClaimResult {
   city: string | null;
   category_id: string | null;
   is_active: boolean;
+  legal_fields_count: number;
 }
 
 export const useClaimSearch = (query: string) => {
