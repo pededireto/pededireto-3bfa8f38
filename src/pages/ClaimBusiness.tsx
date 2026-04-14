@@ -247,7 +247,13 @@ const ClaimBusiness = () => {
                         {r.city && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <MapPin className="h-3 w-3" /> {r.city}
+                            {r.legal_fields_count < 3 && (
+                              <span className="ml-2 text-destructive">· {r.legal_fields_count}/5 dados legais</span>
+                            )}
                           </p>
+                        )}
+                        {!r.city && r.legal_fields_count < 3 && (
+                          <p className="text-xs text-destructive">{r.legal_fields_count}/5 dados legais</p>
                         )}
                       </div>
                     </button>
