@@ -12,6 +12,25 @@ interface OnboardingChecklistProps {
 
 const STORAGE_KEY = "onboarding_checklist_dismissed";
 
+/** Max gallery images per plan tier */
+const getMaxImages = (planTier: string): number => {
+  if (planTier === "pro") return 6;
+  if (planTier === "start") return 2;
+  return 0; // free has no gallery
+};
+
+/** Resolve tier from scoreData or business */
+const resolveTier = (business: any): string => {
+  const now = new Date();
+  const trialEnd = business.trial_ends_at ? new Date(business.trial_ends_at) : null;
+  if (trialEnd && trialEnd > now) return "pro";
+  if (business.subscription_status === "active") {
+    if (business.is_premium) return "pro";
+    return "start";
+  }
+  return "free";
+};
+
 const OnboardingChecklist = ({ business, onNavigate }: OnboardingChecklistProps) => {
   const [dismissed, setDismissed] = useState(true);
   const { data: scoreData } = useBusinessProfileScore(business.id);
@@ -20,6 +39,10 @@ const OnboardingChecklist = ({ business, onNavigate }: OnboardingChecklistProps)
     const val = localStorage.getItem(`${STORAGE_KEY}_${business.id}`);
     setDismissed(val === "true");
   }, [business.id]);
+
+  const tier = useMemo(() => resolveTier(business), [business]);
+  const maxImages = getMaxImages(tier);
+  const currentImages = Array.isArray((business as any).images) ? (business as any).images.filter(Boolean).length : 0;
 
   const steps = useMemo(() => [
     {
@@ -37,14 +60,18 @@ const OnboardingChecklist = ({ business, onNavigate }: OnboardingChecklistProps)
     {
       id: "whatsapp",
       label: "Adicionar WhatsApp",
-      done: !!(business as any).whatsapp,
+      done: !!(business as any).cta_whatsapp,
       action: "edit",
+      minTier: "start",
     },
     {
       id: "photos",
-      label: "Adicionar pelo menos 1 foto",
-      done: ((business as any).gallery?.length ?? 0) > 0,
+      label: maxImages > 0
+        ? `Adicionar fotos (${currentImages}/${maxImages})`
+        : "Adicionar pelo menos 1 foto",
+      done: maxImages > 0 ? currentImages >= maxImages : currentImages > 0,
       action: "edit",
+      minTier: "start",
     },
     {
       id: "schedule",
@@ -58,10 +85,19 @@ const OnboardingChecklist = ({ business, onNavigate }: OnboardingChecklistProps)
       done: ((business as any).subcategories?.length ?? 0) > 0,
       action: "edit",
     },
-  ], [business]);
+  ], [business, maxImages, currentImages]);
 
-  const completedCount = steps.filter((s) => s.done).length;
-  const percentage = Math.round((completedCount / steps.length) * 100);
+  // Filter steps by tier visibility
+  const visibleSteps = useMemo(() => {
+    const tierRank: Record<string, number> = { free: 0, start: 1, pro: 2 };
+    return steps.filter((s) => {
+      if (!s.minTier) return true;
+      return tierRank[tier] >= tierRank[s.minTier];
+    });
+  }, [steps, tier]);
+
+  const completedCount = visibleSteps.filter((s) => s.done).length;
+  const percentage = visibleSteps.length > 0 ? Math.round((completedCount / visibleSteps.length) * 100) : 100;
   const isComplete = percentage === 100;
 
   // Don't show if: dismissed, score >= 80, or fully complete
@@ -118,7 +154,7 @@ const OnboardingChecklist = ({ business, onNavigate }: OnboardingChecklistProps)
       </div>
 
       <div className="space-y-2">
-        {steps.map((step) => (
+        {visibleSteps.map((step) => (
           <button
             key={step.id}
             onClick={() => !step.done && onNavigate(step.action)}
