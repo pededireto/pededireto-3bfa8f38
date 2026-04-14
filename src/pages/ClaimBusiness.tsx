@@ -231,7 +231,7 @@ const ClaimBusiness = () => {
                   {results.map((r) => (
                     <button
                       key={r.id}
-                      onClick={() => setSelectedBusiness({ id: r.id, name: r.name })}
+                      onClick={() => setSelectedBusiness({ id: r.id, name: r.name, legal_fields_count: r.legal_fields_count })}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left"
                     >
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
