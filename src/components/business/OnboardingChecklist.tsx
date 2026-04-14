@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Circle, X, Rocket, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { BusinessWithCategory } from "@/hooks/useBusinesses";
 import { useBusinessProfileScore } from "@/hooks/useBusinessProfileScore";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OnboardingChecklistProps {
   business: BusinessWithCategory;
@@ -34,6 +36,21 @@ const resolveTier = (business: any): string => {
 const OnboardingChecklist = ({ business, onNavigate }: OnboardingChecklistProps) => {
   const [dismissed, setDismissed] = useState(true);
   const { data: scoreData } = useBusinessProfileScore(business.id);
+
+  // Query the junction table for subcategories (not the FK relation)
+  const { data: subcatCount = 0 } = useQuery({
+    queryKey: ["business_subcategories_count", business.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("business_subcategories" as any)
+        .select("*", { count: "exact", head: true })
+        .eq("business_id", business.id);
+      if (error) return 0;
+      return count ?? 0;
+    },
+    enabled: !!business.id,
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     const val = localStorage.getItem(`${STORAGE_KEY}_${business.id}`);
@@ -82,7 +99,7 @@ const OnboardingChecklist = ({ business, onNavigate }: OnboardingChecklistProps)
     {
       id: "subcategory",
       label: "Escolher subcategoria",
-      done: ((business as any).subcategories?.length ?? 0) > 0,
+      done: subcatCount > 0,
       action: "edit",
     },
   ], [business, maxImages, currentImages]);
