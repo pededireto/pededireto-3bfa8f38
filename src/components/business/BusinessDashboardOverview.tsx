@@ -7,6 +7,7 @@ import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
 import { useBusinessScore } from "@/hooks/useBusinessScore";
+import { useBusinessScoreBreakdown } from "@/hooks/useBusinessScoreBreakdown";
 import { useBusinessPlan } from "@/hooks/useBusinessPlan";
 import { useBusinessResponseTime } from "@/hooks/useBusinessResponseTime";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
@@ -157,6 +158,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
   const { data: unreadCount = 0 } = useUnreadNotificationsCount(business.id);
   const { data: analytics, refetch } = useBusinessAnalytics(business.id);
   const { data: scoreData } = useBusinessScore(business.id);
+  const { data: breakdownData } = useBusinessScoreBreakdown(business.id);
   const permissions = useBusinessClaimPermissions(business);
   const { data: responseTime } = useBusinessResponseTime(business.id);
   const { isOnTrial, trialDaysLeft } = useBusinessPlan({
@@ -392,7 +394,7 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
             <Trophy className="h-4 w-4 text-primary" />
             <span className="text-xs text-muted-foreground">Pontos</span>
           </div>
-          <p className="text-2xl font-bold">🏆 {scoreData?.score ?? business.ranking_score ?? 0}</p>
+          <p className="text-2xl font-bold">🏆 {breakdownData?.totalScore ?? scoreData?.score ?? business.ranking_score ?? 0}</p>
           <Button
             size="sm"
             variant="ghost"
