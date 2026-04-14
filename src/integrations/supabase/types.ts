@@ -8422,6 +8422,7 @@ export type Database = {
           city: string
           id: string
           is_active: boolean
+          legal_fields_count: number
           name: string
         }[]
       }
