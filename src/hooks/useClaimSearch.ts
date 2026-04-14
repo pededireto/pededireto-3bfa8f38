@@ -6,6 +6,7 @@ interface ClaimResult {
   name: string;
   city: string | null;
   category_id: string | null;
+  is_active: boolean;
 }
 
 export const useClaimSearch = (query: string) => {
