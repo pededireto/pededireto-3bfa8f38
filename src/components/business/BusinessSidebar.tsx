@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import logo from "@/assets/pede-direto-logo.png";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   LayoutDashboard,
   Briefcase,
