@@ -7,6 +7,7 @@ import { useUnreadNotificationsCount } from "@/hooks/useBusinessNotifications";
 import { useBusinessAnalytics } from "@/hooks/useBusinessAnalytics";
 import { useBusinessClaimPermissions } from "@/hooks/useBusinessClaimPermissions";
 import { useBusinessScore } from "@/hooks/useBusinessScore";
+import { useBusinessScoreBreakdown } from "@/hooks/useBusinessScoreBreakdown";
 import { useBusinessPlan } from "@/hooks/useBusinessPlan";
 import { useBusinessResponseTime } from "@/hooks/useBusinessResponseTime";
 import BusinessProfileScore from "@/components/business/BusinessProfileScore";
