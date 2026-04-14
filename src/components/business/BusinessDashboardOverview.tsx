@@ -420,6 +420,9 @@ const BusinessDashboardOverview = ({ business, onNavigate }: Props) => {
         <BusinessRankingWidget businessId={business.id} onNavigate={onNavigate} />
       </div>
 
+      {/* ── Score Breakdown (visible to all tiers) ──── */}
+      <RankingScoreBreakdown businessId={business.id} />
+
       {/* ── Recent Requests ──────────────────────────── */}
       {!isLocked && recentRequests.length > 0 && (
         <div className="bg-card rounded-xl p-5 shadow-card space-y-3">
