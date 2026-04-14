@@ -336,6 +336,8 @@ const ClaimBusiness = () => {
                       </Button>
                     </div>
                   )}
+                    </>
+                  )}
                 </div>
               )}
 
