@@ -29,7 +29,7 @@ const ClaimBusiness = () => {
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBusiness, setSelectedBusiness] = useState<{ id: string; name: string } | null>(null);
+  const [selectedBusiness, setSelectedBusiness] = useState<{ id: string; name: string; legal_fields_count: number } | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCity, setNewCity] = useState("");
@@ -231,7 +231,7 @@ const ClaimBusiness = () => {
                   {results.map((r) => (
                     <button
                       key={r.id}
-                      onClick={() => setSelectedBusiness({ id: r.id, name: r.name })}
+                      onClick={() => setSelectedBusiness({ id: r.id, name: r.name, legal_fields_count: r.legal_fields_count })}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left"
                     >
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -247,7 +247,13 @@ const ClaimBusiness = () => {
                         {r.city && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <MapPin className="h-3 w-3" /> {r.city}
+                            {r.legal_fields_count < 3 && (
+                              <span className="ml-2 text-destructive">· {r.legal_fields_count}/5 dados legais</span>
+                            )}
                           </p>
+                        )}
+                        {!r.city && r.legal_fields_count < 3 && (
+                          <p className="text-xs text-destructive">{r.legal_fields_count}/5 dados legais</p>
                         )}
                       </div>
                     </button>
@@ -262,17 +268,30 @@ const ClaimBusiness = () => {
                     <p className="font-semibold text-foreground">{selectedBusiness.name}</p>
                   </div>
 
-                  {user ? (
-                    <Button onClick={handleClaim} disabled={isClaiming} className="w-full btn-cta-primary">
-                      {isClaiming ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />A reclamar...
-                        </>
-                      ) : (
-                        "Reclamar este negócio"
-                      )}
-                    </Button>
+                  {selectedBusiness.legal_fields_count < 3 ? (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                      <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        Não é possível reclamar este negócio
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        São necessários pelo menos 3 de 5 dados legais preenchidos (NIF, Morada, Responsável, Telefone, Email). 
+                        Atualmente tem {selectedBusiness.legal_fields_count}/5. Contacte o suporte para completar os dados.
+                      </p>
+                    </div>
                   ) : (
+                    <>
+                      {user ? (
+                        <Button onClick={handleClaim} disabled={isClaiming} className="w-full btn-cta-primary">
+                          {isClaiming ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />A reclamar...
+                            </>
+                          ) : (
+                            "Reclamar este negócio"
+                          )}
+                        </Button>
+                      ) : (
                     <div className="space-y-3 pt-2 border-t border-border">
                       <p className="text-sm text-muted-foreground flex items-center gap-2">
                         <Lock className="h-3.5 w-3.5" />
@@ -322,6 +341,8 @@ const ClaimBusiness = () => {
                         )}
                       </Button>
                     </div>
+                  )}
+                    </>
                   )}
                 </div>
               )}
