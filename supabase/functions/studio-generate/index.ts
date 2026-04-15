@@ -284,114 +284,120 @@ Responde APENAS com JSON válido:
 }`;
 }
 
+function buildAutoFillPrompt(p: any): string {
+  return `És um assistente de marketing visual para pequenos negócios portugueses.
+
+Dado o seguinte negócio, gera sugestões inteligentes para criar uma imagem de marketing de alta qualidade.
+
+NEGÓCIO:
+- Nome: ${p.nome || "não especificado"}
+- Sector/Categoria: ${p.sector || p.categoria || "não especificado"}
+
+Gera sugestões criativas e específicas para este tipo de negócio.
+
+Responde APENAS com JSON válido:
+{
+  "objetivo": "um de: negocio|produto|promocao|evento|pessoa|espaco",
+  "composicao": "um de: profissional_clean|flyer_popular|recrutamento|luxo|portfolio",
+  "oQueVendes": "descrição curta e específica do que o negócio vende/oferece",
+  "paraQuem": "público-alvo específico",
+  "beneficio": "principal benefício para o cliente",
+  "pessoas": "um de: sem|cliente_satisfeito|profissional_acao|equipa",
+  "ambiente": "descrição curta do cenário ideal para a imagem",
+  "emocao": "um de: profissional|energetico|urgente|luxuoso|acolhedor",
+  "textoImagem": "sugestão de headline curta para a imagem (máx 40 caracteres)"
+}`;
+}
+
 function buildImagePrompt(p: any): string {
   const hasContext = p.nome || p.sector || p.descricao || p.personagens || p.ambiente;
 
   const estiloMap: Record<string, string> = {
-    foto: "professional commercial photography, photorealistic, DSLR quality",
-    cinematografico: "cinematic photography, rich colors, shallow depth of field, anamorphic lens",
-    oleo: "oil painting style, rich textures, classical fine art",
-    ilustracao: "editorial illustration, clean lines, modern graphic design",
-    aguarela: "watercolor painting, soft washes, organic textures",
-    dupla: "double exposure photography, surreal overlay composition",
-    neon: "cyberpunk neon aesthetic, vibrant glowing colors, futuristic",
-    vintage: "vintage film photography, grain texture, warm faded tones, nostalgic",
-    minimalista: "minimalist photography, clean negative space, simple composition",
-    cartoon: "cartoon illustration style, bold outlines, vibrant colors",
-    surrealismo: "surrealist art, dreamlike impossible scenes, Salvador Dali inspired",
-    artdeco: "art deco style, geometric patterns, gold accents, 1920s glamour",
-    polaroid: "polaroid lo-fi photography, candid spontaneous feel, authentic",
-    popart: "pop art style, bold flat colors, Andy Warhol inspired",
-    pb: "black and white photography, dramatic contrast, timeless",
+    foto: "professional commercial photography, photorealistic, DSLR quality, sharp focus",
+    cinematografico: "cinematic photography, rich colors, shallow depth of field, anamorphic lens, film grain",
+    ilustracao: "editorial illustration, clean lines, modern graphic design, vector-like quality",
+    minimalista: "minimalist photography, clean negative space, simple powerful composition, one focal point",
+    vintage: "vintage film photography, grain texture, warm faded tones, nostalgic 70s feel",
+    neon: "cyberpunk neon aesthetic, vibrant glowing colors, futuristic urban atmosphere",
   };
 
-  const estiloMarketingMap: Record<string, string> = {
+  const composicaoMap: Record<string, string> = {
     livre: "",
     flyer_popular:
-      "vibrant marketing flyer composition — energetic and busy layout, bold dynamic background with AI-generated composite imagery, multiple service highlights visible, strong saturated colors (yellow, blue, red), Portuguese local business aesthetic, high visual density, attention-grabbing at a glance",
+      "vibrant marketing flyer composition, energetic busy layout, bold dynamic background, multiple service highlights visible, strong saturated colors (yellow, blue, red), Portuguese local business aesthetic, high visual density, attention-grabbing at a glance, designed for social media impact",
     recrutamento:
-      "recruitment impact poster composition — dramatic dark or black background, oversized bold typography dominates, single powerful focal image, high contrast yellow/red accent colors, urgent call-to-action visual hierarchy, stripped-down layout with maximum visual weight on the main message",
+      "recruitment impact poster, dramatic dark background, oversized bold typography dominates, single powerful focal image, high contrast yellow/red accent, urgent call-to-action visual hierarchy, maximum visual weight on main message",
     profissional_clean:
-      "corporate clean professional composition — structured white or neutral background, generous negative space, single professional photo anchor, clear visual hierarchy with brand identity placement, LinkedIn-style trustworthy aesthetic, calm confident layout",
-    luxo: "luxury lifestyle cinematic composition — full-bleed atmospheric photography, dark moody tones with warm gold accents, elegant serif-inspired visual feel, minimal text placement, premium editorial magazine aesthetic, sophisticated depth-of-field, Algarve or high-end Portuguese property atmosphere",
+      "corporate clean professional composition, structured white or neutral background, generous negative space, single professional photo anchor, clear visual hierarchy with brand identity placement, trustworthy aesthetic, calm confident layout, space reserved for headline and CTA",
+    luxo:
+      "luxury lifestyle cinematic composition, full-bleed atmospheric photography, dark moody tones with warm gold accents, elegant editorial magazine aesthetic, sophisticated depth-of-field, premium feel, dramatic lighting",
     portfolio:
-      "portfolio showcase documentary composition — authentic real-environment photography, multiple work-in-progress or results visible, honest raw aesthetic, before/after or process narrative, grid-ready layout that communicates scale and capability of real work",
+      "portfolio showcase documentary composition, authentic real-environment photography, work-in-progress or results visible, honest raw aesthetic, process narrative, grid-ready layout showing scale and capability",
   };
 
-  const ilumMap: Record<string, string> = {
-    manha: "soft morning light, gentle warm sunrise glow",
-    dia: "bright natural daylight, clear and crisp",
-    golden: "golden hour warm lighting, long shadows, amber tones",
-    noite: "nighttime ambient lighting, moody atmosphere",
-    estudio: "professional studio lighting with softbox, even illumination",
-    velas: "warm candlelight atmosphere, intimate flickering glow",
-  };
-
-  const humorMap: Record<string, string> = {
-    acolhedor: "warm and inviting, cozy welcoming atmosphere",
-    energetico: "energetic and dynamic, vibrant motion",
-    sereno: "serene and peaceful, calm tranquility",
-    festivo: "festive and celebratory, joyful atmosphere",
-    profissional: "professional and trustworthy, corporate confidence",
-    natural: "natural and organic, earthy authentic feel",
-    luxuoso: "luxurious and premium, sophisticated elegance",
-    urgente: "urgent and compelling, bold attention-grabbing",
+  const emocaoMap: Record<string, string> = {
+    profissional: "professional and trustworthy atmosphere, corporate confidence, clean and competent, neutral tones with brand accent, even balanced lighting",
+    energetico: "energetic and dynamic atmosphere, vibrant saturated colors, sense of movement, bold contrasts, bright directional lighting",
+    urgente: "urgent and compelling atmosphere, bold attention-grabbing colors (red, yellow, black), high contrast, dramatic shadows, strong visual hierarchy",
+    luxuoso: "luxurious premium atmosphere, dark moody tones with gold/champagne accents, soft dramatic lighting, sophisticated elegance, velvet-like depth",
+    acolhedor: "warm and inviting atmosphere, cozy welcoming feel, soft golden light, warm color palette (amber, cream, soft brown), gentle shadows",
   };
 
   const estiloDesc = estiloMap[p.estilo] || "professional commercial photography";
-  const estiloMarketingDesc = estiloMarketingMap[p.estiloMarketing || "livre"] || "";
-  const ilumDesc = p.iluminacao ? ilumMap[p.iluminacao] || "" : "";
-  const humorDesc = p.humor ? humorMap[p.humor] || "" : "";
-  const paletaDesc = p.paletas || "";
+  const composicaoDesc = composicaoMap[p.estiloMarketing || "livre"] || "";
+  const emocaoDesc = p.humor ? emocaoMap[p.humor] || "" : "";
 
-  return `És um especialista em criação de prompts para geradores de imagem IA (Midjourney, DALL-E, Stable Diffusion, Flux, Ideogram).
+  return `És um especialista WORLD-CLASS em criação de prompts para geradores de imagem IA (Midjourney, DALL-E, Flux, Ideogram).
 
-Cria um prompt DETALHADO e PROFISSIONAL em inglês que produza uma imagem de alta qualidade para uso comercial e marketing.
+O teu trabalho é criar prompts que produzam imagens de QUALIDADE PROFISSIONAL de marketing para pequenos negócios.
 
-O prompt DEVE seguir esta estrutura exacta:
-[SUBJECT] — descrição principal clara e específica do que aparece na imagem
-[MARKETING COMPOSITION] — ${estiloMarketingDesc || "standard commercial photography composition"}
-[STYLE] — estilo visual: ${estiloDesc}
-[LIGHTING] — iluminação específica${ilumDesc ? `: ${ilumDesc}` : ""}
-[COMPOSITION] — composição da imagem (close-up, wide shot, overhead, rule of thirds, etc.)
-[MOOD] — atmosfera e emoção${humorDesc ? `: ${humorDesc}` : ""}
-${paletaDesc ? `[COLOR PALETTE] — ${paletaDesc}` : ""}
-[TECHNICAL] — parâmetros técnicos de qualidade
-[NEGATIVE] — elementos a excluir
-
-DADOS DO PEDIDO:
+CONTEXTO DE MARKETING:
+${p.oQueVendes ? `- Produto/Serviço: ${p.oQueVendes}` : ""}
+${p.paraQuem ? `- Público-alvo: ${p.paraQuem}` : ""}
+${p.beneficio ? `- Benefício principal: ${p.beneficio}` : ""}
 ${p.objectivoImagem ? `- Objectivo: imagem de ${p.objectivoImagem}` : ""}
-${p.nome ? `- Marca/Negócio: ${p.nome} (NÃO incluir o nome como texto na imagem)` : ""}
+
+COMPOSIÇÃO DE MARKETING: ${composicaoDesc || "standard commercial photography"}
+ESTILO VISUAL: ${estiloDesc}
+EMOÇÃO/VIBE: ${emocaoDesc || "professional"}
+
+DADOS ADICIONAIS:
+${p.nome ? `- Marca/Negócio: ${p.nome} (NÃO incluir nome como texto na imagem a menos que pedido)` : ""}
 ${p.sector ? `- Sector: ${p.sector}` : ""}
-${p.descricao ? `- Cena principal: ${p.descricao}` : ""}
+${p.descricao ? `- Descrição da cena: ${p.descricao}` : ""}
 ${p.personagens ? `- Personagens: ${p.personagens}` : ""}
 ${p.ambiente ? `- Ambiente/Cenário: ${p.ambiente}` : ""}
-${p.localizacao ? `- Localização: ${p.localizacao}` : ""}
-${p.elementosFundo ? `- Elementos de fundo: ${p.elementosFundo}` : ""}
-${p.estacao ? `- Estação: ${p.estacao}` : ""}
-${p.textoSobreposto ? `- Texto sobreposto desejado: "${p.textoSobreposto}"${p.textoPosicao ? ` (posição: ${p.textoPosicao})` : ""}` : ""}
-- Estilo artístico: ${estiloDesc}
-${estiloMarketingDesc ? `- Composição de marketing: ${estiloMarketingDesc}` : ""}
-- Proporção: ${p.proporcao || "9:16"}
+${p.textoSobreposto ? `- Texto sobreposto desejado: "${p.textoSobreposto}"` : ""}
+- Proporção: ${p.proporcao || "4:5"}
 
-${!hasContext ? "MODO CRIATIVO: sem contexto específico, cria uma cena visualmente impactante e comercialmente apelativa.\n" : ""}
+O prompt DEVE seguir esta estrutura para máxima qualidade:
+1. [SUBJECT] — descrição clara e ESPECÍFICA do que aparece (nunca vago)
+2. [MARKETING COMPOSITION] — como está composta a imagem para marketing
+3. [STYLE] — estilo fotográfico/artístico específico
+4. [LIGHTING] — iluminação detalhada (direção, intensidade, temperatura de cor)
+5. [MOOD & COLOR] — atmosfera emocional e paleta de cores concreta
+6. [COMPOSITION] — enquadramento (close-up, wide, overhead, rule of thirds, leading lines)
+7. [TECHNICAL] — qualidade técnica
+8. [NEGATIVE] — o que excluir
 
 REGRAS OBRIGATÓRIAS:
-1. O prompt deve ser escrito INTEIRAMENTE em inglês
-2. Ter entre 80 e 150 palavras
-3. Incluir detalhes específicos de iluminação, composição, estilo fotográfico e mood
-4. O estilo de MARKETING COMPOSITION deve influenciar fortemente a estrutura visual e o mood geral
-5. Ser visual e concreto — NUNCA usar palavras vagas como "beautiful", "nice", "good"
-6. Terminar SEMPRE com: sharp focus, high resolution, professional quality --no text, watermark, logo, blur, distortion, amateur, low quality
-7. NÃO incluir o nome da marca/empresa como texto visível na imagem
-8. NÃO incluir explicações, introduções ou aspas — APENAS o prompt
-9. Adicionar aspect ratio no fim: --ar ${p.proporcao || "9:16"}
+1. Prompt INTEIRAMENTE em inglês, 100-180 palavras
+2. NUNCA usar adjectivos vagos: "beautiful", "nice", "good", "amazing"
+3. Usar SEMPRE descritores concretos: "warm amber 3200K lighting", "shallow f/1.4 depth of field", "rule of thirds composition"
+4. A composição de marketing DEVE influenciar fortemente toda a estrutura visual
+5. A emoção/vibe DEVE definir a paleta de cores e tipo de iluminação
+6. Terminar com: sharp focus, high resolution, professional quality --no text, watermark, logo, blur, distortion, amateur, low quality
+7. Adicionar aspect ratio: --ar ${p.proporcao || "4:5"}
+8. Se pessoas foram pedidas, descrever com detalhe (idade, expressão, acção, roupa)
+9. Se "sem pessoas" foi indicado, garantir que a cena é rica em detalhe de objetos/ambiente
+
+${!hasContext ? "MODO CRIATIVO: sem contexto específico, cria uma cena visualmente impactante e comercialmente apelativa para um negócio local português.\n" : ""}
 
 Responde APENAS com JSON válido:
 {
-  "prompt_principal": "prompt completo profissional em inglês, 80-150 palavras, seguindo a estrutura acima",
-  "variante_a": "variante com ângulo/composição diferente, 80-120 palavras",
-  "variante_b": "variante com iluminação/mood diferente, 80-120 palavras",
+  "prompt_principal": "prompt completo profissional em inglês, 100-180 palavras",
+  "variante_a": "variante com ângulo/composição diferente, 100-150 palavras",
+  "variante_b": "variante com iluminação/mood diferente, 100-150 palavras",
   "instrucoes": "3-4 passos práticos em português sobre como usar este prompt"
 }`;
 }
@@ -461,13 +467,17 @@ serve(async (req) => {
       }
 
       rawText = await callGemini(systemPrompt, userMessage, images, 5000);
+    } else if (action === "auto_fill_image") {
+      const systemPrompt = buildAutoFillPrompt(payload);
+      const userText = `Preenche automaticamente os campos para criar uma imagem de marketing para: ${payload.nome || "negócio local"}. Sector: ${payload.sector || payload.categoria || "geral"}.`;
+      rawText = await callGemini(systemPrompt, userText, undefined, 600);
     } else if (action === "generate_image_prompt") {
       const systemPrompt = buildImagePrompt(payload);
-      const userText = `Gera prompts de imagem para: ${payload.nome || payload.descricao || "negócio local português"}. Estilo: ${payload.estilo || "local"}. Proporção: ${payload.proporcao || "9:16"}.`;
+      const userText = `Gera prompts de imagem profissionais para: ${payload.nome || payload.descricao || "negócio local português"}. Composição: ${payload.estiloMarketing || "profissional"}. Estilo: ${payload.estilo || "foto"}. Proporção: ${payload.proporcao || "4:5"}. ${payload.oQueVendes ? "Produto/Serviço: " + payload.oQueVendes : ""} ${payload.paraQuem ? "Público: " + payload.paraQuem : ""} ${payload.beneficio ? "Benefício: " + payload.beneficio : ""}`.trim();
       const images = payload.referenceImageBase64
         ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
         : undefined;
-      rawText = await callGemini(systemPrompt, userText, images, 1200);
+      rawText = await callGemini(systemPrompt, userText, images, 1500);
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400,

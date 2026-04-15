@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Loader2,
   ArrowRight,
+  ArrowLeft,
   ChevronDown,
   ChevronUp,
   Copy,
@@ -11,6 +12,15 @@ import {
   RefreshCw,
   Zap,
   Pencil,
+  Sparkles,
+  Target,
+  Palette,
+  Type,
+  Users,
+  Image as ImageIcon,
+  Ratio,
+  Heart,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,223 +36,180 @@ import { useStudioGenerate } from "@/hooks/useStudioGenerate";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-// ── Constants ──
+// ── Step Constants ──
 
-const OBJECTIVOS = [
-  { key: "negocio", label: "Negócio", emoji: "🏪" },
-  { key: "produto", label: "Produto", emoji: "📦" },
-  { key: "evento", label: "Evento", emoji: "🎉" },
-  { key: "promocao", label: "Promoção", emoji: "💥" },
-  { key: "pessoa", label: "Pessoa/Equipa", emoji: "👤" },
-  { key: "espaco", label: "Espaço", emoji: "🏠" },
-  { key: "outro", label: "Outro", emoji: "🎯" },
+const OBJETIVOS = [
+  { key: "negocio", label: "Negócio", emoji: "🏪", desc: "Imagem geral do negócio" },
+  { key: "produto", label: "Produto", emoji: "📦", desc: "Destaque a um produto" },
+  { key: "promocao", label: "Promoção", emoji: "💥", desc: "Campanha ou desconto" },
+  { key: "evento", label: "Evento", emoji: "🎉", desc: "Evento ou inauguração" },
+  { key: "pessoa", label: "Pessoa/Equipa", emoji: "👤", desc: "Equipa ou fundador" },
+  { key: "espaco", label: "Espaço", emoji: "🏠", desc: "Interior ou exterior" },
 ];
 
-const ILUMINACAO = [
-  { key: "manha", label: "Manhã", emoji: "🌅" },
-  { key: "dia", label: "Dia", emoji: "☀️" },
-  { key: "golden", label: "Golden Hour", emoji: "🌆" },
-  { key: "noite", label: "Noite", emoji: "🌙" },
-  { key: "estudio", label: "Estúdio", emoji: "💡" },
-  { key: "velas", label: "Luz de velas", emoji: "🕯️" },
-];
-
-const ESTACOES = [
-  { key: "primavera", label: "Primavera", emoji: "🌸" },
-  { key: "verao", label: "Verão", emoji: "☀️" },
-  { key: "outono", label: "Outono", emoji: "🍂" },
-  { key: "inverno", label: "Inverno", emoji: "❄️" },
-];
-
-const ESTILOS = [
-  { key: "foto", label: "Fotografia Real", emoji: "📷", desc: "Hiper-realista, foto profissional" },
-  { key: "cinematografico", label: "Cinematográfico", emoji: "🎬", desc: "Cores ricas, profundidade" },
-  { key: "oleo", label: "Pintura a Óleo", emoji: "🎨", desc: "Textura artística" },
-  { key: "ilustracao", label: "Ilustração", emoji: "✏️", desc: "Linhas limpas, editorial" },
-  { key: "aguarela", label: "Aguarela", emoji: "🖼️", desc: "Suave, orgânico" },
-  { key: "dupla", label: "Dupla Exposição", emoji: "🌆", desc: "Sobreposição poética" },
-  { key: "neon", label: "Neon / Cyberpunk", emoji: "🌃", desc: "Cores vibrantes, futurista" },
-  { key: "vintage", label: "Vintage / Retro", emoji: "🪵", desc: "Granulado, nostálgico" },
-  { key: "minimalista", label: "Minimalista", emoji: "📐", desc: "Fundo limpo, espaço negativo" },
-  { key: "cartoon", label: "Cartoon / Anime", emoji: "🎭", desc: "Ilustração animada" },
-  { key: "surrealismo", label: "Surrealismo", emoji: "🌪️", desc: "Dreamlike, impossível" },
-  { key: "artdeco", label: "Art Deco", emoji: "🏺", desc: "Geométrico, anos 20" },
-  { key: "polaroid", label: "Polaroid / Lo-fi", emoji: "📸", desc: "Espontâneo, autêntico" },
-  { key: "popart", label: "Pop Art", emoji: "🎪", desc: "Cores flat, Warhol" },
-  { key: "pb", label: "Preto & Branco", emoji: "⚫", desc: "Dramático, atemporal" },
-];
-
-const ESTILOS_MARKETING = [
+const COMPOSICOES = [
   {
-    key: "livre",
-    label: "Livre",
-    emoji: "🎯",
-    desc: "Sem estilo de marketing forçado",
-    color: "border-border",
+    key: "profissional_clean",
+    label: "Profissional Clean",
+    emoji: "🏢",
+    desc: "Corporativo, limpo, confiança",
+    autoEstilo: "foto",
+    autoEmocao: "profissional",
   },
   {
     key: "flyer_popular",
     label: "Flyer Popular",
     emoji: "🟡",
-    desc: "Colorido, lotado, energia local",
-    color: "border-yellow-400",
+    desc: "Colorido, energia local, impacto",
+    autoEstilo: "foto",
+    autoEmocao: "energetico",
   },
   {
     key: "recrutamento",
     label: "Recrutamento Impacto",
     emoji: "🔴",
-    desc: "Dark bg, tipografia enorme, urgência",
-    color: "border-red-500",
-  },
-  {
-    key: "profissional_clean",
-    label: "Profissional Clean",
-    emoji: "🏢",
-    desc: "Corporativo, espaço branco, confiança",
-    color: "border-blue-400",
+    desc: "Dark, tipografia enorme, urgência",
+    autoEstilo: "cinematografico",
+    autoEmocao: "urgente",
   },
   {
     key: "luxo",
     label: "Luxo & Lifestyle",
     emoji: "✨",
-    desc: "Cinematográfico, gold/dark, premium",
-    color: "border-amber-400",
+    desc: "Cinematográfico, gold, premium",
+    autoEstilo: "cinematografico",
+    autoEmocao: "luxuoso",
   },
   {
     key: "portfolio",
     label: "Portfolio / Obras",
     emoji: "🔨",
-    desc: "Trabalho real, documentário, resultados",
-    color: "border-stone-400",
+    desc: "Trabalho real, documentário",
+    autoEstilo: "foto",
+    autoEmocao: "profissional",
   },
 ];
 
-const PALETAS = [
-  { key: "quentes", label: "Tons quentes", emoji: "🟤" },
-  { key: "neutros", label: "Tons neutros", emoji: "⚪" },
-  { key: "frios", label: "Tons frios", emoji: "🔵" },
-  { key: "verde", label: "Verde / Natural", emoji: "🟢" },
-  { key: "vermelho", label: "Vermelho / Energia", emoji: "🔴" },
-  { key: "roxo", label: "Roxo / Luxo", emoji: "🟣" },
-  { key: "amarelo", label: "Amarelo / Alegria", emoji: "🟡" },
-  { key: "escuro", label: "Escuro / Dramático", emoji: "⚫" },
-  { key: "colorido", label: "Colorido / Vibrante", emoji: "🌈" },
+const PESSOAS_OPCOES = [
+  { key: "sem", label: "Sem pessoas", emoji: "🚫" },
+  { key: "cliente_satisfeito", label: "Cliente satisfeito", emoji: "😊" },
+  { key: "profissional_acao", label: "Profissional em ação", emoji: "👷" },
+  { key: "equipa", label: "Equipa", emoji: "👥" },
+  { key: "custom", label: "Personalizado", emoji: "✏️" },
 ];
 
-const HUMOR = [
-  { key: "acolhedor", label: "Acolhedor", emoji: "😊" },
-  { key: "energetico", label: "Energético", emoji: "🔥" },
-  { key: "sereno", label: "Sereno", emoji: "😌" },
-  { key: "festivo", label: "Festivo", emoji: "🎉" },
-  { key: "profissional", label: "Profissional", emoji: "💼" },
-  { key: "natural", label: "Natural", emoji: "🌿" },
-  { key: "luxuoso", label: "Luxuoso", emoji: "💎" },
-  { key: "urgente", label: "Urgente", emoji: "⚡" },
+const AMBIENTES_SUGESTOES: Record<string, string[]> = {
+  negocio: ["Loja moderna e organizada", "Escritório luminoso", "Fachada do negócio"],
+  produto: ["Fundo limpo e minimalista", "Mesa de madeira rústica", "Cenário lifestyle"],
+  promocao: ["Loja decorada com promoção", "Ambiente festivo", "Montra apelativa"],
+  evento: ["Espaço decorado para evento", "Palco com iluminação", "Sala com convidados"],
+  pessoa: ["Escritório profissional", "Ambiente de trabalho natural", "Estúdio fotográfico"],
+  espaco: ["Interior decorado", "Esplanada ao ar livre", "Vista panorâmica"],
+};
+
+const ESTILOS = [
+  { key: "foto", label: "Fotografia Real", emoji: "📷" },
+  { key: "cinematografico", label: "Cinematográfico", emoji: "🎬" },
+  { key: "ilustracao", label: "Ilustração", emoji: "✏️" },
+  { key: "minimalista", label: "Minimalista", emoji: "📐" },
+  { key: "vintage", label: "Vintage / Retro", emoji: "🪵" },
+  { key: "neon", label: "Neon / Cyberpunk", emoji: "🌃" },
+];
+
+const EMOCOES = [
+  { key: "profissional", label: "Profissional", emoji: "💼", desc: "Confiança, competência" },
+  { key: "energetico", label: "Energético", emoji: "🔥", desc: "Dinâmico, vibrante" },
+  { key: "urgente", label: "Urgente", emoji: "⚡", desc: "Ação imediata" },
+  { key: "luxuoso", label: "Luxuoso", emoji: "💎", desc: "Sofisticado, premium" },
+  { key: "acolhedor", label: "Acolhedor", emoji: "😊", desc: "Caloroso, familiar" },
 ];
 
 const PROPORCOES = [
-  { key: "9:16", label: "9:16 Vertical", desc: "Reels · Stories", aspect: "aspect-[9/16] w-8" },
-  { key: "1:1", label: "1:1 Quadrado", desc: "Feed IG", aspect: "aspect-square w-10" },
-  { key: "16:9", label: "16:9 Horizontal", desc: "YouTube · Web", aspect: "aspect-video w-12" },
-  { key: "4:5", label: "4:5 Feed alt.", desc: "Feed alternativo", aspect: "aspect-[4/5] w-9" },
-  { key: "2:3", label: "2:3 Pinterest", desc: "Pinterest", aspect: "aspect-[2/3] w-8" },
+  { key: "4:5", label: "4:5", desc: "Feed IG (default)", aspect: "aspect-[4/5] w-9" },
+  { key: "1:1", label: "1:1", desc: "Quadrado", aspect: "aspect-square w-10" },
+  { key: "9:16", label: "9:16", desc: "Stories / Reels", aspect: "aspect-[9/16] w-8" },
+  { key: "16:9", label: "16:9", desc: "YouTube / Web", aspect: "aspect-video w-12" },
 ];
 
-const TEXTO_POSICAO = [
-  { key: "topo", label: "Topo", emoji: "⬆️" },
-  { key: "base", label: "Base", emoji: "⬇️" },
-  { key: "sup-esq", label: "Canto sup. esq.", emoji: "↖️" },
-  { key: "sup-dir", label: "Canto sup. dir.", emoji: "↗️" },
-  { key: "centro", label: "Centro", emoji: "🎯" },
-];
+// ── Step Card Component ──
+const StepCard = ({
+  stepNumber,
+  title,
+  icon: Icon,
+  filled,
+  active,
+  children,
+  optional,
+}: {
+  stepNumber: number;
+  title: string;
+  icon: any;
+  filled: boolean;
+  active: boolean;
+  children: React.ReactNode;
+  optional?: boolean;
+}) => (
+  <div
+    className={cn(
+      "rounded-xl border transition-all",
+      active ? "border-primary bg-card shadow-sm" : filled ? "border-primary/30 bg-card" : "border-border bg-card/50",
+    )}
+  >
+    <div className="flex items-center gap-3 p-4 pb-0">
+      <div
+        className={cn(
+          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+          filled ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+        )}
+      >
+        {filled ? <Check className="w-4 h-4" /> : stepNumber}
+      </div>
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
+        <span className="text-sm font-display font-semibold truncate">{title}</span>
+        {optional && (
+          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">opcional</span>
+        )}
+      </div>
+    </div>
+    <div className="p-4 pt-3">{children}</div>
+  </div>
+);
 
 // ── Chip Selector ──
 const ChipSelect = ({
   options,
   value,
   onChange,
-  multi = false,
+  columns = 3,
 }: {
-  options: { key: string; label: string; emoji: string }[];
-  value: string | string[];
-  onChange: (v: string | string[]) => void;
-  multi?: boolean;
+  options: { key: string; label: string; emoji: string; desc?: string }[];
+  value: string;
+  onChange: (v: string) => void;
+  columns?: number;
 }) => (
-  <div className="flex flex-wrap gap-2">
+  <div className={cn("grid gap-2", columns === 2 ? "grid-cols-2" : columns === 3 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2 sm:grid-cols-4")}>
     {options.map((o) => {
-      const selected = multi ? (value as string[]).includes(o.key) : value === o.key;
+      const selected = value === o.key;
       return (
         <button
           key={o.key}
           type="button"
-          onClick={() => {
-            if (multi) {
-              const arr = value as string[];
-              if (arr.includes(o.key)) {
-                onChange(arr.filter((k) => k !== o.key));
-              } else if (arr.length < 2) {
-                onChange([...arr, o.key]);
-              }
-            } else {
-              onChange(selected ? "" : o.key);
-            }
-          }}
+          onClick={() => onChange(selected ? "" : o.key)}
           className={cn(
-            "px-3 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5",
-            selected
-              ? "bg-primary/10 border-primary text-primary font-medium"
-              : "border-border hover:border-primary/30",
+            "p-3 rounded-xl border-2 text-left transition-all",
+            selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30",
           )}
         >
-          <span>{o.emoji}</span>
-          <span>{o.label}</span>
+          <span className="text-lg">{o.emoji}</span>
+          <div className="text-xs font-medium mt-1">{o.label}</div>
+          {o.desc && <div className="text-[10px] text-muted-foreground mt-0.5">{o.desc}</div>}
         </button>
       );
     })}
   </div>
 );
-
-// ── Collapsible Section ──
-const Section = ({
-  title,
-  filled,
-  defaultOpen = false,
-  children,
-  hint,
-}: {
-  title: string;
-  filled: boolean;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-  hint?: string;
-}) => {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="w-full">
-        <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:bg-accent/50 transition-colors">
-          <div className="flex items-center gap-2">
-            <span className={cn("w-2 h-2 rounded-full", filled ? "bg-primary" : "bg-border")} />
-            <span className="text-sm font-display font-semibold">{title}</span>
-          </div>
-          {open ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-          )}
-        </div>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="rounded-b-xl border border-t-0 border-border bg-card p-4 space-y-4">
-          {hint && <p className="text-xs text-muted-foreground italic">{hint}</p>}
-          {children}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-};
 
 // ── Main Component ──
 const StudioImagePage = () => {
@@ -265,25 +232,28 @@ const StudioImagePage = () => {
     localStorage.setItem("studio-image-mode", mode);
   }, [mode]);
 
-  // ── Form State ──
-  const [categoriaSlug, setCategoriaSlug] = useState("");
-  const [subcategoriaSlug, setSubcategoriaSlug] = useState("");
-  const [objectivoImagem, setObjectivoImagem] = useState("");
-  const [nome, setNome] = useState("");
-  const [sector, setSector] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [personagens, setPersonagens] = useState("");
-  const [localizacao, setLocalizacao] = useState("");
-  const [iluminacao, setIluminacao] = useState("");
-  const [estacao, setEstacao] = useState("");
-  const [elementosFundo, setElementosFundo] = useState("");
+  // ── WIZARD STATE ──
+  // Step 1: Objetivo
+  const [objetivo, setObjetivo] = useState("");
+  // Step 2: Composição de Marketing
+  const [composicao, setComposicao] = useState("");
+  // Step 3: Descrição Guiada
+  const [oQueVendes, setOQueVendes] = useState("");
+  const [paraQuem, setParaQuem] = useState("");
+  const [beneficio, setBeneficio] = useState("");
+  // Step 4: Pessoas
+  const [pessoas, setPessoas] = useState("");
+  const [pessoasCustom, setPessoasCustom] = useState("");
+  // Step 5: Ambiente
+  const [ambiente, setAmbiente] = useState("");
+  // Step 6: Estilo Visual (auto from composição, overridable)
   const [estilo, setEstilo] = useState("foto");
-  const [paletas, setPaletas] = useState<string[]>([]);
-  const [humor, setHumor] = useState("");
-  const [textoSobreposto, setTextoSobreposto] = useState("");
-  const [textoPosicao, setTextoPosicao] = useState("");
-  const [proporcao, setProporcao] = useState("9:16");
-  const [estiloMarketing, setEstiloMarketing] = useState("livre");
+  // Step 7: Emoção
+  const [emocao, setEmocao] = useState("");
+  // Step 8: Texto na imagem
+  const [textoImagem, setTextoImagem] = useState("");
+  // Step 9: Formato
+  const [proporcao, setProporcao] = useState("4:5");
 
   // ── Direct Prompt State ──
   const [directPrompt, setDirectPrompt] = useState("");
@@ -295,38 +265,55 @@ const StudioImagePage = () => {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [autoFilling, setAutoFilling] = useState(false);
 
-  const categoriaAtual = useMemo(() => categories?.find((c) => c.slug === categoriaSlug), [categories, categoriaSlug]);
-  const subcategoriasDisponiveis = useMemo(() => (categoriaAtual as any)?.subcategories || [], [categoriaAtual]);
+  // Business context
+  const nome = selectedBusiness?.name || "";
+  const sector = useMemo(() => {
+    if (selectedBusiness?.category_id && categories) {
+      const cat = categories.find((c: any) => c.id === selectedBusiness.category_id);
+      return cat?.name || "";
+    }
+    return "";
+  }, [selectedBusiness?.category_id, categories]);
 
-  // Pre-fill from selected business
+  // Auto-set estilo + emoção when composição changes
   useEffect(() => {
-    if (selectedBusiness) {
-      setNome(selectedBusiness.name || "");
-      if (selectedBusiness.category_id && categories) {
-        const cat = categories.find((c: any) => c.id === selectedBusiness.category_id);
-        if (cat) setSector(cat.name || "");
+    if (composicao) {
+      const comp = COMPOSICOES.find((c) => c.key === composicao);
+      if (comp) {
+        setEstilo(comp.autoEstilo);
+        setEmocao(comp.autoEmocao);
       }
     }
-  }, [selectedBusiness?.id, categories]);
+  }, [composicao]);
 
-  // Save form state to localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("studio-image-form");
-    if (saved) {
-      try {
-        const state = JSON.parse(saved);
-        if (state.categoriaSlug) setCategoriaSlug(state.categoriaSlug);
-        if (state.objectivoImagem) setObjectivoImagem(state.objectivoImagem);
-        if (state.estilo) setEstilo(state.estilo);
-        if (state.proporcao) setProporcao(state.proporcao);
-      } catch {}
+  // Ambiente suggestions based on objetivo
+  const ambienteSugestoes = useMemo(() => {
+    return AMBIENTES_SUGESTOES[objetivo] || [];
+  }, [objetivo]);
+
+  // Text suggestions based on objetivo + composição
+  const textoSugestoes = useMemo(() => {
+    const sugestoes: string[] = [];
+    if (objetivo === "promocao") {
+      sugestoes.push("🔥 Promoção Especial — Até -30%");
+      sugestoes.push("💥 Só esta semana!");
+      if (oQueVendes) sugestoes.push(`✨ ${oQueVendes} — Preço especial`);
+    } else if (objetivo === "evento") {
+      sugestoes.push("📅 Reserva já o teu lugar!");
+      sugestoes.push("🎉 Evento especial — Entrada livre");
+    } else if (objetivo === "negocio") {
+      sugestoes.push(`📞 Liga agora`);
+      if (nome) sugestoes.push(`${nome} — Ao teu serviço`);
+    } else if (objetivo === "produto") {
+      sugestoes.push("🆕 Novidade!");
+      if (oQueVendes) sugestoes.push(`${oQueVendes} — Disponível agora`);
     }
-  }, []);
+    return sugestoes;
+  }, [objetivo, oQueVendes, nome]);
 
-  useEffect(() => {
-    localStorage.setItem("studio-image-form", JSON.stringify({ categoriaSlug, objectivoImagem, estilo, proporcao }));
-  }, [categoriaSlug, objectivoImagem, estilo, proporcao]);
+  const canGenerate = !!(objetivo && composicao);
 
   // When switching to direct mode, pre-fill with generated prompt
   const handleModeChange = (newMode: "guided" | "direct") => {
@@ -336,86 +323,80 @@ const StudioImagePage = () => {
     setMode(newMode);
   };
 
-  const sectionsFilled = {
-    negocio: !!(nome || categoriaSlug),
-    criar: !!(objectivoImagem || descricao),
-    ambiente: !!(localizacao || iluminacao || estacao || elementosFundo),
-    estilo: !!(estilo || paletas.length || humor),
-    texto: !!textoSobreposto,
-    formato: !!proporcao,
-  };
-
-  const canGenerate = !!(categoriaSlug && (descricao || objectivoImagem));
-
-  // ── Build prompt from all fields ──
-  const buildPromptParts = () => {
-    const parts: string[] = [];
-    const estiloObj = ESTILOS.find((e) => e.key === estilo);
-    if (estiloObj) parts.push(estiloObj.label.toLowerCase());
-    const objObj = OBJECTIVOS.find((o) => o.key === objectivoImagem);
-    if (objObj) parts.push(`professional ${objObj.label.toLowerCase()} image`);
-    if (descricao) parts.push(descricao);
-    if (personagens) parts.push(personagens);
-    if (localizacao) parts.push(localizacao);
-    const ilumObj = ILUMINACAO.find((i) => i.key === iluminacao);
-    if (ilumObj) parts.push(`${ilumObj.label.toLowerCase()} lighting`);
-    const estObj = ESTACOES.find((e) => e.key === estacao);
-    if (estObj) parts.push(`${estObj.label.toLowerCase()} season`);
-    if (elementosFundo) parts.push(elementosFundo);
-    if (paletas.length > 0) {
-      const pl = paletas.map((p) => PALETAS.find((x) => x.key === p)?.label || p).join(" and ");
-      parts.push(`${pl} color palette`);
+  // ── Auto-fill ──
+  const handleAutoFill = async () => {
+    setAutoFilling(true);
+    try {
+      const result = await generateAI("auto_fill_image", {
+        nome,
+        sector,
+        categoria: sector,
+      });
+      if (result) {
+        if (result.objetivo) setObjetivo(result.objetivo);
+        if (result.composicao) setComposicao(result.composicao);
+        if (result.oQueVendes) setOQueVendes(result.oQueVendes);
+        if (result.paraQuem) setParaQuem(result.paraQuem);
+        if (result.beneficio) setBeneficio(result.beneficio);
+        if (result.pessoas) setPessoas(result.pessoas);
+        if (result.ambiente) setAmbiente(result.ambiente);
+        if (result.emocao) setEmocao(result.emocao);
+        if (result.textoImagem) setTextoImagem(result.textoImagem);
+        toast({ title: "✨ Preenchido automaticamente!", description: "Revê e ajusta o que quiseres antes de gerar." });
+      }
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível preencher automaticamente.", variant: "destructive" });
+    } finally {
+      setAutoFilling(false);
     }
-    const humObj = HUMOR.find((h) => h.key === humor);
-    if (humObj) parts.push(`${humObj.label.toLowerCase()} atmosphere`);
-    if (nome) parts.push(`for ${nome}`);
-    if (sector) parts.push(`(${sector})`);
-    if (textoSobreposto) parts.push(`with text overlay: "${textoSobreposto}"`);
-    parts.push("highly detailed, 8K quality");
-    parts.push(proporcao);
-    return parts.join(", ");
   };
 
+  // ── Generate Prompt ──
   const handleGeneratePrompt = async () => {
     if (generating) return;
     setGenerating(true);
     setPrompt("");
     setGeneratedImageUrl("");
 
-    const estiloObj = ESTILOS.find((e) => e.key === estilo);
-    const ilumObj = ILUMINACAO.find((i) => i.key === iluminacao);
-    const estObj = ESTACOES.find((e) => e.key === estacao);
-    const humObj = HUMOR.find((h) => h.key === humor);
-    const palLabel = paletas.map((p) => PALETAS.find((x) => x.key === p)?.label || p).join(", ");
+    const pessoasDesc =
+      pessoas === "custom"
+        ? pessoasCustom
+        : pessoas === "sem"
+          ? "no people"
+          : PESSOAS_OPCOES.find((p) => p.key === pessoas)?.label || "";
 
-    // Primary: use AI via studio-generate for rich professional prompts
     try {
       const aiResult = await generateAI("generate_image_prompt", {
-        objectivoImagem: OBJECTIVOS.find((o) => o.key === objectivoImagem)?.label || objectivoImagem || "",
+        objectivoImagem: OBJETIVOS.find((o) => o.key === objetivo)?.label || objetivo,
         nome,
         sector,
-        descricao,
-        personagens,
-        ambiente: [localizacao, elementosFundo].filter(Boolean).join(", "),
-        localizacao,
-        elementosFundo,
-        estilo: estiloObj?.label || estilo,
-        iluminacao,
-        estacao: estObj?.label || "",
-        humor: humObj?.label || "",
-        paletas: palLabel,
-        textoSobreposto: textoSobreposto || "",
-        textoPosicao: textoPosicao || "",
+        descricao: [oQueVendes, paraQuem ? `para ${paraQuem}` : "", beneficio ? `foco em ${beneficio}` : ""]
+          .filter(Boolean)
+          .join(", "),
+        personagens: pessoasDesc,
+        ambiente,
+        localizacao: ambiente,
+        elementosFundo: "",
+        estilo: ESTILOS.find((e) => e.key === estilo)?.label || estilo,
+        iluminacao: "",
+        estacao: "",
+        humor: EMOCOES.find((e) => e.key === emocao)?.label || "",
+        paletas: "",
+        textoSobreposto: textoImagem || "",
+        textoPosicao: "",
         proporcao,
-        estiloMarketing,
+        estiloMarketing: composicao,
+        oQueVendes,
+        paraQuem,
+        beneficio,
       });
 
       if (aiResult?.prompt_principal) {
         setPrompt(aiResult.prompt_principal);
         saveGen.mutate({
           type: "image",
-          title: `${nome || categoriaAtual?.name || "Imagem"} · ${sector || estilo}`,
-          subtitle: `${proporcao} · ${estilo}`,
+          title: `${nome || "Imagem"} · ${OBJETIVOS.find((o) => o.key === objetivo)?.label || ""}`,
+          subtitle: `${proporcao} · ${COMPOSICOES.find((c) => c.key === composicao)?.label || ""}`,
           data: aiResult,
         });
         setGenerating(false);
@@ -423,41 +404,61 @@ const StudioImagePage = () => {
         return;
       }
     } catch {
-      console.warn("[StudioImage] AI prompt generation failed, falling back to library/local");
+      console.warn("[StudioImage] AI prompt generation failed, using local builder");
     }
 
-    // Fallback: library lookup
-    const data = await lookupPrompt({
-      categoria: categoriaSlug,
-      subcategoria: subcategoriaSlug || undefined,
-      estilo,
-      proporcao,
-      objectivo: OBJECTIVOS.find((o) => o.key === objectivoImagem)?.label || objectivoImagem || undefined,
-      nome,
-      sector,
-      descricao,
-      personagens,
-      ambiente: [localizacao, elementosFundo].filter(Boolean).join(", "),
-      textoSobreposto: textoSobreposto || undefined,
-    });
-
-    if (data?.prompt_principal) {
-      setPrompt(data.prompt_principal);
-      saveGen.mutate({
-        type: "image",
-        title: `${nome || categoriaAtual?.name || "Imagem"} · ${sector || estilo}`,
-        subtitle: `${proporcao} · ${estilo}`,
-        data,
-      });
-    } else {
-      // Final fallback: constructed prompt
-      setPrompt(buildPromptParts());
-    }
+    // Fallback: local prompt construction
+    const parts: string[] = [];
+    const estiloObj = ESTILOS.find((e) => e.key === estilo);
+    if (estiloObj) parts.push(estiloObj.label.toLowerCase());
+    const objObj = OBJETIVOS.find((o) => o.key === objetivo);
+    if (objObj) parts.push(`professional ${objObj.label.toLowerCase()} image`);
+    if (oQueVendes) parts.push(oQueVendes);
+    if (paraQuem) parts.push(`targeting ${paraQuem}`);
+    if (beneficio) parts.push(`highlighting ${beneficio}`);
+    if (pessoasDesc && pessoas !== "sem") parts.push(pessoasDesc);
+    if (ambiente) parts.push(ambiente);
+    const emocaoObj = EMOCOES.find((e) => e.key === emocao);
+    if (emocaoObj) parts.push(`${emocaoObj.label.toLowerCase()} atmosphere`);
+    if (nome) parts.push(`for ${nome}`);
+    if (textoImagem) parts.push(`with text overlay: "${textoImagem}"`);
+    parts.push("highly detailed, 8K quality, professional marketing composition");
+    parts.push(proporcao);
+    setPrompt(parts.join(", "));
 
     setGenerating(false);
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
   };
 
+  // ── Image Generation (guided) ──
+  const handleGenerateImage = async () => {
+    if (!selectedBusiness?.id || !prompt) return;
+    setGeneratingImage(true);
+    setGeneratedImageUrl("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-business-image", {
+        body: { business_id: selectedBusiness.id, prompt, aspect_ratio: proporcao },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.image_url) {
+        setGeneratedImageUrl(data.image_url);
+        saveGen.mutate({
+          type: "image",
+          title: `${nome || "Imagem"} · gerada`,
+          subtitle: `${proporcao} · ${apiKey?.provider || "api"}`,
+          data: { prompt, image_url: data.image_url, provider: data.provider },
+        });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro ao gerar imagem", description: err.message, variant: "destructive" });
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
+
+  // ── Image Generation (direct) ──
   const handleGenerateImageDirect = async () => {
     if (!selectedBusiness?.id || !directPrompt.trim()) return;
     if (!apiKey) {
@@ -474,13 +475,8 @@ const StudioImagePage = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-business-image", {
-        body: {
-          business_id: selectedBusiness.id,
-          prompt: directPrompt,
-          aspect_ratio: proporcao,
-        },
+        body: { business_id: selectedBusiness.id, prompt: directPrompt, aspect_ratio: proporcao },
       });
-
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (data?.image_url) {
@@ -490,38 +486,6 @@ const StudioImagePage = () => {
           title: `${nome || "Imagem"} · gerada`,
           subtitle: `${proporcao} · ${apiKey?.provider || "api"}`,
           data: { prompt: directPrompt, image_url: data.image_url, provider: data.provider },
-        });
-      }
-    } catch (err: any) {
-      toast({ title: "Erro ao gerar imagem", description: err.message, variant: "destructive" });
-    } finally {
-      setGeneratingImage(false);
-    }
-  };
-
-  const handleGenerateImage = async () => {
-    if (!selectedBusiness?.id || !prompt) return;
-    setGeneratingImage(true);
-    setGeneratedImageUrl("");
-
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-business-image", {
-        body: {
-          business_id: selectedBusiness.id,
-          prompt,
-          aspect_ratio: proporcao,
-        },
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      if (data?.image_url) {
-        setGeneratedImageUrl(data.image_url);
-        saveGen.mutate({
-          type: "image",
-          title: `${nome || "Imagem"} · gerada`,
-          subtitle: `${proporcao} · ${apiKey?.provider || "api"}`,
-          data: { prompt, image_url: data.image_url, provider: data.provider },
         });
       }
     } catch (err: any) {
@@ -553,6 +517,14 @@ const StudioImagePage = () => {
     }
   };
 
+  // ── Computed description preview ──
+  const descPreview = useMemo(() => {
+    const parts = [oQueVendes, paraQuem ? `para ${paraQuem}` : "", beneficio ? `com foco em ${beneficio}` : ""].filter(Boolean);
+    if (parts.length === 0) return "";
+    const comp = COMPOSICOES.find((c) => c.key === composicao);
+    return `${comp?.label || "Imagem"} a promover ${parts.join(", ")}`;
+  }, [oQueVendes, paraQuem, beneficio, composicao]);
+
   return (
     <div className="max-w-[900px] space-y-4">
       {/* Mode Toggle */}
@@ -567,7 +539,7 @@ const StudioImagePage = () => {
               : "text-muted-foreground hover:text-foreground",
           )}
         >
-          📋 Formulário Guiado
+          🧙 Assistente Criativo
         </button>
         <button
           type="button"
@@ -583,213 +555,245 @@ const StudioImagePage = () => {
         </button>
       </div>
 
-      {/* Hint */}
-      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground flex items-start gap-2">
-        <span className="text-primary">💡</span>
-        {mode === "guided"
-          ? "Quanto mais campos preencheres, mais rica e precisa será a imagem gerada."
-          : "Cola ou escreve o teu prompt directamente. Ideal se já sabes o que queres."}
-      </div>
-
       {mode === "guided" ? (
         <>
-          {/* SECÇÃO 1 — Negócio */}
-          <Section title="O negócio" filled={sectionsFilled.negocio} defaultOpen={true}>
-            {categoriesLoading ? (
-              <Skeleton className="h-10 w-full" />
-            ) : (
-              <Select
-                value={categoriaSlug}
-                onValueChange={(v) => {
-                  setCategoriaSlug(v);
-                  setSubcategoriaSlug("");
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleciona a categoria..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories?.map((cat) => (
-                    <SelectItem key={cat.slug} value={cat.slug}>
-                      {cat.name}
-                    </SelectItem>
+          {/* Header with Auto-Fill */}
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-display font-bold flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Assistente Criativo de Imagem
+              </h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Responde às perguntas e o sistema cria uma prompt profissional para ti.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAutoFill}
+              disabled={autoFilling}
+              className="gap-1.5 shrink-0"
+            >
+              {autoFilling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+              Gerar por mim
+            </Button>
+          </div>
+
+          {/* Business context */}
+          {nome && (
+            <div className="rounded-lg bg-muted/50 border border-border px-4 py-2.5 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Negócio:</span>
+              <span className="text-sm font-medium">{nome}</span>
+              {sector && <span className="text-xs text-muted-foreground">· {sector}</span>}
+            </div>
+          )}
+
+          {/* STEP 1: Objetivo */}
+          <StepCard stepNumber={1} title="O que queres comunicar?" icon={Target} filled={!!objetivo} active={!objetivo}>
+            <ChipSelect options={OBJETIVOS} value={objetivo} onChange={(v) => setObjetivo(v as string)} />
+          </StepCard>
+
+          {/* STEP 2: Composição de Marketing */}
+          {objetivo && (
+            <StepCard
+              stepNumber={2}
+              title="Que estilo de marketing?"
+              icon={Palette}
+              filled={!!composicao}
+              active={!!objetivo && !composicao}
+            >
+              <ChipSelect options={COMPOSICOES} value={composicao} onChange={(v) => setComposicao(v as string)} columns={2} />
+            </StepCard>
+          )}
+
+          {/* STEP 3: Descrição Guiada */}
+          {composicao && (
+            <StepCard
+              stepNumber={3}
+              title="Descreve o conteúdo"
+              icon={ImageIcon}
+              filled={!!oQueVendes}
+              active={!!composicao && !oQueVendes}
+            >
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block font-medium">
+                    O que estás a vender / mostrar? *
+                  </label>
+                  <Input
+                    value={oQueVendes}
+                    onChange={(e) => setOQueVendes(e.target.value)}
+                    placeholder="Ex: Serviço de limpeza profissional, menu de almoço, remodelação de interiores..."
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Para quem?</label>
+                  <Input
+                    value={paraQuem}
+                    onChange={(e) => setParaQuem(e.target.value)}
+                    placeholder="Ex: Famílias, empresas, jovens profissionais..."
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Qual o principal benefício?</label>
+                  <Input
+                    value={beneficio}
+                    onChange={(e) => setBeneficio(e.target.value)}
+                    placeholder="Ex: Confiança, rapidez, qualidade premium, preço acessível..."
+                  />
+                </div>
+                {descPreview && (
+                  <div className="rounded-lg bg-muted/50 border border-border p-3">
+                    <p className="text-[10px] text-muted-foreground mb-1 font-medium">O sistema vai criar:</p>
+                    <p className="text-xs italic">"{descPreview}"</p>
+                  </div>
+                )}
+              </div>
+            </StepCard>
+          )}
+
+          {/* STEP 4: Pessoas */}
+          {oQueVendes && (
+            <StepCard stepNumber={4} title="Pessoas na imagem" icon={Users} filled={!!pessoas} active={false} optional>
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {PESSOAS_OPCOES.map((o) => (
+                    <button
+                      key={o.key}
+                      type="button"
+                      onClick={() => setPessoas(pessoas === o.key ? "" : o.key)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5",
+                        pessoas === o.key
+                          ? "bg-primary/10 border-primary text-primary font-medium"
+                          : "border-border hover:border-primary/30",
+                      )}
+                    >
+                      <span>{o.emoji}</span>
+                      <span>{o.label}</span>
+                    </button>
                   ))}
-                </SelectContent>
-              </Select>
-            )}
-            {categoriaAtual && subcategoriasDisponiveis.length > 0 && (
-              <Select value={subcategoriaSlug} onValueChange={setSubcategoriaSlug}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Subcategoria (opcional)..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {subcategoriasDisponiveis.map((sub: any) => (
-                    <SelectItem key={sub.slug} value={sub.slug}>
-                      {sub.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Nome do negócio ou marca</label>
-                <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Taberna do Borges" />
+                </div>
+                {pessoas === "custom" && (
+                  <Input
+                    value={pessoasCustom}
+                    onChange={(e) => setPessoasCustom(e.target.value)}
+                    placeholder="Descreve quem deve aparecer..."
+                  />
+                )}
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Sector / Tipo</label>
-                <Input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Ex: Restauração..." />
-              </div>
-            </div>
-          </Section>
+            </StepCard>
+          )}
 
-          {/* SECÇÃO 2 — O que queres criar */}
-          <Section title="O que queres criar" filled={sectionsFilled.criar} defaultOpen={true}>
-            <div>
-              <label className="text-xs text-muted-foreground mb-2 block">Objectivo da imagem</label>
-              <ChipSelect
-                options={OBJECTIVOS}
-                value={objectivoImagem}
-                onChange={(v) => setObjectivoImagem(v as string)}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">
-                Descreve o que deve aparecer na imagem *
-              </label>
-              <Textarea
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                rows={3}
-                className="resize-none"
-                maxLength={300}
-                placeholder="Ex: vista do interior do restaurante ao jantar, com mesa posta e luz ambiente..."
-              />
-              <p className="text-[10px] text-muted-foreground text-right mt-0.5">{descricao.length}/300</p>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Personagens ou pessoas?</label>
-              <Input
-                value={personagens}
-                onChange={(e) => setPersonagens(e.target.value)}
-                placeholder="Ex: barista jovem, casal de 30 anos, sem pessoas..."
-              />
-              <p className="text-[10px] text-muted-foreground mt-0.5">Deixa vazio para imagem sem pessoas</p>
-            </div>
-          </Section>
-
-          {/* SECÇÃO 3 — Ambiente & Contexto */}
-          <Section title="Ambiente & Contexto" filled={sectionsFilled.ambiente} hint="Enriquece a atmosfera da imagem">
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Localização / Cenário</label>
-              <Input
-                value={localizacao}
-                onChange={(e) => setLocalizacao(e.target.value)}
-                placeholder="Ex: interior rústico português, esplanada..."
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-2 block">Hora do dia / Iluminação</label>
-              <ChipSelect options={ILUMINACAO} value={iluminacao} onChange={(v) => setIluminacao(v as string)} />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-2 block">Estação do ano</label>
-              <ChipSelect options={ESTACOES} value={estacao} onChange={(v) => setEstacao(v as string)} />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Elementos de fundo / atmosfera</label>
-              <Input
-                value={elementosFundo}
-                onChange={(e) => setElementosFundo(e.target.value)}
-                placeholder="Ex: fumo de cozinha, flores silvestres..."
-              />
-            </div>
-          </Section>
-
-          {/* SECÇÃO 4 — Estilo Visual */}
-          {/* SECÇÃO 4 — Estilo Visual */}
-          <Section title="Estilo Visual" filled={sectionsFilled.estilo} hint="Define o look & feel da imagem">
-            {/* NOVO: Composição de Marketing */}
-            <div>
-              <label className="text-xs text-muted-foreground mb-2 block font-medium">Composição de marketing</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {ESTILOS_MARKETING.map((em) => (
-                  <button
-                    key={em.key}
-                    type="button"
-                    onClick={() => setEstiloMarketing(em.key)}
-                    className={cn(
-                      "p-3 rounded-xl border-2 text-left transition-all",
-                      estiloMarketing === em.key ? `${em.color} bg-primary/5` : "border-border hover:border-primary/30",
-                    )}
-                  >
-                    <span className="text-lg">{em.emoji}</span>
-                    <div className="text-xs font-medium mt-1">{em.label}</div>
-                    <div className="text-[10px] text-muted-foreground">{em.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-t border-border/50 pt-3">
-              <label className="text-xs text-muted-foreground mb-2 block font-medium">Estilo artístico</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {ESTILOS.map((e) => (
-                  <button
-                    key={e.key}
-                    type="button"
-                    onClick={() => setEstilo(e.key)}
-                    className={cn(
-                      "p-3 rounded-xl border text-left transition-all",
-                      estilo === e.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/30",
-                    )}
-                  >
-                    <span className="text-lg">{e.emoji}</span>
-                    <div className="text-xs font-medium mt-1">{e.label}</div>
-                    <div className="text-[10px] text-muted-foreground">{e.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-muted-foreground mb-2 block">Paleta de cores (até 2)</label>
-              <ChipSelect options={PALETAS} value={paletas} onChange={(v) => setPaletas(v as string[])} multi />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-2 block">Humor / Emoção</label>
-              <ChipSelect options={HUMOR} value={humor} onChange={(v) => setHumor(v as string)} />
-            </div>
-          </Section>
-
-          {/* SECÇÃO 5 — Texto sobreposto */}
-          <Section
-            title="Texto sobreposto"
-            filled={sectionsFilled.texto}
-            hint="Para texto em imagem, o Ideogram dá melhores resultados"
-          >
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Mensagem / texto na imagem</label>
-              <Input
-                value={textoSobreposto}
-                onChange={(e) => setTextoSobreposto(e.target.value)}
-                placeholder="Ex: Promoção de Verão · -20% | Menu do dia · 8,50€"
-              />
-            </div>
-            {textoSobreposto && (
-              <div>
-                <label className="text-xs text-muted-foreground mb-2 block">Posição do texto</label>
-                <ChipSelect
-                  options={TEXTO_POSICAO}
-                  value={textoPosicao}
-                  onChange={(v) => setTextoPosicao(v as string)}
+          {/* STEP 5: Ambiente */}
+          {oQueVendes && (
+            <StepCard stepNumber={5} title="Ambiente da imagem" icon={MapPin} filled={!!ambiente} active={false} optional>
+              <div className="space-y-2">
+                <Input
+                  value={ambiente}
+                  onChange={(e) => setAmbiente(e.target.value)}
+                  placeholder="Ex: Escritório moderno, casa limpa e luminosa, restaurante movimentado..."
                 />
+                {ambienteSugestoes.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {ambienteSugestoes.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setAmbiente(s)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-md text-[11px] border transition-all",
+                          ambiente === s
+                            ? "bg-primary/10 border-primary text-primary"
+                            : "border-border hover:border-primary/30 text-muted-foreground",
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </Section>
+            </StepCard>
+          )}
 
-          {/* SECÇÃO 6 — Formato */}
-          <Section title="Formato / Proporção" filled={sectionsFilled.formato} defaultOpen={true}>
+          {/* STEP 6: Estilo Visual */}
+          {oQueVendes && (
+            <StepCard stepNumber={6} title="Estilo visual" icon={Palette} filled={!!estilo} active={false} optional>
+              <div className="space-y-2">
+                <p className="text-[10px] text-muted-foreground">
+                  Preenchido automaticamente com base na composição. Altera se quiseres.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {ESTILOS.map((e) => (
+                    <button
+                      key={e.key}
+                      type="button"
+                      onClick={() => setEstilo(e.key)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5",
+                        estilo === e.key
+                          ? "bg-primary/10 border-primary text-primary font-medium"
+                          : "border-border hover:border-primary/30",
+                      )}
+                    >
+                      <span>{e.emoji}</span>
+                      <span>{e.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </StepCard>
+          )}
+
+          {/* STEP 7: Emoção */}
+          {oQueVendes && (
+            <StepCard stepNumber={7} title="Emoção / Vibe" icon={Heart} filled={!!emocao} active={false} optional>
+              <p className="text-[10px] text-muted-foreground mb-2">
+                Define cores, luz e contraste automaticamente.
+              </p>
+              <ChipSelect options={EMOCOES} value={emocao} onChange={(v) => setEmocao(v as string)} columns={2} />
+            </StepCard>
+          )}
+
+          {/* STEP 8: Texto na imagem */}
+          {oQueVendes && (
+            <StepCard stepNumber={8} title="Texto na imagem" icon={Type} filled={!!textoImagem} active={false} optional>
+              <div className="space-y-2">
+                <Input
+                  value={textoImagem}
+                  onChange={(e) => setTextoImagem(e.target.value)}
+                  placeholder="Ex: Promoção Especial – Sites desde 159€"
+                />
+                {textoSugestoes.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {textoSugestoes.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setTextoImagem(s)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-md text-[11px] border transition-all",
+                          textoImagem === s
+                            ? "bg-primary/10 border-primary text-primary"
+                            : "border-border hover:border-primary/30 text-muted-foreground",
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[10px] text-muted-foreground">
+                  💡 Para texto legível, o Ideogram dá melhores resultados.
+                </p>
+              </div>
+            </StepCard>
+          )}
+
+          {/* STEP 9: Formato */}
+          <StepCard stepNumber={9} title="Formato" icon={Ratio} filled={!!proporcao} active={false}>
             <div className="flex flex-wrap gap-2">
               {PROPORCOES.map((p) => (
                 <button
@@ -808,9 +812,9 @@ const StudioImagePage = () => {
                 </button>
               ))}
             </div>
-          </Section>
+          </StepCard>
 
-          {/* Generate Prompt Button */}
+          {/* Generate Button */}
           <Button
             onClick={handleGeneratePrompt}
             disabled={generating || !canGenerate}
@@ -819,12 +823,19 @@ const StudioImagePage = () => {
           >
             {generating ? (
               <>
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />A construir a tua prompt...
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />A criar a tua prompt profissional...
               </>
             ) : (
-              "✦ Gerar Prompt"
+              <>
+                <Sparkles className="h-5 w-5 mr-2" />
+                Gerar Prompt Profissional
+              </>
             )}
           </Button>
+
+          {!canGenerate && objetivo && !composicao && (
+            <p className="text-xs text-center text-muted-foreground">Seleciona o estilo de marketing para continuar</p>
+          )}
         </>
       ) : (
         /* ── MODO PROMPT DIRECTO ── */
@@ -843,7 +854,6 @@ const StudioImagePage = () => {
             </p>
           </div>
 
-          {/* Formato / Proporção */}
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <label className="text-sm font-display font-semibold block">Formato / Proporção</label>
             <div className="flex flex-wrap gap-2">
@@ -866,7 +876,6 @@ const StudioImagePage = () => {
             </div>
           </div>
 
-          {/* Generate Image Button (direct) */}
           {apiKey ? (
             <Button
               onClick={handleGenerateImageDirect}
@@ -897,7 +906,15 @@ const StudioImagePage = () => {
         </div>
       )}
 
-      {/* ── Direct mode: show generated image inline ── */}
+      {/* ── Direct mode: generating skeleton ── */}
+      {mode === "direct" && generatingImage && !generatedImageUrl && (
+        <div className="rounded-xl border border-border bg-card p-6 text-center space-y-3">
+          <Skeleton className="w-full aspect-square max-w-sm mx-auto rounded-xl" />
+          <p className="text-sm text-muted-foreground">A criar a tua imagem... (15-30 segundos)</p>
+        </div>
+      )}
+
+      {/* ── Direct mode: show generated image ── */}
       {mode === "direct" && generatedImageUrl && (
         <div ref={resultRef} className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="p-4 space-y-3">
@@ -924,15 +941,7 @@ const StudioImagePage = () => {
         </div>
       )}
 
-      {/* ── Direct mode: generating skeleton ── */}
-      {mode === "direct" && generatingImage && !generatedImageUrl && (
-        <div className="rounded-xl border border-border bg-card p-6 text-center space-y-3">
-          <Skeleton className="w-full aspect-square max-w-sm mx-auto rounded-xl" />
-          <p className="text-sm text-muted-foreground">A criar a tua imagem... (15-30 segundos)</p>
-        </div>
-      )}
-
-      {/* ── Prompt Result (guided mode only) ── */}
+      {/* ── Prompt Result (guided mode) ── */}
       {mode === "guided" && prompt && (
         <div ref={resultRef} className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b border-border">
@@ -975,7 +984,7 @@ const StudioImagePage = () => {
             </div>
           </div>
 
-          {/* ── Image Generation ── */}
+          {/* Image Generation */}
           <div className="border-t border-border p-4 space-y-3">
             {apiKey ? (
               <>
@@ -1023,7 +1032,7 @@ const StudioImagePage = () => {
             )}
           </div>
 
-          {/* ── Generated Image ── */}
+          {/* Generated Image */}
           {generatedImageUrl && (
             <div className="border-t border-border p-4 space-y-3">
               <div className="rounded-xl overflow-hidden bg-muted border border-border">
