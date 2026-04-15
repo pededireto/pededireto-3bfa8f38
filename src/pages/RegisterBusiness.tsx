@@ -524,6 +524,28 @@ const RegisterBusiness = () => {
                 </>
               )}
 
+              {!isStep1Valid() && (formData.name || formData.phone || formData.city || formData.email || formData.password) && (
+                <p className="text-xs text-destructive text-center">
+                  {[
+                    formData.name.trim().length < 2 && "Nome do negócio",
+                    formData.phone.trim().length < 9 && "Telefone",
+                    formData.city.trim().length < 2 && "Cidade",
+                    ...(!user ? [
+                      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && "Email",
+                      formData.password.length < 6 && "Password (mín. 6 caracteres)",
+                    ] : []),
+                  ].filter(Boolean).join(", ")} — {[
+                    formData.name.trim().length < 2 && "Nome do negócio",
+                    formData.phone.trim().length < 9 && "Telefone",
+                    formData.city.trim().length < 2 && "Cidade",
+                    ...(!user ? [
+                      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && "Email",
+                      formData.password.length < 6 && "Password (mín. 6 caracteres)",
+                    ] : []),
+                  ].filter(Boolean).length === 1 ? "é obrigatório" : "são obrigatórios"}
+                </p>
+              )}
+
               <Button
                 onClick={() => setStep(2)}
                 disabled={!isStep1Valid()}
