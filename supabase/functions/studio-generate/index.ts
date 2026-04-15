@@ -528,7 +528,7 @@ serve(async (req) => {
       const images = payload.referenceImageBase64
         ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
         : undefined;
-      rawText = await callGemini(systemPrompt, userText, images, 1500);
+      rawText = await callGemini(systemPrompt, userText, images, 3000);
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400,
