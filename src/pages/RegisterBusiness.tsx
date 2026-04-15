@@ -124,9 +124,11 @@ const RegisterBusiness = () => {
   const updateField = (field: keyof FormData, value: string) => {
     setFormData((prev) => {
       const next = { ...prev, [field]: value };
-      // Pre-fill owner fields from main fields when empty
+      // Bi-directional sync between main and owner fields
       if (field === "email" && !prev.ownerEmail) next.ownerEmail = value;
       if (field === "phone" && !prev.ownerPhone) next.ownerPhone = value;
+      if (field === "ownerEmail" && !prev.email) next.email = value;
+      if (field === "ownerPhone" && !prev.phone) next.phone = value;
       return next;
     });
   };
