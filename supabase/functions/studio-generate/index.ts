@@ -287,7 +287,6 @@ Responde APENAS com JSON válido:
 function buildImagePrompt(p: any): string {
   const hasContext = p.nome || p.sector || p.descricao || p.personagens || p.ambiente;
 
-  // Map estilo key to English style description
   const estiloMap: Record<string, string> = {
     foto: "professional commercial photography, photorealistic, DSLR quality",
     cinematografico: "cinematic photography, rich colors, shallow depth of field, anamorphic lens",
@@ -306,7 +305,19 @@ function buildImagePrompt(p: any): string {
     pb: "black and white photography, dramatic contrast, timeless",
   };
 
-  // Map iluminacao key to English lighting
+  const estiloMarketingMap: Record<string, string> = {
+    livre: "",
+    flyer_popular:
+      "vibrant marketing flyer composition — energetic and busy layout, bold dynamic background with AI-generated composite imagery, multiple service highlights visible, strong saturated colors (yellow, blue, red), Portuguese local business aesthetic, high visual density, attention-grabbing at a glance",
+    recrutamento:
+      "recruitment impact poster composition — dramatic dark or black background, oversized bold typography dominates, single powerful focal image, high contrast yellow/red accent colors, urgent call-to-action visual hierarchy, stripped-down layout with maximum visual weight on the main message",
+    profissional_clean:
+      "corporate clean professional composition — structured white or neutral background, generous negative space, single professional photo anchor, clear visual hierarchy with brand identity placement, LinkedIn-style trustworthy aesthetic, calm confident layout",
+    luxo: "luxury lifestyle cinematic composition — full-bleed atmospheric photography, dark moody tones with warm gold accents, elegant serif-inspired visual feel, minimal text placement, premium editorial magazine aesthetic, sophisticated depth-of-field, Algarve or high-end Portuguese property atmosphere",
+    portfolio:
+      "portfolio showcase documentary composition — authentic real-environment photography, multiple work-in-progress or results visible, honest raw aesthetic, before/after or process narrative, grid-ready layout that communicates scale and capability of real work",
+  };
+
   const ilumMap: Record<string, string> = {
     manha: "soft morning light, gentle warm sunrise glow",
     dia: "bright natural daylight, clear and crisp",
@@ -316,7 +327,6 @@ function buildImagePrompt(p: any): string {
     velas: "warm candlelight atmosphere, intimate flickering glow",
   };
 
-  // Map humor key to English mood
   const humorMap: Record<string, string> = {
     acolhedor: "warm and inviting, cozy welcoming atmosphere",
     energetico: "energetic and dynamic, vibrant motion",
@@ -329,6 +339,7 @@ function buildImagePrompt(p: any): string {
   };
 
   const estiloDesc = estiloMap[p.estilo] || "professional commercial photography";
+  const estiloMarketingDesc = estiloMarketingMap[p.estiloMarketing || "livre"] || "";
   const ilumDesc = p.iluminacao ? ilumMap[p.iluminacao] || "" : "";
   const humorDesc = p.humor ? humorMap[p.humor] || "" : "";
   const paletaDesc = p.paletas || "";
@@ -339,6 +350,7 @@ Cria um prompt DETALHADO e PROFISSIONAL em inglês que produza uma imagem de alt
 
 O prompt DEVE seguir esta estrutura exacta:
 [SUBJECT] — descrição principal clara e específica do que aparece na imagem
+[MARKETING COMPOSITION] — ${estiloMarketingDesc || "standard commercial photography composition"}
 [STYLE] — estilo visual: ${estiloDesc}
 [LIGHTING] — iluminação específica${ilumDesc ? `: ${ilumDesc}` : ""}
 [COMPOSITION] — composição da imagem (close-up, wide shot, overhead, rule of thirds, etc.)
@@ -358,7 +370,8 @@ ${p.localizacao ? `- Localização: ${p.localizacao}` : ""}
 ${p.elementosFundo ? `- Elementos de fundo: ${p.elementosFundo}` : ""}
 ${p.estacao ? `- Estação: ${p.estacao}` : ""}
 ${p.textoSobreposto ? `- Texto sobreposto desejado: "${p.textoSobreposto}"${p.textoPosicao ? ` (posição: ${p.textoPosicao})` : ""}` : ""}
-- Estilo visual: ${estiloDesc}
+- Estilo artístico: ${estiloDesc}
+${estiloMarketingDesc ? `- Composição de marketing: ${estiloMarketingDesc}` : ""}
 - Proporção: ${p.proporcao || "9:16"}
 
 ${!hasContext ? "MODO CRIATIVO: sem contexto específico, cria uma cena visualmente impactante e comercialmente apelativa.\n" : ""}
@@ -367,11 +380,12 @@ REGRAS OBRIGATÓRIAS:
 1. O prompt deve ser escrito INTEIRAMENTE em inglês
 2. Ter entre 80 e 150 palavras
 3. Incluir detalhes específicos de iluminação, composição, estilo fotográfico e mood
-4. Ser visual e concreto — NUNCA usar palavras vagas como "beautiful", "nice", "good"
-5. Terminar SEMPRE com: sharp focus, high resolution, professional quality --no text, watermark, logo, blur, distortion, amateur, low quality
-6. NÃO incluir o nome da marca/empresa como texto visível na imagem
-7. NÃO incluir explicações, introduções ou aspas — APENAS o prompt
-8. Adicionar aspect ratio no fim: --ar ${p.proporcao || "9:16"}
+4. O estilo de MARKETING COMPOSITION deve influenciar fortemente a estrutura visual e o mood geral
+5. Ser visual e concreto — NUNCA usar palavras vagas como "beautiful", "nice", "good"
+6. Terminar SEMPRE com: sharp focus, high resolution, professional quality --no text, watermark, logo, blur, distortion, amateur, low quality
+7. NÃO incluir o nome da marca/empresa como texto visível na imagem
+8. NÃO incluir explicações, introduções ou aspas — APENAS o prompt
+9. Adicionar aspect ratio no fim: --ar ${p.proporcao || "9:16"}
 
 Responde APENAS com JSON válido:
 {
