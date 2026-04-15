@@ -467,13 +467,17 @@ serve(async (req) => {
       }
 
       rawText = await callGemini(systemPrompt, userMessage, images, 5000);
+    } else if (action === "auto_fill_image") {
+      const systemPrompt = buildAutoFillPrompt(payload);
+      const userText = `Preenche automaticamente os campos para criar uma imagem de marketing para: ${payload.nome || "negócio local"}. Sector: ${payload.sector || payload.categoria || "geral"}.`;
+      rawText = await callGemini(systemPrompt, userText, undefined, 600);
     } else if (action === "generate_image_prompt") {
       const systemPrompt = buildImagePrompt(payload);
-      const userText = `Gera prompts de imagem para: ${payload.nome || payload.descricao || "negócio local português"}. Estilo: ${payload.estilo || "local"}. Proporção: ${payload.proporcao || "9:16"}.`;
+      const userText = `Gera prompts de imagem profissionais para: ${payload.nome || payload.descricao || "negócio local português"}. Composição: ${payload.estiloMarketing || "profissional"}. Estilo: ${payload.estilo || "foto"}. Proporção: ${payload.proporcao || "4:5"}. ${payload.oQueVendes ? "Produto/Serviço: " + payload.oQueVendes : ""} ${payload.paraQuem ? "Público: " + payload.paraQuem : ""} ${payload.beneficio ? "Benefício: " + payload.beneficio : ""}`.trim();
       const images = payload.referenceImageBase64
         ? [{ base64: payload.referenceImageBase64, mimeType: "image/jpeg" }]
         : undefined;
-      rawText = await callGemini(systemPrompt, userText, images, 1200);
+      rawText = await callGemini(systemPrompt, userText, images, 1500);
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400,
