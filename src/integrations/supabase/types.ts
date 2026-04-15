@@ -7540,7 +7540,9 @@ export type Database = {
           category_id: string | null
           city: string | null
           claim_status: string | null
+          cta_booking_url: string | null
           cta_email: string | null
+          cta_order_url: string | null
           cta_phone: string | null
           cta_website: string | null
           cta_whatsapp: string | null
