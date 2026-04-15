@@ -310,8 +310,59 @@ Responde APENAS com JSON válido:
 }
 
 function buildImagePrompt(p: any): string {
-  const hasContext = p.nome || p.sector || p.descricao || p.personagens || p.ambiente;
+  // ── 1. TYPE ──────────────────────────────────────────────────────────────
+  const typeMap: Record<string, string> = {
+    negocio: "Corporate branding image",
+    produto: "Product advertising image",
+    promocao: "Marketing promotional flyer",
+    evento: "Event promotion image",
+    pessoa: "Marketing recruitment flyer",
+    espaco: "Business space showcase image",
+  };
+  const TYPE = typeMap[p.objectivoImagem] || "Marketing image";
 
+  // ── 2. COMPOSITION PRESETS (define style, marketing, vibe) ───────────────
+  const compositionPresets: Record<string, { style: string; marketing: string; vibe: string }> = {
+    profissional_clean: {
+      style: "Bright environment, soft natural light, minimal design, clean composition, neutral tones with brand accent, even balanced lighting",
+      marketing: "Corporate marketing layout, high clarity, generous negative space, space reserved for headline and call-to-action, trustworthy aesthetic",
+      vibe: "professional, trustworthy, calm confidence",
+    },
+    flyer_popular: {
+      style: "Colorful vibrant lighting, dynamic composition, high visual density, strong saturated colors (yellow, blue, red), attention-grabbing at a glance",
+      marketing: "Busy promotional layout, high energy, multiple service highlights visible, Portuguese local business aesthetic, designed for social media impact",
+      vibe: "energetic, festive, vibrant",
+    },
+    recrutamento: {
+      style: "Dark background with strong contrast lighting, cinematic look, high-end commercial photography, modern corporate style, dramatic shadows",
+      marketing: "Designed for recruitment campaign, bold layout, strong visual hierarchy, oversized bold typography space, urgent call-to-action composition, maximum visual weight on main message",
+      vibe: "urgent, energetic, impactful",
+    },
+    luxo: {
+      style: "Dark elegant tones, cinematic lighting, premium feel, shallow depth of field, soft dramatic lighting, sophisticated elegance, velvet-like depth",
+      marketing: "Luxury branding composition, minimal but impactful, full-bleed atmospheric photography, editorial magazine aesthetic, premium gold/champagne accents",
+      vibe: "luxurious, aspirational, exclusive",
+    },
+    portfolio: {
+      style: "Natural lighting, raw textures, documentary style photography, authentic real-environment, honest aesthetic",
+      marketing: "Focus on real work and results, process narrative visible, authentic composition showing scale and capability, grid-ready layout",
+      vibe: "realistic, trustworthy, authentic",
+    },
+  };
+
+  const preset = compositionPresets[p.estiloMarketing] || compositionPresets.profissional_clean;
+
+  // ── 3. EMOTION OVERRIDE ──────────────────────────────────────────────────
+  const emocaoOverrides: Record<string, string> = {
+    profissional: "professional confident atmosphere, corporate competence, neutral palette with one brand accent color",
+    energetico: "energetic dynamic atmosphere, vibrant saturated colors, sense of movement and action, bold contrasts, bright directional lighting",
+    urgente: "urgent compelling atmosphere, bold attention-grabbing reds/yellows/blacks, high contrast, dramatic shadows, strong visual hierarchy",
+    luxuoso: "luxurious premium atmosphere, dark moody tones with gold/champagne accents, soft dramatic lighting, sophisticated depth",
+    acolhedor: "warm inviting atmosphere, cozy welcoming feel, soft golden hour light, warm amber palette (cream, soft brown, honey tones), gentle shadows",
+  };
+  const emotionDesc = p.humor ? emocaoOverrides[p.humor] || "" : "";
+
+  // ── 4. VISUAL STYLE ─────────────────────────────────────────────────────
   const estiloMap: Record<string, string> = {
     foto: "professional commercial photography, photorealistic, DSLR quality, sharp focus",
     cinematografico: "cinematic photography, rich colors, shallow depth of field, anamorphic lens, film grain",
@@ -320,86 +371,85 @@ function buildImagePrompt(p: any): string {
     vintage: "vintage film photography, grain texture, warm faded tones, nostalgic 70s feel",
     neon: "cyberpunk neon aesthetic, vibrant glowing colors, futuristic urban atmosphere",
   };
+  const visualStyle = estiloMap[p.estilo] || "professional commercial photography";
 
-  const composicaoMap: Record<string, string> = {
-    livre: "",
-    flyer_popular:
-      "vibrant marketing flyer composition, energetic busy layout, bold dynamic background, multiple service highlights visible, strong saturated colors (yellow, blue, red), Portuguese local business aesthetic, high visual density, attention-grabbing at a glance, designed for social media impact",
-    recrutamento:
-      "recruitment impact poster, dramatic dark background, oversized bold typography dominates, single powerful focal image, high contrast yellow/red accent, urgent call-to-action visual hierarchy, maximum visual weight on main message",
-    profissional_clean:
-      "corporate clean professional composition, structured white or neutral background, generous negative space, single professional photo anchor, clear visual hierarchy with brand identity placement, trustworthy aesthetic, calm confident layout, space reserved for headline and CTA",
-    luxo:
-      "luxury lifestyle cinematic composition, full-bleed atmospheric photography, dark moody tones with warm gold accents, elegant editorial magazine aesthetic, sophisticated depth-of-field, premium feel, dramatic lighting",
-    portfolio:
-      "portfolio showcase documentary composition, authentic real-environment photography, work-in-progress or results visible, honest raw aesthetic, process narrative, grid-ready layout showing scale and capability",
+  // ── 5. SCENE (translated from PT inputs) ─────────────────────────────────
+  let SCENE = "";
+  if (p.oQueVendes) SCENE += `showing ${p.oQueVendes}`;
+  if (p.paraQuem) SCENE += `, targeting ${p.paraQuem}`;
+  if (p.beneficio) SCENE += `, representing ${p.beneficio}`;
+  if (p.ambiente) SCENE += `. Environment: ${p.ambiente}`;
+
+  // ── 6. PEOPLE ────────────────────────────────────────────────────────────
+  const peopleMap: Record<string, string> = {
+    sem: "",
+    cliente_satisfeito: "A satisfied happy customer interacting with the product/service, natural expression, genuine smile",
+    profissional_acao: "A professional actively working, confident posture, focused expression, wearing appropriate work attire",
+    equipa: "A motivated professional team working together, diverse group, energy and collaboration visible",
   };
+  const PEOPLE = peopleMap[p.personagens] || (p.personagens && p.personagens !== "sem" ? p.personagens : "");
 
-  const emocaoMap: Record<string, string> = {
-    profissional: "professional and trustworthy atmosphere, corporate confidence, clean and competent, neutral tones with brand accent, even balanced lighting",
-    energetico: "energetic and dynamic atmosphere, vibrant saturated colors, sense of movement, bold contrasts, bright directional lighting",
-    urgente: "urgent and compelling atmosphere, bold attention-grabbing colors (red, yellow, black), high contrast, dramatic shadows, strong visual hierarchy",
-    luxuoso: "luxurious premium atmosphere, dark moody tones with gold/champagne accents, soft dramatic lighting, sophisticated elegance, velvet-like depth",
-    acolhedor: "warm and inviting atmosphere, cozy welcoming feel, soft golden light, warm color palette (amber, cream, soft brown), gentle shadows",
-  };
+  // ── 7. TEXT ON IMAGE ─────────────────────────────────────────────────────
+  let TEXT_BLOCK = "";
+  if (p.textoSobreposto && p.textoSobreposto.trim()) {
+    TEXT_BLOCK = `\nText on image:\n"${p.textoSobreposto.trim()}"`;
+  }
 
-  const estiloDesc = estiloMap[p.estilo] || "professional commercial photography";
-  const composicaoDesc = composicaoMap[p.estiloMarketing || "livre"] || "";
-  const emocaoDesc = p.humor ? emocaoMap[p.humor] || "" : "";
+  // ── 8. BRAND ─────────────────────────────────────────────────────────────
+  const BRAND = p.nome ? `for a company called ${p.nome}` : "";
 
-  return `És um especialista WORLD-CLASS em criação de prompts para geradores de imagem IA (Midjourney, DALL-E, Flux, Ideogram).
+  // ── 9. FORMAT ────────────────────────────────────────────────────────────
+  const FORMAT = p.proporcao || "4:5";
 
-O teu trabalho é criar prompts que produzam imagens de QUALIDADE PROFISSIONAL de marketing para pequenos negócios.
+  // ── 10. BENEFIT ENRICHMENT ───────────────────────────────────────────────
+  let enrichment = "";
+  const benefitLower = (p.beneficio || "").toLowerCase();
+  if (benefitLower.includes("cliente") || benefitLower.includes("customer")) {
+    enrichment += ", smartphone receiving notifications, business activity and engagement visible";
+  }
+  if (benefitLower.includes("vendas") || benefitLower.includes("sales") || benefitLower.includes("cresci")) {
+    enrichment += ", upward growth charts subtly visible, success indicators";
+  }
 
-CONTEXTO DE MARKETING:
-${p.oQueVendes ? `- Produto/Serviço: ${p.oQueVendes}` : ""}
-${p.paraQuem ? `- Público-alvo: ${p.paraQuem}` : ""}
-${p.beneficio ? `- Benefício principal: ${p.beneficio}` : ""}
-${p.objectivoImagem ? `- Objectivo: imagem de ${p.objectivoImagem}` : ""}
+  // ── BUILD THE SYSTEM PROMPT ──────────────────────────────────────────────
+  return `You are a WORLD-CLASS prompt engineer for AI image generators (Midjourney, DALL-E, Flux, Ideogram).
 
-COMPOSIÇÃO DE MARKETING: ${composicaoDesc || "standard commercial photography"}
-ESTILO VISUAL: ${estiloDesc}
-EMOÇÃO/VIBE: ${emocaoDesc || "professional"}
+Your job is to create a SINGLE, STRUCTURED prompt that produces PROFESSIONAL MARKETING QUALITY images.
 
-DADOS ADICIONAIS:
-${p.nome ? `- Marca/Negócio: ${p.nome} (NÃO incluir nome como texto na imagem a menos que pedido)` : ""}
-${p.sector ? `- Sector: ${p.sector}` : ""}
-${p.descricao ? `- Descrição da cena: ${p.descricao}` : ""}
-${p.personagens ? `- Personagens: ${p.personagens}` : ""}
-${p.ambiente ? `- Ambiente/Cenário: ${p.ambiente}` : ""}
-${p.textoSobreposto ? `- Texto sobreposto desejado: "${p.textoSobreposto}"` : ""}
-- Proporção: ${p.proporcao || "4:5"}
+YOU MUST generate the prompt following this EXACT block structure:
 
-O prompt DEVE seguir esta estrutura para máxima qualidade:
-1. [SUBJECT] — descrição clara e ESPECÍFICA do que aparece (nunca vago)
-2. [MARKETING COMPOSITION] — como está composta a imagem para marketing
-3. [STYLE] — estilo fotográfico/artístico específico
-4. [LIGHTING] — iluminação detalhada (direção, intensidade, temperatura de cor)
-5. [MOOD & COLOR] — atmosfera emocional e paleta de cores concreta
-6. [COMPOSITION] — enquadramento (close-up, wide, overhead, rule of thirds, leading lines)
-7. [TECHNICAL] — qualidade técnica
-8. [NEGATIVE] — o que excluir
+BLOCK 1 — TYPE: "${TYPE}"
+BLOCK 2 — MAIN SCENE: ${SCENE || "a professional marketing scene for a local Portuguese business"}${enrichment}
+BLOCK 3 — PEOPLE: ${PEOPLE || "No people required — focus on objects, products, and environment detail"}
+BLOCK 4 — FOCUS: Main focus on the key subject that represents the core value${p.beneficio ? `: ${p.beneficio}` : ""}
+BLOCK 5 — VISUAL STYLE: ${visualStyle}
+BLOCK 6 — COMPOSITION STYLE: ${preset.style}
+BLOCK 7 — MARKETING LAYOUT: ${preset.marketing}
+BLOCK 8 — MOOD & EMOTION: ${emotionDesc || preset.vibe}
+BLOCK 9 — TEXT ON IMAGE: ${TEXT_BLOCK || "No text on image"}
+BLOCK 10 — BRAND: ${BRAND || "generic local business"}
+BLOCK 11 — QUALITY: Ultra realistic, high detail, 8k, professional advertising photography
+BLOCK 12 — FORMAT: Vertical ${FORMAT} format
 
-REGRAS OBRIGATÓRIAS:
-1. Prompt INTEIRAMENTE em inglês, 100-180 palavras
-2. NUNCA usar adjectivos vagos: "beautiful", "nice", "good", "amazing"
-3. Usar SEMPRE descritores concretos: "warm amber 3200K lighting", "shallow f/1.4 depth of field", "rule of thirds composition"
-4. A composição de marketing DEVE influenciar fortemente toda a estrutura visual
-5. A emoção/vibe DEVE definir a paleta de cores e tipo de iluminação
-6. Terminar com: sharp focus, high resolution, professional quality --no text, watermark, logo, blur, distortion, amateur, low quality
-7. Adicionar aspect ratio: --ar ${p.proporcao || "4:5"}
-8. Se pessoas foram pedidas, descrever com detalhe (idade, expressão, acção, roupa)
-9. Se "sem pessoas" foi indicado, garantir que a cena é rica em detalhe de objetos/ambiente
+MANDATORY RULES:
+1. The ENTIRE prompt must be in ENGLISH — EXCEPT text that goes ON the image (Block 9) which stays in original language
+2. NEVER mix image description with text content — they are SEPARATE blocks
+3. NEVER use vague adjectives: "beautiful", "nice", "good", "amazing"
+4. Use CONCRETE descriptors: "warm amber 3200K lighting", "shallow f/1.4 depth of field"
+5. The composition preset (Block 6-7) MUST strongly influence the entire visual structure
+6. If people are included, describe them with detail (age range, expression, action, clothing)
+7. If text on image exists, add: "with clear space reserved for overlaid text"
+8. End with: --no watermark, logo, blur, distortion, amateur, low quality, text errors
+9. Add: --ar ${FORMAT}
+10. Total prompt length: 120-200 words
+11. Auto-correct any spelling errors in the text-on-image content
 
-${!hasContext ? "MODO CRIATIVO: sem contexto específico, cria uma cena visualmente impactante e comercialmente apelativa para um negócio local português.\n" : ""}
-
-Responde APENAS com JSON válido:
+Output ONLY valid JSON:
 {
-  "prompt_principal": "prompt completo profissional em inglês, 100-180 palavras",
-  "variante_a": "variante com ângulo/composição diferente, 100-150 palavras",
-  "variante_b": "variante com iluminação/mood diferente, 100-150 palavras",
-  "instrucoes": "3-4 passos práticos em português sobre como usar este prompt"
-}`;
+  "prompt_principal": "the complete structured prompt in English, 120-200 words",
+  "variante_a": "variant with different camera angle/framing, 100-160 words",
+  "variante_b": "variant with different lighting/mood, 100-160 words",
+  "instrucoes": "3-4 practical steps in Portuguese on how to use this prompt"
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────
