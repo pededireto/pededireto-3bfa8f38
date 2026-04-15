@@ -124,9 +124,11 @@ const RegisterBusiness = () => {
   const updateField = (field: keyof FormData, value: string) => {
     setFormData((prev) => {
       const next = { ...prev, [field]: value };
-      // Pre-fill owner fields from main fields when empty
+      // Bi-directional sync between main and owner fields
       if (field === "email" && !prev.ownerEmail) next.ownerEmail = value;
       if (field === "phone" && !prev.ownerPhone) next.ownerPhone = value;
+      if (field === "ownerEmail" && !prev.email) next.email = value;
+      if (field === "ownerPhone" && !prev.phone) next.phone = value;
       return next;
     });
   };
@@ -521,6 +523,23 @@ const RegisterBusiness = () => {
                   </div>
                 </>
               )}
+
+              {!isStep1Valid() && (formData.name || formData.phone || formData.city || formData.email || formData.password) && (() => {
+                const missing = [
+                  formData.name.trim().length < 2 && "Nome do negócio",
+                  formData.phone.trim().length < 9 && "Telefone",
+                  formData.city.trim().length < 2 && "Cidade",
+                  ...(!user ? [
+                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && "Email",
+                    formData.password.length < 6 && "Password (mín. 6)",
+                  ] : []),
+                ].filter(Boolean);
+                return missing.length > 0 ? (
+                  <p className="text-xs text-destructive text-center">
+                    Falta preencher: {missing.join(", ")}
+                  </p>
+                ) : null;
+              })()}
 
               <Button
                 onClick={() => setStep(2)}
