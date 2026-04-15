@@ -1,6 +1,17 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ArrowRight, ChevronDown, ChevronUp, Copy, Check, Download, RefreshCw, Zap, Pencil } from "lucide-react";
+import {
+  Loader2,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Check,
+  Download,
+  RefreshCw,
+  Zap,
+  Pencil,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,6 +74,51 @@ const ESTILOS = [
   { key: "pb", label: "Preto & Branco", emoji: "⚫", desc: "Dramático, atemporal" },
 ];
 
+const ESTILOS_MARKETING = [
+  {
+    key: "livre",
+    label: "Livre",
+    emoji: "🎯",
+    desc: "Sem estilo de marketing forçado",
+    color: "border-border",
+  },
+  {
+    key: "flyer_popular",
+    label: "Flyer Popular",
+    emoji: "🟡",
+    desc: "Colorido, lotado, energia local",
+    color: "border-yellow-400",
+  },
+  {
+    key: "recrutamento",
+    label: "Recrutamento Impacto",
+    emoji: "🔴",
+    desc: "Dark bg, tipografia enorme, urgência",
+    color: "border-red-500",
+  },
+  {
+    key: "profissional_clean",
+    label: "Profissional Clean",
+    emoji: "🏢",
+    desc: "Corporativo, espaço branco, confiança",
+    color: "border-blue-400",
+  },
+  {
+    key: "luxo",
+    label: "Luxo & Lifestyle",
+    emoji: "✨",
+    desc: "Cinematográfico, gold/dark, premium",
+    color: "border-amber-400",
+  },
+  {
+    key: "portfolio",
+    label: "Portfolio / Obras",
+    emoji: "🔨",
+    desc: "Trabalho real, documentário, resultados",
+    color: "border-stone-400",
+  },
+];
+
 const PALETAS = [
   { key: "quentes", label: "Tons quentes", emoji: "🟤" },
   { key: "neutros", label: "Tons neutros", emoji: "⚪" },
@@ -116,9 +172,7 @@ const ChipSelect = ({
 }) => (
   <div className="flex flex-wrap gap-2">
     {options.map((o) => {
-      const selected = multi
-        ? (value as string[]).includes(o.key)
-        : value === o.key;
+      const selected = multi ? (value as string[]).includes(o.key) : value === o.key;
       return (
         <button
           key={o.key}
@@ -139,7 +193,7 @@ const ChipSelect = ({
             "px-3 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5",
             selected
               ? "bg-primary/10 border-primary text-primary font-medium"
-              : "border-border hover:border-primary/30"
+              : "border-border hover:border-primary/30",
           )}
         >
           <span>{o.emoji}</span>
@@ -173,7 +227,11 @@ const Section = ({
             <span className={cn("w-2 h-2 rounded-full", filled ? "bg-primary" : "bg-border")} />
             <span className="text-sm font-display font-semibold">{title}</span>
           </div>
-          {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          {open ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          )}
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent>
@@ -225,6 +283,7 @@ const StudioImagePage = () => {
   const [textoSobreposto, setTextoSobreposto] = useState("");
   const [textoPosicao, setTextoPosicao] = useState("");
   const [proporcao, setProporcao] = useState("9:16");
+  const [estiloMarketing, setEstiloMarketing] = useState("livre");
 
   // ── Direct Prompt State ──
   const [directPrompt, setDirectPrompt] = useState("");
@@ -348,6 +407,7 @@ const StudioImagePage = () => {
         textoSobreposto: textoSobreposto || "",
         textoPosicao: textoPosicao || "",
         proporcao,
+        estiloMarketing,
       });
 
       if (aiResult?.prompt_principal) {
@@ -401,7 +461,11 @@ const StudioImagePage = () => {
   const handleGenerateImageDirect = async () => {
     if (!selectedBusiness?.id || !directPrompt.trim()) return;
     if (!apiKey) {
-      toast({ title: "Sem chave API", description: "Configura a tua chave API nas Definições → Gerador de Imagem", variant: "destructive" });
+      toast({
+        title: "Sem chave API",
+        description: "Configura a tua chave API nas Definições → Gerador de Imagem",
+        variant: "destructive",
+      });
       return;
     }
     setGeneratingImage(true);
@@ -498,7 +562,9 @@ const StudioImagePage = () => {
           onClick={() => handleModeChange("guided")}
           className={cn(
             "flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all",
-            mode === "guided" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            mode === "guided"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           📋 Formulário Guiado
@@ -508,7 +574,9 @@ const StudioImagePage = () => {
           onClick={() => handleModeChange("direct")}
           className={cn(
             "flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all",
-            mode === "direct" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            mode === "direct"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           ✏️ Prompt Directo
@@ -530,13 +598,21 @@ const StudioImagePage = () => {
             {categoriesLoading ? (
               <Skeleton className="h-10 w-full" />
             ) : (
-              <Select value={categoriaSlug} onValueChange={(v) => { setCategoriaSlug(v); setSubcategoriaSlug(""); }}>
+              <Select
+                value={categoriaSlug}
+                onValueChange={(v) => {
+                  setCategoriaSlug(v);
+                  setSubcategoriaSlug("");
+                }}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Seleciona a categoria..." />
                 </SelectTrigger>
                 <SelectContent>
                   {categories?.map((cat) => (
-                    <SelectItem key={cat.slug} value={cat.slug}>{cat.name}</SelectItem>
+                    <SelectItem key={cat.slug} value={cat.slug}>
+                      {cat.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -548,7 +624,9 @@ const StudioImagePage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {subcategoriasDisponiveis.map((sub: any) => (
-                    <SelectItem key={sub.slug} value={sub.slug}>{sub.name}</SelectItem>
+                    <SelectItem key={sub.slug} value={sub.slug}>
+                      {sub.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -569,10 +647,16 @@ const StudioImagePage = () => {
           <Section title="O que queres criar" filled={sectionsFilled.criar} defaultOpen={true}>
             <div>
               <label className="text-xs text-muted-foreground mb-2 block">Objectivo da imagem</label>
-              <ChipSelect options={OBJECTIVOS} value={objectivoImagem} onChange={(v) => setObjectivoImagem(v as string)} />
+              <ChipSelect
+                options={OBJECTIVOS}
+                value={objectivoImagem}
+                onChange={(v) => setObjectivoImagem(v as string)}
+              />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Descreve o que deve aparecer na imagem *</label>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                Descreve o que deve aparecer na imagem *
+              </label>
               <Textarea
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
@@ -598,7 +682,11 @@ const StudioImagePage = () => {
           <Section title="Ambiente & Contexto" filled={sectionsFilled.ambiente} hint="Enriquece a atmosfera da imagem">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Localização / Cenário</label>
-              <Input value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} placeholder="Ex: interior rústico português, esplanada..." />
+              <Input
+                value={localizacao}
+                onChange={(e) => setLocalizacao(e.target.value)}
+                placeholder="Ex: interior rústico português, esplanada..."
+              />
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-2 block">Hora do dia / Iluminação</label>
@@ -610,14 +698,41 @@ const StudioImagePage = () => {
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Elementos de fundo / atmosfera</label>
-              <Input value={elementosFundo} onChange={(e) => setElementosFundo(e.target.value)} placeholder="Ex: fumo de cozinha, flores silvestres..." />
+              <Input
+                value={elementosFundo}
+                onChange={(e) => setElementosFundo(e.target.value)}
+                placeholder="Ex: fumo de cozinha, flores silvestres..."
+              />
             </div>
           </Section>
 
           {/* SECÇÃO 4 — Estilo Visual */}
+          {/* SECÇÃO 4 — Estilo Visual */}
           <Section title="Estilo Visual" filled={sectionsFilled.estilo} hint="Define o look & feel da imagem">
+            {/* NOVO: Composição de Marketing */}
             <div>
-              <label className="text-xs text-muted-foreground mb-2 block">Estilo artístico</label>
+              <label className="text-xs text-muted-foreground mb-2 block font-medium">Composição de marketing</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {ESTILOS_MARKETING.map((em) => (
+                  <button
+                    key={em.key}
+                    type="button"
+                    onClick={() => setEstiloMarketing(em.key)}
+                    className={cn(
+                      "p-3 rounded-xl border-2 text-left transition-all",
+                      estiloMarketing === em.key ? `${em.color} bg-primary/5` : "border-border hover:border-primary/30",
+                    )}
+                  >
+                    <span className="text-lg">{em.emoji}</span>
+                    <div className="text-xs font-medium mt-1">{em.label}</div>
+                    <div className="text-[10px] text-muted-foreground">{em.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-border/50 pt-3">
+              <label className="text-xs text-muted-foreground mb-2 block font-medium">Estilo artístico</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {ESTILOS.map((e) => (
                   <button
@@ -626,7 +741,7 @@ const StudioImagePage = () => {
                     onClick={() => setEstilo(e.key)}
                     className={cn(
                       "p-3 rounded-xl border text-left transition-all",
-                      estilo === e.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                      estilo === e.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/30",
                     )}
                   >
                     <span className="text-lg">{e.emoji}</span>
@@ -636,6 +751,7 @@ const StudioImagePage = () => {
                 ))}
               </div>
             </div>
+
             <div>
               <label className="text-xs text-muted-foreground mb-2 block">Paleta de cores (até 2)</label>
               <ChipSelect options={PALETAS} value={paletas} onChange={(v) => setPaletas(v as string[])} multi />
@@ -647,7 +763,11 @@ const StudioImagePage = () => {
           </Section>
 
           {/* SECÇÃO 5 — Texto sobreposto */}
-          <Section title="Texto sobreposto" filled={sectionsFilled.texto} hint="Para texto em imagem, o Ideogram dá melhores resultados">
+          <Section
+            title="Texto sobreposto"
+            filled={sectionsFilled.texto}
+            hint="Para texto em imagem, o Ideogram dá melhores resultados"
+          >
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Mensagem / texto na imagem</label>
               <Input
@@ -659,7 +779,11 @@ const StudioImagePage = () => {
             {textoSobreposto && (
               <div>
                 <label className="text-xs text-muted-foreground mb-2 block">Posição do texto</label>
-                <ChipSelect options={TEXTO_POSICAO} value={textoPosicao} onChange={(v) => setTextoPosicao(v as string)} />
+                <ChipSelect
+                  options={TEXTO_POSICAO}
+                  value={textoPosicao}
+                  onChange={(v) => setTextoPosicao(v as string)}
+                />
               </div>
             )}
           </Section>
@@ -674,7 +798,9 @@ const StudioImagePage = () => {
                   onClick={() => setProporcao(p.key)}
                   className={cn(
                     "flex-1 min-w-[100px] px-3 py-3 rounded-xl text-xs border transition-all text-center",
-                    proporcao === p.key ? "bg-primary/10 border-primary text-primary font-medium" : "border-border hover:border-primary/30"
+                    proporcao === p.key
+                      ? "bg-primary/10 border-primary text-primary font-medium"
+                      : "border-border hover:border-primary/30",
                   )}
                 >
                   <div className="font-semibold">{p.label}</div>
@@ -712,7 +838,9 @@ const StudioImagePage = () => {
               className="resize-none font-mono text-sm"
               placeholder="Ex: Professional photo of a modern restaurant interior, warm golden lighting, wooden tables, bokeh background, 8K, photorealistic --ar 16:9"
             />
-            <p className="text-[10px] text-muted-foreground">{directPrompt.length} caracteres · Escreve em inglês para melhores resultados</p>
+            <p className="text-[10px] text-muted-foreground">
+              {directPrompt.length} caracteres · Escreve em inglês para melhores resultados
+            </p>
           </div>
 
           {/* Formato / Proporção */}
@@ -726,7 +854,9 @@ const StudioImagePage = () => {
                   onClick={() => setProporcao(p.key)}
                   className={cn(
                     "flex-1 min-w-[100px] px-3 py-3 rounded-xl text-xs border transition-all text-center",
-                    proporcao === p.key ? "bg-primary/10 border-primary text-primary font-medium" : "border-border hover:border-primary/30"
+                    proporcao === p.key
+                      ? "bg-primary/10 border-primary text-primary font-medium"
+                      : "border-border hover:border-primary/30",
                   )}
                 >
                   <div className="font-semibold">{p.label}</div>
@@ -776,10 +906,18 @@ const StudioImagePage = () => {
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button size="sm" onClick={handleDownload} className="gap-1">
-                <Download className="w-3 h-3" />Descarregar
+                <Download className="w-3 h-3" />
+                Descarregar
               </Button>
-              <Button variant="outline" size="sm" onClick={handleGenerateImageDirect} disabled={generatingImage} className="gap-1">
-                <RefreshCw className="w-3 h-3" />Gerar nova versão
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateImageDirect}
+                disabled={generatingImage}
+                className="gap-1"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Gerar nova versão
               </Button>
             </div>
           </div>
@@ -798,9 +936,7 @@ const StudioImagePage = () => {
       {mode === "guided" && prompt && (
         <div ref={resultRef} className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b border-border">
-            <h3 className="text-sm font-display font-semibold flex items-center gap-1.5">
-              ✦ A tua Prompt
-            </h3>
+            <h3 className="text-sm font-display font-semibold flex items-center gap-1.5">✦ A tua Prompt</h3>
             <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 text-xs gap-1">
               {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
               {copied ? "Copiado" : "Copiar"}
@@ -846,7 +982,14 @@ const StudioImagePage = () => {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-medium">
                     <Check className="w-2.5 h-2.5" />
-                    {apiKey.provider === "openai" ? "OpenAI" : apiKey.provider === "google" ? "Google" : apiKey.provider === "fal" ? "fal.ai Flux" : "Ideogram"} activo
+                    {apiKey.provider === "openai"
+                      ? "OpenAI"
+                      : apiKey.provider === "google"
+                        ? "Google"
+                        : apiKey.provider === "fal"
+                          ? "fal.ai Flux"
+                          : "Ideogram"}{" "}
+                    activo
                   </span>
                 </div>
                 <Button
@@ -884,18 +1027,20 @@ const StudioImagePage = () => {
           {generatedImageUrl && (
             <div className="border-t border-border p-4 space-y-3">
               <div className="rounded-xl overflow-hidden bg-muted border border-border">
-                <img
-                  src={generatedImageUrl}
-                  alt="Imagem gerada"
-                  className="w-full h-auto object-contain"
-                />
+                <img src={generatedImageUrl} alt="Imagem gerada" className="w-full h-auto object-contain" />
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Button size="sm" onClick={handleDownload} className="gap-1">
                   <Download className="w-3 h-3" />
                   Descarregar
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleGenerateImage} disabled={generatingImage} className="gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateImage}
+                  disabled={generatingImage}
+                  className="gap-1"
+                >
                   <RefreshCw className="w-3 h-3" />
                   Gerar nova versão
                 </Button>
