@@ -450,6 +450,7 @@ Output ONLY valid JSON:
   "variante_a": "variant with different camera angle/framing, 100-160 words",
   "variante_b": "variant with different lighting/mood, 100-160 words",
   "instrucoes": "3-4 practical steps in Portuguese on how to use this prompt"
+}`;
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────
