@@ -57,10 +57,15 @@ async function processPendingBusiness(userId: string): Promise<boolean> {
         p_slug: slug,
         p_city: data.city,
         p_cta_phone: data.cta_phone ?? "",
+        p_cta_email: data.cta_email || data.owner_email || "",
         p_category_id: data.category_id,
         p_subcategory_id: primarySubcategoryId,
         p_owner_email: data.owner_email,
         p_registration_source: "onboarding_wizard",
+        p_nif: data.nif || null,
+        p_address: data.address || null,
+        p_owner_name: data.owner_name || null,
+        p_owner_phone: data.owner_phone || data.cta_phone || null,
       });
 
       if (rpcError) throw rpcError;
