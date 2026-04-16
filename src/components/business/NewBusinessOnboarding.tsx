@@ -56,8 +56,11 @@ const NewBusinessOnboarding = ({ business, onComplete }: NewBusinessOnboardingPr
   }, [existingSubcategoryIds]);
 
   // Filter subcategories by business categories
+  const categoryIdStrings = businessCategoryIds.map((bc) => bc.category_id);
+  const fallbackCatId = (business as any).category_id;
+  const effectiveCatIds = categoryIdStrings.length > 0 ? categoryIdStrings : fallbackCatId ? [fallbackCatId] : [];
   const availableSubcategories = allSubcategories.filter(
-    (s) => businessCategoryIds.includes(s.category_id) || s.category_id === (business as any).category_id
+    (s) => effectiveCatIds.includes(s.category_id)
   );
 
   const toggleSubcategory = (id: string) => {
