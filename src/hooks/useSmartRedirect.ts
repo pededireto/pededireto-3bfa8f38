@@ -57,10 +57,15 @@ async function processPendingBusiness(userId: string): Promise<boolean> {
         p_slug: slug,
         p_city: data.city,
         p_cta_phone: data.cta_phone ?? "",
+        p_cta_email: data.cta_email || data.owner_email || "",
         p_category_id: data.category_id,
         p_subcategory_id: primarySubcategoryId,
         p_owner_email: data.owner_email,
         p_registration_source: "onboarding_wizard",
+        p_nif: data.nif || null,
+        p_address: data.address || null,
+        p_owner_name: data.owner_name || null,
+        p_owner_phone: data.owner_phone || data.cta_phone || null,
       });
 
       if (rpcError) throw rpcError;
@@ -79,6 +84,11 @@ async function processPendingBusiness(userId: string): Promise<boolean> {
         .from("pending_registrations")
         .update({ processed_at: new Date().toISOString() })
         .eq("id", row.id);
+
+      // Atualizar profile com nome do responsável
+      if (data.owner_name) {
+        await supabase.from("profiles").update({ full_name: data.owner_name }).eq("user_id", userId);
+      }
 
       console.log("[useSmartRedirect] Negócio pendente criado via BD:", businessId);
       return true;
@@ -104,10 +114,15 @@ async function processPendingBusiness(userId: string): Promise<boolean> {
       p_slug: slug,
       p_city: data.city,
       p_cta_phone: data.cta_phone ?? "",
+      p_cta_email: data.cta_email || data.owner_email || "",
       p_category_id: data.category_id,
       p_subcategory_id: primarySubcategoryId,
       p_owner_email: data.owner_email,
       p_registration_source: "onboarding_wizard",
+      p_nif: data.nif || null,
+      p_address: data.address || null,
+      p_owner_name: data.owner_name || null,
+      p_owner_phone: data.owner_phone || data.cta_phone || null,
     });
 
     if (rpcError) throw rpcError;
@@ -119,6 +134,14 @@ async function processPendingBusiness(userId: string): Promise<boolean> {
         subcategory_id: subId,
       }));
       await supabase.from("business_subcategories").insert(rows);
+    }
+
+    // Atualizar profile com nome do responsável
+    if (data.owner_name) {
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.user?.id) {
+        await supabase.from("profiles").update({ full_name: data.owner_name }).eq("user_id", session.session.user.id);
+      }
     }
 
     console.log("[useSmartRedirect] Negócio pendente criado via localStorage:", businessId);

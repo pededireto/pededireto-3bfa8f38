@@ -186,7 +186,7 @@ const RegisterBusiness = () => {
           email: formData.email,
           password: formData.password,
           options: {
-            data: { full_name: formData.name },
+            data: { full_name: formData.ownerName || formData.name },
             emailRedirectTo: window.location.origin,
           },
         });
@@ -200,13 +200,14 @@ const RegisterBusiness = () => {
             name: formData.name,
             city: formData.city,
             cta_phone: formData.phone,
+            cta_email: formData.ownerEmail || formData.email,
             category_id: formData.primaryCategoryId,
             subcategory_ids: formData.subcategoryIds,
             owner_email: formData.ownerEmail || formData.email,
             nif: formData.nif || null,
             address: formData.address || null,
             owner_name: formData.ownerName || null,
-            owner_phone: formData.ownerPhone || null,
+            owner_phone: formData.ownerPhone || formData.phone || null,
           };
 
           // Tenta guardar na BD (robusto entre dispositivos/sessões)
@@ -232,22 +233,33 @@ const RegisterBusiness = () => {
         currentUser = signUpData.user;
       }
 
+      // Atualizar profile com nome do responsável (não do negócio)
+      if (currentUser?.id && formData.ownerName) {
+        await supabase
+          .from("profiles")
+          .update({ full_name: formData.ownerName })
+          .eq("user_id", currentUser.id);
+      }
+
       const slug = generateSlug(formData.name);
       const primarySubcategoryId = formData.subcategoryIds[0];
+
+      const ownerEmail = formData.ownerEmail || currentUser?.email || formData.email;
 
       const { data: businessId, error: rpcError } = await supabase.rpc("register_business_with_owner" as any, {
         p_name: formData.name,
         p_slug: slug,
         p_city: formData.city,
         p_cta_phone: formData.phone,
+        p_cta_email: ownerEmail,
         p_category_id: formData.primaryCategoryId,
         p_subcategory_id: primarySubcategoryId,
-        p_owner_email: formData.ownerEmail || currentUser?.email || formData.email,
+        p_owner_email: ownerEmail,
         p_registration_source: "onboarding_wizard",
         p_nif: formData.nif || null,
         p_address: formData.address || null,
         p_owner_name: formData.ownerName || null,
-        p_owner_phone: formData.ownerPhone || null,
+        p_owner_phone: formData.ownerPhone || formData.phone || null,
       });
 
       if (rpcError) throw rpcError;
