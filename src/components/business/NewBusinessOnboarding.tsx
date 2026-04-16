@@ -274,11 +274,9 @@ const NewBusinessOnboarding = ({ business, onComplete }: NewBusinessOnboardingPr
               )}
 
               <div className="border border-border rounded-xl max-h-48 overflow-y-auto divide-y divide-border">
-                {businessCategoryIds.length > 0 || (business as any).category_id ? (
+                {effectiveCatIds.length > 0 ? (
                   (() => {
-                    const catIds = businessCategoryIds.length > 0
-                      ? businessCategoryIds
-                      : [(business as any).category_id].filter(Boolean);
+                    const catIds = effectiveCatIds;
 
                     return catIds.map((catId: string) => {
                       const cat = categories.find((c) => c.id === catId);
