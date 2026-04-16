@@ -85,6 +85,11 @@ async function processPendingBusiness(userId: string): Promise<boolean> {
         .update({ processed_at: new Date().toISOString() })
         .eq("id", row.id);
 
+      // Atualizar profile com nome do responsável
+      if (data.owner_name) {
+        await supabase.from("profiles").update({ full_name: data.owner_name }).eq("user_id", userId);
+      }
+
       console.log("[useSmartRedirect] Negócio pendente criado via BD:", businessId);
       return true;
     }
