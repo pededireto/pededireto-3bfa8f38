@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Loader2 } from "lucide-react";
 import logoImg from "@/assets/pede-direto-logo.png";
@@ -22,6 +22,7 @@ import BusinessQuotesContent from "@/components/business/BusinessQuotesContent";
 import BusinessSupportContent from "@/components/business/BusinessSupportContent";
 import BusinessJobOffersContent from "@/components/business/BusinessJobOffersContent";
 import FeaturePopupManager from "@/components/business/FeaturePopupManager";
+import NewBusinessOnboarding from "@/components/business/NewBusinessOnboarding";
 
 const BusinessDashboard = () => {
   const [activeTab, setActiveTab] = useState<BusinessTab>("overview");
