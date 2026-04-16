@@ -27,8 +27,22 @@ import NewBusinessOnboarding from "@/components/business/NewBusinessOnboarding";
 const BusinessDashboard = () => {
   const [activeTab, setActiveTab] = useState<BusinessTab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { data: business, isLoading } = useBusinessByUser();
   const permissions = useBusinessClaimPermissions(business);
+
+  // Show onboarding for new businesses (no description or subcategory)
+  useEffect(() => {
+    if (!business) return;
+    const doneKey = `new_business_onboarding_done_${business.id}`;
+    const alreadyDone = localStorage.getItem(doneKey) === "true";
+    if (alreadyDone) return;
+    const hasDescription = ((business as any).description?.length ?? 0) >= 50;
+    const hasSubcategory = !!(business as any).subcategory_id;
+    if (!hasDescription || !hasSubcategory) {
+      setShowOnboarding(true);
+    }
+  }, [business]);
 
   if (isLoading) {
     return (
