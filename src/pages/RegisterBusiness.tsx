@@ -7,11 +7,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import CityAutocomplete from "@/components/ui/CityAutocomplete";
 import MultiCategorySelector from "@/components/business/MultiCategorySelector";
-import { CheckCircle, Loader2, ArrowLeft, ArrowRight, Phone, MapPin, X, Building2 } from "lucide-react";
+import { CheckCircle, Loader2, ArrowLeft, ArrowRight, Phone, MapPin, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/pede-direto-logo.png";
 
