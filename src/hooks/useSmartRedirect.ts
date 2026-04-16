@@ -136,6 +136,14 @@ async function processPendingBusiness(userId: string): Promise<boolean> {
       await supabase.from("business_subcategories").insert(rows);
     }
 
+    // Atualizar profile com nome do responsável
+    if (data.owner_name) {
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.user?.id) {
+        await supabase.from("profiles").update({ full_name: data.owner_name }).eq("user_id", session.session.user.id);
+      }
+    }
+
     console.log("[useSmartRedirect] Negócio pendente criado via localStorage:", businessId);
     return true;
   } catch (err) {
