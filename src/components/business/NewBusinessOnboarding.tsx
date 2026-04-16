@@ -102,10 +102,9 @@ const NewBusinessOnboarding = ({ business, onComplete }: NewBusinessOnboardingPr
           return;
         }
         await updateBusiness.mutateAsync({
-          businessId: business.id,
-          updates: {
-            description: description.trim(),
-          },
+          id: business.id,
+          name: business.name,
+          description: description.trim(),
         });
         setStep(2);
       }
@@ -113,11 +112,10 @@ const NewBusinessOnboarding = ({ business, onComplete }: NewBusinessOnboardingPr
       // Save schedule
       if (step === 2) {
         await updateBusiness.mutateAsync({
-          businessId: business.id,
-          updates: {
-            schedule_weekdays: scheduleWeekdays.trim() || null,
-            schedule_weekend: scheduleWeekend.trim() || null,
-          },
+          id: business.id,
+          name: business.name,
+          schedule_weekdays: scheduleWeekdays.trim() || null,
+          schedule_weekend: scheduleWeekend.trim() || null,
         });
         setStep(3);
       }
@@ -136,10 +134,9 @@ const NewBusinessOnboarding = ({ business, onComplete }: NewBusinessOnboardingPr
 
         // Also update the primary subcategory on the business
         await updateBusiness.mutateAsync({
-          businessId: business.id,
-          updates: {
-            subcategory_id: selectedSubcategoryIds[0],
-          },
+          id: business.id,
+          name: business.name,
+          subcategory_id: selectedSubcategoryIds[0],
         });
 
         localStorage.setItem(`${STORAGE_KEY}_${business.id}`, "true");
