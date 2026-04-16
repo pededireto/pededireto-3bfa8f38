@@ -34,7 +34,7 @@ interface FormData {
   password: string;
   categoryIds: string[];
   primaryCategoryId: string;
-  subcategoryIds: string[];
+  
   nif: string;
   address: string;
   ownerName: string;
