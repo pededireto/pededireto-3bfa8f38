@@ -2,17 +2,15 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCategories } from "@/hooks/useCategories";
-import { useAllSubcategories } from "@/hooks/useSubcategories";
 import { useSyncBusinessCategories } from "@/hooks/useBusinessCategories";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import CityAutocomplete from "@/components/ui/CityAutocomplete";
 import MultiCategorySelector from "@/components/business/MultiCategorySelector";
-import { CheckCircle, Loader2, ArrowLeft, ArrowRight, Phone, MapPin, X, Building2 } from "lucide-react";
+import { CheckCircle, Loader2, ArrowLeft, ArrowRight, Phone, MapPin, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/pede-direto-logo.png";
 
@@ -36,7 +34,6 @@ interface FormData {
   password: string;
   categoryIds: string[];
   primaryCategoryId: string;
-  subcategoryIds: string[];
   nif: string;
   address: string;
   ownerName: string;
@@ -88,7 +85,6 @@ const RegisterBusiness = () => {
     password: "",
     categoryIds: [],
     primaryCategoryId: "",
-    subcategoryIds: [],
     nif: "",
     address: "",
     ownerName: "",
@@ -115,16 +111,11 @@ const RegisterBusiness = () => {
   }, []);
 
   const { data: categories = [] } = useCategories();
-  const { data: allSubcategories = [] } = useAllSubcategories();
   const syncCategories = useSyncBusinessCategories();
-
-  // Subcategorias filtradas pelas categorias seleccionadas
-  const subcategories = allSubcategories.filter((s) => formData.categoryIds.includes(s.category_id));
 
   const updateField = (field: keyof FormData, value: string) => {
     setFormData((prev) => {
       const next = { ...prev, [field]: value };
-      // Bi-directional sync between main and owner fields
       if (field === "email" && !prev.ownerEmail) next.ownerEmail = value;
       if (field === "phone" && !prev.ownerPhone) next.ownerPhone = value;
       if (field === "ownerEmail" && !prev.email) next.email = value;
@@ -132,28 +123,6 @@ const RegisterBusiness = () => {
       return next;
     });
   };
-
-  const toggleSubcategory = (id: string) => {
-    setFormData((prev) => {
-      const current = prev.subcategoryIds;
-      if (current.includes(id)) {
-        return { ...prev, subcategoryIds: current.filter((s) => s !== id) };
-      }
-      if (current.length >= 3) return prev;
-      return { ...prev, subcategoryIds: [...current, id] };
-    });
-  };
-
-  // Reset subcategorias quando categorias mudam
-  useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      subcategoryIds: prev.subcategoryIds.filter((subId) => {
-        const sub = allSubcategories.find((s) => s.id === subId);
-        return sub && prev.categoryIds.includes(sub.category_id);
-      }),
-    }));
-  }, [formData.categoryIds, allSubcategories]);
 
   const handleCategoriesChange = (categoryIds: string[], primaryCategoryId: string) => {
     setFormData((prev) => ({ ...prev, categoryIds, primaryCategoryId }));
@@ -173,7 +142,7 @@ const RegisterBusiness = () => {
   };
 
   const isStep2Valid = () =>
-    formData.categoryIds.length > 0 && formData.primaryCategoryId !== "" && formData.subcategoryIds.length >= 1;
+    formData.categoryIds.length > 0 && formData.primaryCategoryId !== "";
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -195,14 +164,12 @@ const RegisterBusiness = () => {
         const { data: sessionData } = await supabase.auth.getSession();
 
         if (!sessionData?.session) {
-          // --- FIX: guardar na tabela pending_registrations em vez de só localStorage ---
           const pendingPayload = {
             name: formData.name,
             city: formData.city,
             cta_phone: formData.phone,
             cta_email: formData.ownerEmail || formData.email,
             category_id: formData.primaryCategoryId,
-            subcategory_ids: formData.subcategoryIds,
             owner_email: formData.ownerEmail || formData.email,
             nif: formData.nif || null,
             address: formData.address || null,
@@ -210,7 +177,6 @@ const RegisterBusiness = () => {
             owner_phone: formData.ownerPhone || formData.phone || null,
           };
 
-          // Tenta guardar na BD (robusto entre dispositivos/sessões)
           try {
             await (supabase as any).from("pending_registrations").insert({
               user_id: signUpData.user?.id,
@@ -220,7 +186,6 @@ const RegisterBusiness = () => {
             console.warn("[RegisterBusiness] Fallback para localStorage:", dbErr);
           }
 
-          // Mantém localStorage como fallback
           localStorage.setItem("pendingBusinessRegistration", JSON.stringify(pendingPayload));
 
           toast({
@@ -242,8 +207,6 @@ const RegisterBusiness = () => {
       }
 
       const slug = generateSlug(formData.name);
-      const primarySubcategoryId = formData.subcategoryIds[0];
-
       const ownerEmail = formData.ownerEmail || currentUser?.email || formData.email;
 
       const { data: businessId, error: rpcError } = await supabase.rpc("register_business_with_owner" as any, {
@@ -253,7 +216,7 @@ const RegisterBusiness = () => {
         p_cta_phone: formData.phone,
         p_cta_email: ownerEmail,
         p_category_id: formData.primaryCategoryId,
-        p_subcategory_id: primarySubcategoryId,
+        p_subcategory_id: null,
         p_owner_email: ownerEmail,
         p_registration_source: "onboarding_wizard",
         p_nif: formData.nif || null,
@@ -271,15 +234,6 @@ const RegisterBusiness = () => {
           categoryIds: formData.categoryIds,
           primaryCategoryId: formData.primaryCategoryId,
         });
-      }
-
-      // Subcategorias adicionais
-      if (businessId && formData.subcategoryIds.length > 1) {
-        const additionalRows = formData.subcategoryIds.slice(1).map((subId) => ({
-          business_id: businessId,
-          subcategory_id: subId,
-        }));
-        await supabase.from("business_subcategories").insert(additionalRows);
       }
 
       // Afiliado
@@ -301,7 +255,7 @@ const RegisterBusiness = () => {
 
       toast({
         title: "🎉 Negócio registado!",
-        description: "Estamos a verificar os seus dados. Complete o perfil no dashboard!",
+        description: "Complete o perfil no dashboard para submeter para aprovação!",
       });
 
       navigate("/business-dashboard");
@@ -348,10 +302,6 @@ const RegisterBusiness = () => {
       </div>
     );
   }
-
-  const selectedSubcategoryNames = formData.subcategoryIds
-    .map((id) => subcategories.find((s) => s.id === id)?.name)
-    .filter(Boolean);
 
   const selectedCategoryNames = formData.categoryIds
     .map((id) => categories.find((c) => c.id === id)?.name)
@@ -429,7 +379,7 @@ const RegisterBusiness = () => {
                 </div>
               </div>
 
-              {/* Dados da Empresa (opcionais) */}
+              {/* Dados da Empresa */}
               <div className="relative">
                 <Separator />
                 <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-3 text-xs text-muted-foreground whitespace-nowrap">
@@ -584,77 +534,9 @@ const RegisterBusiness = () => {
                   />
                 </div>
 
-                {formData.categoryIds.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Subcategorias * <span className="text-muted-foreground font-normal">(até 3)</span>
-                    </Label>
-
-                    {formData.subcategoryIds.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {formData.subcategoryIds.map((id) => {
-                          const sub = subcategories.find((s) => s.id === id);
-                          if (!sub) return null;
-                          return (
-                            <Badge
-                              key={id}
-                              variant="default"
-                              className="px-3 py-1.5 text-sm gap-1.5 cursor-pointer"
-                              onClick={() => toggleSubcategory(id)}
-                            >
-                              {sub.name}
-                              <X className="h-3 w-3" />
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    <div className="border border-border rounded-xl max-h-56 overflow-y-auto divide-y divide-border">
-                      {formData.categoryIds.map((catId) => {
-                        const cat = categories.find((c) => c.id === catId);
-                        const catSubs = subcategories.filter((s) => s.category_id === catId);
-                        if (catSubs.length === 0) return null;
-                        return (
-                          <div key={catId}>
-                            {formData.categoryIds.length > 1 && (
-                              <div className="px-4 py-1.5 bg-muted/50 text-xs font-semibold text-muted-foreground">
-                                {cat?.name}
-                              </div>
-                            )}
-                            {catSubs.map((sub) => {
-                              const isSelected = formData.subcategoryIds.includes(sub.id);
-                              const isDisabled = !isSelected && formData.subcategoryIds.length >= 3;
-                              return (
-                                <button
-                                  key={sub.id}
-                                  type="button"
-                                  onClick={() => !isDisabled && toggleSubcategory(sub.id)}
-                                  disabled={isDisabled}
-                                  className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between ${
-                                    isSelected
-                                      ? "bg-primary/10 text-primary font-medium"
-                                      : isDisabled
-                                        ? "opacity-40 cursor-not-allowed"
-                                        : "hover:bg-muted"
-                                  }`}
-                                >
-                                  <span>{sub.name}</span>
-                                  {isSelected && <CheckCircle className="h-4 w-4 text-primary" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-                      {subcategories.length === 0 && (
-                        <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                          <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />A carregar subcategorias...
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <p className="text-xs text-muted-foreground text-center">
+                  As subcategorias poderão ser escolhidas após o registo, no painel de gestão.
+                </p>
               </div>
 
               <Button
@@ -690,14 +572,6 @@ const RegisterBusiness = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedSubcategoryNames.map((name) => (
-                    <Badge key={name} variant="secondary" className="text-xs">
-                      {name}
-                    </Badge>
-                  ))}
-                </div>
-
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Phone className="h-4 w-4" />
                   <span>{maskPhone(formData.phone)}</span>
@@ -710,7 +584,7 @@ const RegisterBusiness = () => {
               </div>
 
               <p className="text-center text-xs text-muted-foreground">
-                Pode completar o perfil com logo, descrição e mais detalhes após publicar.
+                Após publicar, complete o perfil no dashboard (subcategorias, logo, descrição, horário) para submeter o seu negócio para aprovação.
               </p>
 
               <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full h-14 text-base font-bold">
