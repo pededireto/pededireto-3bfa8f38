@@ -144,6 +144,14 @@ const BusinessDashboard = () => {
         audience="business"
         onTabNavigate={(tab) => setActiveTab(tab as BusinessTab)}
       />
+
+      {/* New Business Onboarding Form */}
+      {showOnboarding && business && (
+        <NewBusinessOnboarding
+          business={business}
+          onComplete={() => setShowOnboarding(false)}
+        />
+      )}
     </div>
   );
 };
