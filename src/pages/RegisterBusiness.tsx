@@ -233,6 +233,14 @@ const RegisterBusiness = () => {
         currentUser = signUpData.user;
       }
 
+      // Atualizar profile com nome do responsável (não do negócio)
+      if (currentUser?.id && formData.ownerName) {
+        await supabase
+          .from("profiles")
+          .update({ full_name: formData.ownerName })
+          .eq("user_id", currentUser.id);
+      }
+
       const slug = generateSlug(formData.name);
       const primarySubcategoryId = formData.subcategoryIds[0];
 
