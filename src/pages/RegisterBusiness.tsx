@@ -200,13 +200,14 @@ const RegisterBusiness = () => {
             name: formData.name,
             city: formData.city,
             cta_phone: formData.phone,
+            cta_email: formData.ownerEmail || formData.email,
             category_id: formData.primaryCategoryId,
             subcategory_ids: formData.subcategoryIds,
             owner_email: formData.ownerEmail || formData.email,
             nif: formData.nif || null,
             address: formData.address || null,
             owner_name: formData.ownerName || null,
-            owner_phone: formData.ownerPhone || null,
+            owner_phone: formData.ownerPhone || formData.phone || null,
           };
 
           // Tenta guardar na BD (robusto entre dispositivos/sessões)
