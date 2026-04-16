@@ -296,7 +296,7 @@ const RegisterBusiness = () => {
     } catch (err: any) {
       const errMsg = err?.message || "";
       const code = err?.code || "";
-      
+
       if (code === "23505" || errMsg.includes("already exists") || errMsg.includes("already registered")) {
         toast({
           title: "Conta já existente",
@@ -421,7 +421,7 @@ const RegisterBusiness = () => {
               <div className="relative">
                 <Separator />
                 <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-3 text-xs text-muted-foreground whitespace-nowrap">
-                  Dados da empresa (opcional)
+                  Dados da empresa (Obrigatório)
                 </span>
               </div>
 
@@ -524,22 +524,24 @@ const RegisterBusiness = () => {
                 </>
               )}
 
-              {!isStep1Valid() && (formData.name || formData.phone || formData.city || formData.email || formData.password) && (() => {
-                const missing = [
-                  formData.name.trim().length < 2 && "Nome do negócio",
-                  formData.phone.trim().length < 9 && "Telefone",
-                  formData.city.trim().length < 2 && "Cidade",
-                  ...(!user ? [
-                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && "Email",
-                    formData.password.length < 6 && "Password (mín. 6)",
-                  ] : []),
-                ].filter(Boolean);
-                return missing.length > 0 ? (
-                  <p className="text-xs text-destructive text-center">
-                    Falta preencher: {missing.join(", ")}
-                  </p>
-                ) : null;
-              })()}
+              {!isStep1Valid() &&
+                (formData.name || formData.phone || formData.city || formData.email || formData.password) &&
+                (() => {
+                  const missing = [
+                    formData.name.trim().length < 2 && "Nome do negócio",
+                    formData.phone.trim().length < 9 && "Telefone",
+                    formData.city.trim().length < 2 && "Cidade",
+                    ...(!user
+                      ? [
+                          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && "Email",
+                          formData.password.length < 6 && "Password (mín. 6)",
+                        ]
+                      : []),
+                  ].filter(Boolean);
+                  return missing.length > 0 ? (
+                    <p className="text-xs text-destructive text-center">Falta preencher: {missing.join(", ")}</p>
+                  ) : null;
+                })()}
 
               <Button
                 onClick={() => setStep(2)}
