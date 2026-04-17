@@ -161,6 +161,15 @@ const UsersContent = () => {
                 <td className="p-4 text-muted-foreground">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span>{user.email || "—"}</span>
+                    {user.email_confirmed_at ? (
+                      <Badge variant="outline" className="text-xs">
+                        Validado
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        Não validado
+                      </Badge>
+                    )}
                   </div>
                 </td>
                 <td className="p-4 text-muted-foreground hidden md:table-cell">{user.phone || "—"}</td>
@@ -186,6 +195,24 @@ const UsersContent = () => {
                     <Button size="sm" variant="ghost" title="Gerir Negócios" onClick={() => setBizModal(user.id)}>
                       <Building2 className="h-4 w-4" />
                     </Button>
+                    {/* Botão validar email — só se ainda não estiver validado */}
+                    {!user.email_confirmed_at && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        title="Validar email manualmente"
+                        onClick={() =>
+                          confirmEmail.mutate(user.id, {
+                            onSuccess: () => toast({ title: "Email validado" }),
+                            onError: (e: any) =>
+                              toast({ title: "Erro ao validar", description: e.message, variant: "destructive" }),
+                          })
+                        }
+                        disabled={confirmEmail.isPending}
+                      >
+                        <MailCheck className="h-4 w-4 text-primary" />
+                      </Button>
+                    )}
                     {/* Botão corrigir role — só se não tiver role atribuído */}
                     {!user.app_role && (
                       <Button
