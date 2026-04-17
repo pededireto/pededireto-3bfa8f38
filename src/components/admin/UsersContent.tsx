@@ -162,11 +162,11 @@ const UsersContent = () => {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span>{user.email || "—"}</span>
                     {user.email_confirmed_at ? (
-                      <Badge variant="outline" className="text-xs border-primary/40 text-primary">
+                      <Badge variant="outline" className="text-xs">
                         Validado
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-xs border-orange-500/50 text-orange-500">
+                      <Badge variant="secondary" className="text-xs">
                         Não validado
                       </Badge>
                     )}
